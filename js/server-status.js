@@ -1,92 +1,167 @@
 /* ══════════════════════════════════════════════════════
-   server-status.js — Realtime server status via mcsrvstat.us
+   tebex-store.js — Realtime store via Tebex Headless API
    ══════════════════════════════════════════════════════ */
 
-// ⚙ Ganti dengan IP/domain server kamu
-const SERVER_HOST = 'laughtale.my.id';
-const SERVER_PORT = 19214; // Port Bedrock default
+// ⚙ Ganti dengan Public Token dari Tebex Dashboard
+//   Dashboard → Webstore → API Keys → PUBLIC token (bukan Server API Key)
+const TEBEX_PUBLIC_TOKEN = 'GANTI_DENGAN_PUBLIC_TOKEN_KAMU';
+const BASE_URL = `https://headless.tebex.io/api/accounts/${TEBEX_PUBLIC_TOKEN}`;
 
-async function fetchServerStatus() {
-  const btn = document.getElementById('refresh-btn');
-  btn.textContent = '↻ MEMUAT...';
-  btn.style.pointerEvents = 'none';
+/* ─────────────────────────────────────────────────────
+   FETCH: Kategori & Paket
+───────────────────────────────────────────────────── */
+async function fetchStoreData() {
+  const btn = document.getElementById('store-refresh-btn');
+  if (btn) {
+    btn.textContent = '↻ MEMUAT...';
+    btn.style.pointerEvents = 'none';
+  }
 
   const startTime = Date.now();
 
   try {
-    const res = await fetch(`https://api.mcsrvstat.us/bedrock/2/${SERVER_HOST}`);
+    // Ambil semua kategori + paket sekaligus
+    const [catRes, infoRes] = await Promise.all([
+      fetch(`${BASE_URL}/categories?includePackages=1`),
+      fetch(`${BASE_URL}/webstore`),
+    ]);
+
     const latency = Date.now() - startTime;
-    const data = await res.json();
+    const categories = await catRes.json();
+    const info       = await infoRes.json();
 
-    document.getElementById('latency-display').textContent = latency;
+    // ── Latency
+    const latEl = document.getElementById('store-latency');
+    if (latEl) latEl.textContent = latency;
 
-    if (data.online) {
-      // ── ONLINE ──
-      const dot = document.getElementById('status-dot-emoji');
-      dot.textContent = '🟢';
-      dot.style.background = 'var(--emerald)';
-      dot.style.boxShadow = '0 0 20px rgba(23,221,98,0.5)';
+    // ── Info toko
+    const nameEl = document.getElementById('store-name');
+    if (nameEl && info?.data?.name) nameEl.textContent = info.data.name;
 
-      const label = document.getElementById('status-text-label');
-      label.textContent = 'ONLINE';
-      label.style.color = 'var(--emerald)';
+    const currEl = document.getElementById('store-currency');
+    if (currEl && info?.data?.currency) currEl.textContent = info.data.currency;
 
-      const onlinePlayers = data.players?.online ?? 0;
-      const maxPlayers   = data.players?.max ?? '?';
-      const version      = data.version ?? 'Bedrock';
+    // ── Render kategori & paket
+    renderCategories(categories?.data ?? []);
 
-      document.getElementById('online-players').textContent  = onlinePlayers;
-      document.getElementById('max-players').textContent     = maxPlayers;
-      document.getElementById('server-version').textContent  = version;
-      document.getElementById('server-address-display').textContent = `📌 ${SERVER_HOST}:${SERVER_PORT}`;
-      document.getElementById('hero-player-count').textContent = onlinePlayers;
-
-      // Player list
-      if (data.players?.list && data.players.list.length > 0) {
-        const listWrap = document.getElementById('player-list-wrap');
-        const listEl   = document.getElementById('player-list');
-        listWrap.style.display = 'block';
-        listEl.innerHTML = data.players.list.map(p =>
-          `<span style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:0.82rem;font-weight:700;">👤 ${p}</span>`
-        ).join('');
-      }
-
-    } else {
-      // ── OFFLINE ──
-      const dot = document.getElementById('status-dot-emoji');
-      dot.textContent = '🔴';
-      dot.style.background = 'var(--redstone)';
-      dot.style.boxShadow = '0 0 20px rgba(255,58,58,0.5)';
-
-      const label = document.getElementById('status-text-label');
-      label.textContent = 'OFFLINE';
-      label.style.color = 'var(--redstone)';
-
-      document.getElementById('online-players').textContent = '0';
-      document.getElementById('hero-player-count').textContent = '0';
-      document.getElementById('server-address-display').textContent = `📌 ${SERVER_HOST} — Server sedang mati`;
-    }
-
+    // ── Timestamp
     const now = new Date();
-    document.getElementById('uptime-display').textContent = now.toLocaleTimeString('id-ID');
-    document.getElementById('last-updated-text').textContent =
-      `Terakhir diperbarui: ${now.toLocaleTimeString('id-ID')} WIB • Auto-refresh setiap 60 detik`;
+    const timeStr = now.toLocaleTimeString('id-ID');
+
+    const lastEl = document.getElementById('store-last-updated');
+    if (lastEl) lastEl.textContent =
+      `Terakhir diperbarui: ${timeStr} WIB • Auto-refresh setiap 60 detik`;
 
   } catch (err) {
-    document.getElementById('status-dot-emoji').textContent = '🟡';
+    console.error('[Tebex] Gagal mengambil data:', err);
 
-    const label = document.getElementById('status-text-label');
-    label.textContent = 'ERROR';
-    label.style.color = 'var(--gold)';
+    const errEl = document.getElementById('store-last-updated');
+    if (errEl) errEl.textContent = '⚠ Gagal mengambil data toko — coba refresh manual';
 
-    document.getElementById('last-updated-text').textContent = 'Gagal mengambil data — coba refresh manual';
-    document.getElementById('server-address-display').textContent = '⚠ Tidak dapat terhubung ke API';
+    const listEl = document.getElementById('store-packages-list');
+    if (listEl) listEl.innerHTML =
+      `<p style="color:var(--redstone);text-align:center;">Tidak dapat terhubung ke Tebex API</p>`;
   }
 
-  btn.textContent = '↻ REFRESH STATUS';
-  btn.style.pointerEvents = 'auto';
+  if (btn) {
+    btn.textContent = '↻ REFRESH TOKO';
+    btn.style.pointerEvents = 'auto';
+  }
+}
+
+/* ─────────────────────────────────────────────────────
+   RENDER: Kartu paket per kategori
+───────────────────────────────────────────────────── */
+function renderCategories(categories) {
+  const container = document.getElementById('store-packages-list');
+  if (!container) return;
+
+  if (!categories.length) {
+    container.innerHTML = `<p style="text-align:center;color:var(--muted);">Tidak ada paket tersedia.</p>`;
+    return;
+  }
+
+  container.innerHTML = categories.map(cat => {
+    const packages = cat.packages ?? [];
+
+    const cards = packages.map(pkg => {
+      const price     = pkg.total_price ?? pkg.base_price ?? '?';
+      const currency  = pkg.currency ?? '';
+      const imgUrl    = pkg.image ?? '';
+      const buyUrl    = `https://store.laughtale.my.id/package/${pkg.id}`; // sesuaikan domain toko kamu
+
+      return `
+        <div class="store-card" style="
+          background: var(--bg2);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          transition: transform 0.2s, box-shadow 0.2s;
+        "
+        onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.3)'"
+        onmouseout="this.style.transform='';this.style.boxShadow=''">
+
+          ${imgUrl ? `<img src="${imgUrl}" alt="${pkg.name}" style="width:100%;border-radius:8px;object-fit:cover;max-height:120px;">` : ''}
+
+          <div style="font-weight:700;font-size:1rem;">${pkg.name}</div>
+
+          ${pkg.description
+            ? `<div style="font-size:0.8rem;color:var(--muted);line-height:1.4;">${pkg.description.replace(/<[^>]*>/g,'').slice(0,100)}...</div>`
+            : ''}
+
+          <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <span style="
+              color: var(--emerald);
+              font-size: 1.1rem;
+              font-weight: 800;
+            ">
+              ${currency} ${parseFloat(price).toLocaleString('id-ID')}
+            </span>
+            <a href="${buyUrl}" target="_blank" style="
+              background: var(--emerald);
+              color: #000;
+              padding: 6px 14px;
+              border-radius: 8px;
+              font-weight: 700;
+              font-size: 0.82rem;
+              text-decoration: none;
+              transition: opacity 0.2s;
+            "
+            onmouseover="this.style.opacity='0.85'"
+            onmouseout="this.style.opacity='1'">
+              🛒 BELI
+            </a>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="store-category" style="margin-bottom: 32px;">
+        <h3 style="
+          font-size: 1.1rem;
+          font-weight: 800;
+          letter-spacing: 0.05em;
+          margin-bottom: 14px;
+          padding-bottom: 8px;
+          border-bottom: 2px solid var(--border);
+          text-transform: uppercase;
+        ">📦 ${cat.name}</h3>
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+          gap: 16px;
+        ">
+          ${cards || `<p style="color:var(--muted);">Tidak ada paket di kategori ini.</p>`}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 // Auto-fetch saat halaman dimuat & setiap 60 detik
-fetchServerStatus();
-setInterval(fetchServerStatus, 60000);
+fetchStoreData();
+setInterval(fetchStoreData, 60000);
