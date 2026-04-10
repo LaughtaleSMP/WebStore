@@ -217,6 +217,16 @@
         SALIN
       </button>
     </div>
+    <!-- Direct Connect Button -->
+    <button type="button" class="hero-connect-btn" id="hero-connect-btn" onclick="heroDirectConnect()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+        <polyline points="15 3 21 3 21 9"/>
+        <line x1="10" y1="14" x2="21" y2="3"/>
+      </svg>
+      BUKA DI MINECRAFT
+    </button>
+    <div class="hero-connect-hint" id="hero-connect-hint"></div>
   </div>
 
   <div class="hero-date-strip">
@@ -1065,9 +1075,9 @@
 
 <!-- Original scripts preserved -->
 <script src="js/server-status.js" defer></script>
-<script src="js/shop-config.js"
+<script src="js/shop-config.js" charset="utf-8"
   onerror="console.warn('shop-config.js gagal dimuat')"></script>
-<script src="js/shop.js"
+<script src="js/shop.js" charset="utf-8"
   onerror="(function(){
     var grid = document.getElementById('shop-grid');
     if (grid) grid.innerHTML = '<div class=\'shop-empty\'><div class=\'shop-empty-icon\'>🛒</div><h3>TOKO TIDAK TERSEDIA</h3><p>Gagal memuat data produk. Periksa koneksi internet lalu refresh halaman.</p></div>';
@@ -1120,8 +1130,8 @@
     setTimeout(() => {
       screen.style.display = 'none';
       document.body.style.overflow = '';
-    }, 1700);
-  }, 3000);
+    }, 700);
+  }, 1750);
 
   // Prevent scroll during loading
   document.body.style.overflow = 'hidden';
@@ -1199,5 +1209,60 @@ window.SERVER_CONFIG = {
 <script src="js/back-to-top.js" defer></script>
 <script src="js/typewriter.js" defer></script>
 
+
+<script>
+/* ── Direct Connect to Minecraft Server ── */
+function heroDirectConnect() {
+  var HOST = 'laughtale.my.id';
+  var PORT = '19214';
+  var btn  = document.getElementById('hero-connect-btn');
+  var hint = document.getElementById('hero-connect-hint');
+
+  /* Coba Bedrock deep link: minecraft://connect */
+  var deepLink = 'minecraft://connect?serverUrl=' + HOST + '&serverPort=' + PORT;
+
+  /* Deteksi platform */
+  var ua = navigator.userAgent.toLowerCase();
+  var isMobile = /android|iphone|ipad|ipod/.test(ua);
+  var isWin    = /windows/.test(ua);
+
+  /* Coba buka deep link */
+  var t = Date.now();
+  window.location.href = deepLink;
+
+  /* Fallback: kalau 1.5 detik tidak pindah (browser tidak support deep link) */
+  setTimeout(function() {
+    if (Date.now() - t < 2000) {
+      /* Salin IP ke clipboard sebagai fallback */
+      var ip = HOST + ':' + PORT;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(ip).then(function() {
+          showConnectHint('IP disalin! Buka Minecraft > Bermain > Server > Tambah Server', 'success');
+        });
+      } else {
+        showConnectHint('Buka Minecraft > Bermain > Server > Tambah Server > masukkan ' + ip, 'info');
+      }
+    }
+  }, 1500);
+
+  /* Feedback visual tombol */
+  if (btn) {
+    btn.classList.add('connecting');
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> CONNECTING...';
+    setTimeout(function() {
+      btn.classList.remove('connecting');
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> CONNECT KE SERVER';
+    }, 2500);
+  }
+}
+
+function showConnectHint(msg, type) {
+  var hint = document.getElementById('hero-connect-hint');
+  if (!hint) return;
+  hint.textContent = msg;
+  hint.className = 'hero-connect-hint show ' + (type || '');
+  setTimeout(function() { hint.className = 'hero-connect-hint'; }, 4000);
+}
+</script>
 </body>
 </html>

@@ -247,19 +247,19 @@ body.no-scroll { overflow-y: hidden !important; }
 .nav-drawer {
   display: none;
   position: fixed;
-  top: 0; right: 0;
-  width: min(76vw, 280px);
+  top: 0; left: 0; right: auto;
+  width: min(62vw, 220px);
   height: 100svh;
   box-sizing: border-box;
   background: linear-gradient(160deg, #0c0f19 0%, #0e1120 60%, #100a1a 100%);
-  border-left: 1px solid rgba(168,85,247,0.2);
-  box-shadow: -12px 0 60px rgba(0,0,0,0.7), -1px 0 0 rgba(168,85,247,0.08);
+  border-right: 1px solid rgba(168,85,247,0.2);
+  box-shadow: 12px 0 60px rgba(0,0,0,0.7), 1px 0 0 rgba(168,85,247,0.08);
   z-index: 1002;
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-width: none;
   visibility: hidden;
-  transform: translateX(100%);
+  transform: translateX(-100%);
   transition: transform 0.5s cubic-bezier(0.34,1.2,0.64,1), visibility 0s linear 0.5s;
   display: flex; flex-direction: column;
 }
@@ -273,7 +273,7 @@ body.no-scroll { overflow-y: hidden !important; }
 /* Drawer: ambient glow top-right corner */
 .nav-drawer::before {
   content: '';
-  position: absolute; top: -40px; right: -40px;
+  position: absolute; top: -40px; left: -40px;
   width: 160px; height: 160px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(168,85,247,0.14) 0%, transparent 70%);
@@ -283,13 +283,13 @@ body.no-scroll { overflow-y: hidden !important; }
 /* Drawer header */
 .nav-drawer-header {
   display: flex; align-items: center; gap: 12px;
-  padding: calc(var(--nav-h) + 1rem) 1.25rem 1rem;
+  padding: calc(var(--nav-h) + 0.75rem) 0.75rem 0.75rem;
   position: relative;
 }
 .nav-drawer-header::after {
   content: '';
   position: absolute;
-  bottom: 0; left: 1.25rem; right: 1.25rem;
+  bottom: 0; left: 0.75rem; right: 0.75rem;
   height: 1px;
   background: linear-gradient(90deg, rgba(168,85,247,0.3) 0%, rgba(168,85,247,0.05) 100%);
 }
@@ -318,8 +318,8 @@ body.no-scroll { overflow-y: hidden !important; }
 .nav-drawer ul {
   list-style: none;
   display: flex; flex-direction: column;
-  padding: 0.75rem 0.75rem;
-  gap: 2px;
+  padding: 0.4rem 0.4rem;
+  gap: 1px;
   flex: 1;
 }
 .nav-drawer ul li a {
@@ -327,8 +327,8 @@ body.no-scroll { overflow-y: hidden !important; }
   font-family: 'Press Start 2P', monospace;
   font-size: clamp(0.54rem, 1.3vw, 0.6rem);
   color: var(--text-muted);
-  padding: 0.8rem 0.9rem;
-  border-radius: 10px;
+  padding: 0.5rem 0.5rem;
+  border-radius: 8px;
   letter-spacing: 0.5px;
   transition: color 0.2s, background 0.2s, transform 0.2s;
   position: relative;
@@ -377,7 +377,7 @@ body.no-scroll { overflow-y: hidden !important; }
 
 /* drawer footer (server status pill at bottom) */
 .nav-drawer-footer {
-  padding: 1rem 1.25rem 1.5rem;
+  padding: 0.75rem 0.75rem 1.25rem;
   border-top: 1px solid rgba(168,85,247,0.1);
   display: flex; align-items: center; gap: 10px;
 }
