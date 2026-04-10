@@ -1,41 +1,61 @@
-/* ══════════════════════════════════════════════
-   animations.js — Scroll fade + counter + smooth scroll
-   ══════════════════════════════════════════════ */
-
-// ─── SCROLL FADE-UP ───
-const observer = new IntersectionObserver((entries) => {
+/* ── SCROLL FADE-UP ── */
+// Nama _fadeObserver (dengan prefix _) agar tidak konflik dengan variabel lain
+const _fadeObserver = new IntersectionObserver(entries => {
   entries.forEach(e => {
-    if (e.isIntersecting) e.target.classList.add('visible');
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      _fadeObserver.unobserve(e.target); // FIX: unobserve setelah visible agar hemat memori
+    }
   });
-}, { threshold: 0.1 });
+}, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
 
-document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+// Observe elemen .fade-up yang sudah ada saat halaman dimuat
+document.querySelectorAll('.fade-up').forEach(el => _fadeObserver.observe(el));
 
+// Observe elemen .fade-up yang ditambahkan secara dinamis (misal: kartu toko)
+const _mutationObserver = new MutationObserver(mutations => {
+  mutations.forEach(mutation => {
+    mutation.addedNodes.forEach(node => {
+      if (node.nodeType !== 1) return; // skip non-element nodes
+      // Cek node itu sendiri
+      if (node.classList && node.classList.contains('fade-up')) {
+        _fadeObserver.observe(node);
+      }
+      // Cek semua child yang punya class fade-up
+      if (node.querySelectorAll) {
+        node.querySelectorAll('.fade-up').forEach(el => _fadeObserver.observe(el));
+      }
+    });
+  });
+});
+_mutationObserver.observe(document.body, { childList: true, subtree: true });
 
-// ─── COUNTER ANIMATION ───
+/* ── COUNTER ANIMATION ── */
 function animateCount(el, target) {
   let current = 0;
   const step = target / 40;
   const timer = setInterval(() => {
     current += step;
-    if (current >= target) { current = target; clearInterval(timer); }
+    if (current >= target) {
+      current = target;
+      clearInterval(timer);
+    }
     el.textContent = Math.round(current);
   }, 30);
 }
 
-const counterObs = new IntersectionObserver((entries) => {
+const _counterObserver = new IntersectionObserver(entries => {
   entries.forEach(e => {
     if (e.isIntersecting && e.target.dataset.target) {
       animateCount(e.target, parseInt(e.target.dataset.target));
-      counterObs.unobserve(e.target);
+      _counterObserver.unobserve(e.target);
     }
   });
 }, { threshold: 0.5 });
 
-document.querySelectorAll('[data-target]').forEach(el => counterObs.observe(el));
+document.querySelectorAll('[data-target]').forEach(el => _counterObserver.observe(el));
 
-
-// ─── SMOOTH SCROLL ───
+/* ── SMOOTH SCROLL ── */
 document.querySelectorAll('a[href^="#"]').forEach(a => {
   a.addEventListener('click', e => {
     e.preventDefault();

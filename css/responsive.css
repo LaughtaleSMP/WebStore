@@ -1,0 +1,242 @@
+/* ── Responsive breakpoints ── */
+@media (max-width: 900px) {
+  .nav-links { display: none; }
+  .nav-hamburger { display: flex; }
+  .nav-drawer { display: flex; }
+}
+@media (max-width: 600px) {
+  :root { --nav-h: 56px; }
+  nav { padding: 0 clamp(0.75rem, 3vw, 1.25rem); }
+  .nav-logo img { height: 32px; width: 32px; }
+}
+
+/* ============================================================
+   HERO
+============================================================ */
+.hero {
+  min-height: 100svh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: calc(var(--nav-h) + 1.5rem) clamp(1rem, 5vw, 2rem) 2.5rem;
+  position: relative; z-index: 1;
+  overflow-x: clip;
+}
+
+/* ============================================================
+   HERO PROFILE — EPIC CROWN FIRE (goes UP, not down)
+============================================================ */
+.hero-profile {
+  position: relative;
+  width: clamp(90px, 11vw, 120px);
+  height: clamp(90px, 11vw, 120px);
+  margin: 0 auto 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes heroLogoSpin {
+  0% { transform: rotate(0deg); }
+  50% { opacity:0.9; transform:translateX(-50%) scaleX(1.08); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes heroBadgePulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity:1;   transform:scale(1.04); box-shadow:0 0 20px rgba(168,85,247,0.5); }
+}
+
+.hero-logo-img {
+  position: relative; z-index: 10;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 50%; margin: 0;
+  border: 2.5px solid rgba(168,85,247,0.75);
+  box-shadow:
+    0 0 0 4px rgba(168,85,247,0.12),
+    0 0 28px rgba(168,85,247,0.55),
+    0 0 60px rgba(90,0,180,0.35),
+    inset 0 0 20px rgba(168,85,247,0.08);
+  animation: profileFloat 3.5s ease-in-out infinite;
+  transition: box-shadow 0.4s;
+}
+.hero-logo-img:hover {
+  box-shadow:
+    0 0 0 4px rgba(168,85,247,0.3),
+    0 0 50px rgba(168,85,247,0.8),
+    0 0 100px rgba(100,0,200,0.55);
+}
+@keyframes profileFloat {
+  0%,100% { transform: translateY(0px) scale(1); }
+  40%      { transform: translateY(-6px) scale(1.012); }
+  70%      { transform: translateY(-3px) scale(1.006); }
+}
+
+
+@keyframes profileSparkFly {
+  0% { opacity: 0; }
+  12%  { opacity:1; }
+  75%  { opacity:0.3; }
+  100% { opacity:0;   transform: translateY(var(--ty,-80px)) translateX(var(--tx,10px)) scale(0.2); }
+}
+
+.hero-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(0.42rem, 1.2vw, 0.58rem);
+  color: var(--green);
+  letter-spacing: 3px;
+  border: 1px solid rgba(168,85,247,0.3);
+  padding: 8px 18px;
+  border-radius: 30px;
+  margin-bottom: 0.8rem;
+  background: rgba(168,85,247,0.05);
+  display: inline-block;
+}
+.hero-season {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(0.9rem, 3vw, 1.3rem);
+  color: var(--gold);
+  letter-spacing: 6px;
+  margin-bottom: 0.6rem;
+  opacity: 0.85;
+}
+.hero-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(1.6rem, 7vw, 4.5rem);
+  background: linear-gradient(135deg, var(--green), var(--diamond), var(--green2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.15;
+  margin-bottom: 0.8rem;
+  filter: drop-shadow(0 0 30px rgba(168,85,247,0.3));
+}
+.hero-sub {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(0.5rem, 1.5vw, 0.72rem);
+  color: var(--text-muted);
+  letter-spacing: 5px;
+  margin-bottom: 2.5rem;
+}
+
+.hero-date-strip {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  justify-content: center;
+  margin-bottom: 2.5rem;
+}
+.hero-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg3); border: 1px solid var(--border);
+  padding: 8px 16px; border-radius: 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(0.38rem, 1vw, 0.5rem);
+  color: var(--text-muted);
+}
+
+.hero-cta {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  justify-content: center;
+  margin-bottom: 3rem;
+}
+.btn-primary, .btn-outline {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(0.5rem, 1.3vw, 0.65rem);
+  padding: clamp(12px, 2vw, 16px) clamp(20px, 4vw, 32px);
+  border-radius: 8px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 48px; /* touch target */
+  display: inline-flex; align-items: center;
+}
+.btn-primary {
+  background: var(--green); color: #000;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 20px rgba(168,85,247,0.35);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(168,85,247,0.5); }
+.btn-outline {
+  background: transparent; color: var(--text);
+  border: 2px solid rgba(255,255,255,0.2);
+}
+.btn-outline:hover { border-color: var(--green); color: var(--green); transform: translateY(-2px); }
+
+.scroll-hint {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 6px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.42rem;
+  color: var(--text-muted);
+  letter-spacing: 3px;
+  animation: scrollBounce 2.5s ease-in-out infinite;
+}
+@keyframes scrollBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+
+/* ============================================================
+   GRASS DIVIDER
+============================================================ */
+.grass-divider {
+  width: 100%; overflow: hidden; line-height: 0;
+  position: relative; z-index: 1;
+}
+.grass-divider svg { width: 100%; height: auto; display: block; }
+
+/* ============================================================
+   STATS BAR
+============================================================ */
+.stats-bar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  position: relative; z-index: 1;
+  overflow: hidden; /* no scroll — locked */
+}
+.stats-inner {
+  display: flex; align-items: stretch;
+  padding: 0 clamp(0.5rem, 2vw, 1.5rem);
+  flex-wrap: nowrap;
+}
+.stat-item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: clamp(0.7rem, 2vw, 1.25rem) clamp(0.4rem, 1.5vw, 1.2rem);
+  border-right: 1px solid var(--border);
+}
+.stat-item:last-child { border-right: none; }
+.stat-val {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(1rem, 3vw, 1.6rem);
+  color: var(--green);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.stat-label {
+  font-size: clamp(0.68rem, 1.5vw, 0.78rem);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   SECTIONS
+============================================================ */
+section { padding: clamp(3rem, 8vw, 6rem) 0; position: relative; z-index: 1; }
+.server-status-section { background: var(--bg2); }
+
+/* ============================================================
+   SERVER STATUS — Premium Redesign
+============================================================ */
+
+/* ── Global CSS custom properties for proportional font scale ── */
+:root {
+  /* Fluid scale tokens — scales from 320px to 1280px viewport */
+  --f-2xs: clamp(0.55rem, 0.48rem + 0.35vw, 0.68rem);   /* ~9px → ~11px  */
+  --f-xs:  clamp(0.625rem, 0.52rem + 0.55vw, 0.75rem);   /* ~10px → ~12px */
+  --f-sm:  clamp(0.68rem,  0.58rem + 0.65vw, 0.82rem);   /* ~11px → ~13px */
+  --f-md:  clamp(0.75rem,  0.62rem + 0.8vw,  0.94rem);   /* ~12px → ~15px */
+  --f-nav: clamp(0.58rem,  0.5rem  + 0.48vw, 0.72rem);   /* ~9px  → ~12px */
+  --f-body-sm: clamp(0.8rem, 0.75rem + 0.25vw, 0.92rem); /* ~13px → ~15px */
+  --f-body:    clamp(0.85rem, 0.78rem + 0.35vw, 0.98rem);/* ~14px → ~16px */
+}

@@ -1,0 +1,33 @@
+{
+  "name": "Laughtale SMP",
+  "short_name": "Laughtale",
+  "description": "Server Minecraft Bedrock Indonesia Season XII — 14+ fitur eksklusif, economy system, event mingguan.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d1117",
+  "theme_color": "#a855f7",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "assets/logo.jpeg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/logo.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "screenshots": [
+    {
+      "src": "assets/logo.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

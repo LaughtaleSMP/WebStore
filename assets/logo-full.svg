@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 600 140" width="600" height="140">
+  <defs>
+    <clipPath id="iconClip">
+      <rect x="10" y="10" width="120" height="120" rx="20"/>
+    </clipPath>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#080c14"/>
+      <stop offset="100%" stop-color="#0f1923"/>
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#17dd62"/>
+      <stop offset="100%" stop-color="#00e5a0"/>
+    </linearGradient>
+    <linearGradient id="goldBadge" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffe566"/>
+      <stop offset="100%" stop-color="#c87400"/>
+    </linearGradient>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#17dd62"/>
+      <stop offset="50%"  stop-color="#f4c430"/>
+      <stop offset="100%" stop-color="#ff3a3a"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="iconGlow" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="140" rx="16" fill="url(#bgGrad)"/>
+  <!-- Outer border -->
+  <rect x="1.5" y="1.5" width="597" height="137" rx="15"
+        fill="none" stroke="url(#ringGrad)" stroke-width="1.5" opacity="0.6"/>
+  <!-- Inner border -->
+  <rect x="4" y="4" width="592" height="132" rx="13"
+        fill="none" stroke="#17dd62" stroke-width="0.5" opacity="0.1"/>
+
+  <!-- ===== ICON: dragon logo ===== -->
+  <!-- Glow halo behind icon -->
+  <rect x="8" y="8" width="124" height="124" rx="22"
+        fill="none" stroke="url(#ringGrad)" stroke-width="3"
+        filter="url(#iconGlow)" opacity="0.7"/>
+
+  <!-- Icon image -->
+  <image href="logo.jpeg"
+         x="10" y="10" width="120" height="120"
+         clip-path="url(#iconClip)"
+         preserveAspectRatio="xMidYMid slice"/>
+
+  <!-- Icon inner border -->
+  <rect x="10" y="10" width="120" height="120" rx="20"
+        fill="none" stroke="#17dd62" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- ===== DIVIDER ===== -->
+  <line x1="146" y1="22" x2="146" y2="118"
+        stroke="#17dd62" stroke-width="1" opacity="0.2"/>
+
+  <!-- ===== TEXT ===== -->
+  <!-- LAUGHTALE -->
+  <text x="165" y="62"
+    font-family="'Press Start 2P', 'Courier New', monospace"
+    font-size="24" font-weight="900"
+    fill="url(#greenGrad)"
+    filter="url(#glow)"
+    letter-spacing="2">LAUGHTALE</text>
+
+  <!-- SMP -->
+  <text x="167" y="88"
+    font-family="'Press Start 2P', 'Courier New', monospace"
+    font-size="14" fill="rgba(255,255,255,0.82)"
+    letter-spacing="9">SMP</text>
+
+  <!-- Subtitle -->
+  <text x="167" y="108"
+    font-family="'Press Start 2P', 'Courier New', monospace"
+    font-size="7" fill="#17dd62" opacity="0.5"
+    letter-spacing="3">MINECRAFT BEDROCK</text>
+
+  <!-- S12 badge -->
+  <rect x="496" y="76" width="68" height="26" rx="6" fill="url(#goldBadge)"/>
+  <rect x="497" y="77" width="66" height="12" rx="4" fill="#fff8cc" opacity="0.2"/>
+  <text x="530" y="94"
+    font-family="'Press Start 2P', 'Courier New', monospace"
+    font-size="10" fill="#1a0800" font-weight="700"
+    text-anchor="middle" letter-spacing="1">S12</text>
+
+  <!-- Corner accents -->
+  <rect x="0"   y="0"   width="8" height="8" rx="2" fill="#17dd62" opacity="0.2"/>
+  <rect x="592" y="0"   width="8" height="8" rx="2" fill="#17dd62" opacity="0.2"/>
+  <rect x="0"   y="132" width="8" height="8" rx="2" fill="#f4c430" opacity="0.15"/>
+  <rect x="592" y="132" width="8" height="8" rx="2" fill="#f4c430" opacity="0.15"/>
+</svg>

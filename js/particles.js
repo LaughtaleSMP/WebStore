@@ -1,5 +1,6 @@
 /* ════════════════════════════════════
-   particles.js — Minecraft block rain
+   particles.js — Minecraft floating blocks
+   (blok bergerak ke atas, spawn ulang dari bawah)
    ════════════════════════════════════ */
 
 const canvas = document.getElementById('bg-canvas');

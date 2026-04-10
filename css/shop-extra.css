@@ -1,0 +1,244 @@
+/* ════════════════════════════════════════════════════════════════
+   shop-extra.css — Tambahan style untuk fitur baru toko
+   Tambahkan di dalam <head> di index.html (setelah style.css)
+════════════════════════════════════════════════════════════════ */
+
+/* ── Harga coret ── */
+.shop-card-price {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* ── Quantity selector ── */
+.shop-qty-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.shop-qty-btn {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text);
+  font-size: 1.2rem; font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.shop-qty-btn:hover { background: var(--bg2); border-color: var(--diamond); color: var(--diamond); }
+.shop-qty-input {
+  width: 64px; text-align: center;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.75rem;
+  padding: 8px 4px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.shop-qty-input:focus { border-color: var(--diamond); }
+.shop-qty-input::-webkit-inner-spin-button,
+.shop-qty-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.shop-qty-input { -moz-appearance: textfield; }
+
+/* ── Form input & textarea ── */
+.shop-form-input {
+  width: 100%; box-sizing: border-box;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.88rem;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+  margin-top: 6px;
+  resize: none;
+}
+.shop-form-input:focus { border-color: var(--diamond); }
+.shop-form-input::placeholder { color: var(--text-muted); opacity: 0.7; }
+.shop-form-textarea { min-height: 64px; }
+
+/* ── Total harga box ── */
+.shop-total-box {
+  background: rgba(78,227,227,0.06);
+  border: 1px solid rgba(78,227,227,0.2);
+  border-radius: 10px;
+  padding: 12px 16px !important;
+}
+
+/* ── Tombol WhatsApp ── */
+.shop-wa-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 14px;
+  border-radius: 10px; border: none;
+  background: linear-gradient(135deg, #25D366, #128C7E);
+  color: #fff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  letter-spacing: 0.03em;
+}
+.shop-wa-btn:hover { opacity: 0.92; transform: translateY(-1px); }
+.shop-wa-btn:active { transform: translateY(0); }
+
+/* ── Order form section ── */
+.shop-order-form .shop-modal-section { padding: 0; margin-bottom: 1rem; }
+
+/* ── Error message ── */
+#shop-form-error { border-radius: 6px; border: 1px solid rgba(255,58,58,0.3); }
+
+/* ════════════════════════════════════════════════════════════════
+   🖼 GALERI GAMBAR CONTOH DESAIN
+════════════════════════════════════════════════════════════════ */
+
+/* Thumbnail di kartu toko */
+.shop-card-thumb {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.shop-card-thumb img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  display: block;
+}
+.shop-card:hover .shop-card-thumb img { transform: scale(1.04); }
+
+/* Container galeri di modal */
+.shop-gallery {
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+}
+.shop-gallery-track {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: var(--bg3);
+}
+.shop-gallery-img {
+  display: none;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  position: absolute;
+  top: 0; left: 0;
+}
+.shop-gallery-img.active { display: block; }
+
+/* Navigasi galeri */
+.shop-gallery-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.2);
+  gap: 8px;
+}
+.shop-gallery-btn {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  width: 32px; height: 32px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.shop-gallery-btn:hover { background: var(--diamond); color: #000; border-color: var(--diamond); }
+.shop-gallery-dots {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+}
+.shop-gallery-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.shop-gallery-dot.active { background: var(--diamond); transform: scale(1.3); }
+.shop-gallery-dot:hover { background: var(--text-muted); }
+
+/* ════════════════════════════════════════════════════════════════
+   ✏️ SYARAT DESAIN (Tiro Notice)
+════════════════════════════════════════════════════════════════ */
+.shop-design-notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: rgba(244,196,48,0.07);
+  border: 1px solid rgba(244,196,48,0.3);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 1rem;
+}
+.shop-design-notice-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  line-height: 1;
+  margin-top: 2px;
+}
+.shop-design-notice-content { flex: 1; }
+.shop-design-notice-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.6rem;
+  color: var(--gold, #f4c430);
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.shop-design-notice-text {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0 0 6px 0;
+}
+.shop-design-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(244,196,48,0.15);
+  border: 1px solid rgba(244,196,48,0.4);
+  color: var(--gold, #f4c430);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.1s;
+  margin: 4px 0 2px 0;
+}
+.shop-design-link:hover { background: rgba(244,196,48,0.25); transform: translateY(-1px); }
+
+/* ════════════════════════════════════════════════════════════════
+   📢 INFO JOIN SERVER (WA Community)
+════════════════════════════════════════════════════════════════ */
+.shop-join-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(37,211,102,0.07);
+  border: 1px solid rgba(37,211,102,0.25);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.shop-join-icon { font-size: 1.1rem; flex-shrink: 0; }
+.shop-join-info strong { color: var(--emerald); }

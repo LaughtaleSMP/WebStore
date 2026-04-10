@@ -1,0 +1,71 @@
+/* Two-layer shimmer: sharp white core, soft purple shoulder */
+  background: linear-gradient(
+    90deg,
+    #c4b5fd 0%,
+    #e9d5ff 15%,
+    #ffffff 35%,
+    #ffffff 50%,
+    #ffffff 65%,
+    #e9d5ff 85%,
+    #c4b5fd 100%
+  ) !important;
+  background-size: 250% auto !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+
+  animation:
+    titleBreathe 5s ease-in-out infinite,
+    shimmerPremium 8s ease-in-out infinite !important;
+}
+
+/* Subtitle — refined separator style */
+.hero-sub-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 2.5rem;
+  position: relative;
+  z-index: 1;
+}
+.hero-sub-line {
+  height: 1px;
+  width: clamp(24px, 5vw, 56px);
+  background: linear-gradient(90deg, transparent, rgba(168,85,247,0.45));
+}
+.hero-sub-line.right {
+  background: linear-gradient(90deg, rgba(168,85,247,0.45), transparent);
+}
+.hero-sub {
+  font-family: 'Press Start 2P', monospace !important;
+  font-size: clamp(0.42rem, 1.2vw, 0.58rem) !important;
+  color: rgba(200,180,255,0.6) !important;
+  -webkit-text-fill-color: rgba(200,180,255,0.6) !important;
+  background: none !important;
+  letter-spacing: clamp(5px, 2vw, 11px) !important;
+  margin-bottom: 0 !important;
+  display: block !important;
+  white-space: nowrap !important;
+}
+.hero-sub::before, .hero-sub::after { display: none !important; }
+
+/* ── Live stat card skeleton shimmer ── */
+.skel-val {
+  display: inline-block;
+  min-width: 60px; min-height: 1.2em;
+  border-radius: 4px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(168,85,247,0.08) 50%,
+    rgba(255,255,255,0.04) 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  color: transparent !important;
+  pointer-events: none;
+}
+.skel-val.loaded {
+  animation: none;
+  background: none;
+  color: inherit !important;
+}

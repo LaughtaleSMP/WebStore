@@ -1,249 +1,333 @@
 /* ════════════════════════════════════════════════════════════════
-   🛒 KONFIGURASI SHOP — LAUGHTALE SMP
-   ════════════════════════════════════════════════════════════════
+🛒 KONFIGURASI SHOP — LAUGHTALE SMP
+════════════════════════════════════════════════════════════════
 
-   📌 CARA EDIT:
-   - File ini adalah satu-satunya file yang perlu kamu ubah untuk
-     mengatur semua isi toko.
-   - Tidak perlu tahu coding! Cukup ganti tulisan/angka yang ada.
-   - Tanda  //  di depan baris = komentar (tidak berpengaruh ke website).
-   - Jangan hapus tanda  {  }  [  ]  "  :  ,  kecuali memang mau
-     menghapus satu item sekaligus (lihat petunjuk di bawah).
+✅ CARA PAKAI (BACA INI DULU!):
+─────────────────────────────────────────────────────────────
+File ini adalah SATU-SATUNYA file yang perlu kamu edit.
+Tidak perlu buka file lain, tidak perlu ngerti coding.
 
-   ════════════════════════════════════════════════════════════════ */
+ATURAN AMAN SAAT EDIT:
+• Ganti teks di antara "..." sesukamu.
+• Ganti angka (harga) langsung, tanpa titik/koma.
+• Jangan hapus tanda { } [ ] " : ,
+• Baris yang diawali // adalah komentar — aman dihapus.
+• Kalau website rusak setelah edit → ada tanda baca yang terhapus,
+  kembalikan seperti semula.
+
+════════════════════════════════════════════════════════════════
+🖼 CARA PAKAI GALERI GAMBAR CONTOH:
+─────────────────────────────────────────────────────────────
+① Buat folder: assets/shop/item-{id}/ → contoh: assets/shop/item-1/
+② Taruh gambar di sana, beri nama: 1.jpg, 2.jpg, dst.
+③ Isi field "images" di item yang sesuai:
+   images: [
+     "assets/shop/item-1/1.jpg",
+     "assets/shop/item-1/2.jpg",
+   ],
+④ Jika belum ada gambar → biarkan kosong: images: [],
+
+════════════════════════════════════════════════════════════════
+📝 PENJELASAN FIELD PENTING:
+─────────────────────────────────────────────────────────────
+id             → Nomor unik. Jangan ada yang sama!
+name           → Nama item di kartu toko
+emoji          → Ikon/emoji item
+category       → Harus cocok dengan salah satu kategori di atas
+price          → Harga (angka saja, tanpa titik/koma). 0 = GRATIS
+originalPrice  → Harga coret sebelum diskon. 0 = tidak ada coret
+description    → Deskripsi singkat
+features       → Daftar poin keuntungan. Kosongkan dengan []
+badge          → Label pojok kartu: "POPULER" / "NEW" / "" (kosong)
+badgeColor     → "gold" / "green" / "diamond" / "red" / ""
+stock          → "Tersedia" atau "Habis"
+requiresDesign → true  = pembeli harus siapkan desain dulu (form
+                         hanya meminta username + catatan saja)
+               → false = tidak perlu desain
+images         → Galeri foto contoh desain (lihat petunjuk atas)
+needsUsername  → true = minta username Minecraft pembeli
+canBuyMultiple → true  = pembeli bisa pilih jumlah (qty)
+               → false = qty dikunci ke 1
+maxQuantity    → Batas maksimum qty (default 99)
+════════════════════════════════════════════════════════════════ */
 
 const SHOP_CONFIG = {
 
-  /* ────────────────────────────────────────────────────────────
-     📝 JUDUL & DESKRIPSI SECTION SHOP
-     Ganti teks di antara tanda " " sesukamu.
-  ──────────────────────────────────────────────────────────── */
-  title:    "Laughtale Store",
-  subtitle: "Support server dan dapatkan keuntungan eksklusif! Semua pembelian membantu biaya operasional server tetap jalan. 🙏",
+/* ────────────────────────────────────────────────────────────
+   📝 JUDUL TOKO
+──────────────────────────────────────────────────────────── */
+title:    "Laughtale Store",
+subtitle: "Custom Nametag, Title, Cosmetic, dan Gem Coins — semua pembelian membantu server tetap online! 🙏",
 
-  /* ────────────────────────────────────────────────────────────
-     💳 INFO PEMBAYARAN
-     Ini yang muncul saat pemain klik tombol "Beli".
-  ──────────────────────────────────────────────────────────── */
-  payment: {
-    // Metode pembayaran (contoh: "QRIS / Transfer Bank")
-    method: "QRIS",
+/* ────────────────────────────────────────────────────────────
+   📱 ADMIN WHATSAPP
 
-    // Instruksi singkat untuk pembeli
-    instructions: "Scan QRIS di bawah, lalu kirim bukti bayar ke admin beserta nama item yang dibeli.",
+   • admins      → untuk semua item KECUALI Gem (dipilih random)
+   • gemAdmins   → khusus item kategori "Ingame Gacha" (Gem Coins)
 
-    // Link tombol "Hubungi Admin" (gunakan link WhatsApp atau Discord)
-    contactLink:  "https://chat.whatsapp.com/C2ksT3ncowT7jvkF2TNFnc",
-    contactLabel: "💬 Chat Admin WhatsApp",
+   Format nomor: "62" + nomor tanpa 0 di depan, tanpa spasi
+   Contoh: 082323645879 → "6282323645879"
 
-    // NMID QRIS kamu (tertera di struk/merchant info)
-    qrisNmid: "ID1024360757248 — A01",
+   Untuk menonaktifkan satu admin → hapus baris { name:..., number:... }
+──────────────────────────────────────────────────────────── */
+admins: [
+  { name: "Blackdamen", number: "6282323645879" },
+  { name: "Zoe",        number: "6285246205803" },
+  { name: "Nuna",       number: "6285186844434" },
+],
 
-    // Path gambar QRIS (letakkan file gambar QRIS di folder assets/)
-    qrisImage: "assets/Laughtale-Qris.jpeg",
-  },
+// Khusus item Gem Coins (kategori "Ingame Gacha")
+gemAdmins: [
+  { name: "Baim", number: "6282172955865" },
+],
 
-  /* ────────────────────────────────────────────────────────────
-     🗂 KATEGORI / TAB FILTER
-     Tambah atau hapus kategori sesukamu.
-     ⚠ Nama kategori DI SINI harus sama persis dengan
-       field "category" di setiap item di bawah.
-  ──────────────────────────────────────────────────────────── */
-  categories: ["Semua", "Rank", "Cosmetic", "Title", "Item Spesial"],
+whatsappGreeting: "Halo Admin Laughtale Store! Saya ingin memesan item berikut:",
 
-  /* ────────────────────────────────────────────────────────────
-     🛍 DAFTAR ITEM
-     ════════════════════════════════════════════════════════════
+/* ────────────────────────────────────────────────────────────
+   🗂 KATEGORI / TAB FILTER
+   ⚠ Nama harus sama persis dengan field "category" di tiap item.
+──────────────────────────────────────────────────────────── */
+categories: [
+  "Semua",
+  "Custom Nametag",
+  "Custom Title",
+  "All Cosmetic",
+  "Ingame Gacha",
+],
 
-     CARA TAMBAH ITEM BARU:
-     1. Copy satu blok item dari { ... }, termasuk tanda koma di akhir.
-     2. Tempel di bawah item terakhir (sebelum tanda ] ).
-     3. Ganti isi datanya.
+/* ════════════════════════════════════════════════════════════
+   🛍 DAFTAR ITEM
+   Setiap item dimulai dengan { dan diakhiri dengan },
+════════════════════════════════════════════════════════════ */
+items: [
 
-     CARA HAPUS ITEM:
-     Hapus seluruh blok dari tanda { sampai } berikut koma di akhirnya.
+/* ──────────────── CUSTOM NAMETAG ──────────────── */
 
-     PENJELASAN TIAP FIELD:
-     ─ id          : Angka unik, jangan sampai ada yang sama.
-     ─ name        : Nama item yang tampil di kartu.
-     ─ emoji       : Emoji/ikon item (copy paste dari hp/internet).
-     ─ category    : Harus sama dengan salah satu kategori di atas.
-     ─ price       : Harga dalam Rupiah (angka saja, tanpa titik/koma).
-                     Tulis 0 jika gratis.
-     ─ description : Deskripsi singkat item.
-     ─ features    : Daftar keuntungan item. Boleh dikosongkan [].
-     ─ badge       : Label kecil di pojok kartu (contoh: "POPULER", "NEW", "LIMITED").
-                     Kosongkan "" jika tidak mau pakai badge.
-     ─ badgeColor  : Warna badge → pilih: "gold", "green", "diamond", "red", atau ""
-     ─ stock       : Tulis "Tersedia" atau "Habis".
-  ──────────────────────────────────────────────────────────── */
-  items: [
+{
+  id: 1,
+  name:          "Name Style (Chat)",
+  emoji:         "",
+  category:      "Custom Nametag",
+  price:         15000,
+  originalPrice: 20000,
+  description:   "Gaya nama kustom yang tampil saat kamu chat di server.",
+  features: [
+    "Nama bergaya di chat server",
+    "Bebas pilih warna & style",
+    "Berlaku permanen selama season",
+  ],
+  badge:      "TRENDY",
+  badgeColor: "diamond",
+  stock:      "Tersedia",
 
-    /* ── RANK ── */
-    {
-      id: 1,
-      name:        "VIP Rank",
-      emoji:       "⭐",
-      category:    "Rank",
-      price:       15000,
-      description: "Rank dasar untuk mendukung server. Dapatkan tag [VIP] di chat dan akses ke fitur-fitur member eksklusif.",
-      features:    [
-        "Tag [VIP] di chat server",
-        "Akses channel eksklusif di Discord",
-        "Nama tercantum di papan Supporter",
-      ],
-      badge:       "POPULER",
-      badgeColor:  "gold",
-      stock:       "Tersedia",
-    },
-    {
-      id: 2,
-      name:        "VIP+ Rank",
-      emoji:       "🌟",
-      category:    "Rank",
-      price:       25000,
-      description: "Upgrade dari VIP biasa dengan lebih banyak benefit. Tag [VIP+] berwarna khusus di chat server.",
-      features:    [
-        "Tag [VIP+] berwarna emas di chat",
-        "Semua benefit VIP",
-        "Prioritas daftar allowlist musim berikutnya",
-      ],
-      badge:       "REKOMENDASI",
-      badgeColor:  "diamond",
-      stock:       "Tersedia",
-    },
-    {
-      id: 3,
-      name:        "MVP Rank",
-      emoji:       "👑",
-      category:    "Rank",
-      price:       50000,
-      description: "Rank tertinggi untuk supporter setia Laughtale SMP. Tag [MVP] berkilauan dan semua keistimewaan member.",
-      features:    [
-        "Tag [MVP] animasi berkilau di chat",
-        "Semua benefit VIP+",
-        "Role khusus MVP di Discord",
-        "Shoutout di TikTok/konten server",
-      ],
-      badge:       "PREMIUM",
-      badgeColor:  "red",
-      stock:       "Tersedia",
-    },
+  requiresDesign: true,
+  images: [],
 
-    /* ── COSMETIC ── */
-    {
-      id: 4,
-      name:        "Particle Pack — Flame",
-      emoji:       "🔥",
-      category:    "Cosmetic",
-      price:       10000,
-      description: "Efek partikel api yang mengelilingi karaktermu. Tampil keren dan mencolok di hadapan semua pemain!",
-      features:    [
-        "Partikel api permanen",
-        "Aktif di semua dimensi",
-      ],
-      badge:       "KEREN",
-      badgeColor:  "red",
-      stock:       "Tersedia",
-    },
-    {
-      id: 5,
-      name:        "Particle Pack — Aurora",
-      emoji:       "✨",
-      category:    "Cosmetic",
-      price:       10000,
-      description: "Efek partikel aurora biru-ungu yang elegan. Bikin karaktermu terlihat seperti dari dimensi lain.",
-      features:    [
-        "Partikel aurora permanen",
-        "Aktif di semua dimensi",
-      ],
-      badge:       "",
-      badgeColor:  "",
-      stock:       "Tersedia",
-    },
-    {
-      id: 6,
-      name:        "Cape Eksklusif S12",
-      emoji:       "🦸",
-      category:    "Cosmetic",
-      price:       20000,
-      description: "Cape edisi terbatas Season 12. Hanya tersedia selama S12 berlangsung — dapatkan sebelum kehabisan!",
-      features:    [
-        "Cape desain eksklusif S12",
-        "Terlihat oleh semua pemain",
-        "Tidak tersedia di season lain",
-      ],
-      badge:       "LIMITED",
-      badgeColor:  "gold",
-      stock:       "Tersedia",
-    },
+  needsUsername:  true,
+  canBuyMultiple: true,
+  maxQuantity:    100,
+},
 
-    /* ── TITLE ── */
-    {
-      id: 7,
-      name:        "Custom Title",
-      emoji:       "🏷️",
-      category:    "Title",
-      price:       8000,
-      description: "Title kustom di atas namamu sesuai permintaan. Tulis teks apa saja (maks 16 karakter, bebas warna).",
-      features:    [
-        "Teks bebas (maks 16 karakter)",
-        "Pilih warna teks sesukamu",
-        "Terlihat oleh semua pemain",
-      ],
-      badge:       "CUSTOM",
-      badgeColor:  "diamond",
-      stock:       "Tersedia",
-    },
-    {
-      id: 8,
-      name:        "Prefix — [The Dragon]",
-      emoji:       "🐉",
-      category:    "Title",
-      price:       12000,
-      description: "Prefix bergengsi [The Dragon] untuk para penakluk Ender Dragon. Tunjukkan pencapaianmu!",
-      features:    [
-        "Prefix [The Dragon] berwarna merah",
-        "Cocok untuk yang sudah kill Ender Dragon",
-      ],
-      badge:       "EPIC",
-      badgeColor:  "red",
-      stock:       "Tersedia",
-    },
+{
+  id: 2,
+  name:          "Name Style (Player)",
+  emoji:         "",
+  category:      "Custom Nametag",
+  price:         15000,
+  originalPrice: 20000,
+  description:   "Gaya nama kustom yang tampil di atas kepala karaktermu. Terlihat oleh semua pemain!",
+  features: [
+    "Nama bergaya di atas karakter",
+    "Terlihat oleh semua pemain online",
+    "Bebas pilih warna & style",
+    "Berlaku permanen selama season",
+  ],
+  badge:      "TRENDY",
+  badgeColor: "diamond",
+  stock:      "Tersedia",
 
-    /* ── ITEM SPESIAL ── */
-    {
-      id: 9,
-      name:        "Starter Kit",
-      emoji:       "🎒",
-      category:    "Item Spesial",
-      price:       5000,
-      description: "Paket pemula berisi peralatan dasar untuk mempercepat awal permainanmu. Cocok untuk pemain baru!",
-      features:    [
-        "Peralatan besi lengkap",
-        "Makanan untuk 10 hari",
-        "Torch dan beberapa material dasar",
-      ],
-      badge:       "MURAH",
-      badgeColor:  "green",
-      stock:       "Tersedia",
-    },
-    {
-      id: 10,
-      name:        "Mystery Box",
-      emoji:       "📦",
-      category:    "Item Spesial",
-      price:       7500,
-      description: "Kotak misteri berisi item random dari enchanted tools hingga material langka. Beruntung kah kamu?",
-      features:    [
-        "1 item random dari pool 20+ item",
-        "Chance mendapat item enchanted tinggi",
-      ],
-      badge:       "RANDOM",
-      badgeColor:  "gold",
-      stock:       "Tersedia",
-    },
+  requiresDesign: false,
+  images: [
+    //"assets/shop/item-2/1.jpg",
+    // "assets/shop/item-2/2.jpg",
+  ],
 
-  ], // ← Jangan hapus tanda kurung siku dan koma ini!
+  needsUsername:  true,
+  canBuyMultiple: true,
+  maxQuantity:    100,
+},
 
-}; // ← Jangan hapus baris ini!
+{
+  id: 3,
+  name:          "Name Style (Replace Design)",
+  emoji:         "",
+  category:      "Custom Nametag",
+  price:         12000,
+  originalPrice: 15000,
+  description:   "Nametag dengan desain pengganti eksklusif — bukan sekadar ganti warna, tapi ganti tampilan keseluruhan!",
+  features: [
+    "Desain nametag penuh kustom",
+    "Pilih dari koleksi desain eksklusif",
+    "Tampil beda dari yang lain",
+  ],
+  badge:      "SPECIAL",
+  badgeColor: "gold",
+  stock:      "Tersedia",
+
+  requiresDesign: true,
+  images: [],
+
+  needsUsername:  true,
+  canBuyMultiple: true,
+  maxQuantity:    100,
+},
+
+/* ──────────────── CUSTOM TITLE ──────────────── */
+
+{
+  id: 4,
+  name:          "Title Rank/Clan (Message)",
+  emoji:         "",
+  category:      "Custom Title",
+  price:         5000,
+  originalPrice: 8000,
+  description:   "Title / prefix klan yang muncul di samping namamu saat chat. Tunjukkan identitas klanmu!",
+  features: [
+    "Title tampil di chat server",
+    "Bebas pilih teks & warna title",
+    "Cocok untuk rank atau nama klan",
+  ],
+  badge:      "POPULER",
+  badgeColor: "green",
+  stock:      "Tersedia",
+
+  requiresDesign: true,
+  images: [
+    // "assets/shop/item-4/1.jpg",
+    // "assets/shop/item-4/2.jpg",
+  ],
+
+  needsUsername:  true,
+  canBuyMultiple: true,
+  maxQuantity:    100,
+},
+
+{
+  id: 5,
+  name:          "Title Rank/Clan (Player)",
+  emoji:         "",
+  category:      "Custom Title",
+  price:         10000,
+  originalPrice: 18000,
+  description:   "Title / prefix klan yang muncul di atas kepala karaktermu — semua pemain bisa lihat!",
+  features: [
+    "Title tampil di atas karakter",
+    "Terlihat oleh semua pemain online",
+    "Bebas pilih teks & warna title",
+  ],
+  badge:      "",
+  badgeColor: "",
+  stock:      "Tersedia",
+
+  requiresDesign: true,
+  images: [
+    // "assets/shop/item-5/1.jpg",
+    // "assets/shop/item-5/2.jpg",
+  ],
+
+  needsUsername:  true,
+  canBuyMultiple: true,
+  maxQuantity:    100,
+},
+
+{
+  id: 6,
+  name:          "Title Rank/Clan (Replace Design)",
+  emoji:         "",
+  category:      "Custom Title",
+  price:         8000,
+  originalPrice: 10000,
+  description:   "Title dengan desain pengganti eksklusif — tampilan berbeda dari title biasa!",
+  features: [
+    "Desain title penuh kustom",
+    "Pilih dari koleksi desain khusus",
+    "Tampil premium dan unik",
+  ],
+  badge:      "SPECIAL",
+  badgeColor: "gold",
+  stock:      "Tersedia",
+
+  requiresDesign: true,
+  images: [
+    // "assets/shop/item-6/1.jpg",
+    // "assets/shop/item-6/2.jpg",
+  ],
+
+  needsUsername:  true,
+  canBuyMultiple: true,
+  maxQuantity:    100,
+},
+
+/* ──────────────── ALL COSMETIC ──────────────── */
+
+{
+  id: 7,
+  name:          "All Custom (Replace Design)",
+  emoji:         "",
+  category:      "All Cosmetic",
+  price:         30000,
+  originalPrice: 45000,
+  description:   "Paket lengkap — Name Style Replace Design + Title Replace Design dalam satu harga bundling!",
+  features: [
+    "Name Style Replace Design (Chat + Player)",
+    "Title Rank/Clan Replace Design",
+    "Hemat Rp15.000 dibanding beli satuan",
+    "Semua desain bisa dikustomisasi",
+  ],
+  badge:      "BUNDLING",
+  badgeColor: "red",
+  stock:      "Tersedia",
+
+  requiresDesign: true,
+  images: [
+    // "assets/shop/item-7/1.jpg",
+    // "assets/shop/item-7/2.jpg",
+  ],
+
+  needsUsername:  true,
+  canBuyMultiple: true,
+  maxQuantity:    100,
+},
+
+/* ──────────────── INGAME GACHA ──────────────── */
+
+{
+  id: 8,
+  name:          "Gem Coins",
+  emoji:         "",
+  category:      "Ingame Gacha",
+  price:         600,
+  originalPrice: 0,
+  description:   "Mata uang khusus untuk sistem Gacha in-game Laughtale SMP. Kumpulkan dan coba keberuntunganmu!",
+  features: [
+    "Digunakan di sistem Gacha in-game",
+    "Bisa dibeli dalam jumlah banyak",
+    "Makin banyak makin hemat waktu",
+  ],
+  badge:      "SPECIAL",
+  badgeColor: "diamond",
+  stock:      "Tersedia",
+
+  requiresDesign: false,
+  images: [
+    // "assets/shop/item-8/1.jpg",
+  ],
+
+  needsUsername:  true,
+  canBuyMultiple: true, // ← Gem Coins bisa beli banyak sekaligus
+  maxQuantity:    999,
+},
+
+], // ← Jangan hapus ini
+
+}; // ← Jangan hapus ini
