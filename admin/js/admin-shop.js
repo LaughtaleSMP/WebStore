@@ -267,7 +267,6 @@
   function injectStyles() {
     const s = document.createElement('style');
     s.textContent = `
-      /* Tabs */
       .shop-cfg-tabs { display:flex; gap:6px; margin-bottom:1.2rem; flex-wrap:wrap; }
       .scfg-tab {
         padding:7px 16px; border-radius:20px; font-size:12.5px;
@@ -276,14 +275,10 @@
       }
       .scfg-tab:hover { color:var(--text); border-color:var(--border3); }
       .scfg-tab.active { background:var(--accent-muted); border-color:rgba(79,125,240,.3); color:var(--accent); }
-
-      /* Toolbar */
       .shop-cfg-toolbar {
         display:flex; gap:10px; align-items:center;
         flex-wrap:wrap; margin-bottom:1rem;
       }
-
-      /* Item list rows */
       .scfg-item-row {
         display:flex; align-items:center; gap:10px;
         background:var(--surface); border:1px solid var(--border);
@@ -307,21 +302,15 @@
       .scfg-stock-ok  { color:#22c55e; }
       .scfg-stock-out { color:#ef4444; }
       .scfg-item-actions { display:flex; gap:6px; flex-shrink:0; }
-
-      /* Card (general tab) */
       .scfg-card {
         background:var(--surface); border:1px solid var(--border);
         border-radius:var(--r-lg); padding:16px;
       }
       .scfg-card-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; }
-
-      /* Admin WA rows */
       .scfg-admin-row {
         display:flex; gap:8px; align-items:center; margin-bottom:8px;
       }
       .scfg-admin-row input { flex:1; }
-
-      /* Modal */
       .scfg-backdrop {
         display:none; position:fixed; inset:0;
         background:rgba(0,0,0,.6); z-index:200; backdrop-filter:blur(3px);
@@ -347,14 +336,11 @@
         display:flex; gap:8px; justify-content:flex-end;
         padding:12px 16px; border-top:1px solid var(--border); flex-shrink:0;
       }
-
-      /* Dirty indicator */
       #shop-save-all-btn.dirty {
         opacity:1 !important; cursor:pointer !important;
         background:var(--accent) !important; animation:savePulse 1.5s ease-in-out infinite;
       }
       @keyframes savePulse { 0%,100%{box-shadow:0 0 0 0 rgba(79,125,240,.4)} 50%{box-shadow:0 0 0 6px rgba(79,125,240,0)} }
-
       @media(max-width:600px){
         .scfg-item-row { flex-wrap:wrap; }
         .scfg-item-actions { width:100%; justify-content:flex-end; }
@@ -414,16 +400,34 @@
       return;
     }
 
-    /* pastikan array ada */
+    /* pastikan semua field ada */
     if (!cfg.items)      cfg.items      = [];
     if (!cfg.admins)     cfg.admins     = [];
     if (!cfg.gemAdmins)  cfg.gemAdmins  = [];
-    if (!cfg.categories) cfg.categories = ['Semua'];
+    /* FIX: rebuild categories dari items agar selalu lengkap */
+    rebuildCategories();
+    /* FIX: fallback title/subtitle dari SHOP_CONFIG statis jika kosong */
+    if (!cfg.title) {
+      const sc = getStaticConfig();
+      if (sc) { cfg.title = sc.title || ''; cfg.subtitle = sc.subtitle || ''; }
+    }
 
     dirty = false;
     updateSaveBtn();
     document.getElementById('shop-loading').style.display = 'none';
     switchTab('items', document.querySelector('.scfg-tab[data-tab="items"]'));
+  }
+
+  /* ════════════════════════════════════════════
+     REBUILD CATEGORIES dari semua item
+  ════════════════════════════════════════════ */
+  function rebuildCategories() {
+    /* Ambil urutan kategori lama agar tidak acak */
+    const existing = cfg.categories || [];
+    const fromItems = [...new Set(cfg.items.map(i => i.category).filter(Boolean))];
+    /* Gabungkan: kategori lama yang masih dipakai + kategori baru dari item */
+    const merged = [...new Set([...existing.filter(c => c !== 'Semua'), ...fromItems])];
+    cfg.categories = ['Semua', ...merged];
   }
 
   /* ════════════════════════════════════════════
@@ -466,7 +470,7 @@
       return;
     }
 
-    el.innerHTML = items.map((item, i) => {
+    el.innerHTML = items.map((item) => {
       const realIdx = cfg.items.indexOf(item);
       const priceStr = 'Rp ' + Number(item.price||0).toLocaleString('id-ID');
       const origStr  = item.originalPrice ? ' <span style="text-decoration:line-through;opacity:.5">Rp ' + Number(item.originalPrice).toLocaleString('id-ID') + '</span>' : '';
@@ -510,10 +514,9 @@
     renderAdminList('main');
     renderAdminList('gem');
 
-    /* hint kategori */
     const cats = [...new Set(cfg.items.map(i => i.category).filter(Boolean))];
-    document.getElementById('ef-category-hint').textContent =
-      cats.length ? 'Kategori yang ada: ' + cats.join(', ') : '';
+    const hint = document.getElementById('ef-category-hint');
+    if (hint) hint.textContent = cats.length ? 'Kategori yang ada: ' + cats.join(', ') : '';
   }
 
   function renderAdminList(type) {
@@ -625,15 +628,14 @@
       images:         editingIdx !== null ? (cfg.items[editingIdx].images || []) : [],
     };
 
-    /* update kategori list */
-    if (!cfg.categories.includes(item.category)) cfg.categories.push(item.category);
-    if (!cfg.categories.includes('Semua'))        cfg.categories.unshift('Semua');
-
     if (editingIdx !== null) {
       cfg.items[editingIdx] = item;
     } else {
       cfg.items.push(item);
     }
+
+    /* FIX: selalu rebuild categories dari semua item setelah tambah/edit */
+    rebuildCategories();
 
     markDirty();
     closeForm();
@@ -645,6 +647,8 @@
     const item = cfg.items[idx];
     if (!confirm(`Hapus item "${item?.name}"?\nTindakan ini tidak bisa dibatalkan.`)) return;
     cfg.items.splice(idx, 1);
+    /* FIX: rebuild categories setelah hapus item */
+    rebuildCategories();
     markDirty();
     renderItemList();
     toast('Item dihapus.');
@@ -664,11 +668,20 @@
   async function saveAll() {
     if (!dirty) return;
 
-    /* kumpulkan perubahan dari tab general dulu */
+    /* FIX: kumpulkan title & subtitle dari DOM terlebih dulu */
     const gTitle    = document.getElementById('g-title');
     const gSubtitle = document.getElementById('g-subtitle');
     if (gTitle)    cfg.title    = gTitle.value.trim();
     if (gSubtitle) cfg.subtitle = gSubtitle.value.trim();
+
+    /* FIX: fallback title dari SHOP_CONFIG statis jika masih kosong */
+    if (!cfg.title) {
+      const sc = getStaticConfig();
+      if (sc) { cfg.title = sc.title || 'Toko'; cfg.subtitle = cfg.subtitle || sc.subtitle || ''; }
+    }
+
+    /* FIX: pastikan categories selalu lengkap sebelum simpan */
+    rebuildCategories();
 
     const btn = document.getElementById('shop-save-all-btn');
     btn.disabled = true;
