@@ -250,25 +250,43 @@
   async function syncShopPrices(sb) {
     try {
       const { data: shopItems, error } = await sb.from('shop_items').select('id, price, stock');
-      if (error || !shopItems) return;
-      if (!window.SHOPCONFIG || !window.SHOPCONFIG.items) return;
+      if (error || !shopItems || shopItems.length === 0) return;
 
-      let changed = false;
+      // Update SHOPCONFIG in-memory (untuk modal price display)
+      // SHOPCONFIG pakai const di top-level, bisa diakses tanpa window.
+      const cfg = (typeof SHOPCONFIG !== 'undefined') ? SHOPCONFIG : null;
+
       shopItems.forEach(row => {
-        const item = window.SHOPCONFIG.items.find(i => i.id === row.id);
-        if (item) {
-          item.price = row.price;
-          if (row.stock !== undefined && row.stock !== null) item.stock = row.stock;
-          changed = true;
+        // 1. Update in-memory SHOPCONFIG untuk modal
+        if (cfg && cfg.items) {
+          const item = cfg.items.find(i => i.id === row.id);
+          if (item) {
+            item.price = row.price;
+            if (row.stock !== undefined && row.stock !== null) item.stock = row.stock;
+          }
+        }
+
+        // 2. Update DOM harga langsung di kartu toko
+        const btn = document.querySelector(`.shop-btn-buy[onclick="shopOpenModal(${row.id})"]`);
+        if (btn) {
+          const card = btn.closest('.shop-card');
+          if (card) {
+            const priceEl = card.querySelector('.shop-card-price');
+            if (priceEl) {
+              const p = row.price;
+              const fmt = p === 0
+                ? '<span style="color:#17dd62">GRATIS</span>'
+                : 'Rp ' + p.toLocaleString('id-ID');
+              // Pertahankan harga coret originalPrice jika ada
+              const orig = priceEl.querySelector('.shop-price-orig');
+              priceEl.innerHTML = fmt + (orig ? orig.outerHTML : '');
+            }
+          }
         }
       });
 
-      // Re-render toko dengan harga terbaru
-      if (changed) {
-        const grid = document.getElementById('shop-grid');
-        if (grid && typeof renderShop !== 'undefined') {
-          renderShop();
-        } else if (grid) {
+      const grid = document.getElementById('shop-grid');
+      if (grid) {
           // fallback: reload kartu harga saja tanpa full re-render
           grid.querySelectorAll('.shop-card').forEach((card, idx) => {
             const item = window.SHOPCONFIG.items[idx];
