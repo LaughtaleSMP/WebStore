@@ -36,6 +36,7 @@
 <link rel="stylesheet" href="css/sections.css">
 <link rel="stylesheet" href="css/responsive.css">
 <link rel="stylesheet" href="css/improvements.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script type="application/ld+json">
 {
@@ -64,6 +65,26 @@
 </script>
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════════════════════
+     MAINTENANCE OVERLAY — otomatis dari Admin Panel
+════════════════════════════════════════════════════════ -->
+<div id="maintenance-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(7,7,14,0.97);backdrop-filter:blur(8px);flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;font-family:'Nunito',sans-serif;">
+  <div style="font-size:3rem;margin-bottom:1rem;">🔧</div>
+  <h1 style="font-family:'Press Start 2P',monospace;font-size:clamp(.7rem,2vw,1rem);color:#ef4444;letter-spacing:3px;margin-bottom:1.25rem;">MAINTENANCE</h1>
+  <p id="maint-msg" style="color:#a0a0bc;font-size:1rem;line-height:1.75;max-width:480px;margin-bottom:1rem;">Server sedang dalam pemeliharaan.</p>
+  <p id="maint-eta" style="display:none;color:#f4c430;font-size:.85rem;margin-bottom:.5rem;"></p>
+  <p id="maint-contact" style="display:none;color:#a855f7;font-size:.85rem;"></p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MOTD BANNER — otomatis dari Admin Panel
+════════════════════════════════════════════════════════ -->
+<div id="motd-banner" style="display:none;align-items:center;justify-content:center;gap:.75rem;flex-wrap:wrap;padding:.55rem 1.25rem;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;position:relative;z-index:200;">
+  <span id="motd-text"></span>
+  <a id="motd-btn" href="#" target="_blank" rel="noopener" style="display:none;padding:.3rem .9rem;border-radius:6px;font-size:.75rem;font-weight:700;text-decoration:none;background:rgba(255,255,255,.06);"></a>
+</div>
+
 <a href="#main-content" class="skip-link">⏩ LANGSUNG KE KONTEN</a>
 <div id="loading-screen" role="status" aria-label="Loading Laughtale SMP">
   <div class="loading-corner tl"></div>
@@ -1213,8 +1234,9 @@ window.SERVER_CONFIG = {
 <script>
 /* ── Direct Connect to Minecraft Server ── */
 function heroDirectConnect() {
-  var HOST = 'laughtale.my.id';
-  var PORT = '19214';
+  var _ip   = (window._serverIP || 'laughtale.my.id:19214').split(':');
+  var HOST  = _ip[0] || 'laughtale.my.id';
+  var PORT  = _ip[1] || '19214';
   var btn  = document.getElementById('hero-connect-btn');
   var hint = document.getElementById('hero-connect-hint');
 
@@ -1264,5 +1286,6 @@ function showConnectHint(msg, type) {
   setTimeout(function() { hint.className = 'hero-connect-hint'; }, 4000);
 }
 </script>
+<script src="js/supabase-sync.js" defer></script>
 </body>
 </html>
