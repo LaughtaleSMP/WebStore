@@ -1,19 +1,19 @@
-/* ════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════════
    supabase-sync.js — Sinkronisasi otomatis dari Admin Panel
-   Fetch site_config dari Supabase, lalu terapkan ke website
-   ════════════════════════════════════════════════════════ */
+   • Fetch site_config  → terapkan ke website (server info, MOTD, dll)
+   • Fetch shop_config  → override SHOP_CONFIG & re-render toko
+   ════════════════════════════════════════════════════════════════ */
 
 (async function () {
   const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq';
 
-  // Tunggu Supabase SDK tersedia
+  /* ── tunggu Supabase SDK ── */
   let tries = 0;
   while (typeof supabase === 'undefined' && tries < 20) {
     await new Promise(r => setTimeout(r, 100));
     tries++;
   }
-
   if (typeof supabase === 'undefined') {
     console.warn('[supabase-sync] Supabase client tidak ditemukan.');
     return;
@@ -21,126 +21,233 @@
 
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  /* ════════════════════════════════════════════════════════════════
+     1. SITE CONFIG (server info, maintenance, MOTD, WA admins)
+     ════════════════════════════════════════════════════════════════ */
   try {
     const { data, error } = await sb.from('site_config').select('*');
-    if (error || !data) {
-      console.warn('[supabase-sync] Gagal fetch config:', error?.message);
+    if (!error && data) {
+      const cfg = {};
+      data.forEach(row => { cfg[row.key] = row.value; });
+
+      /* Server config */
+      const sc = window.SERVER_CONFIG || window.SERVERCONFIG || {};
+      if (cfg.server_ip)   sc.ip         = cfg.server_ip;
+      if (cfg.server_name) sc.namaServer = cfg.server_name;
+      if (cfg.server_type) sc.versi      = cfg.server_type;
+      if (cfg.season)      sc.season     = cfg.season;
+      if (cfg.seed)        sc.seed       = parseInt(cfg.seed) || sc.seed;
+      window.SERVER_CONFIG = sc;
+      window.SERVERCONFIG  = sc;
+
+      applyServerConfig(cfg, sc);
+
+      /* Maintenance */
+      if (cfg.maintenance_mode === 'true') showMaintenance(cfg);
+
+      /* MOTD */
+      if (cfg.motd_active === 'true' && cfg.motd_text) showMOTD(cfg);
+
+      /* WA Admins (fallback — admin-shop sekarang mengelola via shop_config) */
+      try {
+        const mainAdmins = JSON.parse(cfg.whatsapp_admins     || '[]');
+        const gemAdmins  = JSON.parse(cfg.whatsapp_gem_admins || '[]');
+        if (mainAdmins.length || gemAdmins.length) {
+          window.supabaseWA  = { main: mainAdmins, gem: gemAdmins };
+          window._supabaseWA = { main: mainAdmins, gem: gemAdmins };
+        }
+      } catch (e) { /* pakai data di shop-config.js */ }
+    }
+  } catch (e) {
+    console.warn('[supabase-sync] site_config error:', e);
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     2. SHOP CONFIG  — baca dari tabel shop_config key="main"
+        Ini adalah sumber kebenaran utama yang dikelola admin panel.
+        Jika berhasil → override SHOP_CONFIG sepenuhnya & re-render.
+     ════════════════════════════════════════════════════════════════ */
+  try {
+    const { data: shopRow, error: shopErr } = await sb
+      .from('shop_config')
+      .select('value')
+      .eq('key', 'main')
+      .single();
+
+    if (!shopErr && shopRow?.value) {
+      const remoteCfg = JSON.parse(shopRow.value);
+
+      /* ── Merge ke SHOP_CONFIG global ── */
+      if (window.SHOP_CONFIG) {
+        /* Ganti semua field yang ada di remote */
+        if (remoteCfg.title)      window.SHOP_CONFIG.title      = remoteCfg.title;
+        if (remoteCfg.subtitle)   window.SHOP_CONFIG.subtitle   = remoteCfg.subtitle;
+        if (remoteCfg.items && remoteCfg.items.length)
+                                  window.SHOP_CONFIG.items      = remoteCfg.items;
+        if (remoteCfg.categories) window.SHOP_CONFIG.categories = remoteCfg.categories;
+        if (remoteCfg.admins)     window.SHOP_CONFIG.admins     = remoteCfg.admins;
+        if (remoteCfg.gemAdmins)  window.SHOP_CONFIG.gemAdmins  = remoteCfg.gemAdmins;
+      } else {
+        /* SHOP_CONFIG belum ada (urutan load) — buat dari remote */
+        window.SHOP_CONFIG = remoteCfg;
+      }
+
+      /* Juga pakai sebagai SHOPCONFIG (alias yang dipakai shop.js) */
+      if (window.SHOPCONFIG) {
+        Object.assign(window.SHOPCONFIG, window.SHOP_CONFIG);
+      }
+
+      /* WA admins dari shop_config juga expose ke supabaseWA */
+      if (remoteCfg.admins || remoteCfg.gemAdmins) {
+        window.supabaseWA  = { main: remoteCfg.admins || [], gem: remoteCfg.gemAdmins || [] };
+        window._supabaseWA = window.supabaseWA;
+      }
+
+      /* ── Re-render toko jika fungsi sudah tersedia ── */
+      reRenderShop(window.SHOP_CONFIG);
+
+      console.log('[supabase-sync] shop_config berhasil di-load dari Supabase Admin Panel ✅');
+    } else {
+      /* Fallback: tidak ada di shop_config → coba shop_items (tabel lama) */
+      await syncShopItemsFallback(sb);
+    }
+  } catch (e) {
+    console.warn('[supabase-sync] shop_config error:', e);
+    await syncShopItemsFallback(sb);
+  }
+
+  console.log('[supabase-sync] Selesai.');
+
+
+  /* ════════════════════════════════════════════════════════════════
+     RE-RENDER SHOP
+     Panggil ulang fungsi render shop di shop.js setelah config update.
+     shop.js mengexpose window._shopReRender atau window.renderShopSection.
+     ════════════════════════════════════════════════════════════════ */
+  function reRenderShop(cfg) {
+    if (!cfg) return;
+
+    /* Cara 1 — shop.js expose hook re-render */
+    if (typeof window._shopReRender === 'function') {
+      window._shopReRender(cfg);
       return;
     }
 
-    // Ubah array rows menjadi object { key: value }
-    const cfg = {};
-    data.forEach(row => { cfg[row.key] = row.value; });
+    /* Cara 2 — patch kartu harga langsung di DOM (live update harga & stok) */
+    if (!cfg.items) return;
+    cfg.items.forEach(item => {
+      /* Update harga di kartu */
+      const buyBtn = document.querySelector(`.shop-btn-buy[onclick="shopOpenModal(${item.id})"]`);
+      if (buyBtn) {
+        const card = buyBtn.closest('.shop-card');
+        if (card) {
+          const priceEl = card.querySelector('.shop-card-price');
+          if (priceEl) {
+            const fmt = item.price === 0
+              ? '<span style="color:#17dd62">GRATIS</span>'
+              : 'Rp ' + Number(item.price).toLocaleString('id-ID');
+            const origHtml = item.originalPrice > 0
+              ? `<span class="shop-price-orig">Rp ${Number(item.originalPrice).toLocaleString('id-ID')}</span>`
+              : '';
+            priceEl.innerHTML = fmt + origHtml;
+          }
 
-    // ── 1. Update window.SERVER_CONFIG & window.SERVERCONFIG (handle keduanya) ──
-    // Index.html menggunakan window.SERVERCONFIG (tanpa underscore)
-    // supabase-sync dan server-status menggunakan window.SERVER_CONFIG
-    const sc = window.SERVER_CONFIG || window.SERVERCONFIG || {};
-    if (cfg.server_ip)   sc.ip         = cfg.server_ip;
-    if (cfg.server_name) sc.namaServer = cfg.server_name;
-    if (cfg.server_type) sc.versi      = cfg.server_type;
-    if (cfg.season)      sc.season     = cfg.season;
-    if (cfg.seed)        sc.seed       = parseInt(cfg.seed) || sc.seed;
-    // Pastikan kedua variabel tersinkron
-    window.SERVER_CONFIG  = sc;
-    window.SERVERCONFIG   = sc;
+          /* Update badge */
+          const badgeEl = card.querySelector('.shop-card-badge');
+          if (badgeEl) {
+            if (item.badge) {
+              badgeEl.textContent = item.badge;
+              badgeEl.className   = 'shop-card-badge badge-' + (item.badgeColor || 'gold');
+              badgeEl.style.display = '';
+            } else {
+              badgeEl.style.display = 'none';
+            }
+          }
 
-    // ── 2. Terapkan ke DOM ────────────────────────────────
-    applyServerConfig(cfg, sc);
-
-    // ── 3. Maintenance mode ───────────────────────────────
-    if (cfg.maintenance_mode === 'true') {
-      showMaintenance(cfg);
-    }
-
-    // ── 4. MOTD / Banner pengumuman ───────────────────────
-    if (cfg.motd_active === 'true' && cfg.motd_text) {
-      showMOTD(cfg);
-    }
-
-    // ── 5. WA Admin — simpan ke window untuk shop.js ──────
-    try {
-      const mainAdmins = JSON.parse(cfg.whatsapp_admins     || '[]');
-      const gemAdmins  = JSON.parse(cfg.whatsapp_gem_admins || '[]');
-      if (mainAdmins.length || gemAdmins.length) {
-        window.supabaseWA  = { main: mainAdmins, gem: gemAdmins };  // dibaca oleh shop.js
-        window._supabaseWA = { main: mainAdmins, gem: gemAdmins };  // legacy support
-      }
-    } catch (e) { /* JSON parse gagal — pakai data di shop-config.js */ }
-
-
-    // ── 6. Shop Items — override SHOP_CONFIG dari Supabase ──────
-    try {
-      const { data: shopItems, error: shopErr } = await sb
-        .from('shop_items')
-        .select('id, name, price, stock')
-        .order('id', { ascending: true });
-
-      if (!shopErr && shopItems && shopItems.length > 0) {
-        const mapped = shopItems.map(row => ({
-          id:              row.id,
-          name:            row.name,
-          emoji:           row.emoji          || '',
-          category:        row.category,
-          price:           row.price,
-          originalPrice:   row.original_price || 0,
-          description:     row.description    || '',
-          features:        Array.isArray(row.features)   ? row.features  : [],
-          badge:           row.badge          || '',
-          badgeColor:      row.badge_color    || '',
-          stock:           row.stock          || 'Tersedia',
-          requiresDesign:  !!row.requires_design,
-          needsUsername:   row.needs_username !== false,
-          canBuyMultiple:  row.can_buy_multiple !== false,
-          maxQuantity:     row.max_quantity   || 99,
-          images:          Array.isArray(row.images)     ? row.images    : [],
-        }));
-
-        // Update SHOP_CONFIG jika tersedia
-        if (window.SHOP_CONFIG) {
-          window.SHOP_CONFIG.items = mapped;
-          // Rebuild kategori unik dari items aktif
-          const cats = ['Semua', ...new Set(mapped.map(i => i.category))];
-          window.SHOP_CONFIG.categories = cats;
+          /* Update stok */
+          const stockEl = card.querySelector('.shop-card-stock, .shop-stock-label');
+          if (stockEl) {
+            if (item.stock === 'Habis') {
+              stockEl.textContent = '❌ Habis';
+              stockEl.classList.add('stock-out');
+              stockEl.classList.remove('stock-ok');
+              buyBtn.disabled = true;
+              buyBtn.textContent = 'Habis';
+            } else {
+              stockEl.textContent = '✅ Tersedia';
+              stockEl.classList.add('stock-ok');
+              stockEl.classList.remove('stock-out');
+              buyBtn.disabled = false;
+              if (buyBtn.textContent === 'Habis') buyBtn.textContent = 'Beli Sekarang';
+            }
+          }
         }
-        // Simpan ke window agar shop.js bisa re-render
-        window._shopItemsFromSupabase = mapped;
       }
-    } catch (e) { /* shop_items gagal — SHOP_CONFIG tetap dari shop-config.js */ }
-
-    // 6. Sync harga shop dari Supabase
-    await syncShopPrices(sb);
-
-    console.log('[supabase-sync] Config berhasil diterapkan.');
-
-  } catch (e) {
-    console.warn('[supabase-sync] Error tidak terduga:', e);
+    });
   }
 
 
-  /* ══════════════════════════════════════════════════════
-     Terapkan config ke semua elemen DOM
-     ══════════════════════════════════════════════════════ */
+  /* ════════════════════════════════════════════════════════════════
+     FALLBACK: baca shop_items (tabel lama, kolom per field)
+     ════════════════════════════════════════════════════════════════ */
+  async function syncShopItemsFallback(sb) {
+    try {
+      const { data: shopItems, error } = await sb
+        .from('shop_items')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (error || !shopItems || !shopItems.length) return;
+
+      const mapped = shopItems.map(row => ({
+        id:             row.id,
+        name:           row.name            || '',
+        emoji:          row.emoji           || '',
+        category:       row.category        || 'Lainnya',
+        price:          row.price           || 0,
+        originalPrice:  row.original_price  || 0,
+        description:    row.description     || '',
+        features:       Array.isArray(row.features)   ? row.features  : [],
+        badge:          row.badge           || '',
+        badgeColor:     row.badge_color     || '',
+        stock:          row.stock           || 'Tersedia',
+        requiresDesign: !!row.requires_design,
+        needsUsername:  row.needs_username  !== false,
+        canBuyMultiple: row.can_buy_multiple !== false,
+        maxQuantity:    row.max_quantity    || 99,
+        images:         Array.isArray(row.images) ? row.images : [],
+      }));
+
+      if (window.SHOP_CONFIG) {
+        window.SHOP_CONFIG.items      = mapped;
+        window.SHOP_CONFIG.categories = ['Semua', ...new Set(mapped.map(i => i.category))];
+      }
+      window._shopItemsFromSupabase = mapped;
+      reRenderShop(window.SHOP_CONFIG);
+      console.log('[supabase-sync] Fallback shop_items berhasil di-sync.');
+    } catch (e) {
+      console.warn('[supabase-sync] Fallback shop_items error:', e);
+    }
+  }
+
+
+  /* ════════════════════════════════════════════════════════════════
+     APPLY SERVER CONFIG → DOM
+     ════════════════════════════════════════════════════════════════ */
   function applyServerConfig(cfg, sc) {
     const ip     = cfg.server_ip || sc.ip || 'laughtale.my.id:19214';
     const season = cfg.season    || sc.season || '';
     const seed   = cfg.seed      || String(sc.seed || '');
 
-    // Simpan IP ke SEMUA variabel yang mungkin dipakai di berbagai tempat
-    window._serverIP  = ip;   // untuk server-status.js baru
-    window.serverIP   = ip;   // untuk heroDirectConnect lama di index.html
+    window._serverIP = ip;
+    window.serverIP  = ip;
 
-    // Hero — IP text
     const heroIpText = document.getElementById('hero-ip-text');
     if (heroIpText) heroIpText.textContent = ip;
 
-    // Server address di section status (hanya update kalau masih "Memuat...")
     const addrEl = document.getElementById('server-address-display');
-    if (addrEl && addrEl.textContent.includes('Memuat')) {
-      addrEl.textContent = ip;
-    }
+    if (addrEl && addrEl.textContent.includes('Memuat')) addrEl.textContent = ip;
 
-    // Stats bar — Season
     document.querySelectorAll('.stat-label').forEach(el => {
       if (el.textContent.trim() === 'Season') {
         const val = el.previousElementSibling;
@@ -148,7 +255,6 @@
       }
     });
 
-    // Stats bar — Seed counter
     document.querySelectorAll('.stat-val[data-target], .stat-val').forEach(el => {
       const item  = el.closest('.stat-item');
       const label = item && item.querySelector('.stat-label');
@@ -159,11 +265,9 @@
       }
     });
 
-    // Section seed value (angka besar)
     const seedVal = document.querySelector('.seed-value');
     if (seedVal && seed) seedVal.textContent = seed;
 
-    // Season desc (opsional)
     if (cfg.season_desc) {
       const descEl = document.querySelector('.season-desc, #season-desc');
       if (descEl) descEl.textContent = cfg.season_desc;
@@ -171,48 +275,35 @@
   }
 
 
-  /* ══════════════════════════════════════════════════════
-     Tampilkan overlay maintenance
-     ══════════════════════════════════════════════════════ */
+  /* ════════════════════════════════════════════════════════════════
+     MAINTENANCE OVERLAY
+     ════════════════════════════════════════════════════════════════ */
   function showMaintenance(cfg) {
     const overlay = document.getElementById('maintenance-overlay');
     if (!overlay) return;
 
-    const msg     = cfg.maintenance_message || 'Server sedang dalam pemeliharaan. Silakan coba beberapa saat lagi.';
-    const contact = cfg.maintenance_contact || '';
+    const msgEl = document.getElementById('maint-msg');
+    if (msgEl) msgEl.textContent = cfg.maintenance_message || 'Server sedang dalam pemeliharaan.';
 
     let etaText = '';
     if (cfg.maintenance_eta) {
-      try {
-        etaText = new Date(cfg.maintenance_eta).toLocaleString('id-ID', {
-          dateStyle: 'long', timeStyle: 'short'
-        });
-      } catch (e) { etaText = cfg.maintenance_eta; }
+      try { etaText = new Date(cfg.maintenance_eta).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' }); }
+      catch (e) { etaText = cfg.maintenance_eta; }
     }
-
-    const msgEl = document.getElementById('maint-msg');
-    if (msgEl) msgEl.textContent = msg;
-
     const etaEl = document.getElementById('maint-eta');
-    if (etaEl) {
-      etaEl.textContent   = etaText ? 'Estimasi selesai: ' + etaText : '';
-      etaEl.style.display = etaText ? 'block' : 'none';
-    }
+    if (etaEl) { etaEl.textContent = etaText ? 'Estimasi selesai: ' + etaText : ''; etaEl.style.display = etaText ? 'block' : 'none'; }
 
     const conEl = document.getElementById('maint-contact');
-    if (conEl) {
-      conEl.textContent   = contact ? 'Kontak: ' + contact : '';
-      conEl.style.display = contact ? 'block' : 'none';
-    }
+    if (conEl) { conEl.textContent = cfg.maintenance_contact ? 'Kontak: ' + cfg.maintenance_contact : ''; conEl.style.display = cfg.maintenance_contact ? 'block' : 'none'; }
 
     overlay.style.display        = 'flex';
     document.body.style.overflow = 'hidden';
   }
 
 
-  /* ══════════════════════════════════════════════════════
-     Tampilkan MOTD banner
-     ══════════════════════════════════════════════════════ */
+  /* ════════════════════════════════════════════════════════════════
+     MOTD BANNER
+     ════════════════════════════════════════════════════════════════ */
   function showMOTD(cfg) {
     const banner = document.getElementById('motd-banner');
     if (!banner) return;
@@ -234,65 +325,10 @@
 
     if (cfg.motd_btn && cfg.motd_url) {
       const btn = document.getElementById('motd-btn');
-      if (btn) {
-        btn.textContent   = cfg.motd_btn;
-        btn.href          = cfg.motd_url;
-        btn.style.display = 'inline-flex';
-        btn.style.color   = p.color;
-        btn.style.border  = '1px solid ' + p.border;
-      }
+      if (btn) { btn.textContent = cfg.motd_btn; btn.href = cfg.motd_url; btn.style.display = 'inline-flex'; btn.style.color = p.color; btn.style.border = '1px solid ' + p.border; }
     }
 
     banner.style.display = 'flex';
-  }
-
-  // 6. Sync harga shop_items dari Supabase → override SHOPCONFIG
-  async function syncShopPrices(sb) {
-    try {
-      const { data: shopItems, error } = await sb.from('shop_items').select('id, price, stock, original_price');
-      if (error || !shopItems || shopItems.length === 0) return;
-
-      // Update SHOPCONFIG in-memory (untuk modal price display)
-      // SHOPCONFIG pakai const di top-level, bisa diakses tanpa window.
-      const cfg = (typeof SHOPCONFIG !== 'undefined') ? SHOPCONFIG : null;
-
-      shopItems.forEach(row => {
-        // 1. Update in-memory SHOPCONFIG untuk modal
-        if (cfg && cfg.items) {
-          const item = cfg.items.find(i => i.id === row.id);
-          if (item) {
-            item.price = row.price;
-            if (row.original_price !== undefined) item.originalPrice = row.original_price;
-            if (row.stock !== undefined && row.stock !== null) item.stock = row.stock;
-          }
-        }
-
-        // 2. Update DOM harga langsung di kartu toko
-        const btn = document.querySelector(`.shop-btn-buy[onclick="shopOpenModal(${row.id})"]`);
-        if (btn) {
-          const card = btn.closest('.shop-card');
-          if (card) {
-            const priceEl = card.querySelector('.shop-card-price');
-            if (priceEl) {
-              const p = row.price;
-              const fmt = p === 0
-                ? '<span style="color:#17dd62">GRATIS</span>'
-                : 'Rp ' + p.toLocaleString('id-ID');
-              // Update harga coret dari Supabase (original_price)
-              const op = row.original_price || 0;
-              const origHtml = op > 0
-                ? `<span class="shop-price-orig">Rp ${op.toLocaleString('id-ID')}</span>`
-                : '';
-              priceEl.innerHTML = fmt + origHtml;
-            }
-          }
-        }
-      });
-
-      console.log('[supabase-sync] Harga shop berhasil disync dari Supabase.');
-    } catch(e) {
-      console.warn('[supabase-sync] Gagal sync shop_items:', e);
-    }
   }
 
 })();
