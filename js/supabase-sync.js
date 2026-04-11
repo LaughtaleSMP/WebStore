@@ -108,8 +108,8 @@
           }
         }
 
-        // ★ Re-render kartu shop di DOM dengan data terbaru ★
-        reRenderShopCards(mapped);
+        // ★ Re-render seluruh grid shop dengan data terbaru ★
+        reRenderShopCards(mapped, shopCfg.categories);
 
         // Update judul & subtitle toko
         if (shopCfg.title) {
@@ -119,17 +119,6 @@
         if (shopCfg.subtitle) {
           const subEl = document.getElementById('shop-section-subtitle');
           if (subEl) subEl.textContent = shopCfg.subtitle;
-        }
-
-        // Update tab filter kategori
-        if (shopCfg.categories && shopCfg.categories.length) {
-          const tabsEl = document.getElementById('shop-tabs');
-          if (tabsEl) {
-            const activeCat = tabsEl.querySelector('.shop-tab.active')?.dataset.cat || 'Semua';
-            tabsEl.innerHTML = shopCfg.categories.map(c =>
-              `<button class="shop-tab${c === activeCat ? ' active' : ''}" data-cat="${c}">${c}</button>`
-            ).join('');
-          }
         }
 
         console.log('[supabase-sync] Shop config berhasil disync dari shop_config.');
@@ -148,76 +137,128 @@
 
 
   /* ════════════════════════════════════════════════════════
-     Re-render kartu shop dengan data dari Supabase
+     Helper: format harga (sama persis dengan shop.js)
   ════════════════════════════════════════════════════════ */
-  function reRenderShopCards(items) {
+  function fmtPrice(p) {
+    if (p === 0) return '<span style="color:#17dd62">GRATIS</span>';
+    return 'Rp\u00a0' + p.toLocaleString('id-ID');
+  }
+  function fmtPlain(p) {
+    return p === 0 ? 'GRATIS' : 'Rp\u00a0' + p.toLocaleString('id-ID');
+  }
+
+  /* ── Badge color map (sama persis dengan shop.js) ── */
+  const BC = {
+    gold:    { bg: 'rgba(244,196,48,0.14)',  bd: 'rgba(244,196,48,0.4)',  cl: '#f4c430' },
+    green:   { bg: 'rgba(23,221,98,0.12)',   bd: 'rgba(23,221,98,0.4)',   cl: '#17dd62' },
+    diamond: { bg: 'rgba(168,85,247,0.14)',  bd: 'rgba(168,85,247,0.4)',  cl: '#c084fc' },
+    red:     { bg: 'rgba(255,58,58,0.13)',   bd: 'rgba(255,58,58,0.35)',  cl: '#ff3a3a' },
+    '':      { bg: 'rgba(139,148,158,0.1)',  bd: 'rgba(139,148,158,0.3)', cl: '#8892a4' },
+  };
+  function badgeHtml(item, extra) {
+    if (!item.badge) return '';
+    const c = BC[item.badgeColor] || BC[''];
+    return `<span class="shop-badge" style="background:${c.bg};border:1px solid ${c.bd};color:${c.cl};${extra || ''}">${item.badge}</span>`;
+  }
+
+  /* ── Animated SVG thumbnail — delegate ke shop.js jika tersedia ── */
+  function animThumbHtml(item) {
+    // shop.js mengekspos animThumbHtml melalui window jika di-export,
+    // tapi karena shop.js tidak mengekspornya secara eksplisit,
+    // kita buat ulang logika minimal: panggil SVG_MAP dari shop.js scope
+    // Cara aman: panggil fungsi buildCard milik shop.js jika ada,
+    // atau render thumbnail kosong agar tidak error.
+    // Kita cukup kembalikan string kosong — thumbnail SVG sudah
+    // di-render oleh shop.js saat renderShop() pertama kali.
+    // Setelah re-render penuh di bawah, SVG_MAP tidak bisa diakses
+    // dari sini (closure shop.js). Tapi buildCard dari shop.js
+    // sudah diekspos ke window? Tidak. Jadi kita skip SVG —
+    // thumbnail akan blank untuk kartu baru. Untuk kartu lama
+    // yang sudah ter-render, kita pertahankan thumb-nya.
+    //
+    // SOLUSI BENAR: delegasikan buildCard ke shop.js via window.shopBuildCard
+    // Jika tersedia (shop.js baru mengeksposnya), gunakan. Jika tidak, fallback.
+    if (typeof window.shopBuildCard === 'function') {
+      return null; // sinyal untuk pakai shopBuildCard langsung
+    }
+    return ''; // fallback: tidak ada thumbnail SVG
+  }
+
+  /* ── Build HTML satu kartu (versi sync, tanpa SVG animated thumb) ── */
+  function buildCardHtml(item) {
+    // Jika shop.js sudah mengekspos shopBuildCard, pakai itu
+    if (typeof window.shopBuildCard === 'function') {
+      return window.shopBuildCard(item);
+    }
+
+    // Fallback: bangun kartu tanpa animated SVG thumb
+    const sold = item.stock === 'Habis';
+    const p    = item.price || 0;
+    const op   = item.originalPrice || 0;
+    const origHtml = (op > 0 && op > p)
+      ? `<span class="shop-price-orig">Rp\u00a0${op.toLocaleString('id-ID')}</span>`
+      : '';
+    const featHtml = (item.features && item.features.length)
+      ? `<ul class="shop-feat-list">${item.features.map(f => `<li>${f}</li>`).join('')}</ul>`
+      : '';
+
+    return `<div class="shop-card${sold ? ' shop-sold-out' : ''}" data-category="${item.category}">
+      ${badgeHtml(item, 'position:absolute;top:12px;right:12px;z-index:2;')}
+      <div class="shop-card-emoji">${item.emoji}</div>
+      <div class="shop-card-name">${item.name}</div>
+      <div class="shop-card-cat">${item.category}</div>
+      <div class="shop-card-desc">${item.description}</div>
+      ${featHtml}
+      <div class="shop-card-footer">
+        <div class="shop-card-price">${fmtPrice(p)}${origHtml}</div>
+        ${sold
+          ? `<button class="shop-btn shop-btn-sold" disabled>HABIS</button>`
+          : `<button class="shop-btn shop-btn-buy" onclick="shopOpenModal(${item.id})">Pesan</button>`}
+      </div>
+    </div>`;
+  }
+
+
+  /* ════════════════════════════════════════════════════════
+     Re-render seluruh grid shop dari nol dengan data Supabase
+  ════════════════════════════════════════════════════════ */
+  function reRenderShopCards(items, categories) {
     const gridEl = document.getElementById('shop-grid');
     if (!gridEl || !items || !items.length) return;
 
     const tabsEl    = document.getElementById('shop-tabs');
     const activeCat = tabsEl?.querySelector('.shop-tab.active')?.dataset.cat || 'Semua';
 
-    items.forEach(item => {
-      const allBtns = gridEl.querySelectorAll('.shop-btn-buy, .shop-btn-sold');
-      allBtns.forEach(b => {
-        const onclickAttr = b.getAttribute('onclick') || '';
-        if (!onclickAttr.includes(`shopOpenModal(${item.id})`)) return;
+    // ── Render ulang semua kartu ──
+    gridEl.innerHTML = items.map(buildCardHtml).join('');
 
-        const card = b.closest('.shop-card');
-        if (!card) return;
+    // ── Update tab filter ──
+    if (tabsEl && categories && categories.length) {
+      tabsEl.innerHTML = categories.map(c =>
+        `<button class="shop-tab${c === activeCat ? ' active' : ''}" data-cat="${c}">${c}</button>`
+      ).join('');
 
-        // Update harga
-        const priceEl = card.querySelector('.shop-card-price');
-        if (priceEl) {
-          const p   = item.price || 0;
-          const fmt = p === 0
-            ? '<span style="color:#17dd62">GRATIS</span>'
-            : 'Rp\u00a0' + p.toLocaleString('id-ID');
-          const op = item.originalPrice || 0;
-          const origHtml = (op > 0 && op > p)
-            ? `<span class="shop-price-orig">Rp\u00a0${op.toLocaleString('id-ID')}</span>`
-            : '';
-          priceEl.innerHTML = fmt + origHtml;
-        }
-
-        // Update stok
-        const footer = card.querySelector('.shop-card-footer');
-        if (footer) {
-          const existingBtn = footer.querySelector('.shop-btn');
-          if (existingBtn) {
-            if (item.stock === 'Habis') {
-              existingBtn.className   = 'shop-btn shop-btn-sold';
-              existingBtn.disabled    = true;
-              existingBtn.textContent = 'HABIS';
-              existingBtn.removeAttribute('onclick');
-              card.classList.add('shop-sold-out');
-            } else {
-              existingBtn.className   = 'shop-btn shop-btn-buy';
-              existingBtn.disabled    = false;
-              existingBtn.textContent = 'Pesan';
-              existingBtn.setAttribute('onclick', `shopOpenModal(${item.id})`);
-              card.classList.remove('shop-sold-out');
-            }
-          }
-        }
-
-        // Update badge
-        const existingBadge = card.querySelector('.shop-badge');
-        if (existingBadge) {
-          if (item.badge) existingBadge.textContent = item.badge;
-          else existingBadge.remove();
-        }
-
-        // Filter kategori aktif
-        if (activeCat !== 'Semua' && card.dataset.category !== activeCat) {
-          card.style.display = 'none';
-        } else {
-          card.style.display = '';
-        }
+      // Re-attach event listener tab (listener lama hilang bersama innerHTML)
+      tabsEl.addEventListener('click', e => {
+        const btn = e.target.closest('.shop-tab');
+        if (!btn) return;
+        tabsEl.querySelectorAll('.shop-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const cat = btn.dataset.cat;
+        gridEl.querySelectorAll('.shop-card').forEach(c => {
+          c.style.display = (cat === 'Semua' || c.dataset.category === cat) ? '' : 'none';
+        });
       });
-    });
+    }
 
-    console.log('[supabase-sync] Kartu shop di-render ulang dengan data terbaru.');
+    // ── Terapkan filter kategori aktif saat ini ──
+    if (activeCat && activeCat !== 'Semua') {
+      gridEl.querySelectorAll('.shop-card').forEach(c => {
+        c.style.display = c.dataset.category === activeCat ? '' : 'none';
+      });
+    }
+
+    console.log('[supabase-sync] Grid shop di-render ulang penuh (' + items.length + ' item).');
   }
 
 
