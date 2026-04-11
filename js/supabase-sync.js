@@ -249,7 +249,7 @@
   // 6. Sync harga shop_items dari Supabase → override SHOPCONFIG
   async function syncShopPrices(sb) {
     try {
-      const { data: shopItems, error } = await sb.from('shop_items').select('id, price, stock');
+      const { data: shopItems, error } = await sb.from('shop_items').select('id, price, stock, originalprice');
       if (error || !shopItems || shopItems.length === 0) return;
 
       // Update SHOPCONFIG in-memory (untuk modal price display)
@@ -277,9 +277,12 @@
               const fmt = p === 0
                 ? '<span style="color:#17dd62">GRATIS</span>'
                 : 'Rp ' + p.toLocaleString('id-ID');
-              // Pertahankan harga coret originalPrice jika ada
-              const orig = priceEl.querySelector('.shop-price-orig');
-              priceEl.innerHTML = fmt + (orig ? orig.outerHTML : '');
+              // Update harga coret dari Supabase
+              const op = row.originalprice || 0;
+              const origHtml = op > 0
+                ? `<span class="shop-price-orig">Rp ${op.toLocaleString('id-ID')}</span>`
+                : '';
+              priceEl.innerHTML = fmt + origHtml;
             }
           }
         }
