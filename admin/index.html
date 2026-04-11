@@ -3,2153 +3,979 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Panel — Laughtale SMP</title>
+<title>Pengaturan Server — Laughtale SMP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-/* ==================== RESET & BASE ==================== */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07070e;--bg2:#0f0f1a;--bg3:#161625;--bg4:#1e1e30;
+  --border:rgba(168,85,247,0.15);--border2:rgba(168,85,247,0.28);
+  --purple:#a855f7;--purple2:#7c3aed;--gold:#f4c430;
+  --green:#5dbd3a;--red:#ef4444;--blue:#60a5fa;
+  --text:#e2e2f0;--text2:#a0a0bc;--text3:#60607a;
+  --sidebar:220px;--topbar:56px;--radius:10px;
+  --font-pixel:'Press Start 2P',monospace;
+  --font-body:'Nunito',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;overflow:hidden}
 
-:root {
-  --bg:      #07070e;
-  --bg2:     #0f0f1a;
-  --bg3:     #161625;
-  --bg4:     #1e1e30;
-  --border:  rgba(168,85,247,0.15);
-  --border2: rgba(168,85,247,0.28);
-  --purple:  #a855f7;
-  --purple2: #7c3aed;
-  --gold:    #f4c430;
-  --green:   #5dbd3a;
-  --red:     #ef4444;
-  --blue:    #60a5fa;
-  --text:    #e2e2f0;
-  --text2:   #a0a0bc;
-  --text3:   #60607a;
-  --sidebar: 240px;
-  --topbar:  56px;
-  --radius:  10px;
-  --font-pixel: 'Press Start 2P', monospace;
-  --font-body:  'Nunito', sans-serif;
-}
+/* ===== AUTH ===== */
+#auth-screen{position:fixed;inset:0;z-index:999;display:flex;background:#06060c}
+.auth-left{width:380px;flex-shrink:0;background:#08080f;border-right:1px solid rgba(168,85,247,0.10);display:flex;flex-direction:column;padding:2.5rem 2.2rem;position:relative;overflow:hidden}
+.auth-left::before{content:'';position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(168,85,247,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(168,85,247,.035) 1px,transparent 1px);background-size:36px 36px;animation:gridMove 30s linear infinite}
+.auth-left::after{content:'';position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(168,85,247,.14) 0%,transparent 65%);top:-120px;right:-160px;pointer-events:none}
+@keyframes gridMove{0%{transform:translate(0,0)}100%{transform:translate(36px,36px)}}
+.auth-brand{display:inline-flex;align-items:center;gap:.55rem;margin-bottom:3.5rem;position:relative;z-index:1}
+.auth-brand-dot{width:7px;height:7px;border-radius:50%;background:var(--purple);animation:pulse 2.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 8px rgba(168,85,247,.7)}50%{box-shadow:0 0 22px rgba(168,85,247,1),0 0 40px rgba(168,85,247,.3)}}
+.auth-brand-name{font-family:var(--font-pixel);font-size:.42rem;color:rgba(168,85,247,.85);letter-spacing:3px}
+.auth-headline{position:relative;z-index:1;font-family:var(--font-pixel);font-size:.62rem;color:#fff;letter-spacing:2px;line-height:2.4;margin-bottom:.7rem;text-shadow:0 0 24px rgba(168,85,247,.4)}
+.auth-headline em{color:var(--purple);font-style:normal}
+.auth-tagline{position:relative;z-index:1;font-size:.78rem;color:var(--text3);line-height:1.75;max-width:260px;margin-bottom:2.2rem}
+.auth-stats{position:relative;z-index:1;display:flex;flex-direction:column;gap:.55rem}
+.auth-stat{display:flex;align-items:center;gap:.6rem;padding:.5rem .75rem;background:rgba(255,255,255,.018);border:1px solid rgba(168,85,247,.07);border-radius:8px}
+.auth-stat-icon{width:24px;height:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(168,85,247,.1);border-radius:6px;color:var(--purple)}
+.auth-stat-icon svg{width:12px;height:12px}
+.auth-stat-info strong{display:block;font-size:.72rem;color:var(--text2);margin-bottom:1px}
+.auth-stat-info span{font-size:.66rem;color:var(--text3)}
+.auth-stat-badge{font-family:var(--font-pixel);font-size:.28rem;letter-spacing:1px;padding:3px 6px;border-radius:4px}
+.badge-on{background:rgba(93,189,58,.12);color:var(--green);border:1px solid rgba(93,189,58,.25)}
+.badge-blue{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.auth-foot{margin-top:auto;position:relative;z-index:1;font-size:.65rem;color:var(--text3);padding-top:1.25rem;border-top:1px solid rgba(168,85,247,.07);display:flex;align-items:center;justify-content:space-between}
+.auth-right{flex:1;background:#07070d;display:flex;align-items:center;justify-content:center;padding:2rem;position:relative;overflow:hidden}
+.auth-right::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 60% 40%,rgba(168,85,247,.04) 0%,transparent 65%)}
+.auth-form-wrap{width:100%;max-width:370px;position:relative;z-index:1;animation:cardIn .5s cubic-bezier(.16,1,.3,1) both}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.auth-eyebrow{font-size:.62rem;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--purple);margin-bottom:.4rem;display:flex;align-items:center;gap:.5rem}
+.auth-eyebrow::before{content:'';width:18px;height:1px;background:var(--purple);opacity:.6}
+.auth-form-title{font-size:1.4rem;font-weight:700;color:#fff;letter-spacing:-.4px;margin-bottom:.3rem;line-height:1.2}
+.auth-form-sub{font-size:.8rem;color:var(--text3);margin-bottom:1.75rem;line-height:1.6}
+.alert{display:flex;align-items:flex-start;gap:.6rem;padding:.75rem 1rem;border-radius:8px;font-size:.8rem;margin-bottom:1.25rem;line-height:1.5}
+.alert-error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#fca5a5}
+.alert svg{flex-shrink:0;margin-top:1px}
+.form-label{display:block;font-size:.72rem;font-weight:700;color:var(--text2);letter-spacing:.5px;margin-bottom:.45rem}
+.form-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(168,85,247,.15);border-radius:8px;padding:.65rem .85rem;color:var(--text);font-size:.85rem;font-family:var(--font-body);transition:.2s}
+.form-input:focus{outline:none;border-color:rgba(168,85,247,.5);background:rgba(168,85,247,.04)}
+.form-group{margin-bottom:1.1rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.65rem 1.25rem;border-radius:8px;font-family:var(--font-pixel);font-size:.38rem;letter-spacing:1.2px;cursor:pointer;border:none;transition:.2s;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,var(--purple2),var(--purple));color:#fff;width:100%;padding:.75rem}
+.btn-primary:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(0)}
+.divider{display:flex;align-items:center;gap:.75rem;margin:1.25rem 0;color:var(--text3);font-size:.72rem}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
 
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 14px; overflow: hidden; }
+/* ===== APP ===== */
+#app{display:none;height:100%;flex-direction:column}
+#app.visible{display:flex}
 
+/* Topbar */
+.topbar{height:var(--topbar);background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.25rem;gap:1rem;flex-shrink:0;z-index:10}
+.topbar-logo{font-family:var(--font-pixel);font-size:.36rem;color:var(--purple);letter-spacing:2px}
+.topbar-dot{width:5px;height:5px;border-radius:50%;background:var(--purple);animation:pulse 2.5s infinite;flex-shrink:0}
+.topbar-title{font-family:var(--font-pixel);font-size:.44rem;color:var(--text);letter-spacing:1.5px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:.75rem}
+.topbar-user{font-size:.75rem;color:var(--text2)}
+.topbar-badge{font-family:var(--font-pixel);font-size:.28rem;padding:3px 8px;border-radius:4px;background:rgba(168,85,247,.15);color:var(--purple);border:1px solid rgba(168,85,247,.25)}
+.btn-logout{background:transparent;border:1px solid rgba(239,68,68,.25);color:var(--red);font-size:.7rem;padding:.35rem .75rem;border-radius:6px;cursor:pointer;font-family:var(--font-body);transition:.2s}
+.btn-logout:hover{background:rgba(239,68,68,.08)}
 
+/* Body layout */
+.app-body{display:flex;flex:1;overflow:hidden}
+.sidebar{width:var(--sidebar);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.nav-section-label{font-family:var(--font-pixel);font-size:.28rem;color:var(--text3);letter-spacing:2px;padding:.9rem 1rem .4rem}
+.nav-item{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;cursor:pointer;color:var(--text2);font-size:.78rem;font-weight:600;border-radius:0;transition:.15s;border-left:2px solid transparent}
+.nav-item:hover{background:rgba(168,85,247,.06);color:var(--text)}
+.nav-item.active{background:rgba(168,85,247,.1);color:var(--purple);border-left-color:var(--purple)}
+.nav-item svg{opacity:.65;flex-shrink:0;width:15px;height:15px}
+.nav-item.active svg{opacity:1}
+.nav-back{display:flex;align-items:center;gap:.5rem;padding:.7rem 1rem;color:var(--text3);font-size:.72rem;cursor:pointer;border-bottom:1px solid var(--border);transition:.15s}
+.nav-back:hover{color:var(--text2)}
 
-/* ==================== AUTH SCREENS ==================== */
-
-/* Shared wrapper */
-.auth-screen {
-  position: fixed; inset: 0; z-index: 999;
-  display: flex; font-family: 'Inter', var(--font-body);
-  background: #06060c;
-}
-#login-screen        { position: fixed; inset: 0; z-index: 999; display: flex; }
-#set-password-screen { position: fixed; inset: 0; z-index: 999; display: none; }
-
-/* ──────── LEFT PANEL ──────── */
-.auth-left {
-  width: 400px; flex-shrink: 0;
-  background: #08080f;
-  border-right: 1px solid rgba(168,85,247,0.10);
-  display: flex; flex-direction: column;
-  padding: 2.75rem 2.5rem;
-  position: relative; overflow: hidden;
-}
-/* Grid texture */
-.auth-left::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background-image:
-    linear-gradient(rgba(168,85,247,0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(168,85,247,0.035) 1px, transparent 1px);
-  background-size: 36px 36px;
-  animation: authGridMove 30s linear infinite;
-}
-/* Glow orb top-right */
-.auth-left::after {
-  content: ''; position: absolute;
-  width: 480px; height: 480px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(168,85,247,0.14) 0%, transparent 65%);
-  top: -140px; right: -180px; pointer-events: none;
-  animation: authOrbFloat 9s ease-in-out infinite alternate;
-}
-@keyframes authGridMove {
-  0% { transform: translate(0,0); }
-  100% { transform: translate(36px,36px); }
-}
-@keyframes authOrbFloat {
-  0%   { transform: translate(0,0) scale(1); }
-  100% { transform: translate(18px, 28px) scale(1.12); }
-}
-@keyframes authPulse {
-  0%,100% { box-shadow: 0 0 8px rgba(168,85,247,0.7); }
-  50%      { box-shadow: 0 0 22px rgba(168,85,247,1), 0 0 40px rgba(168,85,247,0.3); }
-}
-@keyframes authCardIn {
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes authViewIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* Brand pill */
-.auth-brand {
-  display: inline-flex; align-items: center; gap: 0.55rem;
-  margin-bottom: 4rem; position: relative; z-index: 1;
-}
-.auth-brand-dot {
-  width: 7px; height: 7px; border-radius: 50%; background: var(--purple);
-  animation: authPulse 2.5s ease-in-out infinite;
-}
-.auth-brand-name {
-  font-family: var(--font-pixel); font-size: 0.42rem;
-  color: rgba(168,85,247,0.85); letter-spacing: 3px;
-}
-
-/* Headline */
-.auth-headline {
-  position: relative; z-index: 1;
-  font-family: var(--font-pixel); font-size: 0.68rem;
-  color: #fff; letter-spacing: 2px; line-height: 2.4;
-  margin-bottom: 0.85rem;
-  text-shadow: 0 0 24px rgba(168,85,247,0.4);
-}
-.auth-headline em { color: var(--purple); font-style: normal; }
-.auth-tagline {
-  position: relative; z-index: 1;
-  font-size: 0.78rem; color: var(--text3); line-height: 1.75;
-  max-width: 270px; margin-bottom: 2.75rem;
-}
-
-/* Status cards */
-.auth-stats { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 0.6rem; }
-.auth-stat {
-  display: flex; align-items: center; gap: 0.65rem;
-  padding: 0.55rem 0.8rem;
-  background: rgba(255,255,255,0.018);
-  border: 1px solid rgba(168,85,247,0.07);
-  border-radius: 8px;
-}
-.auth-stat-icon {
-  width: 26px; height: 26px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(168,85,247,0.1); border-radius: 6px;
-  color: var(--purple);
-}
-.auth-stat-icon svg { width: 13px; height: 13px; }
-.auth-stat-info { flex: 1; }
-.auth-stat-info strong { display: block; font-size: 0.74rem; color: var(--text2); margin-bottom: 1px; }
-.auth-stat-info span  { font-size: 0.68rem; color: var(--text3); }
-.auth-stat-badge {
-  font-family: var(--font-pixel); font-size: 0.3rem; letter-spacing: 1px;
-  padding: 3px 7px; border-radius: 4px;
-}
-.auth-stat-badge.on  { background: rgba(93,189,58,0.12); color: var(--green); border: 1px solid rgba(93,189,58,0.25); }
-.auth-stat-badge.off { background: rgba(96,165,250,0.1);  color: var(--blue);  border: 1px solid rgba(96,165,250,0.2); }
-
-/* Left footer */
-.auth-left-foot {
-  margin-top: auto; position: relative; z-index: 1;
-  font-size: 0.65rem; color: var(--text3);
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(168,85,247,0.07);
-  display: flex; align-items: center; justify-content: space-between;
-}
-.auth-left-foot span { color: rgba(168,85,247,0.5); }
-
-/* ──────── RIGHT PANEL ──────── */
-.auth-right {
-  flex: 1; background: #07070d;
-  display: flex; align-items: center; justify-content: center;
-  padding: 2rem; position: relative; overflow: hidden;
-}
-/* Subtle noise */
-.auth-right::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(ellipse at 60% 40%, rgba(168,85,247,0.04) 0%, transparent 65%);
-}
-/* Second orb */
-.auth-right::after {
-  content: ''; position: absolute;
-  width: 350px; height: 350px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(96,165,250,0.03) 0%, transparent 65%);
-  bottom: -80px; right: -60px; pointer-events: none;
-}
-
-/* Form container */
-.auth-form {
-  width: 100%; max-width: 380px; position: relative; z-index: 1;
-  animation: authCardIn 0.55s cubic-bezier(0.16,1,0.3,1) both;
-}
-
-/* Form header */
-.auth-eyebrow {
-  font-size: 0.63rem; font-weight: 600; letter-spacing: 2.5px;
-  text-transform: uppercase; color: var(--purple); margin-bottom: 0.45rem;
-  display: flex; align-items: center; gap: 0.5rem;
-}
-.auth-eyebrow::before {
-  content: ''; width: 18px; height: 1px; background: var(--purple); opacity: 0.6;
-}
-.auth-form-title {
-  font-size: 1.45rem; font-weight: 700; color: #fff;
-  letter-spacing: -0.4px; margin-bottom: 0.35rem; line-height: 1.2;
-}
-.auth-form-desc {
-  font-size: 0.78rem; color: var(--text3); line-height: 1.65; margin-bottom: 2rem;
-}
-
-/* Breadcrumb nav between views */
-.auth-crumb {
-  display: flex; align-items: center; gap: 0.4rem;
-  margin-bottom: 1.5rem;
-  font-size: 0.68rem; color: var(--text3);
-}
-.auth-crumb-sep { opacity: 0.4; }
-.auth-crumb-active { color: var(--text2); font-weight: 600; }
-
-/* Views */
-.auth-view {
-  display: none;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.28s ease, transform 0.28s ease;
-}
-.auth-view.visible {
-  display: block;
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Field */
-.auth-field { margin-bottom: 1rem; }
-.auth-field-lbl {
-  display: block; font-size: 0.68rem; font-weight: 600;
-  letter-spacing: 1px; text-transform: uppercase;
-  color: var(--text3); margin-bottom: 0.45rem;
-}
-.auth-field-inp {
-  width: 100%;
-  background: rgba(255,255,255,0.025);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 10px; padding: 0.7rem 1rem;
-  color: var(--text); font-family: 'Inter', var(--font-body); font-size: 0.875rem;
-  outline: none; transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-}
-.auth-field-inp::placeholder { color: rgba(255,255,255,0.18); }
-.auth-field-inp:focus {
-  border-color: rgba(168,85,247,0.45);
-  background: rgba(168,85,247,0.04);
-  box-shadow: 0 0 0 3px rgba(168,85,247,0.1);
-}
-
-/* Password strength bars */
-.pw-meter { display: flex; gap: 3px; margin-top: 0.45rem; height: 2px; }
-.pw-bar { flex: 1; border-radius: 2px; background: rgba(255,255,255,0.06); transition: background 0.3s; }
-.pw-bar.weak   { background: var(--red); }
-.pw-bar.medium { background: var(--gold); }
-.pw-bar.strong { background: var(--green); }
-
-/* Submit button */
-.auth-btn {
-  width: 100%; padding: 0.8rem 1rem;
-  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
-  border: none; border-radius: 10px;
-  color: #fff; font-family: var(--font-pixel); font-size: 0.38rem;
-  letter-spacing: 2.5px; cursor: pointer; margin-top: 0.5rem;
-  box-shadow: 0 4px 20px rgba(168,85,247,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
-  transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
-  position: relative; overflow: hidden;
-}
-.auth-btn::after {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 100%);
-  opacity: 1;
-}
-.auth-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(168,85,247,0.45), inset 0 1px 0 rgba(255,255,255,0.15); }
-.auth-btn:active { transform: translateY(0); }
-.auth-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-
-/* Divider */
-.auth-div {
-  display: flex; align-items: center; gap: 0.75rem;
-  margin: 1.4rem 0; font-size: 0.65rem; color: var(--text3);
-  letter-spacing: 1px; text-transform: uppercase;
-}
-.auth-div::before, .auth-div::after {
-  content: ''; flex: 1; height: 1px;
-  background: rgba(255,255,255,0.05);
-}
-
-/* Option buttons */
-.auth-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; }
-.auth-opt-btn {
-  display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 10px; cursor: pointer;
-  font-family: 'Inter', var(--font-body); font-size: 0.76rem; font-weight: 500;
-  color: var(--text2); transition: all 0.18s; text-align: left;
-}
-.auth-opt-btn svg { width: 15px; height: 15px; color: var(--text3); flex-shrink: 0; transition: color 0.18s; }
-.auth-opt-btn:hover {
-  border-color: rgba(168,85,247,0.28);
-  background: rgba(168,85,247,0.06);
-  color: #fff;
-  box-shadow: 0 2px 12px rgba(168,85,247,0.1);
-}
-.auth-opt-btn:hover svg { color: var(--purple); }
-
-/* Info/desc box */
-.auth-desc-box {
-  background: rgba(168,85,247,0.05);
-  border: 1px solid rgba(168,85,247,0.12);
-  border-radius: 10px; padding: 0.75rem 1rem;
-  margin-bottom: 1.25rem;
-  font-size: 0.76rem; color: var(--text2); line-height: 1.65;
-}
-.auth-desc-box strong { color: rgba(168,85,247,0.9); font-weight: 600; }
-
-/* Alerts */
-.auth-msg {
-  border-radius: 8px; padding: 0.65rem 0.9rem;
-  font-size: 0.76rem; line-height: 1.5; margin-bottom: 1rem;
-  display: flex; align-items: flex-start; gap: 0.5rem;
-}
-.auth-msg svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; }
-.auth-msg-error   { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; }
-.auth-msg-success { background: rgba(93,189,58,0.08); border: 1px solid rgba(93,189,58,0.2); color: #86efac; }
-
-/* Back link */
-.auth-back-link {
-  display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 1.1rem;
-  font-size: 0.74rem; color: var(--text3); background: none; border: none;
-  cursor: pointer; font-family: 'Inter', var(--font-body); padding: 0;
-  transition: color 0.18s;
-}
-.auth-back-link svg { width: 13px; height: 13px; }
-.auth-back-link:hover { color: var(--text); }
-
-/* Mobile */
-@media (max-width: 820px) {
-  .auth-left { display: none; }
-  .auth-right { background: #06060c; }
-}
-
-/* Legacy aliases */
-.alert-success { background: rgba(93,189,58,0.08); border: 1px solid rgba(93,189,58,0.2); color: #86efac; border-radius: 10px; padding: 0.65rem 0.9rem; font-size: 0.78rem; margin-bottom: 1rem; }
-}
-
-
-/* ==================== MAIN APP ==================== */
-#app { display: none; height: 100vh; flex-direction: column; }
-
-/* Top Bar */
-.topbar {
-  height: var(--topbar); background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; padding: 0 1.25rem;
-  gap: 1rem; flex-shrink: 0; position: relative; z-index: 10;
-}
-.topbar-logo { font-family: var(--font-pixel); font-size: 0.5rem; color: var(--purple); letter-spacing: 2px; white-space: nowrap; }
-.topbar-sep { width: 1px; height: 24px; background: var(--border); margin: 0 0.25rem; }
-.topbar-section { font-size: 0.8rem; color: var(--text2); font-weight: 700; }
-.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
-.topbar-user {
-  display: flex; align-items: center; gap: 0.5rem;
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 8px; padding: 0.35rem 0.75rem; font-size: 0.78rem;
-}
-.topbar-user-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; }
-.topbar-badge {
-  font-family: var(--font-pixel); font-size: 0.38rem; padding: 3px 7px;
-  background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3);
-  border-radius: 4px; color: var(--purple);
-}
-
-/* Body */
-.app-body { display: flex; flex: 1; overflow: hidden; }
-
-/* Sidebar */
-.sidebar {
-  width: var(--sidebar); background: var(--bg2);
-  border-right: 1px solid var(--border);
-  display: flex; flex-direction: column;
-  overflow-y: auto; flex-shrink: 0;
-}
-.sidebar::-webkit-scrollbar { width: 4px; }
-.sidebar::-webkit-scrollbar-track { background: transparent; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-
-.nav-section-label {
-  font-family: var(--font-pixel); font-size: 0.38rem; color: var(--text3);
-  letter-spacing: 2px; padding: 1.25rem 1.25rem 0.5rem;
-}
-.nav-item {
-  display: flex; align-items: center; gap: 0.75rem;
-  padding: 0.65rem 1.25rem; cursor: pointer; transition: all 0.15s;
-  font-size: 0.82rem; font-weight: 700; color: var(--text2);
-  border-left: 3px solid transparent; user-select: none;
-}
-.nav-item:hover { background: rgba(168,85,247,0.06); color: var(--text); }
-.nav-item.active {
-  background: rgba(168,85,247,0.12); color: var(--purple);
-  border-left-color: var(--purple);
-}
-.nav-item svg { opacity: 0.7; flex-shrink: 0; }
-.nav-item.active svg { opacity: 1; }
-.nav-count {
-  margin-left: auto; background: rgba(168,85,247,0.2);
-  color: var(--purple); font-size: 0.68rem; font-weight: 800;
-  padding: 1px 7px; border-radius: 12px;
-}
-.sidebar-bottom { margin-top: auto; padding: 1rem; border-top: 1px solid var(--border); }
-
-/* Main Content */
-.main-content { flex: 1; overflow-y: auto; padding: 1.75rem; }
-.main-content::-webkit-scrollbar { width: 6px; }
-.main-content::-webkit-scrollbar-track { background: transparent; }
-.main-content::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+/* Main */
+.main-content{flex:1;overflow-y:auto;padding:1.75rem;background:var(--bg)}
+.main-content::-webkit-scrollbar{width:4px}
+.main-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
 /* Section */
-.section { display: none; }
-.section.active { display: block; }
+.section{display:none;animation:fadeIn .3s ease}
+.section.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
-/* Page Header */
-.page-header { margin-bottom: 1.75rem; }
-.page-title { font-family: var(--font-pixel); font-size: 0.65rem; color: var(--text); letter-spacing: 2px; margin-bottom: 0.4rem; }
-.page-sub { color: var(--text2); font-size: 0.82rem; }
+.page-header{margin-bottom:1.75rem}
+.page-title{font-family:var(--font-pixel);font-size:.6rem;color:var(--text);letter-spacing:2px;margin-bottom:.4rem}
+.page-sub{color:var(--text2);font-size:.82rem}
 
 /* Cards */
-.card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 1.25rem;
-}
-.card-title {
-  font-family: var(--font-pixel); font-size: 0.5rem; color: var(--text2);
-  letter-spacing: 1.5px; margin-bottom: 1rem;
-}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;padding-bottom:.85rem;border-bottom:1px solid var(--border)}
+.card-title{font-family:var(--font-pixel);font-size:.42rem;color:var(--text);letter-spacing:1.5px}
+.card-icon{width:32px;height:32px;background:rgba(168,85,247,.12);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--purple)}
+.card-icon svg{width:16px;height:16px}
 
-/* Stats Row */
-.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
-.stat-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 1.1rem 1.25rem;
-  display: flex; flex-direction: column; gap: 0.3rem;
-}
-.stat-card-label { font-size: 0.72rem; color: var(--text3); font-weight: 700; }
-.stat-card-val { font-family: var(--font-pixel); font-size: 1.1rem; color: var(--text); }
-.stat-card-val.purple { color: var(--purple); }
-.stat-card-val.gold { color: var(--gold); }
-.stat-card-val.green { color: var(--green); }
+/* Form elements */
+.field-group{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+.field-group.full{grid-template-columns:1fr}
+.field{display:flex;flex-direction:column;gap:.4rem}
+.field label{font-size:.72rem;font-weight:700;color:var(--text2);letter-spacing:.4px}
+.field input,.field select,.field textarea{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.6rem .85rem;color:var(--text);font-size:.85rem;font-family:var(--font-body);transition:.2s;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:rgba(168,85,247,.5);background:rgba(168,85,247,.04)}
+.field select{cursor:pointer}
+.field textarea{resize:vertical;min-height:90px}
+.field-hint{font-size:.7rem;color:var(--text3);margin-top:.2rem}
 
-/* Forms */
-.form-group { margin-bottom: 1rem; }
-.form-label { display: block; font-size: 0.78rem; font-weight: 800; color: var(--text2); margin-bottom: 0.4rem; }
-.form-input, .form-select, .form-textarea {
-  width: 100%; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 8px; padding: 0.6rem 0.9rem; color: var(--text);
-  font-family: var(--font-body); font-size: 0.82rem; outline: none;
-  transition: border-color 0.15s;
-}
-.form-input:focus, .form-select:focus, .form-textarea:focus {
-  border-color: var(--purple);
-}
-.form-textarea { resize: vertical; min-height: 80px; }
-.form-select { appearance: none; cursor: pointer; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
-.form-hint { font-size: 0.72rem; color: var(--text3); margin-top: 0.3rem; }
-.form-toggle { display: flex; align-items: center; gap: 0.75rem; }
-.toggle {
-  width: 40px; height: 22px; background: var(--bg4); border-radius: 11px;
-  cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0;
-  border: 1px solid var(--border);
-}
-.toggle.on { background: var(--purple); border-color: var(--purple); }
-.toggle::after {
-  content: ''; position: absolute; width: 16px; height: 16px;
-  background: white; border-radius: 50%; top: 2px; left: 2px;
-  transition: transform 0.2s;
-}
-.toggle.on::after { transform: translateX(18px); }
+/* Toggle switch */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:.7rem .9rem;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:.75rem}
+.toggle-label{display:flex;flex-direction:column;gap:.2rem}
+.toggle-label strong{font-size:.82rem;font-weight:700;color:var(--text)}
+.toggle-label span{font-size:.72rem;color:var(--text3)}
+.toggle{width:42px;height:22px;background:var(--bg4);border-radius:999px;cursor:pointer;position:relative;transition:.3s;flex-shrink:0;border:1px solid var(--border2)}
+.toggle::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.3s}
+.toggle.on{background:var(--purple);border-color:var(--purple)}
+.toggle.on::after{left:20px;background:#fff;box-shadow:0 0 8px rgba(168,85,247,.5)}
+.toggle.danger.on{background:var(--red);border-color:var(--red)}
 
-/* Buttons */
-.btn {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  padding: 0.55rem 1.1rem; border-radius: 8px; cursor: pointer;
-  font-family: var(--font-body); font-size: 0.8rem; font-weight: 800;
-  border: 1px solid transparent; transition: all 0.15s; white-space: nowrap;
-}
-.btn-primary { background: var(--purple); color: white; }
-.btn-primary:hover { background: var(--purple2); }
-.btn-secondary { background: var(--bg3); color: var(--text); border-color: var(--border); }
-.btn-secondary:hover { border-color: var(--purple); color: var(--purple); }
-.btn-danger { background: rgba(239,68,68,0.15); color: var(--red); border-color: rgba(239,68,68,0.3); }
-.btn-danger:hover { background: rgba(239,68,68,0.25); }
-.btn-success { background: rgba(93,189,58,0.15); color: var(--green); border-color: rgba(93,189,58,0.3); }
-.btn-success:hover { background: rgba(93,189,58,0.25); }
-.btn-sm { padding: 0.35rem 0.75rem; font-size: 0.72rem; }
-.btn-icon { padding: 0.4rem; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Status pill */
+.status-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .7rem;border-radius:999px;font-size:.7rem;font-weight:700}
+.pill-online{background:rgba(93,189,58,.12);color:var(--green);border:1px solid rgba(93,189,58,.25)}
+.pill-offline{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.pill-maintenance{background:rgba(244,196,48,.1);color:var(--gold);border:1px solid rgba(244,196,48,.2)}
 
-/* Table */
-.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
-.table { width: 100%; border-collapse: collapse; }
-.table th {
-  background: var(--bg3); padding: 0.7rem 1rem;
-  text-align: left; font-size: 0.72rem; font-weight: 800;
-  color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--border);
-}
-.table td {
-  padding: 0.75rem 1rem; border-bottom: 1px solid rgba(168,85,247,0.07);
-  font-size: 0.82rem; color: var(--text); vertical-align: middle;
-}
-.table tr:last-child td { border-bottom: none; }
-.table tr:hover td { background: rgba(168,85,247,0.04); }
-.table-actions { display: flex; gap: 0.4rem; align-items: center; }
+/* Admin list */
+.admin-item{display:flex;align-items:center;gap:.75rem;padding:.7rem .85rem;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:.5rem}
+.admin-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--purple2),var(--purple));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;flex-shrink:0}
+.admin-info{flex:1}
+.admin-info strong{display:block;font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.1rem}
+.admin-info span{font-size:.72rem;color:var(--text3)}
+.admin-badge{font-family:var(--font-pixel);font-size:.28rem;padding:3px 7px;border-radius:4px}
+.badge-superadmin{background:rgba(244,196,48,.12);color:var(--gold);border:1px solid rgba(244,196,48,.2)}
+.badge-admin{background:rgba(168,85,247,.12);color:var(--purple);border:1px solid rgba(168,85,247,.22)}
+.badge-editor{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.admin-actions{display:flex;gap:.4rem}
+.btn-icon{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text3);transition:.15s}
+.btn-icon:hover{border-color:var(--red);color:var(--red)}
+.btn-icon svg{width:13px;height:13px}
 
-/* Badges */
-.badge {
-  display: inline-flex; align-items: center; padding: 2px 8px;
-  border-radius: 4px; font-size: 0.68rem; font-weight: 800;
-  font-family: var(--font-pixel); letter-spacing: 0.5px;
-}
-.badge-purple { background: rgba(168,85,247,0.15); color: var(--purple); border: 1px solid rgba(168,85,247,0.3); }
-.badge-gold { background: rgba(244,196,48,0.15); color: var(--gold); border: 1px solid rgba(244,196,48,0.3); }
-.badge-green { background: rgba(93,189,58,0.15); color: var(--green); border: 1px solid rgba(93,189,58,0.3); }
-.badge-red { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
-.badge-blue { background: rgba(96,165,250,0.15); color: var(--blue); border: 1px solid rgba(96,165,250,0.3); }
+/* Save bar */
+.save-bar{position:sticky;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;z-index:5}
+.save-bar-hint{font-size:.75rem;color:var(--text3)}
+.save-btn{background:linear-gradient(135deg,var(--purple2),var(--purple));color:#fff;border:none;border-radius:8px;padding:.6rem 1.5rem;font-family:var(--font-pixel);font-size:.38rem;letter-spacing:1px;cursor:pointer;transition:.2s}
+.save-btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.save-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
-/* Pill status */
-.pill-on { color: var(--green); font-size: 0.75rem; font-weight: 800; }
-.pill-off { color: var(--text3); font-size: 0.75rem; font-weight: 800; }
-
-/* Modal */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-  display: none; align-items: center; justify-content: center; z-index: 500;
-  padding: 1rem; backdrop-filter: blur(4px);
-}
-.modal-overlay.open { display: flex; }
-.modal {
-  background: var(--bg2); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 2rem; width: 560px; max-width: 100%;
-  max-height: 90vh; overflow-y: auto; position: relative;
-}
-.modal::-webkit-scrollbar { width: 4px; }
-.modal::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
-.modal-title { font-family: var(--font-pixel); font-size: 0.55rem; color: var(--text); letter-spacing: 1.5px; }
-.modal-close {
-  width: 28px; height: 28px; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  color: var(--text2); font-size: 1rem; transition: all 0.15s;
-}
-.modal-close:hover { border-color: var(--red); color: var(--red); }
-.modal-footer { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
-
-/* Alert */
-.alert {
-  border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem;
-  font-size: 0.8rem; display: flex; align-items: center; gap: 0.6rem;
-}
-.alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
-.alert-success { background: rgba(93,189,58,0.1); border: 1px solid rgba(93,189,58,0.3); color: #86efac; }
-.alert-info { background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); color: #d8b4fe; }
+/* Live preview */
+.preview-box{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:1rem;font-size:.78rem;line-height:1.8}
+.preview-row{display:flex;justify-content:space-between;align-items:center;padding:.25rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.preview-row:last-child{border-bottom:none}
+.preview-key{color:var(--text3)}
+.preview-val{color:var(--purple);font-weight:700}
 
 /* Toast */
-#toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
-.toast {
-  background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: 10px; padding: 0.75rem 1.1rem; min-width: 240px;
-  font-size: 0.82rem; display: flex; align-items: center; gap: 0.6rem;
-  animation: slideIn 0.2s ease; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-}
-.toast.success { border-color: rgba(93,189,58,0.4); }
-.toast.error { border-color: rgba(239,68,68,0.4); }
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+#toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;pointer-events:none}
+.toast-item{padding:.65rem 1.1rem;border-radius:8px;font-size:.8rem;font-weight:700;animation:toastIn .3s ease;display:flex;align-items:center;gap:.5rem;pointer-events:none}
+.toast-success{background:#1a2e1a;border:1px solid rgba(93,189,58,.35);color:var(--green)}
+.toast-error{background:#2e1a1a;border:1px solid rgba(239,68,68,.35);color:#fca5a5}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-/* Empty state */
-.empty-state { text-align: center; padding: 3rem 1rem; color: var(--text3); }
-.empty-state svg { margin-bottom: 1rem; opacity: 0.4; }
-.empty-state p { font-size: 0.85rem; }
+/* Maintenance overlay preview */
+.maint-preview{background:linear-gradient(135deg,rgba(239,68,68,.08),rgba(244,196,48,.05));border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:1rem;text-align:center;margin-top:.75rem}
+.maint-preview h4{font-family:var(--font-pixel);font-size:.42rem;color:var(--red);letter-spacing:1px;margin-bottom:.5rem}
+.maint-preview p{font-size:.75rem;color:var(--text3)}
 
-/* Loading */
-.loading-row td { text-align: center; padding: 2rem; color: var(--text3); font-size: 0.8rem; }
+/* Loading skeleton */
+.skel{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px;height:14px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-/* Toolbar */
-.toolbar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
-.toolbar-right { margin-left: auto; display: flex; gap: 0.75rem; }
-.search-input {
-  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
-  padding: 0.5rem 0.9rem; color: var(--text); font-family: var(--font-body);
-  font-size: 0.82rem; outline: none; width: 220px;
-}
-.search-input:focus { border-color: var(--purple); }
-.search-input::placeholder { color: var(--text3); }
+/* Server status live card */
+.server-live{display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:1.25rem}
+.server-orb{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.2rem}
+.orb-online{background:rgba(93,189,58,.15);border:2px solid rgba(93,189,58,.4);box-shadow:0 0 14px rgba(93,189,58,.2)}
+.orb-offline{background:rgba(239,68,68,.1);border:2px solid rgba(239,68,68,.3)}
+.orb-loading{background:rgba(168,85,247,.1);border:2px solid rgba(168,85,247,.25);animation:orbPulse 1.5s infinite}
+@keyframes orbPulse{0%,100%{opacity:.6}50%{opacity:1}}
+.server-live-info h4{font-size:.85rem;font-weight:800;color:var(--text);margin-bottom:.15rem}
+.server-live-info p{font-size:.72rem;color:var(--text3)}
+.server-live-meta{margin-left:auto;text-align:right}
+.server-live-meta span{display:block;font-family:var(--font-pixel);font-size:.3rem;color:var(--text2);margin-bottom:.2rem}
+.server-live-meta em{display:block;font-size:.7rem;color:var(--text3);font-style:normal}
 
-/* Config table */
-.config-row { display: grid; grid-template-columns: 200px 1fr auto; gap: 0.75rem; align-items: start; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
-.config-row:last-child { border-bottom: none; }
-.config-key { font-size: 0.78rem; font-weight: 800; color: var(--text2); padding-top: 0.6rem; }
-.config-desc { font-size: 0.7rem; color: var(--text3); margin-top: 3px; }
-
-/* Dashboard activity */
-.activity-list { display: flex; flex-direction: column; gap: 0.5rem; }
-.activity-item {
-  display: flex; align-items: center; gap: 0.75rem;
-  padding: 0.65rem 0.9rem; background: var(--bg3); border-radius: 8px;
-  font-size: 0.8rem;
-}
-.activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-/* Announcement types */
-.ann-type-info { background: rgba(96,165,250,0.12); border-color: rgba(96,165,250,0.3); }
-.ann-type-warning { background: rgba(244,196,48,0.12); border-color: rgba(244,196,48,0.3); }
-.ann-type-success { background: rgba(93,189,58,0.12); border-color: rgba(93,189,58,0.3); }
-.ann-type-danger { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); }
-
-/* Color picker row */
-.color-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.color-swatch {
-  width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
-  border: 2px solid transparent; transition: all 0.15s;
-}
-.color-swatch.selected { border-color: white; transform: scale(1.15); }
-
-/* Scrollbar global */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+/* Responsive adjustments */
+@media(max-width:600px){.auth-left{display:none}.field-group{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
-<!-- ==================== TOAST ==================== -->
-<div id="toast-container"></div>
-
-<!-- ==================== SETUP SCREEN ==================== -->
-
-<!-- ==================== LOGIN SCREEN ==================== -->
-<div id="login-screen">
-  <!-- Left Panel: Branding -->
+<!-- ===== AUTH SCREEN ===== -->
+<div id="auth-screen">
   <div class="auth-left">
     <div class="auth-brand">
       <div class="auth-brand-dot"></div>
       <div class="auth-brand-name">LAUGHTALE SMP</div>
     </div>
-
     <div class="auth-headline">ADMIN<br><em>PANEL</em></div>
-    <p class="auth-tagline">Sistem manajemen konten untuk Laughtale SMP. Kelola shop, fitur server, dan komunitas dari satu panel.</p>
-
+    <p class="auth-tagline">Kelola konfigurasi server Laughtale SMP dari satu panel terpusat.</p>
     <div class="auth-stats">
       <div class="auth-stat">
-        <div class="auth-stat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
-        </div>
-        <div class="auth-stat-info">
-          <strong>Server Status</strong>
-          <span>laughtale.my.id</span>
-        </div>
-        <div class="auth-stat-badge on">ONLINE</div>
+        <div class="auth-stat-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <div class="auth-stat-info"><strong>Server Status</strong><span>laughtale.my.id</span></div>
+        <span class="auth-stat-badge badge-on">ONLINE</span>
       </div>
       <div class="auth-stat">
-        <div class="auth-stat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-        </div>
-        <div class="auth-stat-info">
-          <strong>Panel Version</strong>
-          <span>Build 2.0 — Stable</span>
-        </div>
-        <div class="auth-stat-badge off">v2.0</div>
-      </div>
-      <div class="auth-stat">
-        <div class="auth-stat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
-        <div class="auth-stat-info">
-          <strong>Supabase Auth</strong>
-          <span>Row Level Security aktif</span>
-        </div>
-        <div class="auth-stat-badge on">SECURE</div>
+        <div class="auth-stat-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div class="auth-stat-info"><strong>Supabase Auth</strong><span>Row Level Security aktif</span></div>
+        <span class="auth-stat-badge badge-blue">SECURE</span>
       </div>
     </div>
-
-    <div class="auth-left-foot">
-      <span>&copy; 2025 Laughtale SMP</span>
-      <span>Admin Panel</span>
+    <div class="auth-foot">
+      <span>© 2025 Laughtale SMP</span>
+      <span style="color:rgba(168,85,247,.5)">Server Settings</span>
     </div>
   </div>
 
-  <!-- Right Panel: Form -->
   <div class="auth-right">
-    <div class="auth-form">
+    <div class="auth-form-wrap">
+      <div class="auth-eyebrow">Akses Panel</div>
+      <div class="auth-form-title">Selamat datang</div>
+      <p class="auth-form-sub">Masuk menggunakan akun admin yang sudah terdaftar.</p>
 
-      <!-- VIEW: Login -->
-      <div id="view-login" class="auth-view visible">
-        <div class="auth-eyebrow">Akses Panel</div>
-        <div class="auth-form-title">Selamat datang</div>
-        <div class="auth-form-desc">Masuk menggunakan akun admin yang sudah terdaftar.</div>
-        <div id="login-error"></div>
-        <div class="auth-field">
-          <label class="auth-field-lbl">Email</label>
-          <input class="auth-field-inp" id="login-email" type="email" placeholder="admin@laughtale.my.id" autocomplete="email" />
-        </div>
-        <div class="auth-field">
-          <label class="auth-field-lbl">Password</label>
-          <input class="auth-field-inp" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
-        </div>
-        <button type="button" class="auth-btn" id="login-btn" onclick="doLogin()">MASUK KE ADMIN PANEL</button>
-        <div class="auth-div">atau</div>
-        <div class="auth-opts">
-          <button type="button" class="auth-opt-btn" onclick="switchView('register')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-            Buat Akun
-          </button>
-          <button type="button" class="auth-opt-btn" onclick="switchView('reset')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
-            Reset Password
-          </button>
-        </div>
+      <div id="auth-error" class="alert alert-error" style="display:none">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="auth-error-msg"></span>
       </div>
 
-      <!-- VIEW: Buat Akun -->
-      <div id="view-register" class="auth-view">
-        <div class="auth-crumb">
-          <span onclick="switchView('login')" style="cursor:pointer">Login</span>
-          <span class="auth-crumb-sep">/</span>
-          <span class="auth-crumb-active">Buat Akun</span>
-        </div>
-        <div class="auth-eyebrow">Akun Baru</div>
-        <div class="auth-form-title">Buat akun admin</div>
-        <div class="auth-form-desc">Masukkan emailmu. Link aktivasi akan dikirim — klik link tersebut untuk membuat password.</div>
-        <div id="register-result"></div>
-        <div class="auth-field">
-          <label class="auth-field-lbl">Email</label>
-          <input class="auth-field-inp" id="register-email" type="email" placeholder="emailmu@domain.com" autocomplete="email" />
-        </div>
-        <button type="button" class="auth-btn" id="register-btn" onclick="doRegister()">KIRIM LINK AKTIVASI</button>
-        <button type="button" class="auth-back-link" onclick="switchView('login')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
-          Kembali ke login
+      <div class="form-group">
+        <label class="form-label">EMAIL</label>
+        <input class="form-input" id="login-email" type="email" placeholder="admin@laughtale.my.id" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">PASSWORD</label>
+        <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <button class="btn btn-primary" onclick="doLogin()" id="login-btn">MASUK KE PANEL</button>
+
+      <div class="divider">atau</div>
+      <div style="display:flex;gap:.6rem">
+        <button class="btn" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:.32rem" onclick="goRegister()">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Buat Akun
+        </button>
+        <button class="btn" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:.32rem" onclick="goReset()">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Reset Password
         </button>
       </div>
-
-      <!-- VIEW: Reset Password -->
-      <div id="view-reset" class="auth-view">
-        <div class="auth-crumb">
-          <span onclick="switchView('login')" style="cursor:pointer">Login</span>
-          <span class="auth-crumb-sep">/</span>
-          <span class="auth-crumb-active">Reset Password</span>
-        </div>
-        <div class="auth-eyebrow">Lupa Password</div>
-        <div class="auth-form-title">Reset password</div>
-        <div class="auth-form-desc">Masukkan emailmu. Link reset akan dikirim — klik link tersebut untuk membuat password baru.</div>
-        <div id="reset-result"></div>
-        <div class="auth-field">
-          <label class="auth-field-lbl">Email</label>
-          <input class="auth-field-inp" id="reset-email" type="email" placeholder="emailmu@domain.com" autocomplete="email" />
-        </div>
-        <button type="button" class="auth-btn" id="reset-btn" onclick="doReset()">KIRIM LINK RESET</button>
-        <button type="button" class="auth-back-link" onclick="switchView('login')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
-          Kembali ke login
-        </button>
-      </div>
-
     </div>
   </div>
 </div>
 
-<!-- ==================== SET PASSWORD SCREEN ==================== -->
-<div id="set-password-screen">
-  <!-- Left Panel: Branding (sama) -->
-  <div class="auth-left">
-    <div class="auth-brand">
-      <div class="auth-brand-dot"></div>
-      <div class="auth-brand-name">LAUGHTALE SMP</div>
-    </div>
-    <div class="auth-headline">AKTIVASI<br><em>AKUN</em></div>
-    <p class="auth-tagline">Selesaikan proses pendaftaran dengan membuat password untuk akun adminmu.</p>
-    <div class="auth-stats">
-      <div class="auth-stat">
-        <div class="auth-stat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
-        </div>
-        <div class="auth-stat-info">
-          <strong>Email Terverifikasi</strong>
-          <span>Identitas dikonfirmasi</span>
-        </div>
-        <div class="auth-stat-badge on">OK</div>
-      </div>
-      <div class="auth-stat">
-        <div class="auth-stat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
-        <div class="auth-stat-info">
-          <strong>Satu langkah lagi</strong>
-          <span>Buat password yang kuat</span>
-        </div>
-        <div class="auth-stat-badge off">STEP 2</div>
-      </div>
-    </div>
-    <div class="auth-left-foot">
-      <span>&copy; 2025 Laughtale SMP</span>
-      <span>Admin Panel</span>
-    </div>
-  </div>
-
-  <!-- Right Panel: Set Password Form -->
-  <div class="auth-right">
-    <div class="auth-form">
-      <div class="auth-eyebrow">Aktivasi Akun</div>
-      <div class="auth-form-title">Buat password baru</div>
-      <div class="auth-form-desc">Password minimal 6 karakter. Gunakan kombinasi huruf dan angka untuk keamanan yang lebih baik.</div>
-      <div id="setpw-error"></div>
-      <div class="auth-field">
-        <label class="auth-field-lbl">Password Baru</label>
-        <input class="auth-field-inp" id="setpw-password" type="password" placeholder="Minimal 6 karakter" autocomplete="new-password" oninput="updatePwMeter(this.value)" />
-        <div class="pw-meter"><div class="pw-bar" id="pw-b1"></div><div class="pw-bar" id="pw-b2"></div><div class="pw-bar" id="pw-b3"></div></div>
-      </div>
-      <div class="auth-field">
-        <label class="auth-field-lbl">Konfirmasi Password</label>
-        <input class="auth-field-inp" id="setpw-confirm" type="password" placeholder="Ulangi password" autocomplete="new-password" />
-      </div>
-      <button type="button" class="auth-btn" id="setpw-btn" onclick="doSetPassword()">SIMPAN & AKTIFKAN AKUN</button>
-    </div>
-  </div>
-</div>
-
-<!-- ==================== MAIN APP ==================== -->
-<div id="app" style="display:none;flex-direction:column;height:100vh">
-
-  <!-- Top Bar -->
+<!-- ===== APP ===== -->
+<div id="app">
+  <!-- Topbar -->
   <div class="topbar">
-    <span class="topbar-logo">LAUGHTALE</span>
-    <div class="topbar-sep"></div>
-    <span class="topbar-section" id="topbar-section">Dashboard</span>
+    <div class="topbar-dot"></div>
+    <div class="topbar-logo">LAUGHTALE SMP</div>
+    <svg width="14" height="14" fill="none" stroke="rgba(168,85,247,.4)" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    <div class="topbar-title" id="topbar-section">Pengaturan Server</div>
     <div class="topbar-right">
-      <div class="topbar-badge" id="user-role-badge">ADMIN</div>
-      <div class="topbar-user">
-        <div class="topbar-user-dot"></div>
-        <span id="topbar-user-email">admin</span>
-      </div>
-      <button class="btn btn-secondary btn-sm" onclick="doLogout()">Keluar</button>
+      <div class="topbar-user" id="topbar-email">—</div>
+      <div class="topbar-badge" id="topbar-role">admin</div>
+      <button class="btn-logout" onclick="doLogout()">Keluar</button>
     </div>
   </div>
 
   <!-- Body -->
   <div class="app-body">
-
     <!-- Sidebar -->
     <div class="sidebar">
-      <div class="nav-section-label">UTAMA</div>
-      <div class="nav-item active" onclick="showSection('dashboard', this)" data-label="Dashboard">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Dashboard
+      <div class="nav-back" onclick="goToMain()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        Kembali ke Panel Utama
       </div>
-      <div class="nav-item" onclick="showSection('shop', this)" data-label="Shop Items">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39A2 2 0 0 0 9.6 16h9.77a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-        Shop Items
-        <span class="nav-count" id="nav-count-shop">—</span>
+      <div class="nav-section-label">SERVER</div>
+      <div class="nav-item active" onclick="showSection('server', this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Info Server
       </div>
-      <div class="nav-item" onclick="showSection('categories', this)" data-label="Kategori Shop">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-        Kategori Shop
+      <div class="nav-item" onclick="showSection('maintenance', this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Maintenance
       </div>
-
-      <div class="nav-section-label">KONTEN</div>
-      <div class="nav-item" onclick="showSection('features', this)" data-label="Fitur Server">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        Fitur Server
-        <span class="nav-count" id="nav-count-features">—</span>
+      <div class="nav-item" onclick="showSection('motd', this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        MOTD / Pengumuman
       </div>
-      <div class="nav-item" onclick="showSection('rules', this)" data-label="Peraturan">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Peraturan
-        <span class="nav-count" id="nav-count-rules">—</span>
+      <div class="nav-item" onclick="showSection('season', this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Season & World
       </div>
-      <div class="nav-item" onclick="showSection('social', this)" data-label="Sosial Media">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Sosial Media
-      </div>
-      <div class="nav-item" onclick="showSection('announcements', this)" data-label="Pengumuman">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        Pengumuman
-      </div>
-
-      <div class="nav-section-label">KONFIGURASI</div>
-      <div class="nav-item" onclick="showSection('config', this)" data-label="Site Config">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        Site Config
-      </div>
-      <div class="nav-item" onclick="showSection('admins', this)" data-label="Kelola Admin">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Kelola Admin
-      </div>
-
-      <div class="sidebar-bottom">
-        <div style="font-size:0.7rem;color:var(--text3)">Laughtale Admin v1.0</div>
+      <div class="nav-section-label">ADMIN</div>
+      <div class="nav-item" onclick="showSection('admins-wa', this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.37 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.27-.73a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Admin WhatsApp
       </div>
     </div>
 
-    <!-- Main Content -->
+    <!-- Main -->
     <div class="main-content">
 
-      <!-- ===== DASHBOARD ===== -->
-      <div class="section active" id="sec-dashboard">
+      <!-- ===== SERVER INFO ===== -->
+      <div class="section active" id="sec-server">
         <div class="page-header">
-          <div class="page-title">DASHBOARD</div>
-          <div class="page-sub">Selamat datang di Admin Panel Laughtale SMP</div>
+          <div class="page-title">INFO SERVER</div>
+          <div class="page-sub">Pengaturan dasar server Laughtale SMP</div>
         </div>
-        <div class="stats-row">
-          <div class="stat-card">
-            <div class="stat-card-label">Shop Items</div>
-            <div class="stat-card-val purple" id="dash-shop-count">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-label">Fitur Server</div>
-            <div class="stat-card-val gold" id="dash-features-count">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-label">Peraturan</div>
-            <div class="stat-card-val" id="dash-rules-count">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-card-label">Announcement Aktif</div>
-            <div class="stat-card-val green" id="dash-ann-count">—</div>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-          <div class="card">
-            <div class="card-title">QUICK ACTIONS</div>
-            <div style="display:flex;flex-direction:column;gap:0.5rem">
-              <button class="btn btn-secondary" onclick="showSection('shop', document.querySelector('[data-label=\'Shop Items\']'))">+ Tambah Item Shop</button>
-              <button class="btn btn-secondary" onclick="showSection('announcements', document.querySelector('[data-label=\'Pengumuman\']'))">📣 Kelola Pengumuman</button>
-              <button class="btn btn-secondary" onclick="showSection('config', document.querySelector('[data-label=\'Site Config\']'))">⚙️ Edit Konfigurasi</button>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-title">INFO SERVER</div>
-            <div style="display:flex;flex-direction:column;gap:0.6rem">
-              <div style="display:flex;justify-content:space-between;font-size:0.82rem">
-                <span style="color:var(--text3)">IP Server</span>
-                <span id="dash-server-ip" style="color:var(--purple);font-weight:800">—</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;font-size:0.82rem">
-                <span style="color:var(--text3)">Season</span>
-                <span id="dash-season" style="font-weight:800">—</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;font-size:0.82rem">
-                <span style="color:var(--text3)">Seed</span>
-                <span id="dash-seed" style="font-weight:800">—</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;font-size:0.82rem">
-                <span style="color:var(--text3)">Maintenance</span>
-                <span id="dash-maintenance" style="font-weight:800">—</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- ===== SHOP ITEMS ===== -->
-      <div class="section" id="sec-shop">
-        <div class="page-header">
-          <div class="page-title">SHOP ITEMS</div>
-          <div class="page-sub">Kelola item di Laughtale Store</div>
-        </div>
-        <div class="toolbar">
-          <input class="search-input" id="shop-search" placeholder="🔍 Cari item..." oninput="filterShopItems()">
-          <select class="form-select" style="width:160px;padding:0.5rem 0.9rem" id="shop-filter-cat" onchange="filterShopItems()">
-            <option value="">Semua Kategori</option>
-          </select>
-          <div class="toolbar-right">
-            <button class="btn btn-primary" onclick="openShopModal()">+ Tambah Item</button>
+        <!-- Live status -->
+        <div class="server-live" id="server-live-card">
+          <div class="server-orb orb-loading" id="live-orb">⏳</div>
+          <div class="server-live-info">
+            <h4 id="live-status-text">Memuat status...</h4>
+            <p id="live-ip-text">Menghubungi API...</p>
+          </div>
+          <div class="server-live-meta">
+            <span id="live-players">—</span>
+            <em id="live-latency">— ms</em>
           </div>
         </div>
-        <div class="table-wrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Kategori</th>
-                <th>Harga</th>
-                <th>Mata Uang</th>
-                <th>Status</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="shop-tbody">
-              <tr class="loading-row"><td colspan="6">Memuat data...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      <!-- ===== CATEGORIES ===== -->
-      <div class="section" id="sec-categories">
-        <div class="page-header">
-          <div class="page-title">KATEGORI SHOP</div>
-          <div class="page-sub">Kelola tab kategori di halaman shop</div>
-        </div>
-        <div class="toolbar">
-          <div class="toolbar-right">
-            <button class="btn btn-primary" onclick="openCatModal()">+ Tambah Kategori</button>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table class="table">
-            <thead><tr><th>Nama</th><th>Slug</th><th>Urutan</th><th>Status</th><th>Aksi</th></tr></thead>
-            <tbody id="cat-tbody"><tr class="loading-row"><td colspan="5">Memuat data...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ===== FEATURES ===== -->
-      <div class="section" id="sec-features">
-        <div class="page-header">
-          <div class="page-title">FITUR SERVER</div>
-          <div class="page-sub">Kelola 14 fitur yang ditampilkan di website</div>
-        </div>
-        <div class="toolbar">
-          <div class="toolbar-right">
-            <button class="btn btn-primary" onclick="openFeatureModal()">+ Tambah Fitur</button>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table class="table">
-            <thead><tr><th>#</th><th>Nama</th><th>Deskripsi</th><th>Tag</th><th>Status</th><th>Aksi</th></tr></thead>
-            <tbody id="features-tbody"><tr class="loading-row"><td colspan="6">Memuat data...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ===== RULES ===== -->
-      <div class="section" id="sec-rules">
-        <div class="page-header">
-          <div class="page-title">PERATURAN</div>
-          <div class="page-sub">Kelola peraturan yang ditampilkan di website</div>
-        </div>
-        <div class="toolbar">
-          <div class="toolbar-right">
-            <button class="btn btn-primary" onclick="openRuleModal()">+ Tambah Peraturan</button>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table class="table">
-            <thead><tr><th>#</th><th>Judul</th><th>Deskripsi</th><th>Badge</th><th>Status</th><th>Aksi</th></tr></thead>
-            <tbody id="rules-tbody"><tr class="loading-row"><td colspan="6">Memuat data...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ===== SOCIAL ===== -->
-      <div class="section" id="sec-social">
-        <div class="page-header">
-          <div class="page-title">SOSIAL MEDIA</div>
-          <div class="page-sub">Kelola link platform komunitas</div>
-        </div>
-        <div class="toolbar">
-          <div class="toolbar-right">
-            <button class="btn btn-primary" onclick="openSocialModal()">+ Tambah Platform</button>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table class="table">
-            <thead><tr><th>Platform</th><th>Handle</th><th>URL</th><th>Status</th><th>Aksi</th></tr></thead>
-            <tbody id="social-tbody"><tr class="loading-row"><td colspan="5">Memuat data...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- ===== ANNOUNCEMENTS ===== -->
-      <div class="section" id="sec-announcements">
-        <div class="page-header">
-          <div class="page-title">PENGUMUMAN</div>
-          <div class="page-sub">Banner pengumuman yang ditampilkan di website</div>
-        </div>
-        <div class="toolbar">
-          <div class="toolbar-right">
-            <button class="btn btn-primary" onclick="openAnnModal()">+ Buat Pengumuman</button>
-          </div>
-        </div>
-        <div id="ann-list" style="display:flex;flex-direction:column;gap:0.75rem">
-          <div class="loading-row" style="text-align:center;padding:2rem;color:var(--text3)">Memuat data...</div>
-        </div>
-      </div>
-
-      <!-- ===== CONFIG ===== -->
-      <div class="section" id="sec-config">
-        <div class="page-header">
-          <div class="page-title">SITE CONFIG</div>
-          <div class="page-sub">Konfigurasi umum website Laughtale SMP</div>
-        </div>
         <div class="card">
-          <div id="config-list">
-            <div class="loading-row" style="text-align:center;padding:2rem;color:var(--text3)">Memuat data...</div>
+          <div class="card-header">
+            <div class="card-title">KONFIGURASI SERVER</div>
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
           </div>
-          <div style="margin-top:1.5rem;display:flex;justify-content:flex-end">
-            <button class="btn btn-primary" onclick="saveAllConfig()">Simpan Semua Config</button>
+          <div class="field-group">
+            <div class="field">
+              <label>IP / Domain Server</label>
+              <input id="cfg-server_ip" placeholder="laughtale.my.id:19214">
+              <div class="field-hint">Format: domain:port atau IP:port</div>
+            </div>
+            <div class="field">
+              <label>Platform</label>
+              <select id="cfg-server_type">
+                <option value="Bedrock">Bedrock Edition</option>
+                <option value="Java">Java Edition</option>
+                <option value="Bedrock+Java">Bedrock + Java (Crossplay)</option>
+              </select>
+            </div>
           </div>
+          <div class="field-group full">
+            <div class="field">
+              <label>Nama Server (tampil di website)</label>
+              <input id="cfg-server_name" placeholder="Laughtale SMP">
+            </div>
+          </div>
+          <div class="card-header" style="margin-top:1rem">
+            <div class="card-title">PREVIEW</div>
+          </div>
+          <div class="preview-box" id="server-preview">
+            <div class="preview-row"><span class="preview-key">IP Server</span><span class="preview-val" id="pv-ip">—</span></div>
+            <div class="preview-row"><span class="preview-key">Platform</span><span class="preview-val" id="pv-type">—</span></div>
+            <div class="preview-row"><span class="preview-key">Nama</span><span class="preview-val" id="pv-name">—</span></div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <span class="save-bar-hint">Perubahan akan langsung tersimpan ke Supabase.</span>
+          <button class="save-btn" onclick="saveSection('server')">💾 SIMPAN INFO SERVER</button>
         </div>
       </div>
 
-      <!-- ===== ADMINS ===== -->
-      <div class="section" id="sec-admins">
+      <!-- ===== MAINTENANCE ===== -->
+      <div class="section" id="sec-maintenance">
         <div class="page-header">
-          <div class="page-title">KELOLA ADMIN</div>
-          <div class="page-sub">Tambah & atur role admin yang bisa mengakses panel ini</div>
+          <div class="page-title">MAINTENANCE MODE</div>
+          <div class="page-sub">Aktifkan saat server sedang dalam perbaikan</div>
         </div>
-        <div class="alert alert-info">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Untuk menambah admin baru: buat akun di Supabase Authentication terlebih dahulu, lalu tambahkan user_id ke tabel admin_roles.
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">STATUS MAINTENANCE</div>
+            <div id="maint-status-pill" class="status-pill pill-online">🟢 Normal</div>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-label">
+              <strong>🔴 Maintenance Mode</strong>
+              <span>Website akan menampilkan halaman maintenance kepada pengunjung</span>
+            </div>
+            <div class="toggle danger" id="toggle-maintenance" onclick="toggleMaintenance(this)"></div>
+          </div>
+
+          <div id="maint-on-preview" class="maint-preview" style="display:none">
+            <h4>⚠ MAINTENANCE</h4>
+            <p id="cfg-maint-msg-preview">Server sedang dalam pemeliharaan. Silakan coba beberapa saat lagi.</p>
+          </div>
+
+          <div class="field-group full" style="margin-top:1rem">
+            <div class="field">
+              <label>Pesan Maintenance (tampil ke pengunjung)</label>
+              <textarea id="cfg-maintenance_message" placeholder="Server sedang dalam pemeliharaan. Silakan coba beberapa saat lagi." oninput="document.getElementById('cfg-maint-msg-preview').textContent=this.value||'Pesan tidak diisi'"></textarea>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>Estimasi Selesai</label>
+              <input id="cfg-maintenance_eta" type="datetime-local">
+              <div class="field-hint">Opsional — tampil di halaman maintenance</div>
+            </div>
+            <div class="field">
+              <label>Kontak darurat (WhatsApp / Discord)</label>
+              <input id="cfg-maintenance_contact" placeholder="@laughtalesmp">
+            </div>
+          </div>
         </div>
-        <div class="table-wrap">
-          <table class="table">
-            <thead><tr><th>Email</th><th>Display Name</th><th>Role</th><th>Bergabung</th><th>Aksi</th></tr></thead>
-            <tbody id="admins-tbody"><tr class="loading-row"><td colspan="5">Memuat data...</td></tr></tbody>
-          </table>
+
+        <div class="save-bar">
+          <span class="save-bar-hint">⚠ Hati-hati: aktifkan hanya saat diperlukan.</span>
+          <button class="save-btn" onclick="saveSection('maintenance')">💾 SIMPAN MAINTENANCE</button>
+        </div>
+      </div>
+
+      <!-- ===== MOTD ===== -->
+      <div class="section" id="sec-motd">
+        <div class="page-header">
+          <div class="page-title">MOTD / PENGUMUMAN</div>
+          <div class="page-sub">Pesan yang muncul di halaman utama website</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">PENGUMUMAN WEBSITE</div>
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-label">
+              <strong>Tampilkan banner pengumuman</strong>
+              <span>Banner akan muncul di bagian atas website</span>
+            </div>
+            <div class="toggle" id="toggle-motd-active" onclick="this.classList.toggle('on')"></div>
+          </div>
+
+          <div class="field-group full">
+            <div class="field">
+              <label>Teks Pengumuman</label>
+              <textarea id="cfg-motd_text" placeholder="🎉 Season baru telah dimulai! Selamat bermain!"></textarea>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>Tipe Banner</label>
+              <select id="cfg-motd_type">
+                <option value="info">ℹ️ Info (biru)</option>
+                <option value="success">✅ Sukses (hijau)</option>
+                <option value="warning">⚠️ Peringatan (kuning)</option>
+                <option value="error">🔴 Penting (merah)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Teks Tombol (opsional)</label>
+              <input id="cfg-motd_btn" placeholder="Lihat Selengkapnya">
+            </div>
+          </div>
+          <div class="field-group full">
+            <div class="field">
+              <label>URL Tombol (opsional)</label>
+              <input id="cfg-motd_url" placeholder="https://discord.gg/laughtale">
+            </div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <span class="save-bar-hint">Banner akan langsung tampil setelah disimpan.</span>
+          <button class="save-btn" onclick="saveSection('motd')">💾 SIMPAN PENGUMUMAN</button>
+        </div>
+      </div>
+
+      <!-- ===== SEASON ===== -->
+      <div class="section" id="sec-season">
+        <div class="page-header">
+          <div class="page-title">SEASON & WORLD</div>
+          <div class="page-sub">Informasi season dan dunia saat ini</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">INFO SEASON</div>
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field">
+              <label>Nomor Season</label>
+              <input id="cfg-season" type="number" min="1" placeholder="1">
+            </div>
+            <div class="field">
+              <label>World Seed</label>
+              <input id="cfg-seed" placeholder="1234567890">
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>Tanggal Mulai Season</label>
+              <input id="cfg-season_start" type="date">
+            </div>
+            <div class="field">
+              <label>Status Season</label>
+              <select id="cfg-season_status">
+                <option value="active">🟢 Aktif</option>
+                <option value="hiatus">🟡 Hiatus</option>
+                <option value="ended">🔴 Selesai</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group full">
+            <div class="field">
+              <label>Deskripsi Season (tampil di website)</label>
+              <textarea id="cfg-season_desc" placeholder="Season 1 — Dunia survival baru dimulai! Join sekarang dan jadilah yang pertama..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <span class="save-bar-hint">Info season tampil di halaman utama dan about.</span>
+          <button class="save-btn" onclick="saveSection('season')">💾 SIMPAN SEASON</button>
+        </div>
+      </div>
+
+      <!-- ===== ADMINS WA ===== -->
+      <div class="section" id="sec-admins-wa">
+        <div class="page-header">
+          <div class="page-title">ADMIN WHATSAPP</div>
+          <div class="page-sub">Nomor WhatsApp admin untuk pemesanan di toko</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">ADMIN UTAMA (SHOP)</div>
+            <button class="save-btn" style="padding:.4rem 1rem;font-size:.32rem" onclick="addAdminWA('main')">+ Tambah</button>
+          </div>
+          <div id="wa-main-list">
+            <div style="text-align:center;padding:1.5rem;color:var(--text3);font-size:.78rem">Memuat data...</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">ADMIN GEM COINS</div>
+            <button class="save-btn" style="padding:.4rem 1rem;font-size:.32rem" onclick="addAdminWA('gem')">+ Tambah</button>
+          </div>
+          <div id="wa-gem-list">
+            <div style="text-align:center;padding:1.5rem;color:var(--text3);font-size:.78rem">Memuat data...</div>
+          </div>
+        </div>
+
+        <!-- Add form -->
+        <div class="card" id="wa-add-form" style="display:none">
+          <div class="card-header">
+            <div class="card-title" id="wa-add-title">TAMBAH ADMIN</div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>Nama Admin</label>
+              <input id="wa-new-name" placeholder="Blackdamen">
+            </div>
+            <div class="field">
+              <label>Nomor WhatsApp</label>
+              <input id="wa-new-number" placeholder="6282323645879">
+              <div class="field-hint">Format: 62 + nomor tanpa 0 (cth: 6282xxx)</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:.75rem;justify-content:flex-end">
+            <button class="btn" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:.34rem;padding:.5rem 1rem" onclick="cancelAddWA()">Batal</button>
+            <button class="save-btn" style="padding:.5rem 1.25rem" onclick="saveAdminWA()">Simpan</button>
+          </div>
         </div>
       </div>
 
     </div><!-- /main-content -->
-  </div><!-- /app-body -->
-</div><!-- /app -->
-
-<!-- ===== MODAL: SHOP ITEM ===== -->
-<div class="modal-overlay" id="modal-shop">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-shop-title">TAMBAH ITEM SHOP</div>
-      <div class="modal-close" onclick="closeModal('modal-shop')">×</div>
-    </div>
-    <input type="hidden" id="shop-item-id">
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Nama Item *</label>
-        <input class="form-input" id="shop-name" placeholder="Contoh: Rank VIP" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Kategori *</label>
-        <select class="form-select" id="shop-cat-sel">
-          <option value="">Pilih Kategori</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Harga *</label>
-        <input class="form-input" id="shop-price" type="number" placeholder="50000" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Mata Uang</label>
-        <select class="form-select" id="shop-currency">
-          <option value="Gem Coin">Gem Coin</option>
-          <option value="Koin">Koin</option>
-          <option value="IDR">IDR (Rupiah)</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Deskripsi</label>
-      <textarea class="form-textarea" id="shop-desc" placeholder="Deskripsi singkat item..."></textarea>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">URL Gambar</label>
-        <input class="form-input" id="shop-image" placeholder="https://..." />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Badge Label</label>
-        <input class="form-input" id="shop-badge" placeholder="HOT | NEW | LIMITED" />
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Urutan Tampil</label>
-        <input class="form-input" id="shop-order" type="number" placeholder="0" />
-      </div>
-      <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:1rem">
-        <div class="form-toggle">
-          <div class="toggle on" id="shop-visible-toggle" onclick="this.classList.toggle('on')"></div>
-          <label class="form-label" style="margin:0">Tampilkan di website</label>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-shop')">Batal</button>
-      <button class="btn btn-primary" onclick="saveShopItem()">Simpan Item</button>
-    </div>
   </div>
 </div>
 
-<!-- ===== MODAL: CATEGORY ===== -->
-<div class="modal-overlay" id="modal-cat">
-  <div class="modal" style="width:400px">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-cat-title">TAMBAH KATEGORI</div>
-      <div class="modal-close" onclick="closeModal('modal-cat')">×</div>
-    </div>
-    <input type="hidden" id="cat-id">
-    <div class="form-group">
-      <label class="form-label">Nama Kategori *</label>
-      <input class="form-input" id="cat-name" placeholder="Contoh: Rank" />
-    </div>
-    <div class="form-group">
-      <label class="form-label">Slug *</label>
-      <input class="form-input" id="cat-slug" placeholder="contoh: rank" />
-      <div class="form-hint">Huruf kecil, tanpa spasi</div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Urutan</label>
-        <input class="form-input" id="cat-order" type="number" placeholder="0" />
-      </div>
-      <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:1rem">
-        <div class="form-toggle">
-          <div class="toggle on" id="cat-visible-toggle" onclick="this.classList.toggle('on')"></div>
-          <label class="form-label" style="margin:0">Aktif</label>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-cat')">Batal</button>
-      <button class="btn btn-primary" onclick="saveCategory()">Simpan</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== MODAL: FEATURE ===== -->
-<div class="modal-overlay" id="modal-feature">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-feature-title">TAMBAH FITUR</div>
-      <div class="modal-close" onclick="closeModal('modal-feature')">×</div>
-    </div>
-    <input type="hidden" id="feature-id">
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Nomor (mis: 01)</label>
-        <input class="form-input" id="feature-num" placeholder="01" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Nama Fitur *</label>
-        <input class="form-input" id="feature-name" placeholder="Claim Land" />
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Deskripsi</label>
-      <textarea class="form-textarea" id="feature-desc" placeholder="Deskripsi singkat fitur..."></textarea>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Tag Label</label>
-        <input class="form-input" id="feature-tag" placeholder="MIMI LAND | QOL | NEW" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Tag Warna</label>
-        <select class="form-select" id="feature-tag-color">
-          <option value="purple">Purple</option>
-          <option value="gold">Gold</option>
-          <option value="green">Green</option>
-          <option value="red">Red</option>
-          <option value="blue">Blue</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Accent Color</label>
-        <input class="form-input" id="feature-accent" placeholder="#a855f7" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Urutan</label>
-        <input class="form-input" id="feature-order" type="number" placeholder="0" />
-      </div>
-    </div>
-    <div class="form-group">
-      <div class="form-toggle">
-        <div class="toggle on" id="feature-visible-toggle" onclick="this.classList.toggle('on')"></div>
-        <label class="form-label" style="margin:0">Tampilkan di website</label>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-feature')">Batal</button>
-      <button class="btn btn-primary" onclick="saveFeature()">Simpan</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== MODAL: RULE ===== -->
-<div class="modal-overlay" id="modal-rule">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-rule-title">TAMBAH PERATURAN</div>
-      <div class="modal-close" onclick="closeModal('modal-rule')">×</div>
-    </div>
-    <input type="hidden" id="rule-id">
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Nomor (mis: 01)</label>
-        <input class="form-input" id="rule-num" placeholder="01" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Judul *</label>
-        <input class="form-input" id="rule-title" placeholder="No Griefing" />
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Keterangan</label>
-      <textarea class="form-textarea" id="rule-desc" placeholder="Deskripsi peraturan..."></textarea>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Teks Badge</label>
-        <input class="form-input" id="rule-badge" placeholder="BANNED | WARN | REQ" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Tipe Badge</label>
-        <select class="form-select" id="rule-badge-type">
-          <option value="red">Red (BANNED)</option>
-          <option value="gold">Gold (WARN)</option>
-          <option value="purple">Purple (INFO)</option>
-          <option value="green">Green (OK)</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Urutan</label>
-        <input class="form-input" id="rule-order" type="number" placeholder="0" />
-      </div>
-      <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:1rem">
-        <div class="form-toggle">
-          <div class="toggle on" id="rule-visible-toggle" onclick="this.classList.toggle('on')"></div>
-          <label class="form-label" style="margin:0">Aktif</label>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-rule')">Batal</button>
-      <button class="btn btn-primary" onclick="saveRule()">Simpan</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== MODAL: SOCIAL ===== -->
-<div class="modal-overlay" id="modal-social">
-  <div class="modal" style="width:440px">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-social-title">TAMBAH PLATFORM</div>
-      <div class="modal-close" onclick="closeModal('modal-social')">×</div>
-    </div>
-    <input type="hidden" id="social-id">
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Platform *</label>
-        <input class="form-input" id="social-platform" placeholder="WhatsApp, Discord..." />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Handle / Nama</label>
-        <input class="form-input" id="social-handle" placeholder="@laughtale_smp" />
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">URL *</label>
-      <input class="form-input" id="social-url" placeholder="https://..." />
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Warna Brand</label>
-        <input class="form-input" id="social-color" placeholder="#25D366" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Urutan</label>
-        <input class="form-input" id="social-order" type="number" placeholder="1" />
-      </div>
-    </div>
-    <div class="form-group">
-      <div class="form-toggle">
-        <div class="toggle on" id="social-visible-toggle" onclick="this.classList.toggle('on')"></div>
-        <label class="form-label" style="margin:0">Tampilkan</label>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-social')">Batal</button>
-      <button class="btn btn-primary" onclick="saveSocial()">Simpan</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== MODAL: ANNOUNCEMENT ===== -->
-<div class="modal-overlay" id="modal-ann">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-ann-title">BUAT PENGUMUMAN</div>
-      <div class="modal-close" onclick="closeModal('modal-ann')">×</div>
-    </div>
-    <input type="hidden" id="ann-id">
-    <div class="form-group">
-      <label class="form-label">Pesan *</label>
-      <textarea class="form-textarea" id="ann-message" placeholder="Teks pengumuman yang ditampilkan di website..."></textarea>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Tipe</label>
-        <select class="form-select" id="ann-type">
-          <option value="info">Info (Biru)</option>
-          <option value="warning">Warning (Kuning)</option>
-          <option value="success">Success (Hijau)</option>
-          <option value="danger">Danger (Merah)</option>
-        </select>
-      </div>
-      <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:1rem">
-        <div class="form-toggle">
-          <div class="toggle" id="ann-active-toggle" onclick="this.classList.toggle('on')"></div>
-          <label class="form-label" style="margin:0">Aktifkan sekarang</label>
-        </div>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Teks Link (opsional)</label>
-        <input class="form-input" id="ann-link-text" placeholder="Lihat selengkapnya →" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">URL Link</label>
-        <input class="form-input" id="ann-link-url" placeholder="https://..." />
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-ann')">Batal</button>
-      <button class="btn btn-primary" onclick="saveAnnouncement()">Simpan</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== MODAL: CONFIRM DELETE ===== -->
-<div class="modal-overlay" id="modal-confirm">
-  <div class="modal" style="width:380px;text-align:center">
-    <div style="font-size:2rem;margin-bottom:1rem">🗑️</div>
-    <div class="modal-title" style="margin-bottom:0.75rem">HAPUS ITEM?</div>
-    <div id="confirm-message" style="font-size:0.82rem;color:var(--text2);margin-bottom:1.5rem"></div>
-    <div class="modal-footer" style="justify-content:center">
-      <button class="btn btn-secondary" onclick="closeModal('modal-confirm')">Batal</button>
-      <button class="btn btn-danger" id="confirm-btn">Ya, Hapus</button>
-    </div>
-  </div>
-</div>
+<!-- Toast container -->
+<div id="toast"></div>
 
 <script>
+// ==================== SUPABASE ====================
+const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq';
+let sb;
+
 // ==================== STATE ====================
-let sb = null;
-let shopItems = [], categories = [], features = [], rules = [], socials = [], announcements = [], configData = {};
-let editingShopId = null, editingCatId = null, editingFeatureId = null, editingRuleId = null, editingSocialId = null, editingAnnId = null;
+let currentUser = null;
+let currentRole = null;
+let configData  = {};
+let waAdmins    = { main: [], gem: [] };
+let waAddingFor = null; // 'main' | 'gem'
 
-// ==================== SUPABASE SETUP ====================
-// Config tidak lagi perlu setup screen — credentials sudah hardcoded
-function initSupabase() {
-  sb = supabase.createClient('https://jlxtnbnrirxhwuyqjlzw.supabase.co', 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq');
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', async () => {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // Cek apakah URL punya token invite / recovery dari email
-  const hashParams = new URLSearchParams(window.location.hash.slice(1));
-  const tokenType = hashParams.get('type');
-  if (tokenType === 'invite' || tokenType === 'recovery') {
-    // Sembunyikan login, tampilkan set password
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('set-password-screen').style.display = 'flex';
-  }
-  // Kalau tidak ada token, login-screen sudah default flex — tidak perlu diubah
-}
+  // Enter key on login
+  document.getElementById('login-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  // Check existing session
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) await afterLogin(session.user);
+
+  // Listen for preview updates
+  ['cfg-server_ip','cfg-server_type','cfg-server_name'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateServerPreview);
+    if (el) el.addEventListener('change', updateServerPreview);
+  });
+
+  // Fetch live server status
+  fetchLiveStatus();
+});
 
 // ==================== AUTH ====================
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
-  const pw = document.getElementById('login-password').value;
-  const btn = document.getElementById('login-btn');
-  if (!email || !pw) { showLoginError('Isi email dan password.'); return; }
-  btn.disabled = true; btn.textContent = 'MASUK...';
+  const pw    = document.getElementById('login-password').value;
+  const btn   = document.getElementById('login-btn');
+  const errEl = document.getElementById('auth-error');
+  const errMsg= document.getElementById('auth-error-msg');
+
+  errEl.style.display = 'none';
+  btn.textContent = 'MEMUAT...';
+  btn.disabled = true;
+
   try {
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
     if (error) throw error;
-    // Cek admin role
-    const { data: role } = await sb.from('admin_roles').select('role,display_name').eq('user_id', data.user.id).single();
+
+    // Check admin role
+    const { data: role } = await sb.from('admin_roles')
+      .select('role,display_name')
+      .eq('user_id', data.user.id)
+      .single();
+
     if (!role) {
       await sb.auth.signOut();
       throw new Error('Akun ini tidak terdaftar sebagai admin. Hubungi super admin.');
     }
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('topbar-user-email').textContent = email.split('@')[0];
-    document.getElementById('user-role-badge').textContent = (role.role || 'EDITOR').toUpperCase();
-    document.getElementById('app').style.display = 'flex';
-    await loadAllData();
+
+    await afterLogin(data.user, role);
   } catch(e) {
-    showLoginError(e.message);
-    btn.disabled = false; btn.textContent = 'MASUK KE ADMIN PANEL';
+    errMsg.textContent = e.message;
+    errEl.style.display = 'flex';
+    btn.textContent = 'MASUK KE PANEL';
+    btn.disabled = false;
   }
 }
-function showLoginError(msg) {
-  document.getElementById('login-error').innerHTML = `<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${msg}</div>`;
+
+async function afterLogin(user, roleData = null) {
+  if (!roleData) {
+    const { data } = await sb.from('admin_roles')
+      .select('role,display_name')
+      .eq('user_id', user.id)
+      .single();
+    if (!data) { await sb.auth.signOut(); return; }
+    roleData = data;
+  }
+
+  currentUser = user;
+  currentRole = roleData;
+
+  document.getElementById('topbar-email').textContent = roleData.display_name || user.email;
+  document.getElementById('topbar-role').textContent  = roleData.role;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+
+  await loadAllConfig();
+  await loadWAAdmins();
 }
+
 async function doLogout() {
   await sb.auth.signOut();
   location.reload();
 }
 
-// ==================== AUTH VIEW SWITCHER ====================
-function switchView(view) {
-  const loginEmail = (document.getElementById('login-email').value || '').trim();
+function goToMain() {
+  window.location.href = 'index.html';
+}
 
-  ['login','register','reset'].forEach(v => {
-    const el = document.getElementById('view-' + v);
+function goRegister() {
+  toast('Buka panel utama untuk membuat akun.', 'error');
+}
+function goReset() {
+  toast('Buka panel utama untuk reset password.', 'error');
+}
+
+// ==================== CONFIG ====================
+async function loadAllConfig() {
+  const { data, error } = await sb.from('site_config').select('*');
+  if (error) { toast('Gagal memuat konfigurasi: ' + error.message, 'error'); return; }
+
+  configData = {};
+  (data || []).forEach(row => { configData[row.key] = row; });
+
+  // Populate fields
+  const fields = [
+    'server_ip','server_name','server_type',
+    'maintenance_mode','maintenance_message','maintenance_eta','maintenance_contact',
+    'motd_text','motd_type','motd_btn','motd_url',
+    'season','seed','season_start','season_status','season_desc'
+  ];
+  fields.forEach(key => {
+    const el = document.getElementById('cfg-' + key);
     if (!el) return;
-    if (v === view) {
-      el.style.display = 'block';
-      // Force reflow sebelum tambah class agar CSS transition berjalan
-      el.offsetHeight;
-      el.classList.add('visible');
-    } else {
-      el.classList.remove('visible');
-      el.style.display = 'none';
-    }
+    const val = configData[key]?.value || '';
+    if (el.tagName === 'SELECT') el.value = val;
+    else el.value = val;
   });
 
-  if (view === 'register' && loginEmail) document.getElementById('register-email').value = loginEmail;
-  if (view === 'reset'    && loginEmail) document.getElementById('reset-email').value    = loginEmail;
+  // Toggles
+  const maint = configData['maintenance_mode']?.value === 'true';
+  const maintToggle = document.getElementById('toggle-maintenance');
+  maint ? maintToggle.classList.add('on') : maintToggle.classList.remove('on');
+  document.getElementById('maint-on-preview').style.display = maint ? 'block' : 'none';
+  document.getElementById('maint-status-pill').className = 'status-pill ' + (maint ? 'pill-maintenance' : 'pill-online');
+  document.getElementById('maint-status-pill').textContent = maint ? '🟡 Maintenance' : '🟢 Normal';
+
+  const motdActive = configData['motd_active']?.value === 'true';
+  motdActive
+    ? document.getElementById('toggle-motd-active').classList.add('on')
+    : document.getElementById('toggle-motd-active').classList.remove('on');
+
+  updateServerPreview();
 }
 
+function getVal(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
 
-// Buat akun — kirim link aktivasi (reset password for new user)
-async function doRegister() {
-  const email = document.getElementById('register-email').value.trim();
-  const btn = document.getElementById('register-btn');
-  const result = document.getElementById('register-result');
-  result.innerHTML = '';
-  if (!email) { result.innerHTML = '<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Masukkan email kamu.</div>'; return; }
-  btn.disabled = true; btn.textContent = 'MENGIRIM...';
+async function saveSection(section) {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '⏳ MENYIMPAN...';
+
+  let updates = {};
+
+  if (section === 'server') {
+    updates = {
+      server_ip:   getVal('cfg-server_ip'),
+      server_name: getVal('cfg-server_name'),
+      server_type: getVal('cfg-server_type'),
+    };
+  } else if (section === 'maintenance') {
+    updates = {
+      maintenance_mode:    document.getElementById('toggle-maintenance').classList.contains('on') ? 'true' : 'false',
+      maintenance_message: getVal('cfg-maintenance_message'),
+      maintenance_eta:     getVal('cfg-maintenance_eta'),
+      maintenance_contact: getVal('cfg-maintenance_contact'),
+    };
+  } else if (section === 'motd') {
+    updates = {
+      motd_active: document.getElementById('toggle-motd-active').classList.contains('on') ? 'true' : 'false',
+      motd_text:   getVal('cfg-motd_text'),
+      motd_type:   getVal('cfg-motd_type'),
+      motd_btn:    getVal('cfg-motd_btn'),
+      motd_url:    getVal('cfg-motd_url'),
+    };
+  } else if (section === 'season') {
+    updates = {
+      season:         getVal('cfg-season'),
+      seed:           getVal('cfg-seed'),
+      season_start:   getVal('cfg-season_start'),
+      season_status:  getVal('cfg-season_status'),
+      season_desc:    getVal('cfg-season_desc'),
+    };
+  }
+
+  let hasError = false;
+  for (const [key, value] of Object.entries(updates)) {
+    if (configData[key]) {
+      const { error } = await sb.from('site_config').update({ value }).eq('key', key);
+      if (error) { toast(`Gagal simpan ${key}: ${error.message}`, 'error'); hasError = true; }
+      else configData[key].value = value;
+    } else {
+      const { error } = await sb.from('site_config').insert({ key, value, description: key });
+      if (error) { toast(`Gagal buat ${key}: ${error.message}`, 'error'); hasError = true; }
+      else configData[key] = { key, value };
+    }
+  }
+
+  if (!hasError) toast('✅ Konfigurasi berhasil disimpan!');
+
+  await loadAllConfig();
+  btn.disabled = false;
+  btn.textContent = '💾 SIMPAN';
+  // Re-set correct label
+  const labels = { server:'INFO SERVER', maintenance:'MAINTENANCE', motd:'PENGUMUMAN', season:'SEASON' };
+  btn.textContent = '💾 SIMPAN ' + (labels[section] || '');
+}
+
+// ==================== MAINTENANCE TOGGLE ====================
+function toggleMaintenance(el) {
+  el.classList.toggle('on');
+  const on = el.classList.contains('on');
+  document.getElementById('maint-on-preview').style.display = on ? 'block' : 'none';
+  document.getElementById('maint-status-pill').className = 'status-pill ' + (on ? 'pill-maintenance' : 'pill-online');
+  document.getElementById('maint-status-pill').textContent = on ? '🟡 Maintenance' : '🟢 Normal';
+}
+
+// ==================== SERVER PREVIEW ====================
+function updateServerPreview() {
+  document.getElementById('pv-ip').textContent   = getVal('cfg-server_ip')   || '—';
+  document.getElementById('pv-type').textContent = getVal('cfg-server_type') || '—';
+  document.getElementById('pv-name').textContent = getVal('cfg-server_name') || '—';
+}
+
+// ==================== LIVE STATUS ====================
+async function fetchLiveStatus() {
+  const ip = (configData['server_ip']?.value || 'laughtale.my.id:19214');
+  const [host, port] = ip.split(':');
+  const start = Date.now();
   try {
-    const redirectTo = window.location.href.split('#')[0];
-    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
-    if (error) throw error;
-    result.innerHTML = '<div class="auth-msg auth-msg-success">  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><polyline points="20,6 9,17 4,12"/></svg> Link aktivasi dikirim! Cek email kamu lalu klik linknya untuk membuat password.</div>';
-    btn.textContent = 'TERKIRIM ✓';
+    const res  = await fetch(`https://api.mcsrvstat.us/bedrock/3/${host}:${port||19214}`, { signal: AbortSignal.timeout(8000) });
+    const data = await res.json();
+    const lat  = Date.now() - start;
+    const orb  = document.getElementById('live-orb');
+    const txt  = document.getElementById('live-status-text');
+    const ipEl = document.getElementById('live-ip-text');
+    const pl   = document.getElementById('live-players');
+    const ltEl = document.getElementById('live-latency');
+    if (data.online) {
+      orb.className = 'server-orb orb-online'; orb.textContent = '🟢';
+      txt.textContent = 'Server Online';
+      ipEl.textContent = `${host}:${port||19214}`;
+      pl.textContent   = `${data.players?.online||0} / ${data.players?.max||'?'} pemain`;
+      ltEl.textContent = `${lat} ms`;
+    } else {
+      orb.className = 'server-orb orb-offline'; orb.textContent = '🔴';
+      txt.textContent = 'Server Offline';
+      ipEl.textContent = `${host}:${port||19214}`;
+      pl.textContent   = '0 pemain';
+      ltEl.textContent = `${lat} ms`;
+    }
   } catch(e) {
-    result.innerHTML = `<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${e.message}</div>`;
-    btn.disabled = false; btn.textContent = 'KIRIM LINK AKTIVASI';
+    const orb = document.getElementById('live-orb');
+    orb.className = 'server-orb orb-offline'; orb.textContent = '⚠️';
+    document.getElementById('live-status-text').textContent = 'Gagal mengambil status';
+    document.getElementById('live-ip-text').textContent = 'Periksa koneksi atau IP server';
   }
 }
 
-// Reset password — kirim link reset
-async function doReset() {
-  const email = document.getElementById('reset-email').value.trim();
-  const btn = document.getElementById('reset-btn');
-  const result = document.getElementById('reset-result');
-  result.innerHTML = '';
-  if (!email) { result.innerHTML = '<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Masukkan email kamu.</div>'; return; }
-  btn.disabled = true; btn.textContent = 'MENGIRIM...';
-  try {
-    const redirectTo = window.location.href.split('#')[0];
-    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
-    if (error) throw error;
-    result.innerHTML = '<div class="auth-msg auth-msg-success">  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><polyline points="20,6 9,17 4,12"/></svg> Link reset dikirim! Cek email kamu lalu klik linknya untuk membuat password baru.</div>';
-    btn.textContent = 'TERKIRIM ✓';
-  } catch(e) {
-    result.innerHTML = `<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${e.message}</div>`;
-    btn.disabled = false; btn.textContent = 'KIRIM LINK RESET';
-  }
+// ==================== WA ADMINS ====================
+async function loadWAAdmins() {
+  // Load from site_config table (stored as JSON)
+  const mainRow = configData['whatsapp_admins'];
+  const gemRow  = configData['whatsapp_gem_admins'];
+  try { waAdmins.main = JSON.parse(mainRow?.value || '[]'); } catch { waAdmins.main = []; }
+  try { waAdmins.gem  = JSON.parse(gemRow?.value  || '[]'); } catch { waAdmins.gem  = []; }
+  renderWAList('main');
+  renderWAList('gem');
 }
 
-
-// ==================== PASSWORD METER ====================
-function updatePwMeter(val) {
-  const bars = [document.getElementById('pw-b1'), document.getElementById('pw-b2'), document.getElementById('pw-b3')];
-  bars.forEach(b => { if(b) { b.className = 'pw-bar'; } });
-  if (!val || val.length < 4) return;
-  const score = (val.length >= 8 ? 1 : 0) + (/[A-Z]/.test(val) || /[0-9]/.test(val) ? 1 : 0) + (/[^A-Za-z0-9]/.test(val) ? 1 : 0);
-  const cls = score <= 1 ? 'weak' : score === 2 ? 'medium' : 'strong';
-  for (let i = 0; i <= Math.min(score, 2); i++) { if(bars[i]) bars[i].classList.add(cls); }
-}
-
-// ==================== SET PASSWORD ====================
-async function doSetPassword() {
-  const pw = document.getElementById('setpw-password').value;
-  const confirm = document.getElementById('setpw-confirm').value;
-  const btn = document.getElementById('setpw-btn');
-  const errEl = document.getElementById('setpw-error');
-  errEl.innerHTML = '';
-
-  if (!pw || pw.length < 6) {
-    errEl.innerHTML = '<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Password minimal 6 karakter.</div>';
+function renderWAList(type) {
+  const container = document.getElementById(`wa-${type}-list`);
+  const list = waAdmins[type];
+  if (!list.length) {
+    container.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text3);font-size:.78rem">Belum ada admin ' + (type==='gem'?'Gem Coins':'') + ' terdaftar.</div>';
     return;
   }
-  if (pw !== confirm) {
-    errEl.innerHTML = '<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Password tidak cocok, coba lagi.</div>';
-    return;
-  }
-
-  btn.disabled = true; btn.textContent = 'MENYIMPAN...';
-  try {
-    // Pastikan session aktif dari token invite
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) throw new Error('Sesi tidak ditemukan. Minta invite ulang dari admin.');
-
-    const { error } = await sb.auth.updateUser({ password: pw });
-    if (error) throw error;
-
-    errEl.innerHTML = '<div class="auth-msg auth-msg-success">  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><polyline points="20,6 9,17 4,12"/></svg> Password berhasil dibuat! Mengalihkan ke halaman login...</div>';
-    await sb.auth.signOut();
-    setTimeout(() => {
-      window.location.hash = '';
-      document.getElementById('set-password-screen').style.display = 'none';
-      document.getElementById('login-screen').style.display = 'flex'; switchView('login');
-    }, 2000);
-  } catch(e) {
-    errEl.innerHTML = `<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${e.message}</div>`;
-    btn.disabled = false; btn.textContent = 'SIMPAN PASSWORD';
-  }
+  container.innerHTML = list.map((a, i) => `
+    <div class="admin-item">
+      <div class="admin-avatar">${a.name[0].toUpperCase()}</div>
+      <div class="admin-info">
+        <strong>${esc(a.name)}</strong>
+        <span>+${esc(a.number)}</span>
+      </div>
+      <span class="admin-badge badge-admin">${type==='gem'?'GEM':'SHOP'}</span>
+      <div class="admin-actions">
+        <button class="btn-icon" onclick="removeAdminWA('${type}', ${i})" title="Hapus">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+    </div>`).join('');
 }
 
+function addAdminWA(type) {
+  waAddingFor = type;
+  document.getElementById('wa-add-title').textContent = 'TAMBAH ADMIN ' + (type==='gem'?'GEM COINS':'SHOP');
+  document.getElementById('wa-new-name').value   = '';
+  document.getElementById('wa-new-number').value = '';
+  document.getElementById('wa-add-form').style.display = 'block';
+  document.getElementById('wa-new-name').focus();
+}
 
+function cancelAddWA() {
+  document.getElementById('wa-add-form').style.display = 'none';
+  waAddingFor = null;
+}
+
+async function saveAdminWA() {
+  const name   = document.getElementById('wa-new-name').value.trim();
+  const number = document.getElementById('wa-new-number').value.trim();
+  if (!name || !number) { toast('Nama dan nomor wajib diisi!', 'error'); return; }
+  if (!/^62/.test(number)) { toast('Nomor harus diawali 62 (contoh: 6281xxx)', 'error'); return; }
+
+  waAdmins[waAddingFor].push({ name, number });
+  await saveWAAdmins(waAddingFor);
+  renderWAList(waAddingFor);
+  cancelAddWA();
+  toast('✅ Admin berhasil ditambahkan!');
+}
+
+async function removeAdminWA(type, idx) {
+  if (!confirm(`Hapus admin "${waAdmins[type][idx].name}"?`)) return;
+  waAdmins[type].splice(idx, 1);
+  await saveWAAdmins(type);
+  renderWAList(type);
+  toast('Admin dihapus.');
+}
+
+async function saveWAAdmins(type) {
+  const key   = type === 'gem' ? 'whatsapp_gem_admins' : 'whatsapp_admins';
+  const value = JSON.stringify(waAdmins[type]);
+  if (configData[key]) {
+    await sb.from('site_config').update({ value }).eq('key', key);
+  } else {
+    await sb.from('site_config').insert({ key, value, description: 'Admin WhatsApp ' + type });
+    configData[key] = { key, value };
+  }
+}
 
 // ==================== NAVIGATION ====================
 function showSection(name, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('sec-' + name).classList.add('active');
-  if (el) { el.classList.add('active'); document.getElementById('topbar-section').textContent = el.dataset.label || name; }
-}
-
-// ==================== LOAD ALL DATA ====================
-async function loadAllData() {
-  await Promise.all([loadShopItems(), loadCategories(), loadFeatures(), loadRules(), loadSocial(), loadAnnouncements(), loadConfig(), loadAdmins()]);
-  updateDashboard();
-}
-
-// ==================== TOAST ====================
-function toast(msg, type='success') {
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  const icons = { success:'✅', error:'❌', info:'ℹ️' };
-  el.innerHTML = `<span>${icons[type]||'•'}</span><span>${msg}</span>`;
-  document.getElementById('toast-container').appendChild(el);
-  setTimeout(() => el.remove(), 3000);
-}
-
-// ==================== MODAL HELPERS ====================
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function confirmDelete(message, onConfirm) {
-  document.getElementById('confirm-message').textContent = message;
-  document.getElementById('confirm-btn').onclick = () => { closeModal('modal-confirm'); onConfirm(); };
-  openModal('modal-confirm');
-}
-
-// ==================== SHOP ITEMS ====================
-async function loadShopItems() {
-  const { data } = await sb.from('shop_items').select('*').order('sort_order');
-  shopItems = data || [];
-  document.getElementById('nav-count-shop').textContent = shopItems.length;
-  // populate category filter
-  const sel = document.getElementById('shop-filter-cat');
-  const cats = [...new Set(shopItems.map(i=>i.category))];
-  sel.innerHTML = '<option value="">Semua Kategori</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
-  renderShopTable(shopItems);
-}
-function filterShopItems() {
-  const q = document.getElementById('shop-search').value.toLowerCase();
-  const cat = document.getElementById('shop-filter-cat').value;
-  const filtered = shopItems.filter(i =>
-    (!q || i.name.toLowerCase().includes(q) || (i.description||'').toLowerCase().includes(q)) &&
-    (!cat || i.category === cat)
-  );
-  renderShopTable(filtered);
-}
-function renderShopTable(items) {
-  const tb = document.getElementById('shop-tbody');
-  if (!items.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Tidak ada item.</td></tr>'; return; }
-  tb.innerHTML = items.map(i => `
-    <tr>
-      <td><div style="font-weight:800">${esc(i.name)}</div>${i.image_url?`<div style="font-size:0.7rem;color:var(--text3)">${esc(i.image_url).substring(0,40)}...</div>`:''}</td>
-      <td><span class="badge badge-purple">${esc(i.category)}</span></td>
-      <td style="font-weight:800;color:var(--gold)">${i.price.toLocaleString()}</td>
-      <td style="font-size:0.75rem;color:var(--text2)">${esc(i.currency)}</td>
-      <td><span class="${i.visible?'pill-on':'pill-off'}">${i.visible?'● Aktif':'○ Disembunyikan'}</span></td>
-      <td><div class="table-actions">
-        <button class="btn btn-secondary btn-sm btn-icon" onclick="editShopItem('${i.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteShopItem('${i.id}','${esc(i.name)}')">🗑️</button>
-      </div></td>
-    </tr>`).join('');
-}
-function openShopModal(id=null) {
-  editingShopId = id;
-  document.getElementById('modal-shop-title').textContent = id ? 'EDIT ITEM SHOP' : 'TAMBAH ITEM SHOP';
-  // populate category select in modal
-  const sel = document.getElementById('shop-cat-sel');
-  sel.innerHTML = '<option value="">Pilih Kategori</option>' + categories.map(c=>`<option value="${c.slug}">${c.name}</option>`).join('');
-  if (!id) {
-    ['shop-name','shop-price','shop-desc','shop-image','shop-badge','shop-order'].forEach(f=>document.getElementById(f).value='');
-    document.getElementById('shop-currency').value = 'Gem Coin';
-    document.getElementById('shop-visible-toggle').classList.add('on');
-  }
-  openModal('modal-shop');
-}
-function editShopItem(id) {
-  const item = shopItems.find(i=>i.id===id);
-  if (!item) return;
-  openShopModal(id);
-  document.getElementById('shop-name').value = item.name;
-  document.getElementById('shop-price').value = item.price;
-  document.getElementById('shop-currency').value = item.currency;
-  document.getElementById('shop-desc').value = item.description||'';
-  document.getElementById('shop-image').value = item.image_url||'';
-  document.getElementById('shop-badge').value = item.badge||'';
-  document.getElementById('shop-order').value = item.sort_order||0;
-  document.getElementById('shop-cat-sel').value = item.category;
-  item.visible ? document.getElementById('shop-visible-toggle').classList.add('on') : document.getElementById('shop-visible-toggle').classList.remove('on');
-}
-async function saveShopItem() {
-  const payload = {
-    name: document.getElementById('shop-name').value.trim(),
-    category: document.getElementById('shop-cat-sel').value,
-    price: parseInt(document.getElementById('shop-price').value)||0,
-    currency: document.getElementById('shop-currency').value,
-    description: document.getElementById('shop-desc').value.trim(),
-    image_url: document.getElementById('shop-image').value.trim(),
-    badge: document.getElementById('shop-badge').value.trim(),
-    sort_order: parseInt(document.getElementById('shop-order').value)||0,
-    visible: document.getElementById('shop-visible-toggle').classList.contains('on'),
+  if (el) el.classList.add('active');
+  const labels = {
+    'server':'Info Server','maintenance':'Maintenance',
+    'motd':'MOTD / Pengumuman','season':'Season & World',
+    'admins-wa':'Admin WhatsApp'
   };
-  if (!payload.name || !payload.category) { toast('Nama dan kategori wajib diisi!', 'error'); return; }
-  let error;
-  if (editingShopId) ({ error } = await sb.from('shop_items').update(payload).eq('id', editingShopId));
-  else ({ error } = await sb.from('shop_items').insert(payload));
-  if (error) { toast(error.message, 'error'); return; }
-  toast(editingShopId ? 'Item diperbarui!' : 'Item ditambahkan!');
-  closeModal('modal-shop');
-  await loadShopItems();
-}
-function deleteShopItem(id, name) {
-  confirmDelete(`Hapus item "${name}"? Tindakan ini tidak bisa dibatalkan.`, async () => {
-    const { error } = await sb.from('shop_items').delete().eq('id', id);
-    if (error) { toast(error.message, 'error'); return; }
-    toast('Item dihapus.'); await loadShopItems();
-  });
-}
-
-// ==================== CATEGORIES ====================
-async function loadCategories() {
-  const { data } = await sb.from('shop_categories').select('*').order('sort_order');
-  categories = data || [];
-  const tb = document.getElementById('cat-tbody');
-  if (!categories.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text3)">Belum ada kategori.</td></tr>'; return; }
-  tb.innerHTML = categories.map(c=>`
-    <tr>
-      <td style="font-weight:800">${esc(c.name)}</td>
-      <td><code style="background:var(--bg3);padding:2px 8px;border-radius:4px;font-size:0.75rem">${esc(c.slug)}</code></td>
-      <td>${c.sort_order}</td>
-      <td><span class="${c.visible?'pill-on':'pill-off'}">${c.visible?'● Aktif':'○ Nonaktif'}</span></td>
-      <td><div class="table-actions">
-        <button class="btn btn-secondary btn-sm btn-icon" onclick="editCategory('${c.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteCategory('${c.id}','${esc(c.name)}')">🗑️</button>
-      </div></td>
-    </tr>`).join('');
-}
-function openCatModal(id=null) {
-  editingCatId = id;
-  document.getElementById('modal-cat-title').textContent = id ? 'EDIT KATEGORI' : 'TAMBAH KATEGORI';
-  if (!id) { ['cat-name','cat-slug','cat-order'].forEach(f=>document.getElementById(f).value=''); document.getElementById('cat-visible-toggle').classList.add('on'); }
-  openModal('modal-cat');
-}
-function editCategory(id) {
-  const cat = categories.find(c=>c.id===id); if (!cat) return;
-  openCatModal(id);
-  document.getElementById('cat-name').value = cat.name;
-  document.getElementById('cat-slug').value = cat.slug;
-  document.getElementById('cat-order').value = cat.sort_order||0;
-  cat.visible ? document.getElementById('cat-visible-toggle').classList.add('on') : document.getElementById('cat-visible-toggle').classList.remove('on');
-}
-document.getElementById('cat-name').addEventListener('input', function() {
-  if (!editingCatId) document.getElementById('cat-slug').value = this.value.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
-});
-async function saveCategory() {
-  const payload = { name: document.getElementById('cat-name').value.trim(), slug: document.getElementById('cat-slug').value.trim(), sort_order: parseInt(document.getElementById('cat-order').value)||0, visible: document.getElementById('cat-visible-toggle').classList.contains('on') };
-  if (!payload.name || !payload.slug) { toast('Nama dan slug wajib!','error'); return; }
-  let error;
-  if (editingCatId) ({ error } = await sb.from('shop_categories').update(payload).eq('id',editingCatId));
-  else ({ error } = await sb.from('shop_categories').insert(payload));
-  if (error) { toast(error.message,'error'); return; }
-  toast(editingCatId?'Kategori diperbarui!':'Kategori ditambahkan!');
-  closeModal('modal-cat'); await loadCategories();
-}
-function deleteCategory(id, name) {
-  confirmDelete(`Hapus kategori "${name}"?`, async () => {
-    const { error } = await sb.from('shop_categories').delete().eq('id',id);
-    if (error) { toast(error.message,'error'); return; }
-    toast('Kategori dihapus.'); await loadCategories();
-  });
-}
-
-// ==================== FEATURES ====================
-async function loadFeatures() {
-  const { data } = await sb.from('features').select('*').order('sort_order');
-  features = data || [];
-  document.getElementById('nav-count-features').textContent = features.length;
-  const tb = document.getElementById('features-tbody');
-  if (!features.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Belum ada fitur.</td></tr>'; return; }
-  tb.innerHTML = features.map(f=>`
-    <tr>
-      <td><span style="font-family:var(--font-pixel);font-size:0.5rem;color:var(--text3)">${esc(f.num)}</span></td>
-      <td style="font-weight:800">${esc(f.name)}</td>
-      <td style="color:var(--text2);max-width:200px">${esc(f.description||'')}</td>
-      <td>${f.tag?`<span class="badge badge-${f.tag_color||'purple'}">${esc(f.tag)}</span>`:'-'}</td>
-      <td><span class="${f.visible?'pill-on':'pill-off'}">${f.visible?'●':'○'}</span></td>
-      <td><div class="table-actions">
-        <button class="btn btn-secondary btn-sm btn-icon" onclick="editFeature('${f.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteFeature('${f.id}','${esc(f.name)}')">🗑️</button>
-      </div></td>
-    </tr>`).join('');
-}
-function openFeatureModal(id=null) {
-  editingFeatureId = id;
-  document.getElementById('modal-feature-title').textContent = id?'EDIT FITUR':'TAMBAH FITUR';
-  if (!id) { ['feature-num','feature-name','feature-desc','feature-tag','feature-accent','feature-order'].forEach(f=>document.getElementById(f).value=''); document.getElementById('feature-tag-color').value='purple'; document.getElementById('feature-visible-toggle').classList.add('on'); }
-  openModal('modal-feature');
-}
-function editFeature(id) {
-  const f = features.find(x=>x.id===id); if(!f) return;
-  openFeatureModal(id);
-  document.getElementById('feature-num').value = f.num;
-  document.getElementById('feature-name').value = f.name;
-  document.getElementById('feature-desc').value = f.description||'';
-  document.getElementById('feature-tag').value = f.tag||'';
-  document.getElementById('feature-tag-color').value = f.tag_color||'purple';
-  document.getElementById('feature-accent').value = f.accent_color||'#a855f7';
-  document.getElementById('feature-order').value = f.sort_order||0;
-  f.visible ? document.getElementById('feature-visible-toggle').classList.add('on') : document.getElementById('feature-visible-toggle').classList.remove('on');
-}
-async function saveFeature() {
-  const payload = { num: document.getElementById('feature-num').value.trim(), name: document.getElementById('feature-name').value.trim(), description: document.getElementById('feature-desc').value.trim(), tag: document.getElementById('feature-tag').value.trim(), tag_color: document.getElementById('feature-tag-color').value, accent_color: document.getElementById('feature-accent').value.trim()||'#a855f7', sort_order: parseInt(document.getElementById('feature-order').value)||0, visible: document.getElementById('feature-visible-toggle').classList.contains('on') };
-  if (!payload.name) { toast('Nama fitur wajib!','error'); return; }
-  let error;
-  if (editingFeatureId) ({ error } = await sb.from('features').update(payload).eq('id',editingFeatureId));
-  else ({ error } = await sb.from('features').insert(payload));
-  if (error) { toast(error.message,'error'); return; }
-  toast(editingFeatureId?'Fitur diperbarui!':'Fitur ditambahkan!');
-  closeModal('modal-feature'); await loadFeatures();
-}
-function deleteFeature(id, name) {
-  confirmDelete(`Hapus fitur "${name}"?`, async () => {
-    const { error } = await sb.from('features').delete().eq('id',id);
-    if (error) { toast(error.message,'error'); return; }
-    toast('Fitur dihapus.'); await loadFeatures();
-  });
-}
-
-// ==================== RULES ====================
-async function loadRules() {
-  const { data } = await sb.from('rules').select('*').order('sort_order');
-  rules = data || [];
-  document.getElementById('nav-count-rules').textContent = rules.length;
-  const tb = document.getElementById('rules-tbody');
-  if (!rules.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Belum ada peraturan.</td></tr>'; return; }
-  tb.innerHTML = rules.map(r=>`
-    <tr>
-      <td><span style="font-family:var(--font-pixel);font-size:0.5rem;color:var(--text3)">${esc(r.num)}</span></td>
-      <td style="font-weight:800">${esc(r.title)}</td>
-      <td style="color:var(--text2);max-width:200px;font-size:0.78rem">${esc(r.description||'')}</td>
-      <td>${r.badge?`<span class="badge badge-${r.badge_type||'red'}">${esc(r.badge)}</span>`:'-'}</td>
-      <td><span class="${r.visible?'pill-on':'pill-off'}">${r.visible?'●':'○'}</span></td>
-      <td><div class="table-actions">
-        <button class="btn btn-secondary btn-sm btn-icon" onclick="editRule('${r.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteRule('${r.id}','${esc(r.title)}')">🗑️</button>
-      </div></td>
-    </tr>`).join('');
-}
-function openRuleModal(id=null) {
-  editingRuleId = id;
-  document.getElementById('modal-rule-title').textContent = id?'EDIT PERATURAN':'TAMBAH PERATURAN';
-  if (!id) { ['rule-num','rule-title','rule-desc','rule-badge','rule-order'].forEach(f=>document.getElementById(f).value=''); document.getElementById('rule-badge-type').value='red'; document.getElementById('rule-visible-toggle').classList.add('on'); }
-  openModal('modal-rule');
-}
-function editRule(id) {
-  const r = rules.find(x=>x.id===id); if(!r) return;
-  openRuleModal(id);
-  document.getElementById('rule-num').value = r.num;
-  document.getElementById('rule-title').value = r.title;
-  document.getElementById('rule-desc').value = r.description||'';
-  document.getElementById('rule-badge').value = r.badge||'';
-  document.getElementById('rule-badge-type').value = r.badge_type||'red';
-  document.getElementById('rule-order').value = r.sort_order||0;
-  r.visible ? document.getElementById('rule-visible-toggle').classList.add('on') : document.getElementById('rule-visible-toggle').classList.remove('on');
-}
-async function saveRule() {
-  const payload = { num: document.getElementById('rule-num').value.trim(), title: document.getElementById('rule-title').value.trim(), description: document.getElementById('rule-desc').value.trim(), badge: document.getElementById('rule-badge').value.trim(), badge_type: document.getElementById('rule-badge-type').value, sort_order: parseInt(document.getElementById('rule-order').value)||0, visible: document.getElementById('rule-visible-toggle').classList.contains('on') };
-  if (!payload.title) { toast('Judul peraturan wajib!','error'); return; }
-  let error;
-  if (editingRuleId) ({ error } = await sb.from('rules').update(payload).eq('id',editingRuleId));
-  else ({ error } = await sb.from('rules').insert(payload));
-  if (error) { toast(error.message,'error'); return; }
-  toast(editingRuleId?'Peraturan diperbarui!':'Peraturan ditambahkan!');
-  closeModal('modal-rule'); await loadRules();
-}
-function deleteRule(id, title) {
-  confirmDelete(`Hapus peraturan "${title}"?`, async () => {
-    const { error } = await sb.from('rules').delete().eq('id',id);
-    if (error) { toast(error.message,'error'); return; }
-    toast('Peraturan dihapus.'); await loadRules();
-  });
-}
-
-// ==================== SOCIAL ====================
-async function loadSocial() {
-  const { data } = await sb.from('social_links').select('*').order('sort_order');
-  socials = data || [];
-  const tb = document.getElementById('social-tbody');
-  if (!socials.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text3)">Belum ada platform.</td></tr>'; return; }
-  tb.innerHTML = socials.map(s=>`
-    <tr>
-      <td style="font-weight:800">${esc(s.platform)}</td>
-      <td style="color:var(--text2)">${esc(s.handle||'')}</td>
-      <td><a href="${esc(s.url)}" target="_blank" style="color:var(--purple);font-size:0.75rem">${esc(s.url).substring(0,40)}...</a></td>
-      <td><span class="${s.visible?'pill-on':'pill-off'}">${s.visible?'● Aktif':'○ Nonaktif'}</span></td>
-      <td><div class="table-actions">
-        <button class="btn btn-secondary btn-sm btn-icon" onclick="editSocial('${s.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteSocial('${s.id}','${esc(s.platform)}')">🗑️</button>
-      </div></td>
-    </tr>`).join('');
-}
-function openSocialModal(id=null) {
-  editingSocialId = id;
-  document.getElementById('modal-social-title').textContent = id?'EDIT PLATFORM':'TAMBAH PLATFORM';
-  if (!id) { ['social-platform','social-handle','social-url','social-color','social-order'].forEach(f=>document.getElementById(f).value=''); document.getElementById('social-visible-toggle').classList.add('on'); }
-  openModal('modal-social');
-}
-function editSocial(id) {
-  const s = socials.find(x=>x.id===id); if(!s) return;
-  openSocialModal(id);
-  document.getElementById('social-platform').value = s.platform;
-  document.getElementById('social-handle').value = s.handle||'';
-  document.getElementById('social-url').value = s.url;
-  document.getElementById('social-color').value = s.color||'#a855f7';
-  document.getElementById('social-order').value = s.sort_order||0;
-  s.visible ? document.getElementById('social-visible-toggle').classList.add('on') : document.getElementById('social-visible-toggle').classList.remove('on');
-}
-async function saveSocial() {
-  const payload = { platform: document.getElementById('social-platform').value.trim(), handle: document.getElementById('social-handle').value.trim(), url: document.getElementById('social-url').value.trim(), color: document.getElementById('social-color').value.trim()||'#a855f7', sort_order: parseInt(document.getElementById('social-order').value)||0, visible: document.getElementById('social-visible-toggle').classList.contains('on') };
-  if (!payload.platform || !payload.url) { toast('Platform dan URL wajib!','error'); return; }
-  let error;
-  if (editingSocialId) ({ error } = await sb.from('social_links').update(payload).eq('id',editingSocialId));
-  else ({ error } = await sb.from('social_links').insert(payload));
-  if (error) { toast(error.message,'error'); return; }
-  toast(editingSocialId?'Platform diperbarui!':'Platform ditambahkan!');
-  closeModal('modal-social'); await loadSocial();
-}
-function deleteSocial(id, name) {
-  confirmDelete(`Hapus platform "${name}"?`, async () => {
-    const { error } = await sb.from('social_links').delete().eq('id',id);
-    if (error) { toast(error.message,'error'); return; }
-    toast('Platform dihapus.'); await loadSocial();
-  });
-}
-
-// ==================== ANNOUNCEMENTS ====================
-async function loadAnnouncements() {
-  const { data } = await sb.from('announcements').select('*').order('created_at', {ascending:false});
-  announcements = data || [];
-  const activeCount = announcements.filter(a=>a.active).length;
-  document.getElementById('dash-ann-count').textContent = activeCount;
-  const container = document.getElementById('ann-list');
-  if (!announcements.length) { container.innerHTML = '<div class="empty-state"><p>Belum ada pengumuman.</p></div>'; return; }
-  const typeColors = { info:'#60a5fa', warning:'#f4c430', success:'#5dbd3a', danger:'#ef4444' };
-  container.innerHTML = announcements.map(a=>`
-    <div class="card" style="border-left:3px solid ${typeColors[a.type]||'#a855f7'}">
-      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
-        <div style="flex:1">
-          <div style="font-weight:800;margin-bottom:0.3rem">${esc(a.message)}</div>
-          <div style="font-size:0.72rem;color:var(--text3)">Tipe: <strong style="color:${typeColors[a.type]}">${a.type}</strong>${a.link_url?` · Link: <a href="${esc(a.link_url)}" target="_blank" style="color:var(--purple)">${esc(a.link_text||a.link_url)}</a>`:''}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:0.75rem">
-          <div class="form-toggle">
-            <div class="toggle ${a.active?'on':''}" onclick="toggleAnn('${a.id}', this)"></div>
-            <span style="font-size:0.78rem;font-weight:800;color:${a.active?'var(--green)':'var(--text3)'}">${a.active?'AKTIF':'NONAKTIF'}</span>
-          </div>
-          <button class="btn btn-secondary btn-sm btn-icon" onclick="editAnn('${a.id}')">✏️</button>
-          <button class="btn btn-danger btn-sm btn-icon" onclick="deleteAnn('${a.id}')">🗑️</button>
-        </div>
-      </div>
-    </div>`).join('');
-}
-async function toggleAnn(id, el) {
-  el.classList.toggle('on');
-  const active = el.classList.contains('on');
-  // Deactivate others if activating this one
-  if (active) await sb.from('announcements').update({active:false}).neq('id',id);
-  await sb.from('announcements').update({active}).eq('id',id);
-  toast(active?'Pengumuman diaktifkan!':'Pengumuman dinonaktifkan.');
-  await loadAnnouncements();
-}
-function openAnnModal(id=null) {
-  editingAnnId = id;
-  document.getElementById('modal-ann-title').textContent = id?'EDIT PENGUMUMAN':'BUAT PENGUMUMAN';
-  if (!id) { ['ann-message','ann-link-text','ann-link-url'].forEach(f=>document.getElementById(f).value=''); document.getElementById('ann-type').value='info'; document.getElementById('ann-active-toggle').classList.remove('on'); }
-  openModal('modal-ann');
-}
-function editAnn(id) {
-  const a = announcements.find(x=>x.id===id); if(!a) return;
-  openAnnModal(id);
-  document.getElementById('ann-message').value = a.message;
-  document.getElementById('ann-type').value = a.type||'info';
-  document.getElementById('ann-link-text').value = a.link_text||'';
-  document.getElementById('ann-link-url').value = a.link_url||'';
-  a.active ? document.getElementById('ann-active-toggle').classList.add('on') : document.getElementById('ann-active-toggle').classList.remove('on');
-}
-async function saveAnnouncement() {
-  const payload = { message: document.getElementById('ann-message').value.trim(), type: document.getElementById('ann-type').value, active: document.getElementById('ann-active-toggle').classList.contains('on'), link_text: document.getElementById('ann-link-text').value.trim(), link_url: document.getElementById('ann-link-url').value.trim() };
-  if (!payload.message) { toast('Pesan wajib diisi!','error'); return; }
-  if (payload.active) await sb.from('announcements').update({active:false}).neq('id', editingAnnId||'00000000-0000-0000-0000-000000000000');
-  let error;
-  if (editingAnnId) ({ error } = await sb.from('announcements').update(payload).eq('id',editingAnnId));
-  else ({ error } = await sb.from('announcements').insert(payload));
-  if (error) { toast(error.message,'error'); return; }
-  toast(editingAnnId?'Pengumuman diperbarui!':'Pengumuman dibuat!');
-  closeModal('modal-ann'); await loadAnnouncements();
-}
-function deleteAnn(id) {
-  confirmDelete('Hapus pengumuman ini?', async () => {
-    const { error } = await sb.from('announcements').delete().eq('id',id);
-    if (error) { toast(error.message,'error'); return; }
-    toast('Pengumuman dihapus.'); await loadAnnouncements();
-  });
-}
-
-// ==================== CONFIG ====================
-async function loadConfig() {
-  const { data } = await sb.from('site_config').select('*');
-  configData = {};
-  (data||[]).forEach(row => configData[row.key] = row);
-  renderConfig();
-  // Update dashboard
-  if (configData['server_ip']) document.getElementById('dash-server-ip').textContent = configData['server_ip'].value;
-  if (configData['season']) document.getElementById('dash-season').textContent = 'Season ' + configData['season'].value;
-  if (configData['seed']) document.getElementById('dash-seed').textContent = configData['seed'].value;
-  if (configData['maintenance_mode']) document.getElementById('dash-maintenance').textContent = configData['maintenance_mode'].value === 'true' ? '🔴 ON' : '🟢 OFF';
-}
-function renderConfig() {
-  const container = document.getElementById('config-list');
-  const entries = Object.values(configData);
-  if (!entries.length) { container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text3)">Tidak ada konfigurasi.</div>'; return; }
-  container.innerHTML = entries.map(row => `
-    <div class="config-row">
-      <div>
-        <div class="config-key">${esc(row.key)}</div>
-        <div class="config-desc">${esc(row.description||'')}</div>
-      </div>
-      <div>
-        ${row.key === 'maintenance_mode' ?
-          `<select class="form-select" id="cfg-${row.key}"><option value="false" ${row.value!=='true'?'selected':''}>false (Normal)</option><option value="true" ${row.value==='true'?'selected':''}>true (Maintenance)</option></select>` :
-          `<input class="form-input" id="cfg-${row.key}" value="${esc(row.value||'')}" />`
-        }
-      </div>
-      <div style="padding-top:0.5rem">
-        <button class="btn btn-success btn-sm" onclick="saveOneConfig('${row.key}')">Simpan</button>
-      </div>
-    </div>`).join('');
-}
-async function saveOneConfig(key) {
-  const val = document.getElementById('cfg-' + key).value;
-  const { error } = await sb.from('site_config').update({value:val}).eq('key',key);
-  if (error) { toast(error.message,'error'); return; }
-  configData[key].value = val;
-  toast(`Config "${key}" disimpan!`);
-  await loadConfig();
-}
-async function saveAllConfig() {
-  const entries = Object.values(configData);
-  for (const row of entries) {
-    const el = document.getElementById('cfg-' + row.key);
-    if (el) await sb.from('site_config').update({value:el.value}).eq('key',row.key);
-  }
-  toast('Semua konfigurasi disimpan!');
-  await loadConfig();
-}
-
-// ==================== ADMINS ====================
-async function loadAdmins() {
-  const { data } = await sb.from('admin_roles').select('*');
-  const tb = document.getElementById('admins-tbody');
-  if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text3)">Belum ada admin.</td></tr>'; return; }
-  tb.innerHTML = data.map(a=>`
-    <tr>
-      <td style="color:var(--text2)">${a.user_id.substring(0,12)}...</td>
-      <td style="font-weight:800">${esc(a.display_name||'-')}</td>
-      <td><span class="badge ${a.role==='superadmin'?'badge-gold':a.role==='admin'?'badge-purple':'badge-blue'}">${esc(a.role)}</span></td>
-      <td style="font-size:0.75rem;color:var(--text3)">${new Date(a.created_at).toLocaleDateString('id-ID')}</td>
-      <td><div class="table-actions">
-        <select class="form-select" style="padding:0.3rem 0.6rem;font-size:0.75rem;width:120px" onchange="updateAdminRole('${a.user_id}', this.value)">
-          <option ${a.role==='editor'?'selected':''}>editor</option>
-          <option ${a.role==='admin'?'selected':''}>admin</option>
-          <option ${a.role==='superadmin'?'selected':''}>superadmin</option>
-        </select>
-      </div></td>
-    </tr>`).join('');
-}
-async function updateAdminRole(userId, role) {
-  const { error } = await sb.from('admin_roles').update({role}).eq('user_id',userId);
-  if (error) { toast(error.message,'error'); return; }
-  toast('Role diperbarui!'); await loadAdmins();
-}
-
-// ==================== DASHBOARD ====================
-function updateDashboard() {
-  document.getElementById('dash-shop-count').textContent = shopItems.length;
-  document.getElementById('dash-features-count').textContent = features.length;
-  document.getElementById('dash-rules-count').textContent = rules.length;
+  document.getElementById('topbar-section').textContent = labels[name] || name;
 }
 
 // ==================== UTILS ====================
-function esc(str) {
-  if (!str) return '';
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = 'toast-item toast-' + type;
+  el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
 }
-
-// ==================== INIT ====================
-window.addEventListener('load', () => {
-  initSupabase();
-
-  // Check existing session (skip jika sedang dalam mode invite/recovery)
-  const _hashParams = new URLSearchParams(window.location.hash.slice(1));
-  const _tokenType = _hashParams.get('type');
-  if (!_tokenType) {
-    setTimeout(async () => {
-      if (!sb) return;
-      const { data: { session } } = await sb.auth.getSession();
-      if (session) {
-        const { data: role } = await sb.from('admin_roles').select('role').eq('user_id', session.user.id).single();
-        if (role) {
-          document.getElementById('login-screen').style.display = 'none';
-          document.getElementById('topbar-user-email').textContent = session.user.email.split('@')[0];
-          document.getElementById('user-role-badge').textContent = (role.role||'EDITOR').toUpperCase();
-          document.getElementById('app').style.display = 'flex';
-          await loadAllData();
-        }
-      }
-    }, 300);
-  }
-  // Close modals on overlay click
-  document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
-  });
-  // Enter to login
-  document.getElementById('login-password').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
-  document.getElementById('setpw-confirm').addEventListener('keydown', e => { if (e.key==='Enter') doSetPassword(); });
-});
 </script>
 </body>
 </html>
