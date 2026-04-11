@@ -12,7 +12,13 @@ let waAddingFor = null;
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', async () => {
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
 
   // Expose ke window agar admin-shop.js dan modul lain bisa akses
   window._adminSb = sb;
