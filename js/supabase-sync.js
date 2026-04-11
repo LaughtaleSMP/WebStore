@@ -26,40 +26,10 @@
     '':      { bg: 'rgba(139,148,158,0.1)',  bd: 'rgba(139,148,158,0.3)', cl: '#8892a4' },
   };
 
-  function badgeHtml(item, extra) {
+  function badgeHtml(item, extraStyle = '') {
     if (!item.badge) return '';
-    const c = BC[item.badgeColor || item.badge_color] || BC[''];
-    return `<span class="shop-badge" style="background:${c.bg};border:1px solid ${c.bd};color:${c.cl};${extra || ''}">${item.badge}</span>`;
-  }
-
-  /* ── Build HTML satu kartu ── */
-  function buildCardHtml(item) {
-    if (typeof window.shopBuildCard === 'function') {
-      return window.shopBuildCard(item);
-    }
-    const sold     = item.stock === 'Habis';
-    const p        = item.price || 0;
-    const op       = item.originalPrice || item.original_price || 0;
-    const origHtml = (op > 0 && op > p)
-      ? `<span class="shop-price-orig">Rp\u00a0${op.toLocaleString('id-ID')}</span>`
-      : '';
-    const featHtml = (item.features && item.features.length)
-      ? `<ul class="shop-feat-list">${item.features.map(f => `<li>${f}</li>`).join('')}</ul>`
-      : '';
-    return `<div class="shop-card${sold ? ' shop-sold-out' : ''}" data-category="${item.category}">
-      ${badgeHtml(item, 'position:absolute;top:12px;right:12px;z-index:2;')}
-      <div class="shop-card-emoji">${item.emoji || '\uD83D\uDED2'}</div>
-      <div class="shop-card-name">${item.name}</div>
-      <div class="shop-card-cat">${item.category}</div>
-      <div class="shop-card-desc">${item.description || ''}</div>
-      ${featHtml}
-      <div class="shop-card-footer">
-        <div class="shop-card-price">${fmtPrice(p)}${origHtml}</div>
-        ${sold
-          ? `<button class="shop-btn shop-btn-sold" disabled>HABIS</button>`
-          : `<button class="shop-btn shop-btn-buy" onclick="shopOpenModal(${item.id})">Pesan</button>`}
-      </div>
-    </div>`;
+    const c = BC[item.badgeColor] || BC[''];
+    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font-size:0.6rem;font-family:'Press Start 2P',monospace;background:${c.bg};border:1px solid ${c.bd};color:${c.cl};${extraStyle}">${item.badge}</span>`;
   }
 
   /* ── Re-render grid shop dari nol ── */
@@ -70,7 +40,34 @@
     const tabsEl    = document.getElementById('shop-tabs');
     const activeCat = tabsEl?.querySelector('.shop-tab.active')?.dataset.cat || 'Semua';
 
-    gridEl.innerHTML = items.map(buildCardHtml).join('');
+    gridEl.innerHTML = items.map(item => {
+      if (typeof window.shopBuildCard === 'function') {
+        return window.shopBuildCard(item);
+      }
+      const sold     = item.stock === 'Habis';
+      const p        = item.price || 0;
+      const op       = item.originalPrice || item.original_price || 0;
+      const origHtml = (op > 0 && op > p)
+        ? `<span class="shop-price-orig">Rp\u00a0${op.toLocaleString('id-ID')}</span>`
+        : '';
+      const featHtml = (item.features && item.features.length)
+        ? `<ul class="shop-feat-list">${item.features.map(f => `<li>${f}</li>`).join('')}</ul>`
+        : '';
+      return `<div class="shop-card${sold ? ' shop-sold-out' : ''}" data-category="${item.category}">
+        ${badgeHtml(item, 'position:absolute;top:12px;right:12px;z-index:2;')}
+        <div class="shop-card-emoji">${item.emoji || '\uD83D\uDED2'}</div>
+        <div class="shop-card-name">${item.name}</div>
+        <div class="shop-card-cat">${item.category}</div>
+        <div class="shop-card-desc">${item.description || ''}</div>
+        ${featHtml}
+        <div class="shop-card-footer">
+          <div class="shop-card-price">${fmtPrice(p)}${origHtml}</div>
+          ${sold
+            ? `<button class="shop-btn shop-btn-sold" disabled>HABIS</button>`
+            : `<button class="shop-btn shop-btn-buy" onclick="shopOpenModal(${item.id})">Pesan</button>`}
+        </div>
+      </div>`;
+    }).join('');
 
     if (tabsEl && categories && categories.length) {
       tabsEl.innerHTML = categories.map(c =>
@@ -254,88 +251,8 @@
       }
     } catch (e) { /* fallback ke shop-config.js */ }
 
-    // ── 6. Shop Items — baca dari shop_items (bukan shop_config JSON blob) ──
-    try {
-      const { data: itemRows, error: itemErr } = await sb
-        .from('shop_items')
-        .select('*')
-        .eq('active', true)
-        .order('sort_order', { ascending: true });
-
-      const { data: cfgRow } = await sb
-        .from('shop_config')
-        .select('value')
-        .eq('key', 'main')
-        .single();
-
-      if (!itemErr && itemRows && itemRows.length) {
-        /* Normalisasi kolom snake_case → camelCase agar kompatibel dengan shop.js */
-        const mapped = itemRows.map(r => ({
-          id:             r.id,
-          name:           r.name,
-          emoji:          r.emoji,
-          category:       r.category,
-          price:          r.price,
-          originalPrice:  r.original_price,
-          description:    r.description,
-          features:       r.features || [],
-          badge:          r.badge          || '',
-          badgeColor:     r.badge_color    || '',
-          stock:          r.stock,
-          requiresDesign: r.requires_design,
-          needsUsername:  r.needs_username,
-          canBuyMultiple: r.can_buy_multiple,
-          maxQuantity:    r.max_quantity,
-          images:         r.images         || [],
-          active:         r.active,
-          sort_order:     r.sort_order,
-        }));
-
-        let shopMeta = {};
-        try { shopMeta = cfgRow?.value ? JSON.parse(cfgRow.value) : {}; } catch(e) {}
-
-        /* Kumpulkan kategori unik sesuai urutan item */
-        const cats = ['Semua'];
-        mapped.forEach(i => { if (!cats.includes(i.category)) cats.push(i.category); });
-        const categories = shopMeta.categories || cats;
-
-        /* Update SHOP_CONFIG global */
-        if (window.SHOP_CONFIG) {
-          window.SHOP_CONFIG.items      = mapped;
-          window.SHOP_CONFIG.admins     = shopMeta.admins     || window.SHOP_CONFIG.admins;
-          window.SHOP_CONFIG.gemAdmins  = shopMeta.gemAdmins  || window.SHOP_CONFIG.gemAdmins;
-          window.SHOP_CONFIG.categories = categories;
-          window.SHOP_CONFIG.title      = shopMeta.title      || window.SHOP_CONFIG.title;
-          window.SHOP_CONFIG.subtitle   = shopMeta.subtitle   || window.SHOP_CONFIG.subtitle;
-        }
-        window._shopItemsFromSupabase = mapped;
-
-        /* Sync WA dari shop_config jika belum ada di site_config */
-        if (!window.supabaseWA && (shopMeta.admins?.length || shopMeta.gemAdmins?.length)) {
-          window.supabaseWA  = { main: shopMeta.admins || [], gem: shopMeta.gemAdmins || [] };
-          window._supabaseWA = { main: shopMeta.admins || [], gem: shopMeta.gemAdmins || [] };
-        }
-
-        /* Re-render grid shop */
-        reRenderShopCards(mapped, categories);
-
-        /* Update judul & subtitle toko */
-        if (shopMeta.title) {
-          const titleEl = document.getElementById('shop-section-title');
-          if (titleEl) titleEl.textContent = shopMeta.title;
-        }
-        if (shopMeta.subtitle) {
-          const subEl = document.getElementById('shop-section-subtitle');
-          if (subEl) subEl.textContent = shopMeta.subtitle;
-        }
-
-        console.log('[supabase-sync] Shop items berhasil disync dari shop_items (' + mapped.length + ' item).');
-      } else {
-        console.warn('[supabase-sync] shop_items kosong atau error:', itemErr?.message);
-      }
-    } catch (e) {
-      console.warn('[supabase-sync] Gagal baca shop data:', e);
-    }
+    // ── 6. Shop Items — dinonaktifkan, sumber harga dari shop-config.js (statis) ──
+    // Harga & item dikelola via shop-config.js agar konsisten antara card dan modal.
 
     console.log('[supabase-sync] Config berhasil diterapkan.');
 
