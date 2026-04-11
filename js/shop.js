@@ -1683,10 +1683,13 @@ window.shopOrderWA = function(id) {
   const un   = unEl?.value.trim() || '';
   const note = document.getElementById('order-note')?.value.trim() || '';
 
-  /* Pilih admin: gem → Baim, lainnya → random dari 3 admin */
+  /* Pilih admin: cek Supabase dulu, fallback ke shop-config.js */
+  const _wa     = window._supabaseWA;
+  const _admins = (_wa && _wa.main && _wa.main.length) ? _wa.main : SHOP_ADMINS;
+  const _gem    = (_wa && _wa.gem  && _wa.gem.length)  ? _wa.gem[0] : SHOP_ADMIN_GEM;
   const admin = (item.id === GEM_ITEM_ID)
-    ? SHOP_ADMIN_GEM
-    : SHOP_ADMINS[Math.floor(Math.random() * SHOP_ADMINS.length)];
+    ? _gem
+    : _admins[Math.floor(Math.random() * _admins.length)];
 
   /* ── Bangun pesan WA ── */
   const _lines = [
