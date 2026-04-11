@@ -213,8 +213,17 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .auth-crumb-active { color: var(--text2); font-weight: 600; }
 
 /* Views */
-.auth-view { display: none; }
-.auth-view.visible { display: block; animation: authViewIn 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+.auth-view {
+  display: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+.auth-view.visible {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
 
 /* Field */
 .auth-field { margin-bottom: 1rem; }
@@ -696,14 +705,14 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <label class="auth-field-lbl">Password</label>
           <input class="auth-field-inp" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
         </div>
-        <button class="auth-btn" id="login-btn" onclick="doLogin()">MASUK KE ADMIN PANEL</button>
+        <button type="button" class="auth-btn" id="login-btn" onclick="doLogin()">MASUK KE ADMIN PANEL</button>
         <div class="auth-div">atau</div>
         <div class="auth-opts">
-          <button class="auth-opt-btn" onclick="switchView('register')">
+          <button type="button" class="auth-opt-btn" onclick="switchView('register')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
             Buat Akun
           </button>
-          <button class="auth-opt-btn" onclick="switchView('reset')">
+          <button type="button" class="auth-opt-btn" onclick="switchView('reset')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
             Reset Password
           </button>
@@ -725,8 +734,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <label class="auth-field-lbl">Email</label>
           <input class="auth-field-inp" id="register-email" type="email" placeholder="emailmu@domain.com" autocomplete="email" />
         </div>
-        <button class="auth-btn" id="register-btn" onclick="doRegister()">KIRIM LINK AKTIVASI</button>
-        <button class="auth-back-link" onclick="switchView('login')">
+        <button type="button" class="auth-btn" id="register-btn" onclick="doRegister()">KIRIM LINK AKTIVASI</button>
+        <button type="button" class="auth-back-link" onclick="switchView('login')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
           Kembali ke login
         </button>
@@ -747,8 +756,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <label class="auth-field-lbl">Email</label>
           <input class="auth-field-inp" id="reset-email" type="email" placeholder="emailmu@domain.com" autocomplete="email" />
         </div>
-        <button class="auth-btn" id="reset-btn" onclick="doReset()">KIRIM LINK RESET</button>
-        <button class="auth-back-link" onclick="switchView('login')">
+        <button type="button" class="auth-btn" id="reset-btn" onclick="doReset()">KIRIM LINK RESET</button>
+        <button type="button" class="auth-back-link" onclick="switchView('login')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
           Kembali ke login
         </button>
@@ -812,7 +821,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <label class="auth-field-lbl">Konfirmasi Password</label>
         <input class="auth-field-inp" id="setpw-confirm" type="password" placeholder="Ulangi password" autocomplete="new-password" />
       </div>
-      <button class="auth-btn" id="setpw-btn" onclick="doSetPassword()">SIMPAN & AKTIFKAN AKUN</button>
+      <button type="button" class="auth-btn" id="setpw-btn" onclick="doSetPassword()">SIMPAN & AKTIFKAN AKUN</button>
     </div>
   </div>
 </div>
@@ -1445,16 +1454,7 @@ let shopItems = [], categories = [], features = [], rules = [], socials = [], an
 let editingShopId = null, editingCatId = null, editingFeatureId = null, editingRuleId = null, editingSocialId = null, editingAnnId = null;
 
 // ==================== SUPABASE SETUP ====================
-function getStoredConfig() {
-  return { url: localStorage.getItem('sb_url'), key: localStorage.getItem('sb_key') };
-}
-if (!url.includes('supabase.co')) { showSetupError('URL tidak valid. Pastikan format: https://xxxx.supabase.co'); return; }
-  localStorage.setItem('sb_url', url);
-  localStorage.setItem('sb_key', key);
-  initSupabase(url, key);
-}
-</div>`;
-}
+// Config tidak lagi perlu setup screen — credentials sudah hardcoded
 function initSupabase() {
   sb = supabase.createClient('https://jlxtnbnrirxhwuyqjlzw.supabase.co', 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq');
 
@@ -1496,7 +1496,7 @@ async function doLogin() {
   }
 }
 function showLoginError(msg) {
-  document.getElementById('login-error').innerHTML = `<div class="auth-alert auth-alert-error">&#x26A0; ${msg}</div>`;
+  document.getElementById('login-error').innerHTML = `<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${msg}</div>`;
 }
 async function doLogout() {
   await sb.auth.signOut();
@@ -1505,11 +1505,22 @@ async function doLogout() {
 
 // ==================== AUTH VIEW SWITCHER ====================
 function switchView(view) {
+  const loginEmail = (document.getElementById('login-email').value || '').trim();
+
   ['login','register','reset'].forEach(v => {
     const el = document.getElementById('view-' + v);
-    if (el) el.classList.toggle('visible', v === view);
+    if (!el) return;
+    if (v === view) {
+      el.style.display = 'block';
+      // Force reflow sebelum tambah class agar CSS transition berjalan
+      el.offsetHeight;
+      el.classList.add('visible');
+    } else {
+      el.classList.remove('visible');
+      el.style.display = 'none';
+    }
   });
-  const loginEmail = (document.getElementById('login-email').value || '').trim();
+
   if (view === 'register' && loginEmail) document.getElementById('register-email').value = loginEmail;
   if (view === 'reset'    && loginEmail) document.getElementById('reset-email').value    = loginEmail;
 }
@@ -1521,16 +1532,16 @@ async function doRegister() {
   const btn = document.getElementById('register-btn');
   const result = document.getElementById('register-result');
   result.innerHTML = '';
-  if (!email) { result.innerHTML = '<div class="auth-alert auth-alert-error">&#x26A0; Masukkan email kamu.</div>'; return; }
+  if (!email) { result.innerHTML = '<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Masukkan email kamu.</div>'; return; }
   btn.disabled = true; btn.textContent = 'MENGIRIM...';
   try {
     const redirectTo = window.location.href.split('#')[0];
     const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) throw error;
-    result.innerHTML = '<div class="auth-alert auth-alert-success">  Link aktivasi dikirim! Cek email kamu lalu klik linknya untuk membuat password.</div>';
+    result.innerHTML = '<div class="auth-msg auth-msg-success">  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><polyline points="20,6 9,17 4,12"/></svg> Link aktivasi dikirim! Cek email kamu lalu klik linknya untuk membuat password.</div>';
     btn.textContent = 'TERKIRIM ✓';
   } catch(e) {
-    result.innerHTML = `<div class="auth-alert auth-alert-error">&#x26A0; ${e.message}</div>`;
+    result.innerHTML = `<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${e.message}</div>`;
     btn.disabled = false; btn.textContent = 'KIRIM LINK AKTIVASI';
   }
 }
@@ -1541,16 +1552,16 @@ async function doReset() {
   const btn = document.getElementById('reset-btn');
   const result = document.getElementById('reset-result');
   result.innerHTML = '';
-  if (!email) { result.innerHTML = '<div class="auth-alert auth-alert-error">&#x26A0; Masukkan email kamu.</div>'; return; }
+  if (!email) { result.innerHTML = '<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Masukkan email kamu.</div>'; return; }
   btn.disabled = true; btn.textContent = 'MENGIRIM...';
   try {
     const redirectTo = window.location.href.split('#')[0];
     const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
     if (error) throw error;
-    result.innerHTML = '<div class="auth-alert auth-alert-success">  Link reset dikirim! Cek email kamu lalu klik linknya untuk membuat password baru.</div>';
+    result.innerHTML = '<div class="auth-msg auth-msg-success">  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><polyline points="20,6 9,17 4,12"/></svg> Link reset dikirim! Cek email kamu lalu klik linknya untuk membuat password baru.</div>';
     btn.textContent = 'TERKIRIM ✓';
   } catch(e) {
-    result.innerHTML = `<div class="auth-alert auth-alert-error">&#x26A0; ${e.message}</div>`;
+    result.innerHTML = `<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${e.message}</div>`;
     btn.disabled = false; btn.textContent = 'KIRIM LINK RESET';
   }
 }
@@ -1575,11 +1586,11 @@ async function doSetPassword() {
   errEl.innerHTML = '';
 
   if (!pw || pw.length < 6) {
-    errEl.innerHTML = '<div class="auth-alert auth-alert-error">&#x26A0; Password minimal 6 karakter.</div>';
+    errEl.innerHTML = '<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Password minimal 6 karakter.</div>';
     return;
   }
   if (pw !== confirm) {
-    errEl.innerHTML = '<div class="auth-alert auth-alert-error">&#x26A0; Password tidak cocok, coba lagi.</div>';
+    errEl.innerHTML = '<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Password tidak cocok, coba lagi.</div>';
     return;
   }
 
@@ -1592,7 +1603,7 @@ async function doSetPassword() {
     const { error } = await sb.auth.updateUser({ password: pw });
     if (error) throw error;
 
-    errEl.innerHTML = '<div class="auth-alert auth-alert-success">  Password berhasil dibuat! Mengalihkan ke halaman login...</div>';
+    errEl.innerHTML = '<div class="auth-msg auth-msg-success">  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><polyline points="20,6 9,17 4,12"/></svg> Password berhasil dibuat! Mengalihkan ke halaman login...</div>';
     await sb.auth.signOut();
     setTimeout(() => {
       window.location.hash = '';
@@ -1600,7 +1611,7 @@ async function doSetPassword() {
       document.getElementById('login-screen').style.display = 'flex'; switchView('login');
     }, 2000);
   } catch(e) {
-    errEl.innerHTML = `<div class="auth-alert auth-alert-error">&#x26A0; ${e.message}</div>`;
+    errEl.innerHTML = `<div class="auth-msg auth-msg-error"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${e.message}</div>`;
     btn.disabled = false; btn.textContent = 'SIMPAN PASSWORD';
   }
 }
