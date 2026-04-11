@@ -3,299 +3,1199 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pengaturan Server — Laughtale SMP</title>
+<title>Server Settings — Laughtale SMP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#07070e;--bg2:#0f0f1a;--bg3:#161625;--bg4:#1e1e30;
-  --border:rgba(168,85,247,0.15);--border2:rgba(168,85,247,0.28);
-  --purple:#a855f7;--purple2:#7c3aed;--gold:#f4c430;
-  --green:#5dbd3a;--red:#ef4444;--blue:#60a5fa;
-  --text:#e2e2f0;--text2:#a0a0bc;--text3:#60607a;
-  --sidebar:220px;--topbar:56px;--radius:10px;
-  --font-pixel:'Press Start 2P',monospace;
-  --font-body:'Nunito',sans-serif;
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Surfaces */
+  --bg:       #0a0a0c;
+  --surface:  #101013;
+  --surface2: #15151a;
+  --surface3: #1c1c22;
+  --surface4: #22222a;
+
+  /* Borders */
+  --border:  rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.10);
+  --border3: rgba(255,255,255,0.16);
+
+  /* Text */
+  --text:       #eeeef0;
+  --text-muted: #7c7c8e;
+  --text-faint: #3e3e50;
+
+  /* Accent — blue */
+  --accent:          #4f7df0;
+  --accent-hover:    #3a6de0;
+  --accent-muted:    rgba(79,125,240,0.10);
+  --accent-muted2:   rgba(79,125,240,0.18);
+
+  /* State colors */
+  --green:  #22c55e;
+  --red:    #ef4444;
+  --yellow: #f59e0b;
+
+  --green-muted:  rgba(34,197,94,0.10);
+  --red-muted:    rgba(239,68,68,0.10);
+  --yellow-muted: rgba(245,158,11,0.10);
+
+  /* Radius */
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.6);
+
+  /* Layout */
+  --sidebar-w: 216px;
+  --topbar-h:  52px;
+  --font: 'Inter', -apple-system, sans-serif;
 }
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;overflow:hidden}
 
-/* ===== AUTH ===== */
-#auth-screen{position:fixed;inset:0;z-index:999;display:flex;background:#06060c}
-.auth-left{width:380px;flex-shrink:0;background:#08080f;border-right:1px solid rgba(168,85,247,0.10);display:flex;flex-direction:column;padding:2.5rem 2.2rem;position:relative;overflow:hidden}
-.auth-left::before{content:'';position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(168,85,247,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(168,85,247,.035) 1px,transparent 1px);background-size:36px 36px;animation:gridMove 30s linear infinite}
-.auth-left::after{content:'';position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(168,85,247,.14) 0%,transparent 65%);top:-120px;right:-160px;pointer-events:none}
-@keyframes gridMove{0%{transform:translate(0,0)}100%{transform:translate(36px,36px)}}
-.auth-brand{display:inline-flex;align-items:center;gap:.55rem;margin-bottom:3.5rem;position:relative;z-index:1}
-.auth-brand-dot{width:7px;height:7px;border-radius:50%;background:var(--purple);animation:pulse 2.5s ease-in-out infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 8px rgba(168,85,247,.7)}50%{box-shadow:0 0 22px rgba(168,85,247,1),0 0 40px rgba(168,85,247,.3)}}
-.auth-brand-name{font-family:var(--font-pixel);font-size:.42rem;color:rgba(168,85,247,.85);letter-spacing:3px}
-.auth-headline{position:relative;z-index:1;font-family:var(--font-pixel);font-size:.62rem;color:#fff;letter-spacing:2px;line-height:2.4;margin-bottom:.7rem;text-shadow:0 0 24px rgba(168,85,247,.4)}
-.auth-headline em{color:var(--purple);font-style:normal}
-.auth-tagline{position:relative;z-index:1;font-size:.78rem;color:var(--text3);line-height:1.75;max-width:260px;margin-bottom:2.2rem}
-.auth-stats{position:relative;z-index:1;display:flex;flex-direction:column;gap:.55rem}
-.auth-stat{display:flex;align-items:center;gap:.6rem;padding:.5rem .75rem;background:rgba(255,255,255,.018);border:1px solid rgba(168,85,247,.07);border-radius:8px}
-.auth-stat-icon{width:24px;height:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(168,85,247,.1);border-radius:6px;color:var(--purple)}
-.auth-stat-icon svg{width:12px;height:12px}
-.auth-stat-info strong{display:block;font-size:.72rem;color:var(--text2);margin-bottom:1px}
-.auth-stat-info span{font-size:.66rem;color:var(--text3)}
-.auth-stat-badge{font-family:var(--font-pixel);font-size:.28rem;letter-spacing:1px;padding:3px 6px;border-radius:4px}
-.badge-on{background:rgba(93,189,58,.12);color:var(--green);border:1px solid rgba(93,189,58,.25)}
-.badge-blue{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
-.auth-foot{margin-top:auto;position:relative;z-index:1;font-size:.65rem;color:var(--text3);padding-top:1.25rem;border-top:1px solid rgba(168,85,247,.07);display:flex;align-items:center;justify-content:space-between}
-.auth-right{flex:1;background:#07070d;display:flex;align-items:center;justify-content:center;padding:2rem;position:relative;overflow:hidden}
-.auth-right::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 60% 40%,rgba(168,85,247,.04) 0%,transparent 65%)}
-.auth-form-wrap{width:100%;max-width:370px;position:relative;z-index:1;animation:cardIn .5s cubic-bezier(.16,1,.3,1) both}
-@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-.auth-eyebrow{font-size:.62rem;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--purple);margin-bottom:.4rem;display:flex;align-items:center;gap:.5rem}
-.auth-eyebrow::before{content:'';width:18px;height:1px;background:var(--purple);opacity:.6}
-.auth-form-title{font-size:1.4rem;font-weight:700;color:#fff;letter-spacing:-.4px;margin-bottom:.3rem;line-height:1.2}
-.auth-form-sub{font-size:.8rem;color:var(--text3);margin-bottom:1.75rem;line-height:1.6}
-.alert{display:flex;align-items:flex-start;gap:.6rem;padding:.75rem 1rem;border-radius:8px;font-size:.8rem;margin-bottom:1.25rem;line-height:1.5}
-.alert-error{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#fca5a5}
-.alert svg{flex-shrink:0;margin-top:1px}
-.form-label{display:block;font-size:.72rem;font-weight:700;color:var(--text2);letter-spacing:.5px;margin-bottom:.45rem}
-.form-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(168,85,247,.15);border-radius:8px;padding:.65rem .85rem;color:var(--text);font-size:.85rem;font-family:var(--font-body);transition:.2s}
-.form-input:focus{outline:none;border-color:rgba(168,85,247,.5);background:rgba(168,85,247,.04)}
-.form-group{margin-bottom:1.1rem}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.65rem 1.25rem;border-radius:8px;font-family:var(--font-pixel);font-size:.38rem;letter-spacing:1.2px;cursor:pointer;border:none;transition:.2s;white-space:nowrap}
-.btn-primary{background:linear-gradient(135deg,var(--purple2),var(--purple));color:#fff;width:100%;padding:.75rem}
-.btn-primary:hover{filter:brightness(1.12);transform:translateY(-1px)}
-.btn-primary:active{transform:translateY(0)}
-.divider{display:flex;align-items:center;gap:.75rem;margin:1.25rem 0;color:var(--text3);font-size:.72rem}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13.5px;
+  line-height: 1.6;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
 
-/* ===== APP ===== */
-#app{display:none;height:100%;flex-direction:column}
-#app.visible{display:flex}
+input, textarea, select, button { font-family: var(--font); }
 
-/* Topbar */
-.topbar{height:var(--topbar);background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.25rem;gap:1rem;flex-shrink:0;z-index:10}
-.topbar-logo{font-family:var(--font-pixel);font-size:.36rem;color:var(--purple);letter-spacing:2px}
-.topbar-dot{width:5px;height:5px;border-radius:50%;background:var(--purple);animation:pulse 2.5s infinite;flex-shrink:0}
-.topbar-title{font-family:var(--font-pixel);font-size:.44rem;color:var(--text);letter-spacing:1.5px}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:.75rem}
-.topbar-user{font-size:.75rem;color:var(--text2)}
-.topbar-badge{font-family:var(--font-pixel);font-size:.28rem;padding:3px 8px;border-radius:4px;background:rgba(168,85,247,.15);color:var(--purple);border:1px solid rgba(168,85,247,.25)}
-.btn-logout{background:transparent;border:1px solid rgba(239,68,68,.25);color:var(--red);font-size:.7rem;padding:.35rem .75rem;border-radius:6px;cursor:pointer;font-family:var(--font-body);transition:.2s}
-.btn-logout:hover{background:rgba(239,68,68,.08)}
+/* ============================================================
+   AUTH SCREEN
+   ============================================================ */
+#auth-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  background: var(--bg);
+}
 
-/* Body layout */
-.app-body{display:flex;flex:1;overflow:hidden}
-.sidebar{width:var(--sidebar);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
-.sidebar::-webkit-scrollbar{width:3px}
-.sidebar::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-.nav-section-label{font-family:var(--font-pixel);font-size:.28rem;color:var(--text3);letter-spacing:2px;padding:.9rem 1rem .4rem}
-.nav-item{display:flex;align-items:center;gap:.6rem;padding:.6rem 1rem;cursor:pointer;color:var(--text2);font-size:.78rem;font-weight:600;border-radius:0;transition:.15s;border-left:2px solid transparent}
-.nav-item:hover{background:rgba(168,85,247,.06);color:var(--text)}
-.nav-item.active{background:rgba(168,85,247,.1);color:var(--purple);border-left-color:var(--purple)}
-.nav-item svg{opacity:.65;flex-shrink:0;width:15px;height:15px}
-.nav-item.active svg{opacity:1}
-.nav-back{display:flex;align-items:center;gap:.5rem;padding:.7rem 1rem;color:var(--text3);font-size:.72rem;cursor:pointer;border-bottom:1px solid var(--border);transition:.15s}
-.nav-back:hover{color:var(--text2)}
+/* Left branding panel */
+.auth-left {
+  width: 360px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.auth-left-noise {
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, transparent 1px, transparent 40px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0px, transparent 1px, transparent 40px);
+  pointer-events: none;
+}
 
-/* Main */
-.main-content{flex:1;overflow-y:auto;padding:1.75rem;background:var(--bg)}
-.main-content::-webkit-scrollbar{width:4px}
-.main-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.auth-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: auto;
+}
+.auth-wordmark-icon {
+  width: 30px;
+  height: 30px;
+  background: var(--accent-muted2);
+  border: 1px solid rgba(79,125,240,0.25);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.auth-wordmark-icon svg { color: var(--accent); }
+.auth-wordmark-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
 
-/* Section */
-.section{display:none;animation:fadeIn .3s ease}
-.section.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.auth-hero {
+  margin-top: auto;
+  padding-bottom: 2rem;
+  position: relative;
+  z-index: 1;
+}
+.auth-hero-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 0.75rem;
+}
+.auth-hero-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.6rem;
+}
+.auth-hero-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.65;
+  max-width: 260px;
+}
 
-.page-header{margin-bottom:1.75rem}
-.page-title{font-family:var(--font-pixel);font-size:.6rem;color:var(--text);letter-spacing:2px;margin-bottom:.4rem}
-.page-sub{color:var(--text2);font-size:.82rem}
+.auth-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2rem;
+  position: relative;
+  z-index: 1;
+}
+.auth-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.auth-info-row-left {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.auth-info-row-left svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.auth-info-row-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+.auth-info-row-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+  display: block;
+}
+.status-dot-inline {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-green { background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+.dot-blue  { background: var(--accent); }
+
+.auth-foot {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
+.auth-foot span { font-size: 11px; color: var(--text-faint); }
+
+/* Right login panel */
+.auth-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.auth-form-wrap {
+  width: 100%;
+  max-width: 360px;
+  animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.auth-form-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.4px;
+  margin-bottom: 0.25rem;
+}
+.auth-form-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 1.75rem;
+}
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+.alert-error {
+  background: var(--red-muted);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: #fca5a5;
+}
+.alert svg { flex-shrink: 0; margin-top: 1px; }
+
+.form-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.2px;
+  margin-bottom: 6px;
+}
+.form-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-md);
+  padding: 9px 11px;
+  color: var(--text);
+  font-size: 13.5px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.form-input:focus {
+  outline: none;
+  border-color: rgba(79,125,240,0.5);
+  background: var(--surface3);
+}
+.form-input::placeholder { color: var(--text-faint); }
+
+.form-group { margin-bottom: 14px; }
+
+.btn-primary {
+  width: 100%;
+  padding: 9.5px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+  letter-spacing: -0.1px;
+}
+.btn-primary:hover  { background: var(--accent-hover); }
+.btn-primary:active { transform: scale(0.99); }
+
+
+
+
+
+
+/* ============================================================
+   APP SHELL
+   ============================================================ */
+#app { display: none; height: 100%; flex-direction: column; }
+#app.visible { display: flex; }
+
+/* Top bar */
+.topbar {
+  height: var(--topbar-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.topbar-brand-mark {
+  width: 26px;
+  height: 26px;
+  background: var(--accent-muted2);
+  border: 1px solid rgba(79,125,240,0.2);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.topbar-brand-mark svg { color: var(--accent); }
+.topbar-brand-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
+.topbar-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border2);
+  flex-shrink: 0;
+}
+.topbar-breadcrumb {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.topbar-user-name {
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.role-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--accent-muted);
+  color: var(--accent);
+  border: 1px solid rgba(79,125,240,0.2);
+  letter-spacing: 0.3px;
+}
+.btn-logout {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  padding: 5px 11px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-logout:hover { border-color: rgba(239,68,68,0.4); color: #fca5a5; }
+
+/* App body */
+.app-body { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 8px 0;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.sidebar-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  color: var(--text-faint);
+  font-size: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  transition: color 0.15s;
+}
+.sidebar-back:hover { color: var(--text-muted); }
+.sidebar-back svg { flex-shrink: 0; }
+
+.nav-group-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 12px 14px 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 13px;
+  border-radius: 0;
+  transition: color 0.12s, background 0.12s;
+  position: relative;
+}
+.nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+.nav-item.active {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+.nav-item svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+  width: 15px;
+  height: 15px;
+}
+.nav-item.active svg { opacity: 1; }
+
+/* Main content */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.75rem 2rem;
+  background: var(--bg);
+}
+.main-content::-webkit-scrollbar { width: 4px; }
+.main-content::-webkit-scrollbar-thumb { background: var(--surface4); border-radius: 2px; }
+
+/* Sections */
+.section { display: none; animation: fadeIn 0.25s ease; }
+.section.active { display: block; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Page header */
+.page-header { margin-bottom: 1.5rem; }
+.page-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.3px;
+  margin-bottom: 3px;
+}
+.page-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+}
 
 /* Cards */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem}
-.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;padding-bottom:.85rem;border-bottom:1px solid var(--border)}
-.card-title{font-family:var(--font-pixel);font-size:.42rem;color:var(--text);letter-spacing:1.5px}
-.card-icon{width:32px;height:32px;background:rgba(168,85,247,.12);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--purple)}
-.card-icon svg{width:16px;height:16px}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+.card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.card-icon {
+  width: 30px;
+  height: 30px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+.card-icon svg { width: 14px; height: 14px; }
 
-/* Form elements */
-.field-group{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
-.field-group.full{grid-template-columns:1fr}
-.field{display:flex;flex-direction:column;gap:.4rem}
-.field label{font-size:.72rem;font-weight:700;color:var(--text2);letter-spacing:.4px}
-.field input,.field select,.field textarea{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:.6rem .85rem;color:var(--text);font-size:.85rem;font-family:var(--font-body);transition:.2s;width:100%}
-.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:rgba(168,85,247,.5);background:rgba(168,85,247,.04)}
-.field select{cursor:pointer}
-.field textarea{resize:vertical;min-height:90px}
-.field-hint{font-size:.7rem;color:var(--text3);margin-top:.2rem}
+/* Form fields */
+.field-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.field-group.full { grid-template-columns: 1fr; }
+.field {}
+.field label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  letter-spacing: 0.1px;
+}
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-md);
+  padding: 8.5px 11px;
+  color: var(--text);
+  font-size: 13.5px;
+  transition: border-color 0.15s, background 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237c7c8e' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+.field textarea {
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.55;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: rgba(79,125,240,0.5);
+  background: var(--surface3);
+}
+.field input::placeholder,
+.field textarea::placeholder { color: var(--text-faint); }
+.field-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 5px;
+}
 
-/* Toggle switch */
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:.7rem .9rem;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:.75rem}
-.toggle-label{display:flex;flex-direction:column;gap:.2rem}
-.toggle-label strong{font-size:.82rem;font-weight:700;color:var(--text)}
-.toggle-label span{font-size:.72rem;color:var(--text3)}
-.toggle{width:42px;height:22px;background:var(--bg4);border-radius:999px;cursor:pointer;position:relative;transition:.3s;flex-shrink:0;border:1px solid var(--border2)}
-.toggle::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.3s}
-.toggle.on{background:var(--purple);border-color:var(--purple)}
-.toggle.on::after{left:20px;background:#fff;box-shadow:0 0 8px rgba(168,85,247,.5)}
-.toggle.danger.on{background:var(--red);border-color:var(--red)}
-
-/* Status pill */
-.status-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .7rem;border-radius:999px;font-size:.7rem;font-weight:700}
-.pill-online{background:rgba(93,189,58,.12);color:var(--green);border:1px solid rgba(93,189,58,.25)}
-.pill-offline{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
-.pill-maintenance{background:rgba(244,196,48,.1);color:var(--gold);border:1px solid rgba(244,196,48,.2)}
-
-/* Admin list */
-.admin-item{display:flex;align-items:center;gap:.75rem;padding:.7rem .85rem;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:.5rem}
-.admin-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--purple2),var(--purple));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;flex-shrink:0}
-.admin-info{flex:1}
-.admin-info strong{display:block;font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.1rem}
-.admin-info span{font-size:.72rem;color:var(--text3)}
-.admin-badge{font-family:var(--font-pixel);font-size:.28rem;padding:3px 7px;border-radius:4px}
-.badge-superadmin{background:rgba(244,196,48,.12);color:var(--gold);border:1px solid rgba(244,196,48,.2)}
-.badge-admin{background:rgba(168,85,247,.12);color:var(--purple);border:1px solid rgba(168,85,247,.22)}
-.badge-editor{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
-.admin-actions{display:flex;gap:.4rem}
-.btn-icon{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text3);transition:.15s}
-.btn-icon:hover{border-color:var(--red);color:var(--red)}
-.btn-icon svg{width:13px;height:13px}
+/* Preview box */
+.preview-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+.preview-row:last-child { border-bottom: none; }
+.preview-key { color: var(--text-faint); }
+.preview-val { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
 
 /* Save bar */
-.save-bar{position:sticky;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;z-index:5}
-.save-bar-hint{font-size:.75rem;color:var(--text3)}
-.save-btn{background:linear-gradient(135deg,var(--purple2),var(--purple));color:#fff;border:none;border-radius:8px;padding:.6rem 1.5rem;font-family:var(--font-pixel);font-size:.38rem;letter-spacing:1px;cursor:pointer;transition:.2s}
-.save-btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
-.save-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0 0;
+  margin-top: 4px;
+}
+.save-bar-hint { font-size: 12px; color: var(--text-faint); }
 
-/* Live preview */
-.preview-box{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:1rem;font-size:.78rem;line-height:1.8}
-.preview-row{display:flex;justify-content:space-between;align-items:center;padding:.25rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
-.preview-row:last-child{border-bottom:none}
-.preview-key{color:var(--text3)}
-.preview-val{color:var(--purple);font-weight:700}
+.save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+}
+.save-btn:hover  { background: var(--accent-hover); }
+.save-btn:active { transform: scale(0.98); }
+.save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Server live status card */
+.server-live {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  margin-bottom: 1rem;
+}
+.live-indicator {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+.live-indicator-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+.live-indicator-dot.green {
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.15);
+}
+.live-indicator-dot.red   { background: var(--red); }
+.live-indicator-dot.pulse {
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%,100% { box-shadow: 0 0 0 0px rgba(34,197,94,0.4); }
+  50%      { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
+}
+.server-live-info { flex: 1; min-width: 0; }
+.server-live-info h4 {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 1px;
+}
+.server-live-info p { font-size: 12px; color: var(--text-muted); }
+.server-live-meta { margin-left: auto; text-align: right; }
+.server-live-meta strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.server-live-meta span {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* Toggle switch */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+}
+.toggle-row + .toggle-row { border-top: 1px solid var(--border); }
+.toggle-label { flex: 1; }
+.toggle-label strong { display: block; font-size: 13.5px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+.toggle-label span   { font-size: 12px; color: var(--text-muted); }
+
+.toggle {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  background: var(--surface4);
+  border-radius: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s, background 0.2s;
+}
+.toggle.on {
+  background: var(--accent);
+  border-color: var(--accent-hover);
+}
+.toggle.on::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+/* Status pill */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.pill-online {
+  background: var(--green-muted);
+  color: var(--green);
+  border: 1px solid rgba(34,197,94,0.2);
+}
+.pill-maintenance {
+  background: var(--yellow-muted);
+  color: var(--yellow);
+  border: 1px solid rgba(245,158,11,0.2);
+}
+.pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.maint-preview-box {
+  background: var(--yellow-muted);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: #fcd34d;
+  margin-top: 12px;
+}
+.maint-preview-box strong { display: block; font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+
+/* MOTD type select visual */
+.motd-type-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.motd-type-btn {
+  flex: 1;
+  padding: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.motd-type-btn.active {
+  background: var(--accent-muted);
+  border-color: rgba(79,125,240,0.3);
+  color: var(--accent);
+}
+
+/* Admin list */
+.admin-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.admin-item:first-child { padding-top: 0; }
+.admin-item:last-child  { padding-bottom: 0; border-bottom: none; }
+.admin-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-md);
+  background: var(--accent-muted2);
+  border: 1px solid rgba(79,125,240,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.admin-info { flex: 1; min-width: 0; }
+.admin-info strong { display: block; font-size: 13px; font-weight: 600; color: var(--text); }
+.admin-info span   { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.admin-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.badge-admin { background: var(--accent-muted); color: var(--accent); border: 1px solid rgba(79,125,240,0.2); }
+.badge-gem   { background: var(--yellow-muted); color: var(--yellow); border: 1px solid rgba(245,158,11,0.2); }
+.btn-icon {
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-faint);
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-icon:hover { border-color: rgba(239,68,68,0.4); color: #fca5a5; }
+.btn-icon svg   { width: 13px; height: 13px; }
+
+/* Inline add btn */
+.btn-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-add:hover { border-color: rgba(79,125,240,0.35); color: var(--accent); }
+.btn-add svg   { width: 12px; height: 12px; }
+
+/* Inline form footer */
+.form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+}
+.btn-ghost {
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-ghost:hover { border-color: var(--border3); color: var(--text); }
 
 /* Toast */
-#toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;pointer-events:none}
-.toast-item{padding:.65rem 1.1rem;border-radius:8px;font-size:.8rem;font-weight:700;animation:toastIn .3s ease;display:flex;align-items:center;gap:.5rem;pointer-events:none}
-.toast-success{background:#1a2e1a;border:1px solid rgba(93,189,58,.35);color:var(--green)}
-.toast-error{background:#2e1a1a;border:1px solid rgba(239,68,68,.35);color:#fca5a5}
-@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+#toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+.toast-item {
+  padding: 10px 16px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--shadow-md);
+  animation: toastIn 0.3s cubic-bezier(0.16,1,0.3,1) both;
+  max-width: 320px;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.toast-success {
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  color: var(--green);
+}
+.toast-error {
+  background: var(--red-muted);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: #fca5a5;
+}
 
-/* Maintenance overlay preview */
-.maint-preview{background:linear-gradient(135deg,rgba(239,68,68,.08),rgba(244,196,48,.05));border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:1rem;text-align:center;margin-top:.75rem}
-.maint-preview h4{font-family:var(--font-pixel);font-size:.42rem;color:var(--red);letter-spacing:1px;margin-bottom:.5rem}
-.maint-preview p{font-size:.75rem;color:var(--text3)}
+/* Divider */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
 
-/* Loading skeleton */
-.skel{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px;height:14px}
-@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-faint);
+  font-size: 13px;
+}
 
-/* Server status live card */
-.server-live{display:flex;align-items:center;gap:1rem;padding:1rem;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:1.25rem}
-.server-orb{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.2rem}
-.orb-online{background:rgba(93,189,58,.15);border:2px solid rgba(93,189,58,.4);box-shadow:0 0 14px rgba(93,189,58,.2)}
-.orb-offline{background:rgba(239,68,68,.1);border:2px solid rgba(239,68,68,.3)}
-.orb-loading{background:rgba(168,85,247,.1);border:2px solid rgba(168,85,247,.25);animation:orbPulse 1.5s infinite}
-@keyframes orbPulse{0%,100%{opacity:.6}50%{opacity:1}}
-.server-live-info h4{font-size:.85rem;font-weight:800;color:var(--text);margin-bottom:.15rem}
-.server-live-info p{font-size:.72rem;color:var(--text3)}
-.server-live-meta{margin-left:auto;text-align:right}
-.server-live-meta span{display:block;font-family:var(--font-pixel);font-size:.3rem;color:var(--text2);margin-bottom:.2rem}
-.server-live-meta em{display:block;font-size:.7rem;color:var(--text3);font-style:normal}
+/* ============================================================
+   RESPONSIVE — MOBILE FIRST
+   ============================================================ */
 
-/* Responsive adjustments */
-@media(max-width:600px){.auth-left{display:none}.field-group{grid-template-columns:1fr}}
+/* Hamburger button (hidden on desktop) */
+.hamburger {
+  display: none;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.hamburger:hover { border-color: var(--border3); color: var(--text); }
+.hamburger svg  { pointer-events: none; }
+
+/* Sidebar overlay backdrop */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 40;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.sidebar-backdrop.visible {
+  display: block;
+  opacity: 1;
+}
+
+/* ---- Tablet: 768px – 1024px ---- */
+@media (max-width: 1024px) {
+  :root { --sidebar-w: 200px; }
+
+  .auth-left { width: 300px; }
+  .auth-hero-title { font-size: 1.5rem; }
+
+  .main-content { padding: 1.25rem 1.5rem; }
+}
+
+/* ---- Mobile: ≤ 768px ---- */
+@media (max-width: 768px) {
+  /* Auth */
+  .auth-left { display: none; }
+  .auth-right { padding: 1.5rem 1.25rem; }
+  .auth-form-wrap { max-width: 100%; }
+  .auth-form-title { font-size: 1.2rem; }
+
+  /* Topbar */
+  .hamburger { display: inline-flex; }
+  .topbar { padding: 0 12px; gap: 8px; }
+  .topbar-sep { display: none; }
+  .topbar-breadcrumb { display: none; }
+  .topbar-user-name { display: none; }
+  .topbar-brand-name { font-size: 12px; }
+  .role-badge { display: none; }
+  .btn-logout { padding: 5px 9px; font-size: 11.5px; }
+
+  /* Sidebar — slide-in drawer */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 50;
+    width: 240px;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.16,1,0.3,1);
+    box-shadow: var(--shadow-lg);
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  /* Main content */
+  .main-content { padding: 1rem; }
+
+  /* Fields always single column on mobile */
+  .field-group { grid-template-columns: 1fr; }
+
+  /* Save bar stacks vertically */
+  .save-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .save-btn { width: 100%; justify-content: center; }
+
+  /* Cards */
+  .card { padding: 1rem; }
+  .card-header { margin-bottom: 0.85rem; padding-bottom: 0.7rem; }
+
+  /* Server live */
+  .server-live { flex-wrap: wrap; gap: 10px; }
+  .server-live-meta { text-align: left; }
+
+  /* Admin items */
+  .admin-item { flex-wrap: wrap; }
+
+  /* Toggle row */
+  .toggle-row { gap: 12px; }
+  .toggle-label strong { font-size: 13px; }
+
+  /* Page header */
+  .page-header { margin-bottom: 1rem; }
+  .page-title { font-size: 1rem; }
+
+  /* Preview box */
+  .preview-row { flex-direction: column; gap: 2px; align-items: flex-start; }
+}
+
+/* ---- Small phones: ≤ 400px ---- */
+@media (max-width: 400px) {
+  .topbar { padding: 0 10px; }
+  .main-content { padding: 0.75rem; }
+  .card { padding: 0.875rem; }
+  .page-title { font-size: 0.95rem; }
+  .form-actions { flex-direction: column; }
+  .form-actions .btn-ghost,
+  .form-actions .save-btn { width: 100%; justify-content: center; }
+}
 </style>
 </head>
 <body>
 
-<!-- ===== AUTH SCREEN ===== -->
+<!-- ===============================================================
+     AUTH SCREEN
+     =============================================================== -->
 <div id="auth-screen">
+
+  <!-- Left brand panel -->
   <div class="auth-left">
-    <div class="auth-brand">
-      <div class="auth-brand-dot"></div>
-      <div class="auth-brand-name">LAUGHTALE SMP</div>
-    </div>
-    <div class="auth-headline">ADMIN<br><em>PANEL</em></div>
-    <p class="auth-tagline">Kelola konfigurasi server Laughtale SMP dari satu panel terpusat.</p>
-    <div class="auth-stats">
-      <div class="auth-stat">
-        <div class="auth-stat-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
-        <div class="auth-stat-info"><strong>Server Status</strong><span>laughtale.my.id</span></div>
-        <span class="auth-stat-badge badge-on">ONLINE</span>
+    <div class="auth-left-noise"></div>
+    <div class="auth-wordmark">
+      <div class="auth-wordmark-icon">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
       </div>
-      <div class="auth-stat">
-        <div class="auth-stat-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-        <div class="auth-stat-info"><strong>Supabase Auth</strong><span>Row Level Security aktif</span></div>
-        <span class="auth-stat-badge badge-blue">SECURE</span>
+      <span class="auth-wordmark-text">Laughtale SMP</span>
+    </div>
+
+    <div class="auth-hero">
+      <div class="auth-hero-label">Admin Panel</div>
+      <div class="auth-hero-title">Server<br>Configuration</div>
+      <p class="auth-hero-sub">Kelola konfigurasi server Laughtale SMP dari satu panel terpusat yang aman.</p>
+
+      <div class="auth-info-list">
+        <div class="auth-info-row">
+          <div class="auth-info-row-left">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <div>
+              <span class="auth-info-row-name">Server Status</span>
+              <span class="auth-info-row-sub">laughtale.my.id</span>
+            </div>
+          </div>
+          <div class="status-dot-inline dot-green"></div>
+        </div>
+        <div class="auth-info-row">
+          <div class="auth-info-row-left">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <div>
+              <span class="auth-info-row-name">Supabase Auth</span>
+              <span class="auth-info-row-sub">Row Level Security aktif</span>
+            </div>
+          </div>
+          <div class="status-dot-inline dot-blue"></div>
+        </div>
       </div>
     </div>
+
     <div class="auth-foot">
-      <span>© 2025 Laughtale SMP</span>
-      <span style="color:rgba(168,85,247,.5)">Server Settings</span>
+      <span>2025 Laughtale SMP</span>
+      <span>Server Settings</span>
     </div>
   </div>
 
+  <!-- Right form panel -->
   <div class="auth-right">
     <div class="auth-form-wrap">
-      <div class="auth-eyebrow">Akses Panel</div>
       <div class="auth-form-title">Selamat datang</div>
       <p class="auth-form-sub">Masuk menggunakan akun admin yang sudah terdaftar.</p>
 
       <div id="auth-error" class="alert alert-error" style="display:none">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <span id="auth-error-msg"></span>
       </div>
 
       <div class="form-group">
-        <label class="form-label">EMAIL</label>
+        <label class="form-label">Email</label>
         <input class="form-input" id="login-email" type="email" placeholder="admin@laughtale.my.id" autocomplete="email">
       </div>
       <div class="form-group">
-        <label class="form-label">PASSWORD</label>
+        <label class="form-label">Password</label>
         <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
       </div>
 
-      <button class="btn btn-primary" onclick="doLogin()" id="login-btn">MASUK KE PANEL</button>
-
-      <div class="divider">atau</div>
-      <div style="display:flex;gap:.6rem">
-        <button class="btn" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:.32rem" onclick="goRegister()">
-          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          Buat Akun
-        </button>
-        <button class="btn" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:.32rem" onclick="goReset()">
-          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Reset Password
-        </button>
+      <button class="btn-primary" onclick="doLogin()" id="login-btn">Masuk ke Panel</button>
       </div>
-    </div>
   </div>
 </div>
 
-<!-- ===== APP ===== -->
+<!-- ===============================================================
+     APP
+     =============================================================== -->
 <div id="app">
-  <!-- Topbar -->
+
+  <!-- Top bar -->
   <div class="topbar">
-    <div class="topbar-dot"></div>
-    <div class="topbar-logo">LAUGHTALE SMP</div>
-    <svg width="14" height="14" fill="none" stroke="rgba(168,85,247,.4)" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    <div class="topbar-title" id="topbar-section">Pengaturan Server</div>
+    <button class="hamburger" id="hamburger-btn" aria-label="Buka menu" onclick="toggleSidebar()">
+      <svg id="hamburger-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-brand">
+      <div class="topbar-brand-mark">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <span class="topbar-brand-name">Laughtale SMP</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <span class="topbar-breadcrumb" id="topbar-section">Info Server</span>
     <div class="topbar-right">
-      <div class="topbar-user" id="topbar-email">—</div>
-      <div class="topbar-badge" id="topbar-role">admin</div>
+      <span class="topbar-user-name" id="topbar-email">—</span>
+      <span class="role-badge" id="topbar-role">admin</span>
       <button class="btn-logout" onclick="doLogout()">Keluar</button>
     </div>
   </div>
 
   <!-- Body -->
   <div class="app-body">
+
     <!-- Sidebar -->
     <div class="sidebar">
-      <div class="nav-back" onclick="goToMain()">
-        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      <div class="sidebar-back" onclick="goToMain()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
         Kembali ke Panel Utama
       </div>
-      <div class="nav-section-label">SERVER</div>
+
+      <div class="nav-group-label">Server</div>
       <div class="nav-item active" onclick="showSection('server', this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         Info Server
@@ -312,39 +1212,42 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         Season & World
       </div>
-      <div class="nav-section-label">ADMIN</div>
+
+      <div class="nav-group-label">Admin</div>
       <div class="nav-item" onclick="showSection('admins-wa', this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.37 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.27-.73a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         Admin WhatsApp
       </div>
     </div>
 
-    <!-- Main -->
+    <!-- Main content -->
     <div class="main-content">
 
-      <!-- ===== SERVER INFO ===== -->
+      <!-- ============ INFO SERVER ============ -->
       <div class="section active" id="sec-server">
         <div class="page-header">
-          <div class="page-title">INFO SERVER</div>
+          <div class="page-title">Info Server</div>
           <div class="page-sub">Pengaturan dasar server Laughtale SMP</div>
         </div>
 
         <!-- Live status -->
         <div class="server-live" id="server-live-card">
-          <div class="server-orb orb-loading" id="live-orb">⏳</div>
+          <div class="live-indicator">
+            <div class="live-indicator-dot" id="live-orb-dot"></div>
+          </div>
           <div class="server-live-info">
             <h4 id="live-status-text">Memuat status...</h4>
             <p id="live-ip-text">Menghubungi API...</p>
           </div>
           <div class="server-live-meta">
-            <span id="live-players">—</span>
-            <em id="live-latency">— ms</em>
+            <strong id="live-players">—</strong>
+            <span id="live-latency">— ms</span>
           </div>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title">KONFIGURASI SERVER</div>
+            <div class="card-title">Konfigurasi Server</div>
             <div class="card-icon">
               <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
             </div>
@@ -366,13 +1269,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
           </div>
           <div class="field-group full">
             <div class="field">
-              <label>Nama Server (tampil di website)</label>
+              <label>Nama Server</label>
               <input id="cfg-server_name" placeholder="Laughtale SMP">
             </div>
           </div>
-          <div class="card-header" style="margin-top:1rem">
-            <div class="card-title">PREVIEW</div>
-          </div>
+
+          <div class="divider"></div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Preview</div>
           <div class="preview-box" id="server-preview">
             <div class="preview-row"><span class="preview-key">IP Server</span><span class="preview-val" id="pv-ip">—</span></div>
             <div class="preview-row"><span class="preview-key">Platform</span><span class="preview-val" id="pv-type">—</span></div>
@@ -382,71 +1285,74 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
         <div class="save-bar">
           <span class="save-bar-hint">Perubahan akan langsung tersimpan ke Supabase.</span>
-          <button class="save-btn" onclick="saveSection('server')">💾 SIMPAN INFO SERVER</button>
+          <button class="save-btn" onclick="saveSection('server')">Simpan Info Server</button>
         </div>
       </div>
 
-      <!-- ===== MAINTENANCE ===== -->
+      <!-- ============ MAINTENANCE ============ -->
       <div class="section" id="sec-maintenance">
         <div class="page-header">
-          <div class="page-title">MAINTENANCE MODE</div>
+          <div class="page-title">Maintenance Mode</div>
           <div class="page-sub">Aktifkan saat server sedang dalam perbaikan</div>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title">STATUS MAINTENANCE</div>
-            <div id="maint-status-pill" class="status-pill pill-online">🟢 Normal</div>
+            <div class="card-title">Status Maintenance</div>
+            <span class="status-pill pill-online" id="maint-status-pill">
+              <span class="pill-dot"></span>Normal
+            </span>
           </div>
 
           <div class="toggle-row">
             <div class="toggle-label">
-              <strong>🔴 Maintenance Mode</strong>
+              <strong>Maintenance Mode</strong>
               <span>Website akan menampilkan halaman maintenance kepada pengunjung</span>
             </div>
-            <div class="toggle danger" id="toggle-maintenance" onclick="toggleMaintenance(this)"></div>
+            <div class="toggle" id="toggle-maintenance" onclick="toggleMaintenance(this)"></div>
           </div>
 
-          <div id="maint-on-preview" class="maint-preview" style="display:none">
-            <h4>⚠ MAINTENANCE</h4>
-            <p id="cfg-maint-msg-preview">Server sedang dalam pemeliharaan. Silakan coba beberapa saat lagi.</p>
+          <div id="maint-on-preview" class="maint-preview-box" style="display:none">
+            <strong>Mode Maintenance Aktif</strong>
+            Website sedang dalam mode perbaikan dan tidak dapat diakses pengunjung.
           </div>
 
-          <div class="field-group full" style="margin-top:1rem">
+          <div class="divider"></div>
+          <div class="field-group full">
             <div class="field">
-              <label>Pesan Maintenance (tampil ke pengunjung)</label>
-              <textarea id="cfg-maintenance_message" placeholder="Server sedang dalam pemeliharaan. Silakan coba beberapa saat lagi." oninput="document.getElementById('cfg-maint-msg-preview').textContent=this.value||'Pesan tidak diisi'"></textarea>
+              <label>Pesan Maintenance</label>
+              <textarea id="cfg-maintenance_message" placeholder="Server sedang dalam perbaikan. Mohon tunggu sebentar..."></textarea>
+              <div class="field-hint">Opsional — tampil di halaman maintenance</div>
             </div>
           </div>
           <div class="field-group">
             <div class="field">
-              <label>Estimasi Selesai</label>
-              <input id="cfg-maintenance_eta" type="datetime-local">
-              <div class="field-hint">Opsional — tampil di halaman maintenance</div>
+              <label>Estimasi Selesai (ETA)</label>
+              <input id="cfg-maintenance_eta" placeholder="cth: 30 menit, 2 jam">
             </div>
             <div class="field">
-              <label>Kontak darurat (WhatsApp / Discord)</label>
-              <input id="cfg-maintenance_contact" placeholder="@laughtalesmp">
+              <label>Kontak Admin</label>
+              <input id="cfg-maintenance_contact" placeholder="Discord: admin#0001">
             </div>
           </div>
         </div>
 
         <div class="save-bar">
-          <span class="save-bar-hint">⚠ Hati-hati: aktifkan hanya saat diperlukan.</span>
-          <button class="save-btn" onclick="saveSection('maintenance')">💾 SIMPAN MAINTENANCE</button>
+          <span class="save-bar-hint">Hati-hati: aktifkan hanya saat diperlukan.</span>
+          <button class="save-btn" onclick="saveSection('maintenance')">Simpan Maintenance</button>
         </div>
       </div>
 
-      <!-- ===== MOTD ===== -->
+      <!-- ============ MOTD ============ -->
       <div class="section" id="sec-motd">
         <div class="page-header">
-          <div class="page-title">MOTD / PENGUMUMAN</div>
+          <div class="page-title">MOTD / Pengumuman</div>
           <div class="page-sub">Pesan yang muncul di halaman utama website</div>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title">PENGUMUMAN WEBSITE</div>
+            <div class="card-title">Pengumuman Website</div>
             <div class="card-icon">
               <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </div>
@@ -454,57 +1360,59 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
           <div class="toggle-row">
             <div class="toggle-label">
-              <strong>Tampilkan banner pengumuman</strong>
+              <strong>Tampilkan Banner Pengumuman</strong>
               <span>Banner akan muncul di bagian atas website</span>
             </div>
             <div class="toggle" id="toggle-motd-active" onclick="this.classList.toggle('on')"></div>
           </div>
 
+          <div class="divider"></div>
+
           <div class="field-group full">
             <div class="field">
               <label>Teks Pengumuman</label>
-              <textarea id="cfg-motd_text" placeholder="🎉 Season baru telah dimulai! Selamat bermain!"></textarea>
+              <textarea id="cfg-motd_text" placeholder="Server maintenance setiap Senin pukul 00:00 - 02:00 WIB..."></textarea>
             </div>
           </div>
           <div class="field-group">
             <div class="field">
               <label>Tipe Banner</label>
               <select id="cfg-motd_type">
-                <option value="info">ℹ️ Info (biru)</option>
-                <option value="success">✅ Sukses (hijau)</option>
-                <option value="warning">⚠️ Peringatan (kuning)</option>
-                <option value="error">🔴 Penting (merah)</option>
+                <option value="info">Info</option>
+                <option value="warning">Warning</option>
+                <option value="success">Success</option>
+                <option value="error">Error</option>
               </select>
             </div>
             <div class="field">
-              <label>Teks Tombol (opsional)</label>
-              <input id="cfg-motd_btn" placeholder="Lihat Selengkapnya">
+              <label>Label Tombol (opsional)</label>
+              <input id="cfg-motd_btn" placeholder="Selengkapnya">
             </div>
           </div>
           <div class="field-group full">
             <div class="field">
               <label>URL Tombol (opsional)</label>
-              <input id="cfg-motd_url" placeholder="https://discord.gg/laughtale">
+              <input id="cfg-motd_url" placeholder="https://discord.gg/...">
             </div>
           </div>
         </div>
 
         <div class="save-bar">
           <span class="save-bar-hint">Banner akan langsung tampil setelah disimpan.</span>
-          <button class="save-btn" onclick="saveSection('motd')">💾 SIMPAN PENGUMUMAN</button>
+          <button class="save-btn" onclick="saveSection('motd')">Simpan Pengumuman</button>
         </div>
       </div>
 
-      <!-- ===== SEASON ===== -->
+      <!-- ============ SEASON ============ -->
       <div class="section" id="sec-season">
         <div class="page-header">
-          <div class="page-title">SEASON & WORLD</div>
+          <div class="page-title">Season & World</div>
           <div class="page-sub">Informasi season dan dunia saat ini</div>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title">INFO SEASON</div>
+            <div class="card-title">Info Season</div>
             <div class="card-icon">
               <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             </div>
@@ -528,15 +1436,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
             <div class="field">
               <label>Status Season</label>
               <select id="cfg-season_status">
-                <option value="active">🟢 Aktif</option>
-                <option value="hiatus">🟡 Hiatus</option>
-                <option value="ended">🔴 Selesai</option>
+                <option value="active">Aktif</option>
+                <option value="hiatus">Hiatus</option>
+                <option value="ended">Selesai</option>
               </select>
             </div>
           </div>
           <div class="field-group full">
             <div class="field">
-              <label>Deskripsi Season (tampil di website)</label>
+              <label>Deskripsi Season</label>
               <textarea id="cfg-season_desc" placeholder="Season 1 — Dunia survival baru dimulai! Join sekarang dan jadilah yang pertama..."></textarea>
             </div>
           </div>
@@ -544,41 +1452,43 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
         <div class="save-bar">
           <span class="save-bar-hint">Info season tampil di halaman utama dan about.</span>
-          <button class="save-btn" onclick="saveSection('season')">💾 SIMPAN SEASON</button>
+          <button class="save-btn" onclick="saveSection('season')">Simpan Season</button>
         </div>
       </div>
 
-      <!-- ===== ADMINS WA ===== -->
+      <!-- ============ ADMIN WHATSAPP ============ -->
       <div class="section" id="sec-admins-wa">
         <div class="page-header">
-          <div class="page-title">ADMIN WHATSAPP</div>
+          <div class="page-title">Admin WhatsApp</div>
           <div class="page-sub">Nomor WhatsApp admin untuk pemesanan di toko</div>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title">ADMIN UTAMA (SHOP)</div>
-            <button class="save-btn" style="padding:.4rem 1rem;font-size:.32rem" onclick="addAdminWA('main')">+ Tambah</button>
+            <div class="card-title">Admin Utama (Shop)</div>
+            <button class="btn-add" onclick="addAdminWA('main')">
+              <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Tambah
+            </button>
           </div>
-          <div id="wa-main-list">
-            <div style="text-align:center;padding:1.5rem;color:var(--text3);font-size:.78rem">Memuat data...</div>
-          </div>
+          <div id="wa-main-list"><div class="empty-state">Memuat data...</div></div>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <div class="card-title">ADMIN GEM COINS</div>
-            <button class="save-btn" style="padding:.4rem 1rem;font-size:.32rem" onclick="addAdminWA('gem')">+ Tambah</button>
+            <div class="card-title">Admin Gem Coins</div>
+            <button class="btn-add" onclick="addAdminWA('gem')">
+              <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Tambah
+            </button>
           </div>
-          <div id="wa-gem-list">
-            <div style="text-align:center;padding:1.5rem;color:var(--text3);font-size:.78rem">Memuat data...</div>
-          </div>
+          <div id="wa-gem-list"><div class="empty-state">Memuat data...</div></div>
         </div>
 
         <!-- Add form -->
         <div class="card" id="wa-add-form" style="display:none">
           <div class="card-header">
-            <div class="card-title" id="wa-add-title">TAMBAH ADMIN</div>
+            <div class="card-title" id="wa-add-title">Tambah Admin</div>
           </div>
           <div class="field-group">
             <div class="field">
@@ -591,9 +1501,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
               <div class="field-hint">Format: 62 + nomor tanpa 0 (cth: 6282xxx)</div>
             </div>
           </div>
-          <div style="display:flex;gap:.75rem;justify-content:flex-end">
-            <button class="btn" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:.34rem;padding:.5rem 1rem" onclick="cancelAddWA()">Batal</button>
-            <button class="save-btn" style="padding:.5rem 1.25rem" onclick="saveAdminWA()">Simpan</button>
+          <div class="form-actions">
+            <button class="btn-ghost" onclick="cancelAddWA()">Batal</button>
+            <button class="save-btn" onclick="saveAdminWA()">Simpan</button>
           </div>
         </div>
       </div>
@@ -602,7 +1512,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
   </div>
 </div>
 
-<!-- Toast container -->
+<!-- Sidebar backdrop -->
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+<!-- Toast -->
 <div id="toast"></div>
 
 <script>
@@ -616,29 +1529,25 @@ let currentUser = null;
 let currentRole = null;
 let configData  = {};
 let waAdmins    = { main: [], gem: [] };
-let waAddingFor = null; // 'main' | 'gem'
+let waAddingFor = null;
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', async () => {
   sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // Enter key on login
   document.getElementById('login-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
   });
 
-  // Check existing session
   const { data: { session } } = await sb.auth.getSession();
   if (session) await afterLogin(session.user);
 
-  // Listen for preview updates
   ['cfg-server_ip','cfg-server_type','cfg-server_name'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', updateServerPreview);
     if (el) el.addEventListener('change', updateServerPreview);
   });
 
-  // Fetch live server status
   fetchLiveStatus();
 });
 
@@ -651,14 +1560,13 @@ async function doLogin() {
   const errMsg= document.getElementById('auth-error-msg');
 
   errEl.style.display = 'none';
-  btn.textContent = 'MEMUAT...';
+  btn.textContent = 'Memuat...';
   btn.disabled = true;
 
   try {
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
     if (error) throw error;
 
-    // Check admin role
     const { data: role } = await sb.from('admin_roles')
       .select('role,display_name')
       .eq('user_id', data.user.id)
@@ -673,7 +1581,7 @@ async function doLogin() {
   } catch(e) {
     errMsg.textContent = e.message;
     errEl.style.display = 'flex';
-    btn.textContent = 'MASUK KE PANEL';
+    btn.textContent = 'Masuk ke Panel';
     btn.disabled = false;
   }
 }
@@ -705,16 +1613,7 @@ async function doLogout() {
   location.reload();
 }
 
-function goToMain() {
-  window.location.href = 'index.html';
-}
-
-function goRegister() {
-  toast('Buka panel utama untuk membuat akun.', 'error');
-}
-function goReset() {
-  toast('Buka panel utama untuk reset password.', 'error');
-}
+function goToMain() { window.location.href = 'index.html'; }
 
 // ==================== CONFIG ====================
 async function loadAllConfig() {
@@ -724,7 +1623,6 @@ async function loadAllConfig() {
   configData = {};
   (data || []).forEach(row => { configData[row.key] = row; });
 
-  // Populate fields
   const fields = [
     'server_ip','server_name','server_type',
     'maintenance_mode','maintenance_message','maintenance_eta','maintenance_contact',
@@ -735,22 +1633,22 @@ async function loadAllConfig() {
     const el = document.getElementById('cfg-' + key);
     if (!el) return;
     const val = configData[key]?.value || '';
-    if (el.tagName === 'SELECT') el.value = val;
-    else el.value = val;
+    el.value = val;
   });
 
-  // Toggles
+  // Maintenance toggle
   const maint = configData['maintenance_mode']?.value === 'true';
   const maintToggle = document.getElementById('toggle-maintenance');
   maint ? maintToggle.classList.add('on') : maintToggle.classList.remove('on');
   document.getElementById('maint-on-preview').style.display = maint ? 'block' : 'none';
-  document.getElementById('maint-status-pill').className = 'status-pill ' + (maint ? 'pill-maintenance' : 'pill-online');
-  document.getElementById('maint-status-pill').textContent = maint ? '🟡 Maintenance' : '🟢 Normal';
+  const pill = document.getElementById('maint-status-pill');
+  pill.className = 'status-pill ' + (maint ? 'pill-maintenance' : 'pill-online');
+  pill.innerHTML = '<span class="pill-dot"></span>' + (maint ? 'Maintenance' : 'Normal');
 
+  // MOTD toggle
   const motdActive = configData['motd_active']?.value === 'true';
-  motdActive
-    ? document.getElementById('toggle-motd-active').classList.add('on')
-    : document.getElementById('toggle-motd-active').classList.remove('on');
+  const motdToggle = document.getElementById('toggle-motd-active');
+  motdActive ? motdToggle.classList.add('on') : motdToggle.classList.remove('on');
 
   updateServerPreview();
 }
@@ -762,8 +1660,9 @@ function getVal(id) {
 
 async function saveSection(section) {
   const btn = event.target;
+  const origText = btn.textContent;
   btn.disabled = true;
-  btn.textContent = '⏳ MENYIMPAN...';
+  btn.textContent = 'Menyimpan...';
 
   let updates = {};
 
@@ -802,23 +1701,20 @@ async function saveSection(section) {
   for (const [key, value] of Object.entries(updates)) {
     if (configData[key]) {
       const { error } = await sb.from('site_config').update({ value }).eq('key', key);
-      if (error) { toast(`Gagal simpan ${key}: ${error.message}`, 'error'); hasError = true; }
+      if (error) { toast('Gagal simpan ' + key + ': ' + error.message, 'error'); hasError = true; }
       else configData[key].value = value;
     } else {
       const { error } = await sb.from('site_config').insert({ key, value, description: key });
-      if (error) { toast(`Gagal buat ${key}: ${error.message}`, 'error'); hasError = true; }
+      if (error) { toast('Gagal buat ' + key + ': ' + error.message, 'error'); hasError = true; }
       else configData[key] = { key, value };
     }
   }
 
-  if (!hasError) toast('✅ Konfigurasi berhasil disimpan!');
+  if (!hasError) toast('Konfigurasi berhasil disimpan.');
 
   await loadAllConfig();
   btn.disabled = false;
-  btn.textContent = '💾 SIMPAN';
-  // Re-set correct label
-  const labels = { server:'INFO SERVER', maintenance:'MAINTENANCE', motd:'PENGUMUMAN', season:'SEASON' };
-  btn.textContent = '💾 SIMPAN ' + (labels[section] || '');
+  btn.textContent = origText;
 }
 
 // ==================== MAINTENANCE TOGGLE ====================
@@ -826,8 +1722,9 @@ function toggleMaintenance(el) {
   el.classList.toggle('on');
   const on = el.classList.contains('on');
   document.getElementById('maint-on-preview').style.display = on ? 'block' : 'none';
-  document.getElementById('maint-status-pill').className = 'status-pill ' + (on ? 'pill-maintenance' : 'pill-online');
-  document.getElementById('maint-status-pill').textContent = on ? '🟡 Maintenance' : '🟢 Normal';
+  const pill = document.getElementById('maint-status-pill');
+  pill.className = 'status-pill ' + (on ? 'pill-maintenance' : 'pill-online');
+  pill.innerHTML = '<span class="pill-dot"></span>' + (on ? 'Maintenance' : 'Normal');
 }
 
 // ==================== SERVER PREVIEW ====================
@@ -842,31 +1739,30 @@ async function fetchLiveStatus() {
   const ip = (configData['server_ip']?.value || 'laughtale.my.id:19214');
   const [host, port] = ip.split(':');
   const start = Date.now();
+  const orbDot = document.getElementById('live-orb-dot');
   try {
     const res  = await fetch(`https://api.mcsrvstat.us/bedrock/3/${host}:${port||19214}`, { signal: AbortSignal.timeout(8000) });
     const data = await res.json();
     const lat  = Date.now() - start;
-    const orb  = document.getElementById('live-orb');
     const txt  = document.getElementById('live-status-text');
     const ipEl = document.getElementById('live-ip-text');
     const pl   = document.getElementById('live-players');
     const ltEl = document.getElementById('live-latency');
     if (data.online) {
-      orb.className = 'server-orb orb-online'; orb.textContent = '🟢';
+      orbDot.className = 'live-indicator-dot green pulse';
       txt.textContent = 'Server Online';
-      ipEl.textContent = `${host}:${port||19214}`;
-      pl.textContent   = `${data.players?.online||0} / ${data.players?.max||'?'} pemain`;
-      ltEl.textContent = `${lat} ms`;
+      ipEl.textContent = host + ':' + (port||19214);
+      pl.textContent   = (data.players?.online||0) + ' / ' + (data.players?.max||'?') + ' pemain';
+      ltEl.textContent = lat + ' ms';
     } else {
-      orb.className = 'server-orb orb-offline'; orb.textContent = '🔴';
+      orbDot.className = 'live-indicator-dot red';
       txt.textContent = 'Server Offline';
-      ipEl.textContent = `${host}:${port||19214}`;
+      ipEl.textContent = host + ':' + (port||19214);
       pl.textContent   = '0 pemain';
-      ltEl.textContent = `${lat} ms`;
+      ltEl.textContent = lat + ' ms';
     }
   } catch(e) {
-    const orb = document.getElementById('live-orb');
-    orb.className = 'server-orb orb-offline'; orb.textContent = '⚠️';
+    orbDot.className = 'live-indicator-dot red';
     document.getElementById('live-status-text').textContent = 'Gagal mengambil status';
     document.getElementById('live-ip-text').textContent = 'Periksa koneksi atau IP server';
   }
@@ -874,7 +1770,6 @@ async function fetchLiveStatus() {
 
 // ==================== WA ADMINS ====================
 async function loadWAAdmins() {
-  // Load from site_config table (stored as JSON)
   const mainRow = configData['whatsapp_admins'];
   const gemRow  = configData['whatsapp_gem_admins'];
   try { waAdmins.main = JSON.parse(mainRow?.value || '[]'); } catch { waAdmins.main = []; }
@@ -884,31 +1779,29 @@ async function loadWAAdmins() {
 }
 
 function renderWAList(type) {
-  const container = document.getElementById(`wa-${type}-list`);
+  const container = document.getElementById('wa-' + type + '-list');
   const list = waAdmins[type];
   if (!list.length) {
-    container.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text3);font-size:.78rem">Belum ada admin ' + (type==='gem'?'Gem Coins':'') + ' terdaftar.</div>';
+    container.innerHTML = '<div class="empty-state">Belum ada admin ' + (type==='gem' ? 'Gem Coins' : '') + ' terdaftar.</div>';
     return;
   }
   container.innerHTML = list.map((a, i) => `
     <div class="admin-item">
-      <div class="admin-avatar">${a.name[0].toUpperCase()}</div>
+      <div class="admin-avatar">${esc(a.name[0])}</div>
       <div class="admin-info">
         <strong>${esc(a.name)}</strong>
         <span>+${esc(a.number)}</span>
       </div>
-      <span class="admin-badge badge-admin">${type==='gem'?'GEM':'SHOP'}</span>
-      <div class="admin-actions">
-        <button class="btn-icon" onclick="removeAdminWA('${type}', ${i})" title="Hapus">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-        </button>
-      </div>
+      <span class="admin-badge ${type==='gem'?'badge-gem':'badge-admin'}">${type==='gem'?'Gem':'Shop'}</span>
+      <button class="btn-icon" onclick="removeAdminWA('${type}', ${i})" title="Hapus">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button>
     </div>`).join('');
 }
 
 function addAdminWA(type) {
   waAddingFor = type;
-  document.getElementById('wa-add-title').textContent = 'TAMBAH ADMIN ' + (type==='gem'?'GEM COINS':'SHOP');
+  document.getElementById('wa-add-title').textContent = 'Tambah Admin ' + (type==='gem' ? 'Gem Coins' : 'Shop');
   document.getElementById('wa-new-name').value   = '';
   document.getElementById('wa-new-number').value = '';
   document.getElementById('wa-add-form').style.display = 'block';
@@ -923,18 +1816,18 @@ function cancelAddWA() {
 async function saveAdminWA() {
   const name   = document.getElementById('wa-new-name').value.trim();
   const number = document.getElementById('wa-new-number').value.trim();
-  if (!name || !number) { toast('Nama dan nomor wajib diisi!', 'error'); return; }
+  if (!name || !number) { toast('Nama dan nomor wajib diisi.', 'error'); return; }
   if (!/^62/.test(number)) { toast('Nomor harus diawali 62 (contoh: 6281xxx)', 'error'); return; }
 
   waAdmins[waAddingFor].push({ name, number });
   await saveWAAdmins(waAddingFor);
   renderWAList(waAddingFor);
   cancelAddWA();
-  toast('✅ Admin berhasil ditambahkan!');
+  toast('Admin berhasil ditambahkan.');
 }
 
 async function removeAdminWA(type, idx) {
-  if (!confirm(`Hapus admin "${waAdmins[type][idx].name}"?`)) return;
+  if (!confirm('Hapus admin "' + waAdmins[type][idx].name + '"?')) return;
   waAdmins[type].splice(idx, 1);
   await saveWAAdmins(type);
   renderWAList(type);
@@ -959,15 +1852,53 @@ function showSection(name, el) {
   document.getElementById('sec-' + name).classList.add('active');
   if (el) el.classList.add('active');
   const labels = {
-    'server':'Info Server','maintenance':'Maintenance',
-    'motd':'MOTD / Pengumuman','season':'Season & World',
-    'admins-wa':'Admin WhatsApp'
+    'server': 'Info Server',
+    'maintenance': 'Maintenance',
+    'motd': 'MOTD / Pengumuman',
+    'season': 'Season & World',
+    'admins-wa': 'Admin WhatsApp'
   };
   document.getElementById('topbar-section').textContent = labels[name] || name;
 }
 
+
+// ==================== SIDEBAR TOGGLE (MOBILE) ====================
+function toggleSidebar() {
+  const sidebar  = document.querySelector('.sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const icon     = document.getElementById('hamburger-icon');
+  const isOpen   = sidebar.classList.contains('open');
+  if (isOpen) {
+    closeSidebar();
+  } else {
+    sidebar.classList.add('open');
+    backdrop.classList.add('visible');
+    icon.innerHTML = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+  }
+}
+
+function closeSidebar() {
+  const sidebar  = document.querySelector('.sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const icon     = document.getElementById('hamburger-icon');
+  sidebar.classList.remove('open');
+  backdrop.classList.remove('visible');
+  icon.innerHTML = '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>';
+}
+
+// Close sidebar when a nav item is clicked on mobile
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.nav-item, .sidebar-back').forEach(item => {
+    item.addEventListener('click', () => {
+      if (window.innerWidth <= 768) closeSidebar();
+    });
+  });
+});
+
 // ==================== UTILS ====================
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 function toast(msg, type='success') {
   const el = document.createElement('div');
@@ -977,5 +1908,7 @@ function toast(msg, type='success') {
   setTimeout(() => el.remove(), 3200);
 }
 </script>
+<script>window._adminSb = sb;</script>
+<script src="js/admin-shop.js" defer></script>
 </body>
 </html>

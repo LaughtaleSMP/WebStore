@@ -1,18 +1,19 @@
 /* ════════════════════════════════════════════════════════
    supabase-sync.js — Sinkronisasi otomatis dari Admin Panel
    Fetch site_config dari Supabase, lalu terapkan ke website
-════════════════════════════════════════════════════════ */
+   ════════════════════════════════════════════════════════ */
 
 (async function () {
   const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq';
 
-  // Tunggu Supabase client tersedia
+  // Tunggu Supabase SDK tersedia
   let tries = 0;
   while (typeof supabase === 'undefined' && tries < 20) {
     await new Promise(r => setTimeout(r, 100));
     tries++;
   }
+
   if (typeof supabase === 'undefined') {
     console.warn('[supabase-sync] Supabase client tidak ditemukan.');
     return;
@@ -23,7 +24,7 @@
   try {
     const { data, error } = await sb.from('site_config').select('*');
     if (error || !data) {
-      console.warn('[supabase-sync] Gagal fetch:', error?.message);
+      console.warn('[supabase-sync] Gagal fetch config:', error?.message);
       return;
     }
 
@@ -31,17 +32,21 @@
     const cfg = {};
     data.forEach(row => { cfg[row.key] = row.value; });
 
-    // ── 1. Override window.SERVER_CONFIG ──────────────────
-    if (window.SERVER_CONFIG) {
-      if (cfg.server_ip)   window.SERVER_CONFIG.ip        = cfg.server_ip;
-      if (cfg.server_name) window.SERVER_CONFIG.namaServer = cfg.server_name;
-      if (cfg.server_type) window.SERVER_CONFIG.versi      = cfg.server_type;
-      if (cfg.season)      window.SERVER_CONFIG.season     = cfg.season;
-      if (cfg.seed)        window.SERVER_CONFIG.seed       = parseInt(cfg.seed) || window.SERVER_CONFIG.seed;
-    }
+    // ── 1. Update window.SERVER_CONFIG & window.SERVERCONFIG (handle keduanya) ──
+    // Index.html menggunakan window.SERVERCONFIG (tanpa underscore)
+    // supabase-sync dan server-status menggunakan window.SERVER_CONFIG
+    const sc = window.SERVER_CONFIG || window.SERVERCONFIG || {};
+    if (cfg.server_ip)   sc.ip         = cfg.server_ip;
+    if (cfg.server_name) sc.namaServer = cfg.server_name;
+    if (cfg.server_type) sc.versi      = cfg.server_type;
+    if (cfg.season)      sc.season     = cfg.season;
+    if (cfg.seed)        sc.seed       = parseInt(cfg.seed) || sc.seed;
+    // Pastikan kedua variabel tersinkron
+    window.SERVER_CONFIG  = sc;
+    window.SERVERCONFIG   = sc;
 
     // ── 2. Terapkan ke DOM ────────────────────────────────
-    applyServerConfig(window.SERVER_CONFIG);
+    applyServerConfig(cfg, sc);
 
     // ── 3. Maintenance mode ───────────────────────────────
     if (cfg.maintenance_mode === 'true') {
@@ -53,114 +58,187 @@
       showMOTD(cfg);
     }
 
-    // ── 5. WA Admin override untuk toko ──────────────────
+    // ── 5. WA Admin — simpan ke window untuk shop.js ──────
     try {
       const mainAdmins = JSON.parse(cfg.whatsapp_admins     || '[]');
       const gemAdmins  = JSON.parse(cfg.whatsapp_gem_admins || '[]');
       if (mainAdmins.length || gemAdmins.length) {
-        window._supabaseWA = { main: mainAdmins, gem: gemAdmins };
+        window.supabaseWA  = { main: mainAdmins, gem: gemAdmins };  // dibaca oleh shop.js
+        window._supabaseWA = { main: mainAdmins, gem: gemAdmins };  // legacy support
       }
     } catch (e) { /* JSON parse gagal — pakai data di shop-config.js */ }
+
+
+    // ── 6. Shop Items — override SHOP_CONFIG dari Supabase ──────
+    try {
+      const { data: shopItems, error: shopErr } = await sb
+        .from('shop_items')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order', { ascending: true });
+
+      if (!shopErr && shopItems && shopItems.length > 0) {
+        const mapped = shopItems.map(row => ({
+          id:              row.id,
+          name:            row.name,
+          emoji:           row.emoji          || '',
+          category:        row.category,
+          price:           row.price,
+          originalPrice:   row.original_price || 0,
+          description:     row.description    || '',
+          features:        Array.isArray(row.features)   ? row.features  : [],
+          badge:           row.badge          || '',
+          badgeColor:      row.badge_color    || '',
+          stock:           row.stock          || 'Tersedia',
+          requiresDesign:  !!row.requires_design,
+          needsUsername:   row.needs_username !== false,
+          canBuyMultiple:  row.can_buy_multiple !== false,
+          maxQuantity:     row.max_quantity   || 99,
+          images:          Array.isArray(row.images)     ? row.images    : [],
+        }));
+
+        // Update SHOP_CONFIG jika tersedia
+        if (window.SHOP_CONFIG) {
+          window.SHOP_CONFIG.items = mapped;
+          // Rebuild kategori unik dari items aktif
+          const cats = ['Semua', ...new Set(mapped.map(i => i.category))];
+          window.SHOP_CONFIG.categories = cats;
+        }
+        // Simpan ke window agar shop.js bisa re-render
+        window._shopItemsFromSupabase = mapped;
+      }
+    } catch (e) { /* shop_items gagal — SHOP_CONFIG tetap dari shop-config.js */ }
 
     console.log('[supabase-sync] Config berhasil diterapkan.');
 
   } catch (e) {
-    console.warn('[supabase-sync] Error:', e);
+    console.warn('[supabase-sync] Error tidak terduga:', e);
   }
 
 
-  /* ── Terapkan SERVER_CONFIG ke semua elemen DOM ── */
-  function applyServerConfig(sc) {
-    if (!sc) return;
+  /* ══════════════════════════════════════════════════════
+     Terapkan config ke semua elemen DOM
+     ══════════════════════════════════════════════════════ */
+  function applyServerConfig(cfg, sc) {
+    const ip     = cfg.server_ip || sc.ip || 'laughtale.my.id:19214';
+    const season = cfg.season    || sc.season || '';
+    const seed   = cfg.seed      || String(sc.seed || '');
 
-    // Season counter
+    // Simpan IP ke SEMUA variabel yang mungkin dipakai di berbagai tempat
+    window._serverIP  = ip;   // untuk server-status.js baru
+    window.serverIP   = ip;   // untuk heroDirectConnect lama di index.html
+
+    // Hero — IP text
+    const heroIpText = document.getElementById('hero-ip-text');
+    if (heroIpText) heroIpText.textContent = ip;
+
+    // Server address di section status (hanya update kalau masih "Memuat...")
+    const addrEl = document.getElementById('server-address-display');
+    if (addrEl && addrEl.textContent.includes('Memuat')) {
+      addrEl.textContent = ip;
+    }
+
+    // Stats bar — Season
     document.querySelectorAll('.stat-label').forEach(el => {
       if (el.textContent.trim() === 'Season') {
-        var val = el.previousElementSibling;
-        if (val) val.textContent = sc.season;
+        const val = el.previousElementSibling;
+        if (val && season) val.textContent = season;
       }
     });
 
-    // Seed, Total Fitur, Peraturan
-    var map = {
-      'Total Fitur': sc.totalFitur,
-      'Peraturan':   sc.totalPeraturan,
-      'Seed':        sc.seed,
-    };
-    document.querySelectorAll('.stat-val[data-target]').forEach(el => {
-      var label = el.closest('.stat-item') && el.closest('.stat-item').querySelector('.stat-label');
-      if (label && map[label.textContent.trim()] !== undefined) {
-        el.setAttribute('data-target', map[label.textContent.trim()]);
-        el.textContent = map[label.textContent.trim()];
+    // Stats bar — Seed counter
+    document.querySelectorAll('.stat-val[data-target], .stat-val').forEach(el => {
+      const item  = el.closest('.stat-item');
+      const label = item && item.querySelector('.stat-label');
+      if (!label) return;
+      if (label.textContent.trim() === 'Seed' && seed) {
+        el.setAttribute('data-target', seed);
+        el.textContent = seed;
       }
     });
 
-    // IP server yang tampil di halaman
-    document.querySelectorAll('#server-address-display, .server-ip-text').forEach(el => {
-      el.textContent = sc.ip;
-    });
+    // Section seed value (angka besar)
+    const seedVal = document.querySelector('.seed-value');
+    if (seedVal && seed) seedVal.textContent = seed;
 
-    // Simpan IP agar heroDirectConnect pakai data terbaru
-    window._serverIP = sc.ip;
+    // Season desc (opsional)
+    if (cfg.season_desc) {
+      const descEl = document.querySelector('.season-desc, #season-desc');
+      if (descEl) descEl.textContent = cfg.season_desc;
+    }
   }
 
 
-  /* ── Tampilkan overlay maintenance ── */
+  /* ══════════════════════════════════════════════════════
+     Tampilkan overlay maintenance
+     ══════════════════════════════════════════════════════ */
   function showMaintenance(cfg) {
-    var overlay = document.getElementById('maintenance-overlay');
+    const overlay = document.getElementById('maintenance-overlay');
     if (!overlay) return;
 
-    var msg  = cfg.maintenance_message || 'Server sedang dalam pemeliharaan. Silakan coba beberapa saat lagi.';
-    var eta  = cfg.maintenance_eta
-      ? new Date(cfg.maintenance_eta).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })
-      : null;
-    var contact = cfg.maintenance_contact || '';
+    const msg     = cfg.maintenance_message || 'Server sedang dalam pemeliharaan. Silakan coba beberapa saat lagi.';
+    const contact = cfg.maintenance_contact || '';
 
-    document.getElementById('maint-msg').textContent = msg;
-
-    var etaEl = document.getElementById('maint-eta');
-    if (eta && etaEl) {
-      etaEl.textContent    = '⏱ Estimasi selesai: ' + eta;
-      etaEl.style.display  = 'block';
+    let etaText = '';
+    if (cfg.maintenance_eta) {
+      try {
+        etaText = new Date(cfg.maintenance_eta).toLocaleString('id-ID', {
+          dateStyle: 'long', timeStyle: 'short'
+        });
+      } catch (e) { etaText = cfg.maintenance_eta; }
     }
 
-    var conEl = document.getElementById('maint-contact');
-    if (contact && conEl) {
-      conEl.textContent   = '📞 Kontak: ' + contact;
-      conEl.style.display = 'block';
+    const msgEl = document.getElementById('maint-msg');
+    if (msgEl) msgEl.textContent = msg;
+
+    const etaEl = document.getElementById('maint-eta');
+    if (etaEl) {
+      etaEl.textContent   = etaText ? 'Estimasi selesai: ' + etaText : '';
+      etaEl.style.display = etaText ? 'block' : 'none';
     }
 
-    overlay.style.display  = 'flex';
+    const conEl = document.getElementById('maint-contact');
+    if (conEl) {
+      conEl.textContent   = contact ? 'Kontak: ' + contact : '';
+      conEl.style.display = contact ? 'block' : 'none';
+    }
+
+    overlay.style.display        = 'flex';
     document.body.style.overflow = 'hidden';
   }
 
 
-  /* ── Tampilkan MOTD banner ── */
+  /* ══════════════════════════════════════════════════════
+     Tampilkan MOTD banner
+     ══════════════════════════════════════════════════════ */
   function showMOTD(cfg) {
-    var banner = document.getElementById('motd-banner');
+    const banner = document.getElementById('motd-banner');
     if (!banner) return;
 
-    var palette = {
+    const palette = {
       info:    { bg: 'rgba(96,165,250,0.10)',  border: 'rgba(96,165,250,0.25)',  color: '#60a5fa' },
       success: { bg: 'rgba(93,189,58,0.10)',   border: 'rgba(93,189,58,0.25)',   color: '#5dbd3a' },
       warning: { bg: 'rgba(244,196,48,0.10)',  border: 'rgba(244,196,48,0.25)',  color: '#f4c430' },
       error:   { bg: 'rgba(239,68,68,0.10)',   border: 'rgba(239,68,68,0.25)',   color: '#ef4444' },
     };
-    var p = palette[cfg.motd_type] || palette.info;
+    const p = palette[cfg.motd_type] || palette.info;
 
     banner.style.background   = p.bg;
     banner.style.borderBottom = '1px solid ' + p.border;
     banner.style.color        = p.color;
 
-    document.getElementById('motd-text').textContent = cfg.motd_text;
+    const textEl = document.getElementById('motd-text');
+    if (textEl) textEl.textContent = cfg.motd_text;
 
     if (cfg.motd_btn && cfg.motd_url) {
-      var btn      = document.getElementById('motd-btn');
-      btn.textContent   = cfg.motd_btn;
-      btn.href          = cfg.motd_url;
-      btn.style.display = 'inline-flex';
-      btn.style.color   = p.color;
-      btn.style.border  = '1px solid ' + p.border;
+      const btn = document.getElementById('motd-btn');
+      if (btn) {
+        btn.textContent   = cfg.motd_btn;
+        btn.href          = cfg.motd_url;
+        btn.style.display = 'inline-flex';
+        btn.style.color   = p.color;
+        btn.style.border  = '1px solid ' + p.border;
+      }
     }
 
     banner.style.display = 'flex';
