@@ -285,23 +285,7 @@
         }
       });
 
-      const grid = document.getElementById('shop-grid');
-      if (grid) {
-          // fallback: reload kartu harga saja tanpa full re-render
-          grid.querySelectorAll('.shop-card').forEach((card, idx) => {
-            const item = window.SHOPCONFIG.items[idx];
-            if (!item) return;
-            const priceEl = card.querySelector('.shop-card-price');
-            if (priceEl) {
-              const p = item.price;
-              priceEl.innerHTML = p === 0
-                ? '<span style="color:#17dd62">GRATIS</span>'
-                : 'Rp ' + p.toLocaleString('id-ID');
-            }
-          });
-        }
-        console.log('[supabase-sync] Harga shop berhasil disync dari Supabase.');
-      }
+      console.log('[supabase-sync] Harga shop berhasil disync dari Supabase.');
     } catch(e) {
       console.warn('[supabase-sync] Gagal sync shop_items:', e);
     }
