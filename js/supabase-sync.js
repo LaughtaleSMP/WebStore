@@ -73,9 +73,8 @@
     try {
       const { data: shopItems, error: shopErr } = await sb
         .from('shop_items')
-        .select('*')
-        .eq('active', true)
-        .order('sort_order', { ascending: true });
+        .select('id, name, price, stock')
+        .order('id', { ascending: true });
 
       if (!shopErr && shopItems && shopItems.length > 0) {
         const mapped = shopItems.map(row => ({
