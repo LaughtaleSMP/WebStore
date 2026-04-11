@@ -1,7 +1,17 @@
 // ==================== SUPABASE ====================
 const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq';
-let sb;
+
+// createClient dipanggil di scope global — SDK sudah pasti tersedia
+// karena script ini dimuat SETELAH tag <script> Supabase CDN (tanpa defer)
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
+window._adminSb = sb;
 
 // ==================== STATE ====================
 let currentUser = null;
@@ -12,17 +22,6 @@ let waAddingFor = null;
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', async () => {
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  });
-
-  // Expose ke window agar admin-shop.js dan modul lain bisa akses
-  window._adminSb = sb;
-
   document.getElementById('login-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
   });
