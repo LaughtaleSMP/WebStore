@@ -36,26 +36,7 @@
 
 html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 14px; overflow: hidden; }
 
-/* ==================== SETUP SCREEN ==================== */
-#setup-screen {
-  position: fixed; inset: 0; background: var(--bg);
-  display: flex; align-items: center; justify-content: center; z-index: 1000;
-}
-.setup-box {
-  background: var(--bg2); border: 1px solid var(--border2);
-  border-radius: 16px; padding: 2.5rem; width: 440px; max-width: 95vw;
-}
-.setup-logo {
-  font-family: var(--font-pixel); font-size: 0.55rem; color: var(--purple);
-  letter-spacing: 3px; text-align: center; margin-bottom: 0.4rem;
-}
-.setup-title {
-  font-family: var(--font-pixel); font-size: 0.75rem; color: var(--text);
-  text-align: center; margin-bottom: 0.4rem; line-height: 1.8;
-}
-.setup-sub {
-  color: var(--text3); font-size: 0.78rem; text-align: center; margin-bottom: 2rem;
-}
+
 
 /* ==================== LOGIN SCREEN ==================== */
 #login-screen {
@@ -72,6 +53,23 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .login-logo-title { font-family: var(--font-pixel); font-size: 0.7rem; color: var(--purple); letter-spacing: 2px; }
 .login-logo-sub { font-family: var(--font-pixel); font-size: 0.45rem; color: var(--text3); letter-spacing: 2px; }
 .login-divider { width: 60px; height: 1px; background: var(--border2); margin: 0 auto 1.8rem; }
+/* ==================== SET PASSWORD SCREEN ==================== */
+#set-password-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: none; align-items: center; justify-content: center; z-index: 999;
+}
+.setpw-welcome {
+  text-align: center; margin-bottom: 1.5rem;
+  background: rgba(168,85,247,0.08); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 0.75rem 1rem;
+}
+.setpw-welcome p { color: var(--text2); font-size: 0.82rem; line-height: 1.7; }
+.alert-success {
+  background: rgba(93,189,58,0.12); border: 1px solid rgba(93,189,58,0.3);
+  color: #5dbd3a; border-radius: 8px; padding: 0.65rem 0.9rem;
+  font-size: 0.8rem; margin-bottom: 1rem;
+}
+
 
 /* ==================== MAIN APP ==================== */
 #app { display: none; height: 100vh; flex-direction: column; }
@@ -363,25 +361,6 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 <div id="toast-container"></div>
 
 <!-- ==================== SETUP SCREEN ==================== -->
-<div id="setup-screen">
-  <div class="setup-box">
-    <div class="setup-logo">LAUGHTALE SMP</div>
-    <div class="setup-title">ADMIN PANEL SETUP</div>
-    <div class="setup-sub">Masukkan kredensial Supabase kamu sekali saja</div>
-    <div id="setup-error"></div>
-    <div class="form-group">
-      <label class="form-label">Supabase Project URL</label>
-      <input class="form-input" id="setup-url" placeholder="https://xxxx.supabase.co" />
-      <div class="form-hint">Dapat ditemukan di Project Settings → API</div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Supabase Anon Key</label>
-      <input class="form-input" id="setup-key" placeholder="eyJ..." />
-      <div class="form-hint">Gunakan anon/public key (bukan service role)</div>
-    </div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="saveSetup()">SIMPAN & LANJUT →</button>
-  </div>
-</div>
 
 <!-- ==================== LOGIN SCREEN ==================== -->
 <div id="login-screen">
@@ -401,11 +380,32 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <input class="form-input" id="login-password" type="password" placeholder="••••••••" />
     </div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem" id="login-btn" onclick="doLogin()">MASUK KE ADMIN PANEL</button>
-    <div style="text-align:center;margin-top:1rem">
-      <span style="font-size:0.72rem;color:var(--text3);cursor:pointer" onclick="clearSetup()">Ganti konfigurasi Supabase</span>
-    </div>
   </div>
 </div>
+<!-- ==================== SET PASSWORD SCREEN ==================== -->
+<div id="set-password-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-title">LAUGHTALE SMP</div>
+      <div class="login-logo-sub">BUAT PASSWORD</div>
+    </div>
+    <div class="login-divider"></div>
+    <div class="setpw-welcome">
+      <p>&#x1F389; Selamat datang, Admin!<br>Kamu perlu membuat password untuk melanjutkan.</p>
+    </div>
+    <div id="setpw-error"></div>
+    <div class="form-group">
+      <label class="form-label">Password Baru</label>
+      <input class="form-input" id="setpw-password" type="password" placeholder="Minimal 6 karakter" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Konfirmasi Password</label>
+      <input class="form-input" id="setpw-confirm" type="password" placeholder="Ulangi password kamu" />
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem" id="setpw-btn" onclick="doSetPassword()">SIMPAN PASSWORD</button>
+  </div>
+</div>
+
 
 <!-- ==================== MAIN APP ==================== -->
 <div id="app" style="display:none;flex-direction:column;height:100vh">
@@ -1038,25 +1038,24 @@ let editingShopId = null, editingCatId = null, editingFeatureId = null, editingR
 function getStoredConfig() {
   return { url: localStorage.getItem('sb_url'), key: localStorage.getItem('sb_key') };
 }
-function saveSetup() {
-  const url = document.getElementById('setup-url').value.trim();
-  const key = document.getElementById('setup-key').value.trim();
-  if (!url || !key) { showSetupError('URL dan Key wajib diisi.'); return; }
-  if (!url.includes('supabase.co')) { showSetupError('URL tidak valid. Pastikan format: https://xxxx.supabase.co'); return; }
+if (!url.includes('supabase.co')) { showSetupError('URL tidak valid. Pastikan format: https://xxxx.supabase.co'); return; }
   localStorage.setItem('sb_url', url);
   localStorage.setItem('sb_key', key);
   initSupabase(url, key);
 }
-function showSetupError(msg) {
-  document.getElementById('setup-error').innerHTML = `<div class="alert alert-error">${msg}</div>`;
+</div>`;
 }
-function clearSetup() {
-  localStorage.removeItem('sb_url'); localStorage.removeItem('sb_key');
-  location.reload();
-}
-function initSupabase(url, key) {
-  sb = supabase.createClient(url, key);
-  document.getElementById('setup-screen').style.display = 'none';
+function initSupabase() {
+  sb = supabase.createClient('https://jlxtnbnrirxhwuyqjlzw.supabase.co', 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq');
+
+  // Cek apakah URL punya token invite / recovery dari email
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  const tokenType = hashParams.get('type');
+  if (tokenType === 'invite' || tokenType === 'recovery') {
+    document.getElementById('set-password-screen').style.display = 'flex';
+    return;
+  }
+
   document.getElementById('login-screen').style.display = 'flex';
 }
 
@@ -1093,6 +1092,46 @@ async function doLogout() {
   await sb.auth.signOut();
   location.reload();
 }
+// ==================== SET PASSWORD ====================
+async function doSetPassword() {
+  const pw = document.getElementById('setpw-password').value;
+  const confirm = document.getElementById('setpw-confirm').value;
+  const btn = document.getElementById('setpw-btn');
+  const errEl = document.getElementById('setpw-error');
+  errEl.innerHTML = '';
+
+  if (!pw || pw.length < 6) {
+    errEl.innerHTML = '<div class="alert alert-error">Password minimal 6 karakter.</div>';
+    return;
+  }
+  if (pw !== confirm) {
+    errEl.innerHTML = '<div class="alert alert-error">Password tidak cocok, coba lagi.</div>';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'MENYIMPAN...';
+  try {
+    // Pastikan session aktif dari token invite
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) throw new Error('Sesi tidak ditemukan. Minta invite ulang dari admin.');
+
+    const { error } = await sb.auth.updateUser({ password: pw });
+    if (error) throw error;
+
+    errEl.innerHTML = '<div class="alert alert-success">&#x2705; Password berhasil dibuat! Mengalihkan ke halaman login...</div>';
+    await sb.auth.signOut();
+    setTimeout(() => {
+      window.location.hash = '';
+      document.getElementById('set-password-screen').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+    }, 2000);
+  } catch(e) {
+    errEl.innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+    btn.disabled = false; btn.textContent = 'SIMPAN PASSWORD';
+  }
+}
+
+
 
 // ==================== NAVIGATION ====================
 function showSection(name, el) {
@@ -1597,12 +1636,12 @@ function esc(str) {
 
 // ==================== INIT ====================
 window.addEventListener('load', () => {
-  const { url, key } = getStoredConfig();
-  if (url && key) {
-    document.getElementById('setup-screen').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'flex';
-    initSupabase(url, key);
-    // Check existing session
+  initSupabase();
+
+  // Check existing session (skip jika sedang dalam mode invite/recovery)
+  const _hashParams = new URLSearchParams(window.location.hash.slice(1));
+  const _tokenType = _hashParams.get('type');
+  if (!_tokenType) {
     setTimeout(async () => {
       if (!sb) return;
       const { data: { session } } = await sb.auth.getSession();
@@ -1624,6 +1663,7 @@ window.addEventListener('load', () => {
   });
   // Enter to login
   document.getElementById('login-password').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+  document.getElementById('setpw-confirm').addEventListener('keydown', e => { if (e.key==='Enter') doSetPassword(); });
 });
 </script>
 </body>
