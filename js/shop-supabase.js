@@ -69,12 +69,9 @@
       };
 
       /* Trigger render ulang shop setelah data live dimuat */
-      if (typeof renderShopPublic === 'function') {
-        renderShopPublic();
-      } else {
-        /* shop.js belum expose renderShopPublic — dispatch event sebagai sinyal */
-        document.dispatchEvent(new CustomEvent('shopDataReady'));
-      }
+      /* Hanya dispatch event — biarkan supabase-sync.js yang handle re-render
+         agar tidak terjadi double render / race condition harga */
+      document.dispatchEvent(new CustomEvent('shopDataReady'));
 
     } catch (err) {
       console.warn('[shop-supabase] Gagal load data live, fallback ke shop-config.js:', err.message);
