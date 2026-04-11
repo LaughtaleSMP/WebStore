@@ -40,34 +40,36 @@
     const tabsEl    = document.getElementById('shop-tabs');
     const activeCat = tabsEl?.querySelector('.shop-tab.active')?.dataset.cat || 'Semua';
 
-    gridEl.innerHTML = items.map(item => {
-      if (typeof window.shopBuildCard === 'function') {
-        return window.shopBuildCard(item);
-      }
-      const sold     = item.stock === 'Habis';
-      const p        = item.price || 0;
-      const op       = item.originalPrice || item.original_price || 0;
-      const origHtml = (op > 0 && op > p)
-        ? `<span class="shop-price-orig">Rp\u00a0${op.toLocaleString('id-ID')}</span>`
-        : '';
-      const featHtml = (item.features && item.features.length)
-        ? `<ul class="shop-feat-list">${item.features.map(f => `<li>${f}</li>`).join('')}</ul>`
-        : '';
-      return `<div class="shop-card${sold ? ' shop-sold-out' : ''}" data-category="${item.category}">
-        ${badgeHtml(item, 'position:absolute;top:12px;right:12px;z-index:2;')}
-        <div class="shop-card-emoji">${item.emoji || '\uD83D\uDED2'}</div>
-        <div class="shop-card-name">${item.name}</div>
-        <div class="shop-card-cat">${item.category}</div>
-        <div class="shop-card-desc">${item.description || ''}</div>
-        ${featHtml}
-        <div class="shop-card-footer">
-          <div class="shop-card-price">${fmtPrice(p)}${origHtml}</div>
-          ${sold
-            ? `<button class="shop-btn shop-btn-sold" disabled>HABIS</button>`
-            : `<button class="shop-btn shop-btn-buy" onclick="shopOpenModal(${item.id})">Pesan</button>`}
-        </div>
-      </div>`;
-    }).join('');
+    /* Gunakan shopBuildCard dari shop.js agar animasi SVG tetap muncul */
+    if (typeof window.shopBuildCard === 'function') {
+      gridEl.innerHTML = items.map(window.shopBuildCard).join('');
+    } else {
+      gridEl.innerHTML = items.map(item => {
+        const sold     = item.stock === 'Habis';
+        const p        = item.price || 0;
+        const op       = item.originalPrice || item.original_price || 0;
+        const origHtml = (op > 0 && op > p)
+          ? `<span class="shop-price-orig">Rp\u00a0${op.toLocaleString('id-ID')}</span>`
+          : '';
+        const featHtml = (item.features && item.features.length)
+          ? `<ul class="shop-feat-list">${item.features.map(f => `<li>${f}</li>`).join('')}</ul>`
+          : '';
+        return `<div class="shop-card${sold ? ' shop-sold-out' : ''}" data-category="${item.category}">
+          ${badgeHtml(item, 'position:absolute;top:12px;right:12px;z-index:2;')}
+          <div class="shop-card-emoji">${item.emoji || '\uD83D\uDED2'}</div>
+          <div class="shop-card-name">${item.name}</div>
+          <div class="shop-card-cat">${item.category}</div>
+          <div class="shop-card-desc">${item.description || ''}</div>
+          ${featHtml}
+          <div class="shop-card-footer">
+            <div class="shop-card-price">${fmtPrice(p)}${origHtml}</div>
+            ${sold
+              ? `<button class="shop-btn shop-btn-sold" disabled>HABIS</button>`
+              : `<button class="shop-btn shop-btn-buy" onclick="shopOpenModal(${item.id})">Pesan</button>`}
+          </div>
+        </div>`;
+      }).join('');
+    }
 
     if (tabsEl && categories && categories.length) {
       tabsEl.innerHTML = categories.map(c =>
@@ -251,8 +253,87 @@
       }
     } catch (e) { /* fallback ke shop-config.js */ }
 
-    // ── 6. Shop Items — dinonaktifkan, sumber harga dari shop-config.js (statis) ──
-    // Harga & item dikelola via shop-config.js agar konsisten antara card dan modal.
+    // ── 6. Shop Items — baca dari shop_items, sync ke SHOP_CONFIG lalu re-render ──
+    try {
+      const { data: itemRows, error: itemErr } = await sb
+        .from('shop_items')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order', { ascending: true });
+
+      const { data: cfgRow } = await sb
+        .from('shop_config')
+        .select('value')
+        .eq('key', 'main')
+        .single();
+
+      if (!itemErr && itemRows && itemRows.length) {
+        const mapped = itemRows.map(r => ({
+          id:             r.id,
+          name:           r.name,
+          emoji:          r.emoji,
+          category:       r.category,
+          price:          r.price,
+          originalPrice:  r.original_price,
+          description:    r.description,
+          features:       r.features || [],
+          badge:          r.badge          || '',
+          badgeColor:     r.badge_color    || '',
+          stock:          r.stock,
+          requiresDesign: r.requires_design,
+          needsUsername:  r.needs_username,
+          canBuyMultiple: r.can_buy_multiple,
+          maxQuantity:    r.max_quantity,
+          images:         r.images         || [],
+          active:         r.active,
+          sort_order:     r.sort_order,
+        }));
+
+        let shopMeta = {};
+        try { shopMeta = cfgRow?.value ? JSON.parse(cfgRow.value) : {}; } catch(e) {}
+
+        const cats = ['Semua'];
+        mapped.forEach(i => { if (!cats.includes(i.category)) cats.push(i.category); });
+        const categories = shopMeta.categories || cats;
+
+        /* Update SHOP_CONFIG global dengan data live DB */
+        if (window.SHOP_CONFIG) {
+          window.SHOP_CONFIG.items      = mapped;
+          window.SHOP_CONFIG.admins     = shopMeta.admins     || window.SHOP_CONFIG.admins;
+          window.SHOP_CONFIG.gemAdmins  = shopMeta.gemAdmins  || window.SHOP_CONFIG.gemAdmins;
+          window.SHOP_CONFIG.categories = categories;
+          window.SHOP_CONFIG.title      = shopMeta.title      || window.SHOP_CONFIG.title;
+          window.SHOP_CONFIG.subtitle   = shopMeta.subtitle   || window.SHOP_CONFIG.subtitle;
+        }
+        window._shopItemsFromSupabase = mapped;
+
+        if (!window.supabaseWA && (shopMeta.admins?.length || shopMeta.gemAdmins?.length)) {
+          window.supabaseWA  = { main: shopMeta.admins || [], gem: shopMeta.gemAdmins || [] };
+          window._supabaseWA = { main: shopMeta.admins || [], gem: shopMeta.gemAdmins || [] };
+        }
+
+        /* Re-render grid pakai shopBuildCard (shop.js) agar animasi SVG tetap ada */
+        reRenderShopCards(mapped, categories);
+
+        if (shopMeta.title) {
+          const titleEl = document.getElementById('shop-section-title');
+          if (titleEl) titleEl.textContent = shopMeta.title;
+        }
+        if (shopMeta.subtitle) {
+          const subEl = document.getElementById('shop-section-subtitle');
+          if (subEl) subEl.textContent = shopMeta.subtitle;
+        }
+
+        /* Dispatch event agar shop.js tahu data sudah sinkron dari DB */
+        document.dispatchEvent(new CustomEvent('shopItemsReady', { detail: { items: mapped } }));
+
+        console.log('[supabase-sync] Shop items berhasil disync dari shop_items (' + mapped.length + ' item).');
+      } else {
+        console.warn('[supabase-sync] shop_items kosong atau error:', itemErr?.message);
+      }
+    } catch (e) {
+      console.warn('[supabase-sync] Gagal baca shop data:', e);
+    }
 
     console.log('[supabase-sync] Config berhasil diterapkan.');
 
