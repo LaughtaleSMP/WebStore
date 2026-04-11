@@ -1586,7 +1586,7 @@ function buildModal(item) {
     ? `<span style="font-size:0.7rem;color:var(--s-muted);text-decoration:line-through;margin-left:6px">${fmtPlain(item.originalPrice)}</span>` : '';
 
   return `<div id="shop-modal-overlay" class="shop-modal-overlay" onclick="shopCloseModal()">
-    <div class="shop-modal-box" onclick="event.stopPropagation()" data-price="${item.price}" data-canbuy="${!!item.canBuyMultiple}" data-max="${maxQty}" id="shop-order-form">
+    <div class="shop-modal-box" onclick="event.stopPropagation()" data-price="${item.price}" data-itemid="${item.id}" data-canbuy="${!!item.canBuyMultiple}" data-max="${maxQty}" id="shop-order-form">
       <button class="shop-modal-close" onclick="shopCloseModal()">✕</button>
       <div style="text-align:center;margin-bottom:16px;">
         <div class="shop-modal-emoji">${item.emoji}</div>
@@ -1654,7 +1654,11 @@ function updateTotal() {
   if (!form || !tot) return;
   if (form.dataset.canbuy !== 'true') return;
   const qty = parseInt(document.getElementById('order-qty')?.value) || 1;
-  tot.textContent = fmtPlain((parseInt(form.dataset.price)||0) * qty);
+  /* Baca harga live dari SHOP_CONFIG agar selalu sinkron meski data di-update Supabase */
+  const itemId    = parseInt(form.dataset.itemid) || 0;
+  const liveItem  = window.SHOP_CONFIG?.items?.find(i => i.id === itemId);
+  const livePrice = liveItem ? liveItem.price : (parseInt(form.dataset.price) || 0);
+  tot.textContent = fmtPlain(livePrice * qty);
 }
 
 /* ── Admin WA numbers ── */
