@@ -1,1 +1,565 @@
-NEW_INDEX_PLACEHOLDER
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Server Settings — Laughtale SMP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+<!-- ===============================================================
+     AUTH SCREEN
+     =============================================================== -->
+<div id="auth-screen">
+
+  <!-- Left brand panel -->
+  <div class="auth-left">
+    <div class="auth-left-noise"></div>
+    <div class="auth-wordmark">
+      <div class="auth-wordmark-icon">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <span class="auth-wordmark-text">Laughtale SMP</span>
+    </div>
+
+    <div class="auth-hero">
+      <div class="auth-hero-label">Admin Panel</div>
+      <div class="auth-hero-title">Server<br>Configuration</div>
+      <p class="auth-hero-sub">Kelola konfigurasi server Laughtale SMP dari satu panel terpusat yang aman.</p>
+
+      <div class="auth-info-list">
+        <div class="auth-info-row">
+          <div class="auth-info-row-left">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <div>
+              <span class="auth-info-row-name">Server Status</span>
+              <span class="auth-info-row-sub">laughtale.my.id</span>
+            </div>
+          </div>
+          <div class="status-dot-inline dot-green"></div>
+        </div>
+        <div class="auth-info-row">
+          <div class="auth-info-row-left">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <div>
+              <span class="auth-info-row-name">Supabase Auth</span>
+              <span class="auth-info-row-sub">Row Level Security aktif</span>
+            </div>
+          </div>
+          <div class="status-dot-inline dot-blue"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-foot">
+      <span>2025 Laughtale SMP</span>
+      <span>Server Settings</span>
+    </div>
+  </div>
+
+  <!-- Right form panel -->
+  <div class="auth-right">
+    <div class="auth-form-wrap">
+      <div class="auth-form-title">Selamat datang</div>
+      <p class="auth-form-sub">Masuk menggunakan akun admin yang sudah terdaftar.</p>
+
+      <div id="auth-error" class="alert alert-error" style="display:none">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="auth-error-msg"></span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="login-email" type="email" placeholder="admin@laughtale.my.id" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <button class="btn-primary" onclick="doLogin()" id="login-btn">Masuk ke Panel</button>
+      </div>
+  </div>
+</div>
+
+<!-- ===============================================================
+     APP
+     =============================================================== -->
+<div id="app">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <button class="hamburger" id="hamburger-btn" aria-label="Buka menu" onclick="toggleSidebar()">
+      <svg id="hamburger-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-brand">
+      <div class="topbar-brand-mark">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <span class="topbar-brand-name">Laughtale SMP</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <span class="topbar-breadcrumb" id="topbar-section">Info Server</span>
+    <div class="topbar-right">
+      <span class="topbar-user-name" id="topbar-email">—</span>
+      <span class="role-badge" id="topbar-role">admin</span>
+      <button class="btn-logout" onclick="doLogout()">Keluar</button>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="app-body">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-back" onclick="goToMain()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        Kembali ke Panel Utama
+      </div>
+
+      <div class="nav-group-label">Server</div>
+      <div class="nav-item active" onclick="showSection('server', this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Info Server
+      </div>
+      <div class="nav-item" onclick="showSection('server-status', this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+        Server Status
+      </div>
+      <div class="nav-item" onclick="showSection('maintenance', this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Maintenance
+      </div>
+      <div class="nav-item" onclick="showSection('motd', this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        MOTD / Pengumuman
+      </div>
+      <div class="nav-item" onclick="showSection('season', this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Season & World
+      </div>
+
+      <div class="nav-group-label">Admin</div>
+      <div class="nav-item" onclick="showSection('admins-wa', this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.37 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.27-.73a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Admin WhatsApp
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+
+      <!-- ============ INFO SERVER ============ -->
+      <div class="section active" id="sec-server">
+        <div class="page-header">
+          <div class="page-title">Info Server</div>
+          <div class="page-sub">Pengaturan dasar server Laughtale SMP</div>
+        </div>
+
+        <!-- Live status -->
+        <div class="server-live" id="server-live-card">
+          <div class="live-indicator">
+            <div class="live-indicator-dot" id="live-orb-dot"></div>
+          </div>
+          <div class="server-live-info">
+            <h4 id="live-status-text">Memuat status...</h4>
+            <p id="live-ip-text">Menghubungi API...</p>
+          </div>
+          <div class="server-live-meta">
+            <strong id="live-players">—</strong>
+            <span id="live-latency">— ms</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Konfigurasi Server</div>
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>IP / Domain Server</label>
+              <input id="cfg-server_ip" placeholder="laughtale.my.id:19214">
+              <div class="field-hint">Format: domain:port atau IP:port</div>
+            </div>
+            <div class="field">
+              <label>Platform</label>
+              <select id="cfg-server_type">
+                <option value="Bedrock">Bedrock Edition</option>
+                <option value="Java">Java Edition</option>
+                <option value="Bedrock+Java">Bedrock + Java (Crossplay)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group full">
+            <div class="field">
+              <label>Nama Server</label>
+              <input id="cfg-server_name" placeholder="Laughtale SMP">
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Preview</div>
+          <div class="preview-box" id="server-preview">
+            <div class="preview-row"><span class="preview-key">IP Server</span><span class="preview-val" id="pv-ip">—</span></div>
+            <div class="preview-row"><span class="preview-key">Platform</span><span class="preview-val" id="pv-type">—</span></div>
+            <div class="preview-row"><span class="preview-key">Nama</span><span class="preview-val" id="pv-name">—</span></div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <span class="save-bar-hint">Perubahan akan langsung tersimpan ke Supabase.</span>
+          <button class="save-btn" onclick="saveSection('server')">Simpan Info Server</button>
+        </div>
+      </div>
+
+      <!-- ============ SERVER STATUS CONFIG ============ -->
+      <div class="section" id="sec-server-status">
+        <div class="page-header">
+          <div class="page-title">Konfigurasi Server Status</div>
+          <div class="page-sub">Atur bagaimana data status server diambil dan ditampilkan</div>
+        </div>
+
+        <!-- Live preview card -->
+        <div class="server-live" id="ss-live-card">
+          <div class="live-indicator">
+            <div class="live-indicator-dot" id="ss-orb-dot"></div>
+          </div>
+          <div class="server-live-info">
+            <h4 id="ss-status-text">Belum dicek</h4>
+            <p id="ss-ip-text">Tekan "Test Koneksi" untuk cek sekarang</p>
+          </div>
+          <div class="server-live-meta">
+            <strong id="ss-players">—</strong>
+            <span id="ss-latency">— ms</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">API & Polling</div>
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field">
+              <label>API Provider</label>
+              <select id="cfg-status_api_provider" onchange="onProviderChange()">
+                <option value="mcsrvstat">mcsrvstat.us (default)</option>
+                <option value="mcstatus">mcstatus.io</option>
+                <option value="custom">Custom URL</option>
+              </select>
+              <div class="field-hint">API yang digunakan untuk cek status server</div>
+            </div>
+            <div class="field">
+              <label>Interval Auto-Refresh (detik)</label>
+              <input id="cfg-status_refresh_interval" type="number" min="30" max="600" placeholder="60">
+              <div class="field-hint">Min 30 detik, maks 600 detik (10 menit)</div>
+            </div>
+          </div>
+
+          <div class="field-group full" id="ss-custom-url-wrap" style="display:none">
+            <div class="field">
+              <label>Custom API URL</label>
+              <input id="cfg-status_custom_url" placeholder="https://api.example.com/status/{host}/{port}">
+              <div class="field-hint">Gunakan <code style="background:var(--surface3);padding:1px 5px;border-radius:4px;font-size:11px">{host}</code> dan <code style="background:var(--surface3);padding:1px 5px;border-radius:4px;font-size:11px">{port}</code> sebagai placeholder</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-faint);margin-bottom:10px;">Tampilan Widget</div>
+
+          <div class="toggle-row">
+            <div class="toggle-label">
+              <strong>Tampilkan Latency</strong>
+              <span>Menampilkan angka latency (ms) di kartu status</span>
+            </div>
+            <div class="toggle" id="toggle-status_show_latency" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              <strong>Tampilkan Daftar Pemain</strong>
+              <span>Menampilkan nama-nama pemain yang sedang online</span>
+            </div>
+            <div class="toggle" id="toggle-status_show_playerlist" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-label">
+              <strong>Pause saat Tab Tidak Aktif</strong>
+              <span>Hentikan auto-refresh saat pengguna berpindah tab (hemat bandwidth)</span>
+            </div>
+            <div class="toggle on" id="toggle-status_pause_hidden" onclick="this.classList.toggle('on')"></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Preview URL -->
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Preview URL API</div>
+          <div class="preview-box">
+            <div class="preview-row">
+              <span class="preview-key">URL yang akan dipakai</span>
+              <span class="preview-val" id="pv-api-url" style="font-size:11.5px;word-break:break-all;text-align:right;max-width:65%">—</span>
+            </div>
+            <div class="preview-row">
+              <span class="preview-key">Interval Refresh</span>
+              <span class="preview-val" id="pv-refresh-interval">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <button class="btn-ghost" onclick="testStatusConnection()" style="border-color:rgba(79,125,240,0.3);color:var(--accent)">
+            ⚡ Test Koneksi
+          </button>
+          <button class="save-btn" onclick="saveSection('server-status')">Simpan Konfigurasi</button>
+        </div>
+      </div>
+
+      <!-- ============ MAINTENANCE ============ -->
+      <div class="section" id="sec-maintenance">
+        <div class="page-header">
+          <div class="page-title">Maintenance Mode</div>
+          <div class="page-sub">Aktifkan saat server sedang dalam perbaikan</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Status Maintenance</div>
+            <span class="status-pill pill-online" id="maint-status-pill">
+              <span class="pill-dot"></span>Normal
+            </span>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-label">
+              <strong>Maintenance Mode</strong>
+              <span>Website akan menampilkan halaman maintenance kepada pengunjung</span>
+            </div>
+            <div class="toggle" id="toggle-maintenance" onclick="toggleMaintenance(this)"></div>
+          </div>
+
+          <div id="maint-on-preview" class="maint-preview-box" style="display:none">
+            <strong>Mode Maintenance Aktif</strong>
+            Website sedang dalam mode perbaikan dan tidak dapat diakses pengunjung.
+          </div>
+
+          <div class="divider"></div>
+          <div class="field-group full">
+            <div class="field">
+              <label>Pesan Maintenance</label>
+              <textarea id="cfg-maintenance_message" placeholder="Server sedang dalam perbaikan. Mohon tunggu sebentar..."></textarea>
+              <div class="field-hint">Opsional — tampil di halaman maintenance</div>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>Estimasi Selesai (ETA)</label>
+              <input id="cfg-maintenance_eta" placeholder="cth: 30 menit, 2 jam">
+            </div>
+            <div class="field">
+              <label>Kontak Admin</label>
+              <input id="cfg-maintenance_contact" placeholder="Discord: admin#0001">
+            </div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <span class="save-bar-hint">Hati-hati: aktifkan hanya saat diperlukan.</span>
+          <button class="save-btn" onclick="saveSection('maintenance')">Simpan Maintenance</button>
+        </div>
+      </div>
+
+      <!-- ============ MOTD ============ -->
+      <div class="section" id="sec-motd">
+        <div class="page-header">
+          <div class="page-title">MOTD / Pengumuman</div>
+          <div class="page-sub">Pesan yang muncul di halaman utama website</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Pengumuman Website</div>
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-label">
+              <strong>Tampilkan Banner Pengumuman</strong>
+              <span>Banner akan muncul di bagian atas website</span>
+            </div>
+            <div class="toggle" id="toggle-motd-active" onclick="this.classList.toggle('on')"></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="field-group full">
+            <div class="field">
+              <label>Teks Pengumuman</label>
+              <textarea id="cfg-motd_text" placeholder="Server maintenance setiap Senin pukul 00:00 - 02:00 WIB..."></textarea>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>Tipe Banner</label>
+              <select id="cfg-motd_type">
+                <option value="info">Info</option>
+                <option value="warning">Warning</option>
+                <option value="success">Success</option>
+                <option value="error">Error</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Label Tombol (opsional)</label>
+              <input id="cfg-motd_btn" placeholder="Selengkapnya">
+            </div>
+          </div>
+          <div class="field-group full">
+            <div class="field">
+              <label>URL Tombol (opsional)</label>
+              <input id="cfg-motd_url" placeholder="https://discord.gg/...">
+            </div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <span class="save-bar-hint">Banner akan langsung tampil setelah disimpan.</span>
+          <button class="save-btn" onclick="saveSection('motd')">Simpan Pengumuman</button>
+        </div>
+      </div>
+
+      <!-- ============ SEASON ============ -->
+      <div class="section" id="sec-season">
+        <div class="page-header">
+          <div class="page-title">Season & World</div>
+          <div class="page-sub">Informasi season dan dunia saat ini</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Info Season</div>
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field">
+              <label>Nomor Season</label>
+              <input id="cfg-season" type="number" min="1" placeholder="1">
+            </div>
+            <div class="field">
+              <label>World Seed</label>
+              <input id="cfg-seed" placeholder="1234567890">
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>Tanggal Mulai Season</label>
+              <input id="cfg-season_start" type="date">
+            </div>
+            <div class="field">
+              <label>Status Season</label>
+              <select id="cfg-season_status">
+                <option value="active">Aktif</option>
+                <option value="hiatus">Hiatus</option>
+                <option value="ended">Selesai</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group full">
+            <div class="field">
+              <label>Deskripsi Season</label>
+              <textarea id="cfg-season_desc" placeholder="Season 1 — Dunia survival baru dimulai! Join sekarang dan jadilah yang pertama..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <span class="save-bar-hint">Info season tampil di halaman utama dan about.</span>
+          <button class="save-btn" onclick="saveSection('season')">Simpan Season</button>
+        </div>
+      </div>
+
+      <!-- ============ ADMIN WHATSAPP ============ -->
+      <div class="section" id="sec-admins-wa">
+        <div class="page-header">
+          <div class="page-title">Admin WhatsApp</div>
+          <div class="page-sub">Nomor WhatsApp admin untuk pemesanan di toko</div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Admin Utama (Shop)</div>
+            <button class="btn-add" onclick="addAdminWA('main')">
+              <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Tambah
+            </button>
+          </div>
+          <div id="wa-main-list"><div class="empty-state">Memuat data...</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Admin Gem Coins</div>
+            <button class="btn-add" onclick="addAdminWA('gem')">
+              <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Tambah
+            </button>
+          </div>
+          <div id="wa-gem-list"><div class="empty-state">Memuat data...</div></div>
+        </div>
+
+        <!-- Add form -->
+        <div class="card" id="wa-add-form" style="display:none">
+          <div class="card-header">
+            <div class="card-title" id="wa-add-title">Tambah Admin</div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>Nama Admin</label>
+              <input id="wa-new-name" placeholder="Blackdamen">
+            </div>
+            <div class="field">
+              <label>Nomor WhatsApp</label>
+              <input id="wa-new-number" placeholder="6282323645879">
+              <div class="field-hint">Format: 62 + nomor tanpa 0 (cth: 6282xxx)</div>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-ghost" onclick="cancelAddWA()">Batal</button>
+            <button class="save-btn" onclick="saveAdminWA()">Simpan</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main-content -->
+  </div>
+</div>
+
+<!-- Sidebar backdrop -->
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/admin-init.js"          defer></script>
+<script src="js/admin-auth.js"          defer></script>
+<script src="js/admin-config.js"        defer></script>
+<script src="js/admin-wa.js"            defer></script>
+<script src="js/admin-nav.js"           defer></script>
+<script src="js/admin-server-status.js" defer></script>
+<script src="js/admin-shop.js"          defer></script>
+</body>
+</html>
