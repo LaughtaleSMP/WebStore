@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — Laughtale SMP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ==================== RESET & BASE ==================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #07070e;
+  --bg2:     #0f0f1a;
+  --bg3:     #161625;
+  --bg4:     #1e1e30;
+  --border:  rgba(168,85,247,0.15);
+  --border2: rgba(168,85,247,0.28);
+  --purple:  #a855f7;
+  --purple2: #7c3aed;
+  --gold:    #f4c430;
+  --green:   #5dbd3a;
+  --red:     #ef4444;
+  --blue:    #60a5fa;
+  --text:    #e2e2f0;
+  --text2:   #a0a0bc;
+  --text3:   #60607a;
+  --sidebar: 240px;
+  --topbar:  56px;
+  --radius:  10px;
+  --font-pixel: 'Press Start 2P', monospace;
+  --font-body:  'Nunito', sans-serif;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 14px; overflow: hidden; }
+
+/* ==================== SETUP SCREEN ==================== */
+#setup-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.setup-box {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 2.5rem; width: 440px; max-width: 95vw;
+}
+.setup-logo {
+  font-family: var(--font-pixel); font-size: 0.55rem; color: var(--purple);
+  letter-spacing: 3px; text-align: center; margin-bottom: 0.4rem;
+}
+.setup-title {
+  font-family: var(--font-pixel); font-size: 0.75rem; color: var(--text);
+  text-align: center; margin-bottom: 0.4rem; line-height: 1.8;
+}
+.setup-sub {
+  color: var(--text3); font-size: 0.78rem; text-align: center; margin-bottom: 2rem;
+}
+
+/* ==================== LOGIN SCREEN ==================== */
+#login-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: none; align-items: center; justify-content: center; z-index: 999;
+}
+.login-box {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 2.5rem; width: 400px; max-width: 95vw;
+}
+.login-logo {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 2rem;
+}
+.login-logo-title { font-family: var(--font-pixel); font-size: 0.7rem; color: var(--purple); letter-spacing: 2px; }
+.login-logo-sub { font-family: var(--font-pixel); font-size: 0.45rem; color: var(--text3); letter-spacing: 2px; }
+.login-divider { width: 60px; height: 1px; background: var(--border2); margin: 0 auto 1.8rem; }
+
+/* ==================== MAIN APP ==================== */
+#app { display: none; height: 100vh; flex-direction: column; }
+
+/* Top Bar */
+.topbar {
+  height: var(--topbar); background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 1.25rem;
+  gap: 1rem; flex-shrink: 0; position: relative; z-index: 10;
+}
+.topbar-logo { font-family: var(--font-pixel); font-size: 0.5rem; color: var(--purple); letter-spacing: 2px; white-space: nowrap; }
+.topbar-sep { width: 1px; height: 24px; background: var(--border); margin: 0 0.25rem; }
+.topbar-section { font-size: 0.8rem; color: var(--text2); font-weight: 700; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
+.topbar-user {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 0.35rem 0.75rem; font-size: 0.78rem;
+}
+.topbar-user-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; }
+.topbar-badge {
+  font-family: var(--font-pixel); font-size: 0.38rem; padding: 3px 7px;
+  background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3);
+  border-radius: 4px; color: var(--purple);
+}
+
+/* Body */
+.app-body { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar); background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow-y: auto; flex-shrink: 0;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.nav-section-label {
+  font-family: var(--font-pixel); font-size: 0.38rem; color: var(--text3);
+  letter-spacing: 2px; padding: 1.25rem 1.25rem 0.5rem;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.65rem 1.25rem; cursor: pointer; transition: all 0.15s;
+  font-size: 0.82rem; font-weight: 700; color: var(--text2);
+  border-left: 3px solid transparent; user-select: none;
+}
+.nav-item:hover { background: rgba(168,85,247,0.06); color: var(--text); }
+.nav-item.active {
+  background: rgba(168,85,247,0.12); color: var(--purple);
+  border-left-color: var(--purple);
+}
+.nav-item svg { opacity: 0.7; flex-shrink: 0; }
+.nav-item.active svg { opacity: 1; }
+.nav-count {
+  margin-left: auto; background: rgba(168,85,247,0.2);
+  color: var(--purple); font-size: 0.68rem; font-weight: 800;
+  padding: 1px 7px; border-radius: 12px;
+}
+.sidebar-bottom { margin-top: auto; padding: 1rem; border-top: 1px solid var(--border); }
+
+/* Main Content */
+.main-content { flex: 1; overflow-y: auto; padding: 1.75rem; }
+.main-content::-webkit-scrollbar { width: 6px; }
+.main-content::-webkit-scrollbar-track { background: transparent; }
+.main-content::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+
+/* Section */
+.section { display: none; }
+.section.active { display: block; }
+
+/* Page Header */
+.page-header { margin-bottom: 1.75rem; }
+.page-title { font-family: var(--font-pixel); font-size: 0.65rem; color: var(--text); letter-spacing: 2px; margin-bottom: 0.4rem; }
+.page-sub { color: var(--text2); font-size: 0.82rem; }
+
+/* Cards */
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+}
+.card-title {
+  font-family: var(--font-pixel); font-size: 0.5rem; color: var(--text2);
+  letter-spacing: 1.5px; margin-bottom: 1rem;
+}
+
+/* Stats Row */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+.stat-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.1rem 1.25rem;
+  display: flex; flex-direction: column; gap: 0.3rem;
+}
+.stat-card-label { font-size: 0.72rem; color: var(--text3); font-weight: 700; }
+.stat-card-val { font-family: var(--font-pixel); font-size: 1.1rem; color: var(--text); }
+.stat-card-val.purple { color: var(--purple); }
+.stat-card-val.gold { color: var(--gold); }
+.stat-card-val.green { color: var(--green); }
+
+/* Forms */
+.form-group { margin-bottom: 1rem; }
+.form-label { display: block; font-size: 0.78rem; font-weight: 800; color: var(--text2); margin-bottom: 0.4rem; }
+.form-input, .form-select, .form-textarea {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 0.6rem 0.9rem; color: var(--text);
+  font-family: var(--font-body); font-size: 0.82rem; outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--purple);
+}
+.form-textarea { resize: vertical; min-height: 80px; }
+.form-select { appearance: none; cursor: pointer; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+.form-hint { font-size: 0.72rem; color: var(--text3); margin-top: 0.3rem; }
+.form-toggle { display: flex; align-items: center; gap: 0.75rem; }
+.toggle {
+  width: 40px; height: 22px; background: var(--bg4); border-radius: 11px;
+  cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+.toggle.on { background: var(--purple); border-color: var(--purple); }
+.toggle::after {
+  content: ''; position: absolute; width: 16px; height: 16px;
+  background: white; border-radius: 50%; top: 2px; left: 2px;
+  transition: transform 0.2s;
+}
+.toggle.on::after { transform: translateX(18px); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.55rem 1.1rem; border-radius: 8px; cursor: pointer;
+  font-family: var(--font-body); font-size: 0.8rem; font-weight: 800;
+  border: 1px solid transparent; transition: all 0.15s; white-space: nowrap;
+}
+.btn-primary { background: var(--purple); color: white; }
+.btn-primary:hover { background: var(--purple2); }
+.btn-secondary { background: var(--bg3); color: var(--text); border-color: var(--border); }
+.btn-secondary:hover { border-color: var(--purple); color: var(--purple); }
+.btn-danger { background: rgba(239,68,68,0.15); color: var(--red); border-color: rgba(239,68,68,0.3); }
+.btn-danger:hover { background: rgba(239,68,68,0.25); }
+.btn-success { background: rgba(93,189,58,0.15); color: var(--green); border-color: rgba(93,189,58,0.3); }
+.btn-success:hover { background: rgba(93,189,58,0.25); }
+.btn-sm { padding: 0.35rem 0.75rem; font-size: 0.72rem; }
+.btn-icon { padding: 0.4rem; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Table */
+.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+  background: var(--bg3); padding: 0.7rem 1rem;
+  text-align: left; font-size: 0.72rem; font-weight: 800;
+  color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+.table td {
+  padding: 0.75rem 1rem; border-bottom: 1px solid rgba(168,85,247,0.07);
+  font-size: 0.82rem; color: var(--text); vertical-align: middle;
+}
+.table tr:last-child td { border-bottom: none; }
+.table tr:hover td { background: rgba(168,85,247,0.04); }
+.table-actions { display: flex; gap: 0.4rem; align-items: center; }
+
+/* Badges */
+.badge {
+  display: inline-flex; align-items: center; padding: 2px 8px;
+  border-radius: 4px; font-size: 0.68rem; font-weight: 800;
+  font-family: var(--font-pixel); letter-spacing: 0.5px;
+}
+.badge-purple { background: rgba(168,85,247,0.15); color: var(--purple); border: 1px solid rgba(168,85,247,0.3); }
+.badge-gold { background: rgba(244,196,48,0.15); color: var(--gold); border: 1px solid rgba(244,196,48,0.3); }
+.badge-green { background: rgba(93,189,58,0.15); color: var(--green); border: 1px solid rgba(93,189,58,0.3); }
+.badge-red { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+.badge-blue { background: rgba(96,165,250,0.15); color: var(--blue); border: 1px solid rgba(96,165,250,0.3); }
+
+/* Pill status */
+.pill-on { color: var(--green); font-size: 0.75rem; font-weight: 800; }
+.pill-off { color: var(--text3); font-size: 0.75rem; font-weight: 800; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  display: none; align-items: center; justify-content: center; z-index: 500;
+  padding: 1rem; backdrop-filter: blur(4px);
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 2rem; width: 560px; max-width: 100%;
+  max-height: 90vh; overflow-y: auto; position: relative;
+}
+.modal::-webkit-scrollbar { width: 4px; }
+.modal::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+.modal-title { font-family: var(--font-pixel); font-size: 0.55rem; color: var(--text); letter-spacing: 1.5px; }
+.modal-close {
+  width: 28px; height: 28px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--text2); font-size: 1rem; transition: all 0.15s;
+}
+.modal-close:hover { border-color: var(--red); color: var(--red); }
+.modal-footer { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
+
+/* Alert */
+.alert {
+  border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem;
+  font-size: 0.8rem; display: flex; align-items: center; gap: 0.6rem;
+}
+.alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+.alert-success { background: rgba(93,189,58,0.1); border: 1px solid rgba(93,189,58,0.3); color: #86efac; }
+.alert-info { background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); color: #d8b4fe; }
+
+/* Toast */
+#toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+.toast {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 0.75rem 1.1rem; min-width: 240px;
+  font-size: 0.82rem; display: flex; align-items: center; gap: 0.6rem;
+  animation: slideIn 0.2s ease; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.toast.success { border-color: rgba(93,189,58,0.4); }
+.toast.error { border-color: rgba(239,68,68,0.4); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 3rem 1rem; color: var(--text3); }
+.empty-state svg { margin-bottom: 1rem; opacity: 0.4; }
+.empty-state p { font-size: 0.85rem; }
+
+/* Loading */
+.loading-row td { text-align: center; padding: 2rem; color: var(--text3); font-size: 0.8rem; }
+
+/* Toolbar */
+.toolbar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.toolbar-right { margin-left: auto; display: flex; gap: 0.75rem; }
+.search-input {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.5rem 0.9rem; color: var(--text); font-family: var(--font-body);
+  font-size: 0.82rem; outline: none; width: 220px;
+}
+.search-input:focus { border-color: var(--purple); }
+.search-input::placeholder { color: var(--text3); }
+
+/* Config table */
+.config-row { display: grid; grid-template-columns: 200px 1fr auto; gap: 0.75rem; align-items: start; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+.config-row:last-child { border-bottom: none; }
+.config-key { font-size: 0.78rem; font-weight: 800; color: var(--text2); padding-top: 0.6rem; }
+.config-desc { font-size: 0.7rem; color: var(--text3); margin-top: 3px; }
+
+/* Dashboard activity */
+.activity-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.activity-item {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.65rem 0.9rem; background: var(--bg3); border-radius: 8px;
+  font-size: 0.8rem;
+}
+.activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Announcement types */
+.ann-type-info { background: rgba(96,165,250,0.12); border-color: rgba(96,165,250,0.3); }
+.ann-type-warning { background: rgba(244,196,48,0.12); border-color: rgba(244,196,48,0.3); }
+.ann-type-success { background: rgba(93,189,58,0.12); border-color: rgba(93,189,58,0.3); }
+.ann-type-danger { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.3); }
+
+/* Color picker row */
+.color-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.color-swatch {
+  width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+  border: 2px solid transparent; transition: all 0.15s;
+}
+.color-swatch.selected { border-color: white; transform: scale(1.15); }
+
+/* Scrollbar global */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ==================== TOAST ==================== -->
+<div id="toast-container"></div>
+
+<!-- ==================== SETUP SCREEN ==================== -->
+<div id="setup-screen">
+  <div class="setup-box">
+    <div class="setup-logo">LAUGHTALE SMP</div>
+    <div class="setup-title">ADMIN PANEL SETUP</div>
+    <div class="setup-sub">Masukkan kredensial Supabase kamu sekali saja</div>
+    <div id="setup-error"></div>
+    <div class="form-group">
+      <label class="form-label">Supabase Project URL</label>
+      <input class="form-input" id="setup-url" placeholder="https://xxxx.supabase.co" />
+      <div class="form-hint">Dapat ditemukan di Project Settings → API</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Supabase Anon Key</label>
+      <input class="form-input" id="setup-key" placeholder="eyJ..." />
+      <div class="form-hint">Gunakan anon/public key (bukan service role)</div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="saveSetup()">SIMPAN & LANJUT →</button>
+  </div>
+</div>
+
+<!-- ==================== LOGIN SCREEN ==================== -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-title">LAUGHTALE SMP</div>
+      <div class="login-logo-sub">ADMIN PANEL</div>
+    </div>
+    <div class="login-divider"></div>
+    <div id="login-error"></div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" id="login-email" type="email" placeholder="admin@laughtale.my.id" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="login-password" type="password" placeholder="••••••••" />
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem" id="login-btn" onclick="doLogin()">MASUK KE ADMIN PANEL</button>
+    <div style="text-align:center;margin-top:1rem">
+      <span style="font-size:0.72rem;color:var(--text3);cursor:pointer" onclick="clearSetup()">Ganti konfigurasi Supabase</span>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MAIN APP ==================== -->
+<div id="app" style="display:none;flex-direction:column;height:100vh">
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <span class="topbar-logo">LAUGHTALE</span>
+    <div class="topbar-sep"></div>
+    <span class="topbar-section" id="topbar-section">Dashboard</span>
+    <div class="topbar-right">
+      <div class="topbar-badge" id="user-role-badge">ADMIN</div>
+      <div class="topbar-user">
+        <div class="topbar-user-dot"></div>
+        <span id="topbar-user-email">admin</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="doLogout()">Keluar</button>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="app-body">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="nav-section-label">UTAMA</div>
+      <div class="nav-item active" onclick="showSection('dashboard', this)" data-label="Dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="showSection('shop', this)" data-label="Shop Items">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39A2 2 0 0 0 9.6 16h9.77a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Shop Items
+        <span class="nav-count" id="nav-count-shop">—</span>
+      </div>
+      <div class="nav-item" onclick="showSection('categories', this)" data-label="Kategori Shop">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        Kategori Shop
+      </div>
+
+      <div class="nav-section-label">KONTEN</div>
+      <div class="nav-item" onclick="showSection('features', this)" data-label="Fitur Server">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Fitur Server
+        <span class="nav-count" id="nav-count-features">—</span>
+      </div>
+      <div class="nav-item" onclick="showSection('rules', this)" data-label="Peraturan">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Peraturan
+        <span class="nav-count" id="nav-count-rules">—</span>
+      </div>
+      <div class="nav-item" onclick="showSection('social', this)" data-label="Sosial Media">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Sosial Media
+      </div>
+      <div class="nav-item" onclick="showSection('announcements', this)" data-label="Pengumuman">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Pengumuman
+      </div>
+
+      <div class="nav-section-label">KONFIGURASI</div>
+      <div class="nav-item" onclick="showSection('config', this)" data-label="Site Config">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Site Config
+      </div>
+      <div class="nav-item" onclick="showSection('admins', this)" data-label="Kelola Admin">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Kelola Admin
+      </div>
+
+      <div class="sidebar-bottom">
+        <div style="font-size:0.7rem;color:var(--text3)">Laughtale Admin v1.0</div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+
+      <!-- ===== DASHBOARD ===== -->
+      <div class="section active" id="sec-dashboard">
+        <div class="page-header">
+          <div class="page-title">DASHBOARD</div>
+          <div class="page-sub">Selamat datang di Admin Panel Laughtale SMP</div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-card-label">Shop Items</div>
+            <div class="stat-card-val purple" id="dash-shop-count">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Fitur Server</div>
+            <div class="stat-card-val gold" id="dash-features-count">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Peraturan</div>
+            <div class="stat-card-val" id="dash-rules-count">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Announcement Aktif</div>
+            <div class="stat-card-val green" id="dash-ann-count">—</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          <div class="card">
+            <div class="card-title">QUICK ACTIONS</div>
+            <div style="display:flex;flex-direction:column;gap:0.5rem">
+              <button class="btn btn-secondary" onclick="showSection('shop', document.querySelector('[data-label=\'Shop Items\']'))">+ Tambah Item Shop</button>
+              <button class="btn btn-secondary" onclick="showSection('announcements', document.querySelector('[data-label=\'Pengumuman\']'))">📣 Kelola Pengumuman</button>
+              <button class="btn btn-secondary" onclick="showSection('config', document.querySelector('[data-label=\'Site Config\']'))">⚙️ Edit Konfigurasi</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">INFO SERVER</div>
+            <div style="display:flex;flex-direction:column;gap:0.6rem">
+              <div style="display:flex;justify-content:space-between;font-size:0.82rem">
+                <span style="color:var(--text3)">IP Server</span>
+                <span id="dash-server-ip" style="color:var(--purple);font-weight:800">—</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.82rem">
+                <span style="color:var(--text3)">Season</span>
+                <span id="dash-season" style="font-weight:800">—</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.82rem">
+                <span style="color:var(--text3)">Seed</span>
+                <span id="dash-seed" style="font-weight:800">—</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.82rem">
+                <span style="color:var(--text3)">Maintenance</span>
+                <span id="dash-maintenance" style="font-weight:800">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== SHOP ITEMS ===== -->
+      <div class="section" id="sec-shop">
+        <div class="page-header">
+          <div class="page-title">SHOP ITEMS</div>
+          <div class="page-sub">Kelola item di Laughtale Store</div>
+        </div>
+        <div class="toolbar">
+          <input class="search-input" id="shop-search" placeholder="🔍 Cari item..." oninput="filterShopItems()">
+          <select class="form-select" style="width:160px;padding:0.5rem 0.9rem" id="shop-filter-cat" onchange="filterShopItems()">
+            <option value="">Semua Kategori</option>
+          </select>
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="openShopModal()">+ Tambah Item</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Kategori</th>
+                <th>Harga</th>
+                <th>Mata Uang</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="shop-tbody">
+              <tr class="loading-row"><td colspan="6">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== CATEGORIES ===== -->
+      <div class="section" id="sec-categories">
+        <div class="page-header">
+          <div class="page-title">KATEGORI SHOP</div>
+          <div class="page-sub">Kelola tab kategori di halaman shop</div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="openCatModal()">+ Tambah Kategori</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Nama</th><th>Slug</th><th>Urutan</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="cat-tbody"><tr class="loading-row"><td colspan="5">Memuat data...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== FEATURES ===== -->
+      <div class="section" id="sec-features">
+        <div class="page-header">
+          <div class="page-title">FITUR SERVER</div>
+          <div class="page-sub">Kelola 14 fitur yang ditampilkan di website</div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="openFeatureModal()">+ Tambah Fitur</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>#</th><th>Nama</th><th>Deskripsi</th><th>Tag</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="features-tbody"><tr class="loading-row"><td colspan="6">Memuat data...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== RULES ===== -->
+      <div class="section" id="sec-rules">
+        <div class="page-header">
+          <div class="page-title">PERATURAN</div>
+          <div class="page-sub">Kelola peraturan yang ditampilkan di website</div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="openRuleModal()">+ Tambah Peraturan</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>#</th><th>Judul</th><th>Deskripsi</th><th>Badge</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="rules-tbody"><tr class="loading-row"><td colspan="6">Memuat data...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== SOCIAL ===== -->
+      <div class="section" id="sec-social">
+        <div class="page-header">
+          <div class="page-title">SOSIAL MEDIA</div>
+          <div class="page-sub">Kelola link platform komunitas</div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="openSocialModal()">+ Tambah Platform</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Platform</th><th>Handle</th><th>URL</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody id="social-tbody"><tr class="loading-row"><td colspan="5">Memuat data...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== ANNOUNCEMENTS ===== -->
+      <div class="section" id="sec-announcements">
+        <div class="page-header">
+          <div class="page-title">PENGUMUMAN</div>
+          <div class="page-sub">Banner pengumuman yang ditampilkan di website</div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="openAnnModal()">+ Buat Pengumuman</button>
+          </div>
+        </div>
+        <div id="ann-list" style="display:flex;flex-direction:column;gap:0.75rem">
+          <div class="loading-row" style="text-align:center;padding:2rem;color:var(--text3)">Memuat data...</div>
+        </div>
+      </div>
+
+      <!-- ===== CONFIG ===== -->
+      <div class="section" id="sec-config">
+        <div class="page-header">
+          <div class="page-title">SITE CONFIG</div>
+          <div class="page-sub">Konfigurasi umum website Laughtale SMP</div>
+        </div>
+        <div class="card">
+          <div id="config-list">
+            <div class="loading-row" style="text-align:center;padding:2rem;color:var(--text3)">Memuat data...</div>
+          </div>
+          <div style="margin-top:1.5rem;display:flex;justify-content:flex-end">
+            <button class="btn btn-primary" onclick="saveAllConfig()">Simpan Semua Config</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ADMINS ===== -->
+      <div class="section" id="sec-admins">
+        <div class="page-header">
+          <div class="page-title">KELOLA ADMIN</div>
+          <div class="page-sub">Tambah & atur role admin yang bisa mengakses panel ini</div>
+        </div>
+        <div class="alert alert-info">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Untuk menambah admin baru: buat akun di Supabase Authentication terlebih dahulu, lalu tambahkan user_id ke tabel admin_roles.
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Email</th><th>Display Name</th><th>Role</th><th>Bergabung</th><th>Aksi</th></tr></thead>
+            <tbody id="admins-tbody"><tr class="loading-row"><td colspan="5">Memuat data...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /main-content -->
+  </div><!-- /app-body -->
+</div><!-- /app -->
+
+<!-- ===== MODAL: SHOP ITEM ===== -->
+<div class="modal-overlay" id="modal-shop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-shop-title">TAMBAH ITEM SHOP</div>
+      <div class="modal-close" onclick="closeModal('modal-shop')">×</div>
+    </div>
+    <input type="hidden" id="shop-item-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nama Item *</label>
+        <input class="form-input" id="shop-name" placeholder="Contoh: Rank VIP" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kategori *</label>
+        <select class="form-select" id="shop-cat-sel">
+          <option value="">Pilih Kategori</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Harga *</label>
+        <input class="form-input" id="shop-price" type="number" placeholder="50000" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mata Uang</label>
+        <select class="form-select" id="shop-currency">
+          <option value="Gem Coin">Gem Coin</option>
+          <option value="Koin">Koin</option>
+          <option value="IDR">IDR (Rupiah)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Deskripsi</label>
+      <textarea class="form-textarea" id="shop-desc" placeholder="Deskripsi singkat item..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">URL Gambar</label>
+        <input class="form-input" id="shop-image" placeholder="https://..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Badge Label</label>
+        <input class="form-input" id="shop-badge" placeholder="HOT | NEW | LIMITED" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Urutan Tampil</label>
+        <input class="form-input" id="shop-order" type="number" placeholder="0" />
+      </div>
+      <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:1rem">
+        <div class="form-toggle">
+          <div class="toggle on" id="shop-visible-toggle" onclick="this.classList.toggle('on')"></div>
+          <label class="form-label" style="margin:0">Tampilkan di website</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-shop')">Batal</button>
+      <button class="btn btn-primary" onclick="saveShopItem()">Simpan Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: CATEGORY ===== -->
+<div class="modal-overlay" id="modal-cat">
+  <div class="modal" style="width:400px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-cat-title">TAMBAH KATEGORI</div>
+      <div class="modal-close" onclick="closeModal('modal-cat')">×</div>
+    </div>
+    <input type="hidden" id="cat-id">
+    <div class="form-group">
+      <label class="form-label">Nama Kategori *</label>
+      <input class="form-input" id="cat-name" placeholder="Contoh: Rank" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Slug *</label>
+      <input class="form-input" id="cat-slug" placeholder="contoh: rank" />
+      <div class="form-hint">Huruf kecil, tanpa spasi</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Urutan</label>
+        <input class="form-input" id="cat-order" type="number" placeholder="0" />
+      </div>
+      <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:1rem">
+        <div class="form-toggle">
+          <div class="toggle on" id="cat-visible-toggle" onclick="this.classList.toggle('on')"></div>
+          <label class="form-label" style="margin:0">Aktif</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-cat')">Batal</button>
+      <button class="btn btn-primary" onclick="saveCategory()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: FEATURE ===== -->
+<div class="modal-overlay" id="modal-feature">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-feature-title">TAMBAH FITUR</div>
+      <div class="modal-close" onclick="closeModal('modal-feature')">×</div>
+    </div>
+    <input type="hidden" id="feature-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nomor (mis: 01)</label>
+        <input class="form-input" id="feature-num" placeholder="01" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nama Fitur *</label>
+        <input class="form-input" id="feature-name" placeholder="Claim Land" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Deskripsi</label>
+      <textarea class="form-textarea" id="feature-desc" placeholder="Deskripsi singkat fitur..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tag Label</label>
+        <input class="form-input" id="feature-tag" placeholder="MIMI LAND | QOL | NEW" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tag Warna</label>
+        <select class="form-select" id="feature-tag-color">
+          <option value="purple">Purple</option>
+          <option value="gold">Gold</option>
+          <option value="green">Green</option>
+          <option value="red">Red</option>
+          <option value="blue">Blue</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Accent Color</label>
+        <input class="form-input" id="feature-accent" placeholder="#a855f7" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Urutan</label>
+        <input class="form-input" id="feature-order" type="number" placeholder="0" />
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-toggle">
+        <div class="toggle on" id="feature-visible-toggle" onclick="this.classList.toggle('on')"></div>
+        <label class="form-label" style="margin:0">Tampilkan di website</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-feature')">Batal</button>
+      <button class="btn btn-primary" onclick="saveFeature()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: RULE ===== -->
+<div class="modal-overlay" id="modal-rule">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-rule-title">TAMBAH PERATURAN</div>
+      <div class="modal-close" onclick="closeModal('modal-rule')">×</div>
+    </div>
+    <input type="hidden" id="rule-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nomor (mis: 01)</label>
+        <input class="form-input" id="rule-num" placeholder="01" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Judul *</label>
+        <input class="form-input" id="rule-title" placeholder="No Griefing" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Keterangan</label>
+      <textarea class="form-textarea" id="rule-desc" placeholder="Deskripsi peraturan..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Teks Badge</label>
+        <input class="form-input" id="rule-badge" placeholder="BANNED | WARN | REQ" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipe Badge</label>
+        <select class="form-select" id="rule-badge-type">
+          <option value="red">Red (BANNED)</option>
+          <option value="gold">Gold (WARN)</option>
+          <option value="purple">Purple (INFO)</option>
+          <option value="green">Green (OK)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Urutan</label>
+        <input class="form-input" id="rule-order" type="number" placeholder="0" />
+      </div>
+      <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:1rem">
+        <div class="form-toggle">
+          <div class="toggle on" id="rule-visible-toggle" onclick="this.classList.toggle('on')"></div>
+          <label class="form-label" style="margin:0">Aktif</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-rule')">Batal</button>
+      <button class="btn btn-primary" onclick="saveRule()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: SOCIAL ===== -->
+<div class="modal-overlay" id="modal-social">
+  <div class="modal" style="width:440px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-social-title">TAMBAH PLATFORM</div>
+      <div class="modal-close" onclick="closeModal('modal-social')">×</div>
+    </div>
+    <input type="hidden" id="social-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Platform *</label>
+        <input class="form-input" id="social-platform" placeholder="WhatsApp, Discord..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Handle / Nama</label>
+        <input class="form-input" id="social-handle" placeholder="@laughtale_smp" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">URL *</label>
+      <input class="form-input" id="social-url" placeholder="https://..." />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Warna Brand</label>
+        <input class="form-input" id="social-color" placeholder="#25D366" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Urutan</label>
+        <input class="form-input" id="social-order" type="number" placeholder="1" />
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-toggle">
+        <div class="toggle on" id="social-visible-toggle" onclick="this.classList.toggle('on')"></div>
+        <label class="form-label" style="margin:0">Tampilkan</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-social')">Batal</button>
+      <button class="btn btn-primary" onclick="saveSocial()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: ANNOUNCEMENT ===== -->
+<div class="modal-overlay" id="modal-ann">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-ann-title">BUAT PENGUMUMAN</div>
+      <div class="modal-close" onclick="closeModal('modal-ann')">×</div>
+    </div>
+    <input type="hidden" id="ann-id">
+    <div class="form-group">
+      <label class="form-label">Pesan *</label>
+      <textarea class="form-textarea" id="ann-message" placeholder="Teks pengumuman yang ditampilkan di website..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tipe</label>
+        <select class="form-select" id="ann-type">
+          <option value="info">Info (Biru)</option>
+          <option value="warning">Warning (Kuning)</option>
+          <option value="success">Success (Hijau)</option>
+          <option value="danger">Danger (Merah)</option>
+        </select>
+      </div>
+      <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:1rem">
+        <div class="form-toggle">
+          <div class="toggle" id="ann-active-toggle" onclick="this.classList.toggle('on')"></div>
+          <label class="form-label" style="margin:0">Aktifkan sekarang</label>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Teks Link (opsional)</label>
+        <input class="form-input" id="ann-link-text" placeholder="Lihat selengkapnya →" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL Link</label>
+        <input class="form-input" id="ann-link-url" placeholder="https://..." />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-ann')">Batal</button>
+      <button class="btn btn-primary" onclick="saveAnnouncement()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: CONFIRM DELETE ===== -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal" style="width:380px;text-align:center">
+    <div style="font-size:2rem;margin-bottom:1rem">🗑️</div>
+    <div class="modal-title" style="margin-bottom:0.75rem">HAPUS ITEM?</div>
+    <div id="confirm-message" style="font-size:0.82rem;color:var(--text2);margin-bottom:1.5rem"></div>
+    <div class="modal-footer" style="justify-content:center">
+      <button class="btn btn-secondary" onclick="closeModal('modal-confirm')">Batal</button>
+      <button class="btn btn-danger" id="confirm-btn">Ya, Hapus</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== STATE ====================
+let sb = null;
+let shopItems = [], categories = [], features = [], rules = [], socials = [], announcements = [], configData = {};
+let editingShopId = null, editingCatId = null, editingFeatureId = null, editingRuleId = null, editingSocialId = null, editingAnnId = null;
+
+// ==================== SUPABASE SETUP ====================
+function getStoredConfig() {
+  return { url: localStorage.getItem('sb_url'), key: localStorage.getItem('sb_key') };
+}
+function saveSetup() {
+  const url = document.getElementById('setup-url').value.trim();
+  const key = document.getElementById('setup-key').value.trim();
+  if (!url || !key) { showSetupError('URL dan Key wajib diisi.'); return; }
+  if (!url.includes('supabase.co')) { showSetupError('URL tidak valid. Pastikan format: https://xxxx.supabase.co'); return; }
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  initSupabase(url, key);
+}
+function showSetupError(msg) {
+  document.getElementById('setup-error').innerHTML = `<div class="alert alert-error">${msg}</div>`;
+}
+function clearSetup() {
+  localStorage.removeItem('sb_url'); localStorage.removeItem('sb_key');
+  location.reload();
+}
+function initSupabase(url, key) {
+  sb = supabase.createClient(url, key);
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ==================== AUTH ====================
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  if (!email || !pw) { showLoginError('Isi email dan password.'); return; }
+  btn.disabled = true; btn.textContent = 'MASUK...';
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (error) throw error;
+    // Check admin role
+    const { data: role } = await sb.from('admin_roles').select('role,display_name').eq('user_id', data.user.id).single();
+    if (!role) {
+      await sb.auth.signOut();
+      throw new Error('Akun ini tidak terdaftar sebagai admin. Hubungi super admin.');
+    }
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('topbar-user-email').textContent = email.split('@')[0];
+    document.getElementById('user-role-badge').textContent = (role.role || 'EDITOR').toUpperCase();
+    document.getElementById('app').style.display = 'flex';
+    await loadAllData();
+  } catch(e) {
+    showLoginError(e.message);
+    btn.disabled = false; btn.textContent = 'MASUK KE ADMIN PANEL';
+  }
+}
+function showLoginError(msg) {
+  document.getElementById('login-error').innerHTML = `<div class="alert alert-error">${msg}</div>`;
+}
+async function doLogout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// ==================== NAVIGATION ====================
+function showSection(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  if (el) { el.classList.add('active'); document.getElementById('topbar-section').textContent = el.dataset.label || name; }
+}
+
+// ==================== LOAD ALL DATA ====================
+async function loadAllData() {
+  await Promise.all([loadShopItems(), loadCategories(), loadFeatures(), loadRules(), loadSocial(), loadAnnouncements(), loadConfig(), loadAdmins()]);
+  updateDashboard();
+}
+
+// ==================== TOAST ====================
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icons = { success:'✅', error:'❌', info:'ℹ️' };
+  el.innerHTML = `<span>${icons[type]||'•'}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ==================== MODAL HELPERS ====================
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function confirmDelete(message, onConfirm) {
+  document.getElementById('confirm-message').textContent = message;
+  document.getElementById('confirm-btn').onclick = () => { closeModal('modal-confirm'); onConfirm(); };
+  openModal('modal-confirm');
+}
+
+// ==================== SHOP ITEMS ====================
+async function loadShopItems() {
+  const { data } = await sb.from('shop_items').select('*').order('sort_order');
+  shopItems = data || [];
+  document.getElementById('nav-count-shop').textContent = shopItems.length;
+  // populate category filter
+  const sel = document.getElementById('shop-filter-cat');
+  const cats = [...new Set(shopItems.map(i=>i.category))];
+  sel.innerHTML = '<option value="">Semua Kategori</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  renderShopTable(shopItems);
+}
+function filterShopItems() {
+  const q = document.getElementById('shop-search').value.toLowerCase();
+  const cat = document.getElementById('shop-filter-cat').value;
+  const filtered = shopItems.filter(i =>
+    (!q || i.name.toLowerCase().includes(q) || (i.description||'').toLowerCase().includes(q)) &&
+    (!cat || i.category === cat)
+  );
+  renderShopTable(filtered);
+}
+function renderShopTable(items) {
+  const tb = document.getElementById('shop-tbody');
+  if (!items.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Tidak ada item.</td></tr>'; return; }
+  tb.innerHTML = items.map(i => `
+    <tr>
+      <td><div style="font-weight:800">${esc(i.name)}</div>${i.image_url?`<div style="font-size:0.7rem;color:var(--text3)">${esc(i.image_url).substring(0,40)}...</div>`:''}</td>
+      <td><span class="badge badge-purple">${esc(i.category)}</span></td>
+      <td style="font-weight:800;color:var(--gold)">${i.price.toLocaleString()}</td>
+      <td style="font-size:0.75rem;color:var(--text2)">${esc(i.currency)}</td>
+      <td><span class="${i.visible?'pill-on':'pill-off'}">${i.visible?'● Aktif':'○ Disembunyikan'}</span></td>
+      <td><div class="table-actions">
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="editShopItem('${i.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteShopItem('${i.id}','${esc(i.name)}')">🗑️</button>
+      </div></td>
+    </tr>`).join('');
+}
+function openShopModal(id=null) {
+  editingShopId = id;
+  document.getElementById('modal-shop-title').textContent = id ? 'EDIT ITEM SHOP' : 'TAMBAH ITEM SHOP';
+  // populate category select in modal
+  const sel = document.getElementById('shop-cat-sel');
+  sel.innerHTML = '<option value="">Pilih Kategori</option>' + categories.map(c=>`<option value="${c.slug}">${c.name}</option>`).join('');
+  if (!id) {
+    ['shop-name','shop-price','shop-desc','shop-image','shop-badge','shop-order'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('shop-currency').value = 'Gem Coin';
+    document.getElementById('shop-visible-toggle').classList.add('on');
+  }
+  openModal('modal-shop');
+}
+function editShopItem(id) {
+  const item = shopItems.find(i=>i.id===id);
+  if (!item) return;
+  openShopModal(id);
+  document.getElementById('shop-name').value = item.name;
+  document.getElementById('shop-price').value = item.price;
+  document.getElementById('shop-currency').value = item.currency;
+  document.getElementById('shop-desc').value = item.description||'';
+  document.getElementById('shop-image').value = item.image_url||'';
+  document.getElementById('shop-badge').value = item.badge||'';
+  document.getElementById('shop-order').value = item.sort_order||0;
+  document.getElementById('shop-cat-sel').value = item.category;
+  item.visible ? document.getElementById('shop-visible-toggle').classList.add('on') : document.getElementById('shop-visible-toggle').classList.remove('on');
+}
+async function saveShopItem() {
+  const payload = {
+    name: document.getElementById('shop-name').value.trim(),
+    category: document.getElementById('shop-cat-sel').value,
+    price: parseInt(document.getElementById('shop-price').value)||0,
+    currency: document.getElementById('shop-currency').value,
+    description: document.getElementById('shop-desc').value.trim(),
+    image_url: document.getElementById('shop-image').value.trim(),
+    badge: document.getElementById('shop-badge').value.trim(),
+    sort_order: parseInt(document.getElementById('shop-order').value)||0,
+    visible: document.getElementById('shop-visible-toggle').classList.contains('on'),
+  };
+  if (!payload.name || !payload.category) { toast('Nama dan kategori wajib diisi!', 'error'); return; }
+  let error;
+  if (editingShopId) ({ error } = await sb.from('shop_items').update(payload).eq('id', editingShopId));
+  else ({ error } = await sb.from('shop_items').insert(payload));
+  if (error) { toast(error.message, 'error'); return; }
+  toast(editingShopId ? 'Item diperbarui!' : 'Item ditambahkan!');
+  closeModal('modal-shop');
+  await loadShopItems();
+}
+function deleteShopItem(id, name) {
+  confirmDelete(`Hapus item "${name}"? Tindakan ini tidak bisa dibatalkan.`, async () => {
+    const { error } = await sb.from('shop_items').delete().eq('id', id);
+    if (error) { toast(error.message, 'error'); return; }
+    toast('Item dihapus.'); await loadShopItems();
+  });
+}
+
+// ==================== CATEGORIES ====================
+async function loadCategories() {
+  const { data } = await sb.from('shop_categories').select('*').order('sort_order');
+  categories = data || [];
+  const tb = document.getElementById('cat-tbody');
+  if (!categories.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text3)">Belum ada kategori.</td></tr>'; return; }
+  tb.innerHTML = categories.map(c=>`
+    <tr>
+      <td style="font-weight:800">${esc(c.name)}</td>
+      <td><code style="background:var(--bg3);padding:2px 8px;border-radius:4px;font-size:0.75rem">${esc(c.slug)}</code></td>
+      <td>${c.sort_order}</td>
+      <td><span class="${c.visible?'pill-on':'pill-off'}">${c.visible?'● Aktif':'○ Nonaktif'}</span></td>
+      <td><div class="table-actions">
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="editCategory('${c.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteCategory('${c.id}','${esc(c.name)}')">🗑️</button>
+      </div></td>
+    </tr>`).join('');
+}
+function openCatModal(id=null) {
+  editingCatId = id;
+  document.getElementById('modal-cat-title').textContent = id ? 'EDIT KATEGORI' : 'TAMBAH KATEGORI';
+  if (!id) { ['cat-name','cat-slug','cat-order'].forEach(f=>document.getElementById(f).value=''); document.getElementById('cat-visible-toggle').classList.add('on'); }
+  openModal('modal-cat');
+}
+function editCategory(id) {
+  const cat = categories.find(c=>c.id===id); if (!cat) return;
+  openCatModal(id);
+  document.getElementById('cat-name').value = cat.name;
+  document.getElementById('cat-slug').value = cat.slug;
+  document.getElementById('cat-order').value = cat.sort_order||0;
+  cat.visible ? document.getElementById('cat-visible-toggle').classList.add('on') : document.getElementById('cat-visible-toggle').classList.remove('on');
+}
+document.getElementById('cat-name').addEventListener('input', function() {
+  if (!editingCatId) document.getElementById('cat-slug').value = this.value.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+});
+async function saveCategory() {
+  const payload = { name: document.getElementById('cat-name').value.trim(), slug: document.getElementById('cat-slug').value.trim(), sort_order: parseInt(document.getElementById('cat-order').value)||0, visible: document.getElementById('cat-visible-toggle').classList.contains('on') };
+  if (!payload.name || !payload.slug) { toast('Nama dan slug wajib!','error'); return; }
+  let error;
+  if (editingCatId) ({ error } = await sb.from('shop_categories').update(payload).eq('id',editingCatId));
+  else ({ error } = await sb.from('shop_categories').insert(payload));
+  if (error) { toast(error.message,'error'); return; }
+  toast(editingCatId?'Kategori diperbarui!':'Kategori ditambahkan!');
+  closeModal('modal-cat'); await loadCategories();
+}
+function deleteCategory(id, name) {
+  confirmDelete(`Hapus kategori "${name}"?`, async () => {
+    const { error } = await sb.from('shop_categories').delete().eq('id',id);
+    if (error) { toast(error.message,'error'); return; }
+    toast('Kategori dihapus.'); await loadCategories();
+  });
+}
+
+// ==================== FEATURES ====================
+async function loadFeatures() {
+  const { data } = await sb.from('features').select('*').order('sort_order');
+  features = data || [];
+  document.getElementById('nav-count-features').textContent = features.length;
+  const tb = document.getElementById('features-tbody');
+  if (!features.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Belum ada fitur.</td></tr>'; return; }
+  tb.innerHTML = features.map(f=>`
+    <tr>
+      <td><span style="font-family:var(--font-pixel);font-size:0.5rem;color:var(--text3)">${esc(f.num)}</span></td>
+      <td style="font-weight:800">${esc(f.name)}</td>
+      <td style="color:var(--text2);max-width:200px">${esc(f.description||'')}</td>
+      <td>${f.tag?`<span class="badge badge-${f.tag_color||'purple'}">${esc(f.tag)}</span>`:'-'}</td>
+      <td><span class="${f.visible?'pill-on':'pill-off'}">${f.visible?'●':'○'}</span></td>
+      <td><div class="table-actions">
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="editFeature('${f.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteFeature('${f.id}','${esc(f.name)}')">🗑️</button>
+      </div></td>
+    </tr>`).join('');
+}
+function openFeatureModal(id=null) {
+  editingFeatureId = id;
+  document.getElementById('modal-feature-title').textContent = id?'EDIT FITUR':'TAMBAH FITUR';
+  if (!id) { ['feature-num','feature-name','feature-desc','feature-tag','feature-accent','feature-order'].forEach(f=>document.getElementById(f).value=''); document.getElementById('feature-tag-color').value='purple'; document.getElementById('feature-visible-toggle').classList.add('on'); }
+  openModal('modal-feature');
+}
+function editFeature(id) {
+  const f = features.find(x=>x.id===id); if(!f) return;
+  openFeatureModal(id);
+  document.getElementById('feature-num').value = f.num;
+  document.getElementById('feature-name').value = f.name;
+  document.getElementById('feature-desc').value = f.description||'';
+  document.getElementById('feature-tag').value = f.tag||'';
+  document.getElementById('feature-tag-color').value = f.tag_color||'purple';
+  document.getElementById('feature-accent').value = f.accent_color||'#a855f7';
+  document.getElementById('feature-order').value = f.sort_order||0;
+  f.visible ? document.getElementById('feature-visible-toggle').classList.add('on') : document.getElementById('feature-visible-toggle').classList.remove('on');
+}
+async function saveFeature() {
+  const payload = { num: document.getElementById('feature-num').value.trim(), name: document.getElementById('feature-name').value.trim(), description: document.getElementById('feature-desc').value.trim(), tag: document.getElementById('feature-tag').value.trim(), tag_color: document.getElementById('feature-tag-color').value, accent_color: document.getElementById('feature-accent').value.trim()||'#a855f7', sort_order: parseInt(document.getElementById('feature-order').value)||0, visible: document.getElementById('feature-visible-toggle').classList.contains('on') };
+  if (!payload.name) { toast('Nama fitur wajib!','error'); return; }
+  let error;
+  if (editingFeatureId) ({ error } = await sb.from('features').update(payload).eq('id',editingFeatureId));
+  else ({ error } = await sb.from('features').insert(payload));
+  if (error) { toast(error.message,'error'); return; }
+  toast(editingFeatureId?'Fitur diperbarui!':'Fitur ditambahkan!');
+  closeModal('modal-feature'); await loadFeatures();
+}
+function deleteFeature(id, name) {
+  confirmDelete(`Hapus fitur "${name}"?`, async () => {
+    const { error } = await sb.from('features').delete().eq('id',id);
+    if (error) { toast(error.message,'error'); return; }
+    toast('Fitur dihapus.'); await loadFeatures();
+  });
+}
+
+// ==================== RULES ====================
+async function loadRules() {
+  const { data } = await sb.from('rules').select('*').order('sort_order');
+  rules = data || [];
+  document.getElementById('nav-count-rules').textContent = rules.length;
+  const tb = document.getElementById('rules-tbody');
+  if (!rules.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">Belum ada peraturan.</td></tr>'; return; }
+  tb.innerHTML = rules.map(r=>`
+    <tr>
+      <td><span style="font-family:var(--font-pixel);font-size:0.5rem;color:var(--text3)">${esc(r.num)}</span></td>
+      <td style="font-weight:800">${esc(r.title)}</td>
+      <td style="color:var(--text2);max-width:200px;font-size:0.78rem">${esc(r.description||'')}</td>
+      <td>${r.badge?`<span class="badge badge-${r.badge_type||'red'}">${esc(r.badge)}</span>`:'-'}</td>
+      <td><span class="${r.visible?'pill-on':'pill-off'}">${r.visible?'●':'○'}</span></td>
+      <td><div class="table-actions">
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="editRule('${r.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteRule('${r.id}','${esc(r.title)}')">🗑️</button>
+      </div></td>
+    </tr>`).join('');
+}
+function openRuleModal(id=null) {
+  editingRuleId = id;
+  document.getElementById('modal-rule-title').textContent = id?'EDIT PERATURAN':'TAMBAH PERATURAN';
+  if (!id) { ['rule-num','rule-title','rule-desc','rule-badge','rule-order'].forEach(f=>document.getElementById(f).value=''); document.getElementById('rule-badge-type').value='red'; document.getElementById('rule-visible-toggle').classList.add('on'); }
+  openModal('modal-rule');
+}
+function editRule(id) {
+  const r = rules.find(x=>x.id===id); if(!r) return;
+  openRuleModal(id);
+  document.getElementById('rule-num').value = r.num;
+  document.getElementById('rule-title').value = r.title;
+  document.getElementById('rule-desc').value = r.description||'';
+  document.getElementById('rule-badge').value = r.badge||'';
+  document.getElementById('rule-badge-type').value = r.badge_type||'red';
+  document.getElementById('rule-order').value = r.sort_order||0;
+  r.visible ? document.getElementById('rule-visible-toggle').classList.add('on') : document.getElementById('rule-visible-toggle').classList.remove('on');
+}
+async function saveRule() {
+  const payload = { num: document.getElementById('rule-num').value.trim(), title: document.getElementById('rule-title').value.trim(), description: document.getElementById('rule-desc').value.trim(), badge: document.getElementById('rule-badge').value.trim(), badge_type: document.getElementById('rule-badge-type').value, sort_order: parseInt(document.getElementById('rule-order').value)||0, visible: document.getElementById('rule-visible-toggle').classList.contains('on') };
+  if (!payload.title) { toast('Judul peraturan wajib!','error'); return; }
+  let error;
+  if (editingRuleId) ({ error } = await sb.from('rules').update(payload).eq('id',editingRuleId));
+  else ({ error } = await sb.from('rules').insert(payload));
+  if (error) { toast(error.message,'error'); return; }
+  toast(editingRuleId?'Peraturan diperbarui!':'Peraturan ditambahkan!');
+  closeModal('modal-rule'); await loadRules();
+}
+function deleteRule(id, title) {
+  confirmDelete(`Hapus peraturan "${title}"?`, async () => {
+    const { error } = await sb.from('rules').delete().eq('id',id);
+    if (error) { toast(error.message,'error'); return; }
+    toast('Peraturan dihapus.'); await loadRules();
+  });
+}
+
+// ==================== SOCIAL ====================
+async function loadSocial() {
+  const { data } = await sb.from('social_links').select('*').order('sort_order');
+  socials = data || [];
+  const tb = document.getElementById('social-tbody');
+  if (!socials.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text3)">Belum ada platform.</td></tr>'; return; }
+  tb.innerHTML = socials.map(s=>`
+    <tr>
+      <td style="font-weight:800">${esc(s.platform)}</td>
+      <td style="color:var(--text2)">${esc(s.handle||'')}</td>
+      <td><a href="${esc(s.url)}" target="_blank" style="color:var(--purple);font-size:0.75rem">${esc(s.url).substring(0,40)}...</a></td>
+      <td><span class="${s.visible?'pill-on':'pill-off'}">${s.visible?'● Aktif':'○ Nonaktif'}</span></td>
+      <td><div class="table-actions">
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="editSocial('${s.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteSocial('${s.id}','${esc(s.platform)}')">🗑️</button>
+      </div></td>
+    </tr>`).join('');
+}
+function openSocialModal(id=null) {
+  editingSocialId = id;
+  document.getElementById('modal-social-title').textContent = id?'EDIT PLATFORM':'TAMBAH PLATFORM';
+  if (!id) { ['social-platform','social-handle','social-url','social-color','social-order'].forEach(f=>document.getElementById(f).value=''); document.getElementById('social-visible-toggle').classList.add('on'); }
+  openModal('modal-social');
+}
+function editSocial(id) {
+  const s = socials.find(x=>x.id===id); if(!s) return;
+  openSocialModal(id);
+  document.getElementById('social-platform').value = s.platform;
+  document.getElementById('social-handle').value = s.handle||'';
+  document.getElementById('social-url').value = s.url;
+  document.getElementById('social-color').value = s.color||'#a855f7';
+  document.getElementById('social-order').value = s.sort_order||0;
+  s.visible ? document.getElementById('social-visible-toggle').classList.add('on') : document.getElementById('social-visible-toggle').classList.remove('on');
+}
+async function saveSocial() {
+  const payload = { platform: document.getElementById('social-platform').value.trim(), handle: document.getElementById('social-handle').value.trim(), url: document.getElementById('social-url').value.trim(), color: document.getElementById('social-color').value.trim()||'#a855f7', sort_order: parseInt(document.getElementById('social-order').value)||0, visible: document.getElementById('social-visible-toggle').classList.contains('on') };
+  if (!payload.platform || !payload.url) { toast('Platform dan URL wajib!','error'); return; }
+  let error;
+  if (editingSocialId) ({ error } = await sb.from('social_links').update(payload).eq('id',editingSocialId));
+  else ({ error } = await sb.from('social_links').insert(payload));
+  if (error) { toast(error.message,'error'); return; }
+  toast(editingSocialId?'Platform diperbarui!':'Platform ditambahkan!');
+  closeModal('modal-social'); await loadSocial();
+}
+function deleteSocial(id, name) {
+  confirmDelete(`Hapus platform "${name}"?`, async () => {
+    const { error } = await sb.from('social_links').delete().eq('id',id);
+    if (error) { toast(error.message,'error'); return; }
+    toast('Platform dihapus.'); await loadSocial();
+  });
+}
+
+// ==================== ANNOUNCEMENTS ====================
+async function loadAnnouncements() {
+  const { data } = await sb.from('announcements').select('*').order('created_at', {ascending:false});
+  announcements = data || [];
+  const activeCount = announcements.filter(a=>a.active).length;
+  document.getElementById('dash-ann-count').textContent = activeCount;
+  const container = document.getElementById('ann-list');
+  if (!announcements.length) { container.innerHTML = '<div class="empty-state"><p>Belum ada pengumuman.</p></div>'; return; }
+  const typeColors = { info:'#60a5fa', warning:'#f4c430', success:'#5dbd3a', danger:'#ef4444' };
+  container.innerHTML = announcements.map(a=>`
+    <div class="card" style="border-left:3px solid ${typeColors[a.type]||'#a855f7'}">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        <div style="flex:1">
+          <div style="font-weight:800;margin-bottom:0.3rem">${esc(a.message)}</div>
+          <div style="font-size:0.72rem;color:var(--text3)">Tipe: <strong style="color:${typeColors[a.type]}">${a.type}</strong>${a.link_url?` · Link: <a href="${esc(a.link_url)}" target="_blank" style="color:var(--purple)">${esc(a.link_text||a.link_url)}</a>`:''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <div class="form-toggle">
+            <div class="toggle ${a.active?'on':''}" onclick="toggleAnn('${a.id}', this)"></div>
+            <span style="font-size:0.78rem;font-weight:800;color:${a.active?'var(--green)':'var(--text3)'}">${a.active?'AKTIF':'NONAKTIF'}</span>
+          </div>
+          <button class="btn btn-secondary btn-sm btn-icon" onclick="editAnn('${a.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="deleteAnn('${a.id}')">🗑️</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+async function toggleAnn(id, el) {
+  el.classList.toggle('on');
+  const active = el.classList.contains('on');
+  // Deactivate others if activating this one
+  if (active) await sb.from('announcements').update({active:false}).neq('id',id);
+  await sb.from('announcements').update({active}).eq('id',id);
+  toast(active?'Pengumuman diaktifkan!':'Pengumuman dinonaktifkan.');
+  await loadAnnouncements();
+}
+function openAnnModal(id=null) {
+  editingAnnId = id;
+  document.getElementById('modal-ann-title').textContent = id?'EDIT PENGUMUMAN':'BUAT PENGUMUMAN';
+  if (!id) { ['ann-message','ann-link-text','ann-link-url'].forEach(f=>document.getElementById(f).value=''); document.getElementById('ann-type').value='info'; document.getElementById('ann-active-toggle').classList.remove('on'); }
+  openModal('modal-ann');
+}
+function editAnn(id) {
+  const a = announcements.find(x=>x.id===id); if(!a) return;
+  openAnnModal(id);
+  document.getElementById('ann-message').value = a.message;
+  document.getElementById('ann-type').value = a.type||'info';
+  document.getElementById('ann-link-text').value = a.link_text||'';
+  document.getElementById('ann-link-url').value = a.link_url||'';
+  a.active ? document.getElementById('ann-active-toggle').classList.add('on') : document.getElementById('ann-active-toggle').classList.remove('on');
+}
+async function saveAnnouncement() {
+  const payload = { message: document.getElementById('ann-message').value.trim(), type: document.getElementById('ann-type').value, active: document.getElementById('ann-active-toggle').classList.contains('on'), link_text: document.getElementById('ann-link-text').value.trim(), link_url: document.getElementById('ann-link-url').value.trim() };
+  if (!payload.message) { toast('Pesan wajib diisi!','error'); return; }
+  if (payload.active) await sb.from('announcements').update({active:false}).neq('id', editingAnnId||'00000000-0000-0000-0000-000000000000');
+  let error;
+  if (editingAnnId) ({ error } = await sb.from('announcements').update(payload).eq('id',editingAnnId));
+  else ({ error } = await sb.from('announcements').insert(payload));
+  if (error) { toast(error.message,'error'); return; }
+  toast(editingAnnId?'Pengumuman diperbarui!':'Pengumuman dibuat!');
+  closeModal('modal-ann'); await loadAnnouncements();
+}
+function deleteAnn(id) {
+  confirmDelete('Hapus pengumuman ini?', async () => {
+    const { error } = await sb.from('announcements').delete().eq('id',id);
+    if (error) { toast(error.message,'error'); return; }
+    toast('Pengumuman dihapus.'); await loadAnnouncements();
+  });
+}
+
+// ==================== CONFIG ====================
+async function loadConfig() {
+  const { data } = await sb.from('site_config').select('*');
+  configData = {};
+  (data||[]).forEach(row => configData[row.key] = row);
+  renderConfig();
+  // Update dashboard
+  if (configData['server_ip']) document.getElementById('dash-server-ip').textContent = configData['server_ip'].value;
+  if (configData['season']) document.getElementById('dash-season').textContent = 'Season ' + configData['season'].value;
+  if (configData['seed']) document.getElementById('dash-seed').textContent = configData['seed'].value;
+  if (configData['maintenance_mode']) document.getElementById('dash-maintenance').textContent = configData['maintenance_mode'].value === 'true' ? '🔴 ON' : '🟢 OFF';
+}
+function renderConfig() {
+  const container = document.getElementById('config-list');
+  const entries = Object.values(configData);
+  if (!entries.length) { container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text3)">Tidak ada konfigurasi.</div>'; return; }
+  container.innerHTML = entries.map(row => `
+    <div class="config-row">
+      <div>
+        <div class="config-key">${esc(row.key)}</div>
+        <div class="config-desc">${esc(row.description||'')}</div>
+      </div>
+      <div>
+        ${row.key === 'maintenance_mode' ?
+          `<select class="form-select" id="cfg-${row.key}"><option value="false" ${row.value!=='true'?'selected':''}>false (Normal)</option><option value="true" ${row.value==='true'?'selected':''}>true (Maintenance)</option></select>` :
+          `<input class="form-input" id="cfg-${row.key}" value="${esc(row.value||'')}" />`
+        }
+      </div>
+      <div style="padding-top:0.5rem">
+        <button class="btn btn-success btn-sm" onclick="saveOneConfig('${row.key}')">Simpan</button>
+      </div>
+    </div>`).join('');
+}
+async function saveOneConfig(key) {
+  const val = document.getElementById('cfg-' + key).value;
+  const { error } = await sb.from('site_config').update({value:val}).eq('key',key);
+  if (error) { toast(error.message,'error'); return; }
+  configData[key].value = val;
+  toast(`Config "${key}" disimpan!`);
+  await loadConfig();
+}
+async function saveAllConfig() {
+  const entries = Object.values(configData);
+  for (const row of entries) {
+    const el = document.getElementById('cfg-' + row.key);
+    if (el) await sb.from('site_config').update({value:el.value}).eq('key',row.key);
+  }
+  toast('Semua konfigurasi disimpan!');
+  await loadConfig();
+}
+
+// ==================== ADMINS ====================
+async function loadAdmins() {
+  const { data } = await sb.from('admin_roles').select('*');
+  const tb = document.getElementById('admins-tbody');
+  if (!data || !data.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text3)">Belum ada admin.</td></tr>'; return; }
+  tb.innerHTML = data.map(a=>`
+    <tr>
+      <td style="color:var(--text2)">${a.user_id.substring(0,12)}...</td>
+      <td style="font-weight:800">${esc(a.display_name||'-')}</td>
+      <td><span class="badge ${a.role==='superadmin'?'badge-gold':a.role==='admin'?'badge-purple':'badge-blue'}">${esc(a.role)}</span></td>
+      <td style="font-size:0.75rem;color:var(--text3)">${new Date(a.created_at).toLocaleDateString('id-ID')}</td>
+      <td><div class="table-actions">
+        <select class="form-select" style="padding:0.3rem 0.6rem;font-size:0.75rem;width:120px" onchange="updateAdminRole('${a.user_id}', this.value)">
+          <option ${a.role==='editor'?'selected':''}>editor</option>
+          <option ${a.role==='admin'?'selected':''}>admin</option>
+          <option ${a.role==='superadmin'?'selected':''}>superadmin</option>
+        </select>
+      </div></td>
+    </tr>`).join('');
+}
+async function updateAdminRole(userId, role) {
+  const { error } = await sb.from('admin_roles').update({role}).eq('user_id',userId);
+  if (error) { toast(error.message,'error'); return; }
+  toast('Role diperbarui!'); await loadAdmins();
+}
+
+// ==================== DASHBOARD ====================
+function updateDashboard() {
+  document.getElementById('dash-shop-count').textContent = shopItems.length;
+  document.getElementById('dash-features-count').textContent = features.length;
+  document.getElementById('dash-rules-count').textContent = rules.length;
+}
+
+// ==================== UTILS ====================
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ==================== INIT ====================
+window.addEventListener('load', () => {
+  const { url, key } = getStoredConfig();
+  if (url && key) {
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    initSupabase(url, key);
+    // Check existing session
+    setTimeout(async () => {
+      if (!sb) return;
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        const { data: role } = await sb.from('admin_roles').select('role').eq('user_id', session.user.id).single();
+        if (role) {
+          document.getElementById('login-screen').style.display = 'none';
+          document.getElementById('topbar-user-email').textContent = session.user.email.split('@')[0];
+          document.getElementById('user-role-badge').textContent = (role.role||'EDITOR').toUpperCase();
+          document.getElementById('app').style.display = 'flex';
+          await loadAllData();
+        }
+      }
+    }, 300);
+  }
+  // Close modals on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+  });
+  // Enter to login
+  document.getElementById('login-password').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+});
+</script>
+</body>
+</html>
