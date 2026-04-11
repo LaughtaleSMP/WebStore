@@ -14,6 +14,9 @@ let waAddingFor = null;
 document.addEventListener('DOMContentLoaded', async () => {
   sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  // Expose ke window agar admin-shop.js dan modul lain bisa akses
+  window._adminSb = sb;
+
   document.getElementById('login-password').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
   });
