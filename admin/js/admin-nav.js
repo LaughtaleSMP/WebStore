@@ -2,18 +2,23 @@
 function showSection(name, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('sec-' + name).classList.add('active');
-  if (el) el.classList.add('active');
+  const sec = document.getElementById('sec-' + name);
+  if (sec) sec.classList.add('active');
+  if (el)  el.classList.add('active');
   const labels = {
-    'server': 'Info Server',
-    'maintenance': 'Maintenance',
-    'motd': 'MOTD / Pengumuman',
-    'season': 'Season & World',
-    'admins-wa': 'Admin WhatsApp',
-    'server-status': 'Server Status Config'
+    'server':        'Info Server',
+    'maintenance':   'Maintenance',
+    'motd':          'MOTD / Pengumuman',
+    'season':        'Season & World',
+    'admins-wa':     'Admin WhatsApp',
+    'server-status': 'Server Status Config',
+    'shop':          'Shop Items'
   };
   document.getElementById('topbar-section').textContent = labels[name] || name;
 }
+
+/* expose ke window agar bisa dipanggil dari file JS lain (mis. admin-shop.js) */
+window.showSection = showSection;
 
 
 // ==================== SIDEBAR TOGGLE (MOBILE) ====================
