@@ -109,6 +109,9 @@
       }
     } catch (e) { /* shop_items gagal — SHOP_CONFIG tetap dari shop-config.js */ }
 
+    // 6. Sync harga shop dari Supabase
+    await syncShopPrices(sb);
+
     console.log('[supabase-sync] Config berhasil diterapkan.');
 
   } catch (e) {
@@ -242,6 +245,49 @@
     }
 
     banner.style.display = 'flex';
+  }
+
+  // 6. Sync harga shop_items dari Supabase → override SHOPCONFIG
+  async function syncShopPrices(sb) {
+    try {
+      const { data: shopItems, error } = await sb.from('shop_items').select('id, price, stock');
+      if (error || !shopItems) return;
+      if (!window.SHOPCONFIG || !window.SHOPCONFIG.items) return;
+
+      let changed = false;
+      shopItems.forEach(row => {
+        const item = window.SHOPCONFIG.items.find(i => i.id === row.id);
+        if (item) {
+          item.price = row.price;
+          if (row.stock !== undefined && row.stock !== null) item.stock = row.stock;
+          changed = true;
+        }
+      });
+
+      // Re-render toko dengan harga terbaru
+      if (changed) {
+        const grid = document.getElementById('shop-grid');
+        if (grid && typeof renderShop !== 'undefined') {
+          renderShop();
+        } else if (grid) {
+          // fallback: reload kartu harga saja tanpa full re-render
+          grid.querySelectorAll('.shop-card').forEach((card, idx) => {
+            const item = window.SHOPCONFIG.items[idx];
+            if (!item) return;
+            const priceEl = card.querySelector('.shop-card-price');
+            if (priceEl) {
+              const p = item.price;
+              priceEl.innerHTML = p === 0
+                ? '<span style="color:#17dd62">GRATIS</span>'
+                : 'Rp ' + p.toLocaleString('id-ID');
+            }
+          });
+        }
+        console.log('[supabase-sync] Harga shop berhasil disync dari Supabase.');
+      }
+    } catch(e) {
+      console.warn('[supabase-sync] Gagal sync shop_items:', e);
+    }
   }
 
 })();
