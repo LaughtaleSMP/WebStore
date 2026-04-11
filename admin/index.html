@@ -553,8 +553,10 @@
 <!-- Toast -->
 <div id="toast"></div>
 
+<!-- Supabase SDK harus dimuat PERTAMA tanpa defer -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/admin-init.js"          defer></script>
+<!-- admin-init.js tanpa defer agar createClient dipanggil setelah SDK siap -->
+<script src="js/admin-init.js"></script>
 <script src="js/admin-auth.js"          defer></script>
 <script src="js/admin-config.js"        defer></script>
 <script src="js/admin-wa.js"            defer></script>
