@@ -1,20 +1,22 @@
 /* ════════════════════════════════════════════════════════════════
    admin-shop.js — Shop Configurator for Laughtale Admin Panel
-   Edit item shop (harga, stok, badge, dll) → simpan ke Supabase
-   Web umum membaca dari tabel `shop_config` di Supabase.
+   ────────────────────────────────────────────────────────────
+   Tabel yang dipakai:
+   • shop_items  → setiap item (id, name, price, stock, …)
+   • shop_config → config umum (title, subtitle, admins WA)
+
+   Web (shop-supabase.js) membaca langsung dari shop_items &
+   shop_config, jadi perubahan admin langsung terlihat.
 ════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
 
-  /* ── Fallback config dari file statis ── */
-  function getStaticConfig() {
-    return (typeof SHOP_CONFIG !== 'undefined') ? JSON.parse(JSON.stringify(SHOP_CONFIG)) : null;
-  }
-
   /* ── State ── */
-  let cfg         = null;   // config aktif (dari Supabase atau statis)
-  let editingIdx  = null;   // index item yang sedang di-edit
-  let dirty       = false;  // ada perubahan belum tersimpan
+  let items        = [];   // array item dari shop_items
+  let shopMeta     = {};   // {title, subtitle, admins, gemAdmins} dari shop_config
+  let editingId    = null; // id item yang sedang di-edit (null = tambah baru)
+  let dirty        = false;
+  let dirtyMeta    = false;
 
   function getSb() { return window._adminSb; }
 
@@ -30,12 +32,10 @@
   function injectNav() {
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
-
     const grp = document.createElement('div');
     grp.className = 'nav-group-label';
     grp.textContent = 'Toko';
     sidebar.appendChild(grp);
-
     const item = document.createElement('div');
     item.className = 'nav-item';
     item.id = 'nav-shop';
@@ -62,7 +62,7 @@
       const bc = document.getElementById('topbar-section');
       if (bc) bc.textContent = 'Shop';
     }
-    loadConfig();
+    loadData();
   }
 
   /* ════════════════════════════════════════════
@@ -81,10 +81,12 @@
           <div class="page-title">Konfigurasi Shop</div>
           <div class="page-sub">Edit harga, stok, badge, dan informasi item yang tampil di web</div>
         </div>
-        <button class="save-btn" id="shop-save-all-btn" onclick="window._shopSaveAll()" style="opacity:.4;cursor:not-allowed" disabled>
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Simpan Semua
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="save-btn" id="shop-save-meta-btn" onclick="window._shopSaveMeta()" style="opacity:.4;cursor:not-allowed" disabled>
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Simpan Pengaturan
+          </button>
+        </div>
       </div>
 
       <!-- Tabs -->
@@ -115,11 +117,11 @@
           <div class="scfg-card-title">Info Toko</div>
           <div class="field">
             <label>Judul Toko</label>
-            <input id="g-title" oninput="window._shopMarkDirty()">
+            <input id="g-title" oninput="window._shopMetaDirty()">
           </div>
           <div class="field" style="margin-top:10px">
             <label>Subtitle</label>
-            <textarea id="g-subtitle" rows="2" oninput="window._shopMarkDirty()"></textarea>
+            <textarea id="g-subtitle" rows="2" oninput="window._shopMetaDirty()"></textarea>
           </div>
         </div>
 
@@ -162,7 +164,7 @@
           <!-- Kategori -->
           <div class="field" style="margin-top:10px">
             <label>Kategori</label>
-            <input id="ef-category" placeholder="Custom Nametag" oninput="window._shopMarkDirty()">
+            <input id="ef-category" placeholder="Custom Nametag">
             <div class="field-hint" id="ef-category-hint"></div>
           </div>
 
@@ -170,11 +172,11 @@
           <div class="field-group" style="margin-top:10px">
             <div class="field">
               <label>Harga (Rp) <span style="color:var(--red)">*</span></label>
-              <input id="ef-price" type="number" min="0" placeholder="15000" oninput="window._shopMarkDirty()">
+              <input id="ef-price" type="number" min="0" placeholder="15000">
             </div>
             <div class="field">
               <label>Harga Coret (Rp)</label>
-              <input id="ef-price-orig" type="number" min="0" placeholder="20000 (opsional)" oninput="window._shopMarkDirty()">
+              <input id="ef-price-orig" type="number" min="0" placeholder="20000 (opsional)">
             </div>
           </div>
 
@@ -182,11 +184,11 @@
           <div class="field-group" style="margin-top:10px">
             <div class="field">
               <label>Teks Badge</label>
-              <input id="ef-badge" placeholder="POPULER / NEW / SPECIAL / …" maxlength="20" oninput="window._shopMarkDirty()">
+              <input id="ef-badge" placeholder="POPULER / NEW / SPECIAL / …" maxlength="20">
             </div>
             <div class="field">
               <label>Warna Badge</label>
-              <select id="ef-badge-color" onchange="window._shopMarkDirty()">
+              <select id="ef-badge-color">
                 <option value="">Tidak ada</option>
                 <option value="gold">⭐ Gold</option>
                 <option value="green">🟢 Green</option>
@@ -196,25 +198,40 @@
             </div>
           </div>
 
+          <!-- Sort order -->
+          <div class="field" style="margin-top:10px">
+            <label>Urutan Tampil (sort_order)</label>
+            <input id="ef-sort-order" type="number" min="0" placeholder="0 = paling atas">
+          </div>
+
           <!-- Stok -->
           <div class="field" style="margin-top:10px">
             <label>Stok</label>
-            <select id="ef-stock" onchange="window._shopMarkDirty()">
+            <select id="ef-stock">
               <option value="Tersedia">✅ Tersedia</option>
               <option value="Habis">❌ Habis</option>
             </select>
           </div>
 
+          <!-- Aktif -->
+          <div class="toggle-row" style="margin-top:12px">
+            <div class="toggle-label">
+              <strong>Tampilkan di web (active)</strong>
+              <span>Hilangkan centang untuk sembunyikan item tanpa hapus</span>
+            </div>
+            <div class="toggle on" id="ef-active" onclick="this.classList.toggle('on')"></div>
+          </div>
+
           <!-- Deskripsi -->
           <div class="field" style="margin-top:10px">
             <label>Deskripsi</label>
-            <textarea id="ef-desc" rows="2" placeholder="Deskripsi singkat item…" oninput="window._shopMarkDirty()"></textarea>
+            <textarea id="ef-desc" rows="2" placeholder="Deskripsi singkat item…"></textarea>
           </div>
 
           <!-- Fitur (features) -->
           <div class="field" style="margin-top:10px">
             <label>Fitur <span style="color:var(--text-faint);font-size:11px">(pisahkan dengan Enter)</span></label>
-            <textarea id="ef-features" rows="3" placeholder="Bebas pilih warna &amp; style&#10;Berlaku permanen selama season" oninput="window._shopMarkDirty()"></textarea>
+            <textarea id="ef-features" rows="3" placeholder="Bebas pilih warna &amp; style&#10;Berlaku permanen selama season"></textarea>
           </div>
 
           <!-- Toggle baris -->
@@ -224,34 +241,34 @@
                 <strong>Perlu Desain (requiresDesign)</strong>
                 <span>Pembeli harus siapkan file desain sebelum order</span>
               </div>
-              <div class="toggle" id="ef-requires-design" onclick="this.classList.toggle('on');window._shopMarkDirty()"></div>
+              <div class="toggle" id="ef-requires-design" onclick="this.classList.toggle('on')"></div>
             </div>
             <div class="toggle-row">
               <div class="toggle-label">
                 <strong>Minta Username Minecraft</strong>
                 <span>Form pesanan akan menampilkan field username</span>
               </div>
-              <div class="toggle on" id="ef-needs-username" onclick="this.classList.toggle('on');window._shopMarkDirty()"></div>
+              <div class="toggle on" id="ef-needs-username" onclick="this.classList.toggle('on')"></div>
             </div>
             <div class="toggle-row">
               <div class="toggle-label">
                 <strong>Bisa Beli Banyak (qty)</strong>
                 <span>Pembeli bisa pilih jumlah yang dibeli</span>
               </div>
-              <div class="toggle on" id="ef-can-multi" onclick="this.classList.toggle('on');window._shopMarkDirty();window._shopToggleMaxQty()"></div>
+              <div class="toggle on" id="ef-can-multi" onclick="this.classList.toggle('on');window._shopToggleMaxQty()"></div>
             </div>
           </div>
 
-          <!-- Max qty (tampil hanya bila canBuyMultiple) -->
+          <!-- Max qty -->
           <div class="field" style="margin-top:10px" id="ef-max-qty-wrap">
             <label>Maks. Qty per Pesanan</label>
-            <input id="ef-max-qty" type="number" min="1" placeholder="99" oninput="window._shopMarkDirty()">
+            <input id="ef-max-qty" type="number" min="1" placeholder="99">
           </div>
 
         </div>
         <div class="scfg-modal-footer">
           <button class="btn-ghost" onclick="window._shopCloseForm()">Batal</button>
-          <button class="save-btn" id="ef-save-btn" onclick="window._shopApplyItem()">Terapkan</button>
+          <button class="save-btn" id="ef-save-btn" onclick="window._shopApplyItem()">Simpan Item</button>
         </div>
       </div>
     `;
@@ -286,6 +303,7 @@
         margin-bottom:8px; transition:border-color .15s;
       }
       .scfg-item-row:hover { border-color:var(--border3); }
+      .scfg-item-row.inactive { opacity:.45; }
       .scfg-item-emoji { font-size:1.5rem; flex-shrink:0; width:32px; text-align:center; }
       .scfg-item-info { flex:1; min-width:0; }
       .scfg-item-name { font-size:13.5px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -336,7 +354,7 @@
         display:flex; gap:8px; justify-content:flex-end;
         padding:12px 16px; border-top:1px solid var(--border); flex-shrink:0;
       }
-      #shop-save-all-btn.dirty {
+      #shop-save-meta-btn.dirty {
         opacity:1 !important; cursor:pointer !important;
         background:var(--accent) !important; animation:savePulse 1.5s ease-in-out infinite;
       }
@@ -353,81 +371,69 @@
      GLOBALS
   ════════════════════════════════════════════ */
   function registerGlobals() {
-    window._shopTab         = switchTab;
-    window._shopItemSearch  = filterItems;
-    window._shopNewItem     = newItem;
-    window._shopEditItem    = editItem;
-    window._shopDeleteItem  = deleteItem;
-    window._shopMoveItem    = moveItem;
-    window._shopCloseForm   = closeForm;
-    window._shopApplyItem   = applyItem;
-    window._shopSaveAll     = saveAll;
-    window._shopMarkDirty   = markDirty;
-    window._shopToggleMaxQty= toggleMaxQty;
-    window._shopAddAdmin    = addAdminRow;
-    window._shopRemoveAdmin = removeAdminRow;
+    window._shopTab          = switchTab;
+    window._shopItemSearch   = filterItems;
+    window._shopNewItem      = newItem;
+    window._shopEditItem     = editItem;
+    window._shopDeleteItem   = deleteItem;
+    window._shopMoveItem     = moveItem;
+    window._shopCloseForm    = closeForm;
+    window._shopApplyItem    = applyItem;
+    window._shopSaveMeta     = saveMeta;
+    window._shopMetaDirty    = markMetaDirty;
+    window._shopToggleMaxQty = toggleMaxQty;
+    window._shopAddAdmin     = addAdminRow;
+    window._shopRemoveAdmin  = removeAdminRow;
+    window._shopAdminChange  = adminChange;
   }
 
   /* ════════════════════════════════════════════
-     LOAD CONFIG
+     LOAD DATA — dari shop_items + shop_config
   ════════════════════════════════════════════ */
-  async function loadConfig() {
-    document.getElementById('shop-loading').style.display = 'block';
+  async function loadData() {
+    const loadEl = document.getElementById('shop-loading');
+    loadEl.style.display = 'block';
+    loadEl.textContent   = 'Memuat konfigurasi…';
     document.getElementById('shop-tab-items').style.display   = 'none';
     document.getElementById('shop-tab-general').style.display = 'none';
 
     const sb = getSb();
-    let loaded = false;
-
-    if (sb) {
-      const { data, error } = await sb
-        .from('shop_config')
-        .select('value')
-        .eq('key', 'main')
-        .single();
-      if (!error && data?.value) {
-        try { cfg = JSON.parse(data.value); loaded = true; } catch(e) {}
-      }
-    }
-
-    if (!loaded) {
-      const staticCfg = getStaticConfig();
-      if (staticCfg) { cfg = staticCfg; loaded = true; }
-    }
-
-    if (!loaded) {
-      document.getElementById('shop-loading').textContent = '⚠️ Gagal memuat konfigurasi.';
+    if (!sb) {
+      loadEl.textContent = '⚠️ Supabase belum siap.';
       return;
     }
 
-    /* pastikan semua field ada */
-    if (!cfg.items)      cfg.items      = [];
-    if (!cfg.admins)     cfg.admins     = [];
-    if (!cfg.gemAdmins)  cfg.gemAdmins  = [];
-    /* FIX: rebuild categories dari items agar selalu lengkap */
-    rebuildCategories();
-    /* FIX: fallback title/subtitle dari SHOP_CONFIG statis jika kosong */
-    if (!cfg.title) {
-      const sc = getStaticConfig();
-      if (sc) { cfg.title = sc.title || ''; cfg.subtitle = sc.subtitle || ''; }
+    /* Fetch shop_items */
+    const { data: itemRows, error: itemErr } = await sb
+      .from('shop_items')
+      .select('*')
+      .order('sort_order', { ascending: true });
+
+    if (itemErr) {
+      loadEl.textContent = '⚠️ Gagal memuat item: ' + itemErr.message;
+      return;
     }
+    items = itemRows || [];
 
-    dirty = false;
-    updateSaveBtn();
-    document.getElementById('shop-loading').style.display = 'none';
+    /* Fetch shop_config (meta: title, subtitle, admins WA) */
+    const { data: cfgRow } = await sb
+      .from('shop_config')
+      .select('value')
+      .eq('key', 'main')
+      .single();
+
+    try { shopMeta = cfgRow?.value ? JSON.parse(cfgRow.value) : {}; } catch(e) { shopMeta = {}; }
+    if (!shopMeta.admins)    shopMeta.admins    = [];
+    if (!shopMeta.gemAdmins) shopMeta.gemAdmins = [];
+    if (!shopMeta.title)     shopMeta.title     = 'Laughtale Store';
+    if (!shopMeta.subtitle)  shopMeta.subtitle  = '';
+
+    dirty     = false;
+    dirtyMeta = false;
+    updateMetaBtn();
+
+    loadEl.style.display = 'none';
     switchTab('items', document.querySelector('.scfg-tab[data-tab="items"]'));
-  }
-
-  /* ════════════════════════════════════════════
-     REBUILD CATEGORIES dari semua item
-  ════════════════════════════════════════════ */
-  function rebuildCategories() {
-    /* Ambil urutan kategori lama agar tidak acak */
-    const existing = cfg.categories || [];
-    const fromItems = [...new Set(cfg.items.map(i => i.category).filter(Boolean))];
-    /* Gabungkan: kategori lama yang masih dipakai + kategori baru dari item */
-    const merged = [...new Set([...existing.filter(c => c !== 'Semua'), ...fromItems])];
-    cfg.categories = ['Semua', ...merged];
   }
 
   /* ════════════════════════════════════════════
@@ -454,36 +460,44 @@
 
   function renderItemList() {
     const el = document.getElementById('shop-item-list');
-    if (!el || !cfg) return;
+    if (!el) return;
 
-    let items = cfg.items;
+    let list = items;
     if (itemSearch.trim()) {
       const q = itemSearch.toLowerCase();
-      items = items.filter(i =>
+      list = list.filter(i =>
         (i.name||'').toLowerCase().includes(q) ||
         (i.category||'').toLowerCase().includes(q)
       );
     }
 
-    if (!items.length) {
+    if (!list.length) {
       el.innerHTML = '<div class="empty-state">Tidak ada item ditemukan.</div>';
       return;
     }
 
-    el.innerHTML = items.map((item) => {
-      const realIdx = cfg.items.indexOf(item);
+    /* update hint kategori di form */
+    const cats = [...new Set(items.map(i => i.category).filter(Boolean))];
+    const hint = document.getElementById('ef-category-hint');
+    if (hint) hint.textContent = cats.length ? 'Kategori yang ada: ' + cats.join(', ') : '';
+
+    el.innerHTML = list.map((item) => {
       const priceStr = 'Rp ' + Number(item.price||0).toLocaleString('id-ID');
-      const origStr  = item.originalPrice ? ' <span style="text-decoration:line-through;opacity:.5">Rp ' + Number(item.originalPrice).toLocaleString('id-ID') + '</span>' : '';
-      const badgeCls = item.badgeColor ? `scfg-badge-${item.badgeColor}` : 'scfg-badge-empty';
+      const origStr  = item.original_price
+        ? ' <span style="text-decoration:line-through;opacity:.5">Rp ' + Number(item.original_price).toLocaleString('id-ID') + '</span>'
+        : '';
+      const badgeCls = item.badge_color ? `scfg-badge-${item.badge_color}` : 'scfg-badge-empty';
       const badgeHtml = item.badge
         ? `<span class="scfg-badge-preview ${badgeCls}">${esc(item.badge)}</span>`
         : `<span class="scfg-badge-preview scfg-badge-empty" style="opacity:.4">no badge</span>`;
       const stockHtml = item.stock === 'Habis'
         ? `<span class="scfg-stock-out">❌ Habis</span>`
         : `<span class="scfg-stock-ok">✅ Tersedia</span>`;
+      const activeTag = item.active === false
+        ? `<span style="color:var(--text-faint)">👁 Tersembunyi</span>` : '';
 
       return `
-        <div class="scfg-item-row" id="srow-${realIdx}">
+        <div class="scfg-item-row${item.active === false ? ' inactive' : ''}" id="srow-${item.id}">
           <div class="scfg-item-emoji">${esc(item.emoji||'🛒')}</div>
           <div class="scfg-item-info">
             <div class="scfg-item-name">${esc(item.name||'(tanpa nama)')}</div>
@@ -492,13 +506,12 @@
               <span><strong>${priceStr}</strong>${origStr}</span>
               ${stockHtml}
               ${badgeHtml}
+              ${activeTag}
             </div>
           </div>
           <div class="scfg-item-actions">
-            <button class="btn-edit" onclick="window._shopMoveItem(${realIdx},-1)" title="Naik" ${realIdx===0?'disabled':''}>↑</button>
-            <button class="btn-edit" onclick="window._shopMoveItem(${realIdx},1)" title="Turun" ${realIdx===cfg.items.length-1?'disabled':''}>↓</button>
-            <button class="btn-edit" onclick="window._shopEditItem(${realIdx})">✏️ Edit</button>
-            <button class="btn-del"  onclick="window._shopDeleteItem(${realIdx})" title="Hapus">🗑</button>
+            <button class="btn-edit" onclick="window._shopEditItem(${item.id})">✏️ Edit</button>
+            <button class="btn-del"  onclick="window._shopDeleteItem(${item.id})" title="Hapus">🗑</button>
           </div>
         </div>`;
     }).join('');
@@ -508,220 +521,252 @@
      GENERAL TAB
   ════════════════════════════════════════════ */
   function renderGeneral() {
-    if (!cfg) return;
-    document.getElementById('g-title').value    = cfg.title    || '';
-    document.getElementById('g-subtitle').value = cfg.subtitle || '';
+    document.getElementById('g-title').value    = shopMeta.title    || '';
+    document.getElementById('g-subtitle').value = shopMeta.subtitle || '';
     renderAdminList('main');
     renderAdminList('gem');
-
-    const cats = [...new Set(cfg.items.map(i => i.category).filter(Boolean))];
-    const hint = document.getElementById('ef-category-hint');
-    if (hint) hint.textContent = cats.length ? 'Kategori yang ada: ' + cats.join(', ') : '';
   }
 
   function renderAdminList(type) {
-    const listId  = type === 'main' ? 'g-admins-list' : 'g-gem-admins-list';
-    const arrKey  = type === 'main' ? 'admins' : 'gemAdmins';
+    const listId = type === 'main' ? 'g-admins-list' : 'g-gem-admins-list';
+    const arrKey = type === 'main' ? 'admins' : 'gemAdmins';
     const el = document.getElementById(listId);
     if (!el) return;
-    const arr = cfg[arrKey] || [];
+    const arr = shopMeta[arrKey] || [];
     el.innerHTML = arr.map((a, i) => `
-      <div class="scfg-admin-row" id="adm-${type}-${i}">
+      <div class="scfg-admin-row">
         <input placeholder="Nama admin" value="${esc(a.name||'')}"
           oninput="window._shopAdminChange('${type}',${i},'name',this.value)">
         <input placeholder="Nomor WA (628…)" value="${esc(a.number||'')}"
           oninput="window._shopAdminChange('${type}',${i},'number',this.value)"
           style="flex:1.5">
         <button class="btn-del" onclick="window._shopRemoveAdmin('${type}',${i})" title="Hapus">🗑</button>
-      </div>`).join('') || '<div style="color:var(--text-faint);font-size:12px;padding:4px 0">Belum ada admin.</div>';
+      </div>`).join('')
+      || '<div style="color:var(--text-faint);font-size:12px;padding:4px 0">Belum ada admin.</div>';
   }
 
-  window._shopAdminChange = function(type, idx, field, val) {
+  function adminChange(type, idx, field, val) {
     const arrKey = type === 'main' ? 'admins' : 'gemAdmins';
-    cfg[arrKey][idx][field] = val;
-    markDirty();
-  };
+    shopMeta[arrKey][idx][field] = val;
+    markMetaDirty();
+  }
 
   function addAdminRow(type) {
     const arrKey = type === 'main' ? 'admins' : 'gemAdmins';
-    cfg[arrKey].push({ name: '', number: '' });
-    markDirty();
+    shopMeta[arrKey].push({ name: '', number: '' });
+    markMetaDirty();
     renderAdminList(type);
   }
 
   function removeAdminRow(type, idx) {
     const arrKey = type === 'main' ? 'admins' : 'gemAdmins';
-    cfg[arrKey].splice(idx, 1);
-    markDirty();
+    shopMeta[arrKey].splice(idx, 1);
+    markMetaDirty();
     renderAdminList(type);
   }
 
   /* ════════════════════════════════════════════
-     ITEM FORM
+     ITEM FORM — TAMBAH / EDIT
   ════════════════════════════════════════════ */
   function newItem() {
-    editingIdx = null;
+    editingId = null;
     document.getElementById('scfg-modal-title').textContent = 'Tambah Item Baru';
     clearForm();
     openModal();
   }
 
-  function editItem(idx) {
-    editingIdx = idx;
-    const item = cfg.items[idx];
+  function editItem(id) {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    editingId = id;
     document.getElementById('scfg-modal-title').textContent = 'Edit Item';
-    document.getElementById('ef-name').value        = item.name          || '';
-    document.getElementById('ef-emoji').value       = item.emoji         || '';
-    document.getElementById('ef-category').value    = item.category      || '';
-    document.getElementById('ef-price').value       = item.price         ?? '';
-    document.getElementById('ef-price-orig').value  = item.originalPrice || '';
-    document.getElementById('ef-badge').value       = item.badge         || '';
-    document.getElementById('ef-badge-color').value = item.badgeColor    || '';
-    document.getElementById('ef-stock').value       = item.stock         || 'Tersedia';
-    document.getElementById('ef-desc').value        = item.description   || '';
-    document.getElementById('ef-features').value    = (item.features||[]).join('\n');
-    setToggle('ef-requires-design', !!item.requiresDesign);
-    setToggle('ef-needs-username',  item.needsUsername !== false);
-    setToggle('ef-can-multi',       item.canBuyMultiple !== false);
-    document.getElementById('ef-max-qty').value     = item.maxQuantity   || '';
+    document.getElementById('ef-name').value         = item.name           || '';
+    document.getElementById('ef-emoji').value        = item.emoji          || '';
+    document.getElementById('ef-category').value     = item.category       || '';
+    document.getElementById('ef-price').value        = item.price          ?? '';
+    document.getElementById('ef-price-orig').value   = item.original_price || '';
+    document.getElementById('ef-badge').value        = item.badge          || '';
+    document.getElementById('ef-badge-color').value  = item.badge_color    || '';
+    document.getElementById('ef-sort-order').value   = item.sort_order     ?? '';
+    document.getElementById('ef-stock').value        = item.stock          || 'Tersedia';
+    document.getElementById('ef-desc').value         = item.description    || '';
+    document.getElementById('ef-features').value     = (item.features||[]).join('\n');
+    setToggle('ef-active',          item.active !== false);
+    setToggle('ef-requires-design', !!item.requires_design);
+    setToggle('ef-needs-username',  item.needs_username !== false);
+    setToggle('ef-can-multi',       item.can_buy_multiple !== false);
+    document.getElementById('ef-max-qty').value      = item.max_quantity   || '';
     toggleMaxQty();
     openModal();
   }
 
   function clearForm() {
     ['ef-name','ef-emoji','ef-category','ef-price','ef-price-orig',
-     'ef-badge','ef-desc','ef-features','ef-max-qty'].forEach(id => {
+     'ef-badge','ef-sort-order','ef-desc','ef-features','ef-max-qty'].forEach(id => {
       document.getElementById(id).value = '';
     });
     document.getElementById('ef-badge-color').value = '';
     document.getElementById('ef-stock').value = 'Tersedia';
+    setToggle('ef-active',          true);
     setToggle('ef-requires-design', false);
     setToggle('ef-needs-username',  true);
     setToggle('ef-can-multi',       true);
     toggleMaxQty();
   }
 
-  function applyItem() {
+  /* ── Simpan satu item ke Supabase (upsert) ── */
+  async function applyItem() {
     const name  = document.getElementById('ef-name').value.trim();
     const price = document.getElementById('ef-price').value.trim();
-    if (!name)  { toast('Nama item wajib diisi.', 'error'); return; }
-    if (price === '') { toast('Harga wajib diisi.', 'error'); return; }
+    if (!name)       { toast('Nama item wajib diisi.', 'error'); return; }
+    if (price === '') { toast('Harga wajib diisi.',    'error'); return; }
+
+    const sb = getSb();
+    if (!sb) { toast('Supabase belum siap.', 'error'); return; }
 
     const canMulti = document.getElementById('ef-can-multi').classList.contains('on');
 
-    const item = {
-      id:             editingIdx !== null ? cfg.items[editingIdx].id : (Math.max(0, ...cfg.items.map(i=>i.id||0)) + 1),
+    /* Tentukan id: edit = id lama, tambah baru = max(id)+1 */
+    const newId = editingId !== null
+      ? editingId
+      : (items.length ? Math.max(...items.map(i => i.id || 0)) + 1 : 1);
+
+    const row = {
+      id:              newId,
       name,
-      emoji:          document.getElementById('ef-emoji').value.trim() || '🛒',
-      category:       document.getElementById('ef-category').value.trim() || 'Lainnya',
-      price:          Number(price),
-      originalPrice:  Number(document.getElementById('ef-price-orig').value) || 0,
-      badge:          document.getElementById('ef-badge').value.trim(),
-      badgeColor:     document.getElementById('ef-badge-color').value,
-      stock:          document.getElementById('ef-stock').value,
-      description:    document.getElementById('ef-desc').value.trim(),
-      features:       document.getElementById('ef-features').value.split('\n').map(s=>s.trim()).filter(Boolean),
-      requiresDesign: document.getElementById('ef-requires-design').classList.contains('on'),
-      needsUsername:  document.getElementById('ef-needs-username').classList.contains('on'),
-      canBuyMultiple: canMulti,
-      maxQuantity:    canMulti ? (Number(document.getElementById('ef-max-qty').value) || 99) : 1,
-      images:         editingIdx !== null ? (cfg.items[editingIdx].images || []) : [],
+      emoji:           document.getElementById('ef-emoji').value.trim()       || '🛒',
+      category:        document.getElementById('ef-category').value.trim()    || 'Lainnya',
+      price:           Number(price),
+      original_price:  Number(document.getElementById('ef-price-orig').value) || 0,
+      badge:           document.getElementById('ef-badge').value.trim(),
+      badge_color:     document.getElementById('ef-badge-color').value,
+      sort_order:      Number(document.getElementById('ef-sort-order').value) || 0,
+      stock:           document.getElementById('ef-stock').value,
+      active:          document.getElementById('ef-active').classList.contains('on'),
+      description:     document.getElementById('ef-desc').value.trim(),
+      features:        document.getElementById('ef-features').value
+                         .split('\n').map(s => s.trim()).filter(Boolean),
+      requires_design: document.getElementById('ef-requires-design').classList.contains('on'),
+      needs_username:  document.getElementById('ef-needs-username').classList.contains('on'),
+      can_buy_multiple:canMulti,
+      max_quantity:    canMulti ? (Number(document.getElementById('ef-max-qty').value) || 99) : 1,
+      images:          editingId !== null ? (items.find(i=>i.id===editingId)?.images || []) : [],
     };
 
-    if (editingIdx !== null) {
-      cfg.items[editingIdx] = item;
+    const saveBtn = document.getElementById('ef-save-btn');
+    saveBtn.disabled    = true;
+    saveBtn.textContent = 'Menyimpan…';
+
+    const { error } = await sb.from('shop_items').upsert(row, { onConflict: 'id' });
+
+    saveBtn.disabled    = false;
+    saveBtn.textContent = 'Simpan Item';
+
+    if (error) { toast('Gagal: ' + error.message, 'error'); return; }
+
+    /* Update local state */
+    if (editingId !== null) {
+      const idx = items.findIndex(i => i.id === editingId);
+      if (idx !== -1) items[idx] = row;
     } else {
-      cfg.items.push(item);
+      items.push(row);
     }
+    /* Re-sort by sort_order */
+    items.sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
 
-    /* FIX: selalu rebuild categories dari semua item setelah tambah/edit */
-    rebuildCategories();
-
-    markDirty();
     closeForm();
     renderItemList();
-    toast(editingIdx !== null ? 'Item diperbarui.' : 'Item ditambahkan.');
+    toast(editingId !== null ? 'Item berhasil diperbarui ✅' : 'Item baru berhasil ditambahkan ✅');
   }
 
-  function deleteItem(idx) {
-    const item = cfg.items[idx];
+  /* ── Hapus item dari Supabase ── */
+  async function deleteItem(id) {
+    const item = items.find(i => i.id === id);
     if (!confirm(`Hapus item "${item?.name}"?\nTindakan ini tidak bisa dibatalkan.`)) return;
-    cfg.items.splice(idx, 1);
-    /* FIX: rebuild categories setelah hapus item */
-    rebuildCategories();
-    markDirty();
+    const sb = getSb();
+    if (!sb) { toast('Supabase belum siap.', 'error'); return; }
+    const { error } = await sb.from('shop_items').delete().eq('id', id);
+    if (error) { toast('Gagal hapus: ' + error.message, 'error'); return; }
+    items = items.filter(i => i.id !== id);
     renderItemList();
     toast('Item dihapus.');
   }
 
-  function moveItem(idx, dir) {
+  /* ── Pindah urutan sort_order ── */
+  async function moveItem(id, dir) {
+    const idx    = items.findIndex(i => i.id === id);
     const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= cfg.items.length) return;
-    [cfg.items[idx], cfg.items[newIdx]] = [cfg.items[newIdx], cfg.items[idx]];
-    markDirty();
+    if (newIdx < 0 || newIdx >= items.length) return;
+    const sb = getSb();
+    if (!sb) return;
+
+    /* Tukar sort_order dua item */
+    const a = items[idx];
+    const b = items[newIdx];
+    const tmpSort = a.sort_order;
+    a.sort_order = b.sort_order;
+    b.sort_order = tmpSort;
+
+    /* Upsert keduanya */
+    await sb.from('shop_items').upsert([
+      { id: a.id, sort_order: a.sort_order },
+      { id: b.id, sort_order: b.sort_order },
+    ], { onConflict: 'id' });
+
+    /* Tukar posisi di array lokal */
+    [items[idx], items[newIdx]] = [items[newIdx], items[idx]];
     renderItemList();
   }
 
   /* ════════════════════════════════════════════
-     SAVE ALL → SUPABASE
+     SIMPAN META (title, subtitle, admins WA)
+     → shop_config key='main'
   ════════════════════════════════════════════ */
-  async function saveAll() {
-    if (!dirty) return;
+  async function saveMeta() {
+    if (!dirtyMeta) return;
+    const sb = getSb();
+    if (!sb) { toast('Supabase belum siap.', 'error'); return; }
 
-    /* FIX: kumpulkan title & subtitle dari DOM terlebih dulu */
+    /* Baca dari DOM sebelum simpan */
     const gTitle    = document.getElementById('g-title');
     const gSubtitle = document.getElementById('g-subtitle');
-    if (gTitle)    cfg.title    = gTitle.value.trim();
-    if (gSubtitle) cfg.subtitle = gSubtitle.value.trim();
+    if (gTitle)    shopMeta.title    = gTitle.value.trim()    || shopMeta.title;
+    if (gSubtitle) shopMeta.subtitle = gSubtitle.value.trim() || '';
 
-    /* FIX: fallback title dari SHOP_CONFIG statis jika masih kosong */
-    if (!cfg.title) {
-      const sc = getStaticConfig();
-      if (sc) { cfg.title = sc.title || 'Toko'; cfg.subtitle = cfg.subtitle || sc.subtitle || ''; }
-    }
-
-    /* FIX: pastikan categories selalu lengkap sebelum simpan */
-    rebuildCategories();
-
-    const btn = document.getElementById('shop-save-all-btn');
-    btn.disabled = true;
+    const btn = document.getElementById('shop-save-meta-btn');
+    btn.disabled    = true;
     btn.textContent = 'Menyimpan…';
-
-    const sb = getSb();
-    if (!sb) {
-      toast('Supabase belum siap.', 'error');
-      btn.disabled = false; btn.innerHTML = saveBtnInner(); return;
-    }
 
     const { error } = await sb.from('shop_config').upsert({
       key:        'main',
-      value:      JSON.stringify(cfg),
+      value:      JSON.stringify(shopMeta),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'key' });
 
-    btn.disabled = false; btn.innerHTML = saveBtnInner();
+    btn.disabled = false;
+    btn.innerHTML = metaBtnInner();
 
-    if (error) { toast('Gagal menyimpan: ' + error.message, 'error'); markDirty(); return; }
+    if (error) { toast('Gagal: ' + error.message, 'error'); markMetaDirty(); return; }
 
-    dirty = false;
+    dirtyMeta = false;
     btn.classList.remove('dirty');
     btn.disabled = true;
-    toast('Konfigurasi shop berhasil disimpan! ✅');
+    toast('Pengaturan shop berhasil disimpan ✅');
   }
 
-  function saveBtnInner() {
-    return `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Simpan Semua`;
+  function metaBtnInner() {
+    return `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Simpan Pengaturan`;
   }
 
-  function markDirty() {
-    dirty = true;
-    updateSaveBtn();
+  function markMetaDirty() {
+    dirtyMeta = true;
+    updateMetaBtn();
   }
 
-  function updateSaveBtn() {
-    const btn = document.getElementById('shop-save-all-btn');
+  function updateMetaBtn() {
+    const btn = document.getElementById('shop-save-meta-btn');
     if (!btn) return;
-    if (dirty) {
+    if (dirtyMeta) {
       btn.disabled = false;
       btn.style.opacity = '1';
       btn.style.cursor  = 'pointer';
@@ -746,7 +791,7 @@
   function closeForm() {
     document.getElementById('scfg-backdrop').classList.remove('open');
     document.getElementById('scfg-modal').classList.remove('open');
-    editingIdx = null;
+    editingId = null;
   }
 
   function toggleMaxQty() {
