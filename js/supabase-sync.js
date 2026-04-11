@@ -42,7 +42,7 @@
     window.SERVER_CONFIG  = sc;
     window.SERVERCONFIG   = sc;
 
-    // ── 2. Terapkan ke DOM ────────────────────────────────
+    // ── 2. Terapkan ke DOM ───────────────────────────────
     applyServerConfig(cfg, sc);
 
     // ── 3. Maintenance mode ───────────────────────────────
@@ -79,6 +79,7 @@
         const shopCfg = JSON.parse(shopCfgRow.value);
         const mapped  = shopCfg.items || [];
 
+        // Update SHOP_CONFIG global dengan data terbaru dari admin
         if (window.SHOP_CONFIG) {
           window.SHOP_CONFIG.items      = mapped;
           window.SHOP_CONFIG.admins     = shopCfg.admins     || window.SHOP_CONFIG.admins;
@@ -88,7 +89,6 @@
           window.SHOP_CONFIG.subtitle   = shopCfg.subtitle   || window.SHOP_CONFIG.subtitle;
         }
 
-        // Simpan ke window agar shop.js bisa re-render
         window._shopItemsFromSupabase = mapped;
 
         // Sync WA dari shop_config jika tidak ada di site_config
@@ -101,31 +101,35 @@
           }
         }
 
-        // Update harga langsung di DOM kartu shop
-        mapped.forEach(item => {
-          const btn = document.querySelector(`.shop-btn-buy[onclick="shopOpenModal(${item.id})"]`);
-          if (btn) {
-            const card = btn.closest('.shop-card');
-            if (card) {
-              const priceEl = card.querySelector('.shop-card-price');
-              if (priceEl) {
-                const p   = item.price || 0;
-                const fmt = p === 0
-                  ? '<span style="color:#17dd62">GRATIS</span>'
-                  : 'Rp ' + p.toLocaleString('id-ID');
-                const op = item.originalPrice || 0;
-                const origHtml = op > 0
-                  ? `<span class="shop-price-orig">Rp ${op.toLocaleString('id-ID')}</span>`
-                  : '';
-                priceEl.innerHTML = fmt + origHtml;
-              }
-            }
+        // ★ Re-render kartu shop di DOM dengan data terbaru ★
+        // shop.js sudah render duluan pakai SHOP_CONFIG statis.
+        // Kita perlu render ulang agar harga & stok dari admin muncul.
+        reRenderShopCards(mapped);
+
+        // Update judul & subtitle toko jika berubah
+        if (shopCfg.title) {
+          const titleEl = document.getElementById('shop-section-title');
+          if (titleEl) titleEl.textContent = shopCfg.title;
+        }
+        if (shopCfg.subtitle) {
+          const subEl = document.getElementById('shop-section-subtitle');
+          if (subEl) subEl.textContent = shopCfg.subtitle;
+        }
+
+        // Update tab filter kategori
+        if (shopCfg.categories && shopCfg.categories.length) {
+          const tabsEl = document.getElementById('shop-tabs');
+          if (tabsEl) {
+            const activeCat = tabsEl.querySelector('.shop-tab.active')?.dataset.cat || 'Semua';
+            tabsEl.innerHTML = shopCfg.categories.map((c, i) =>
+              `<button class="shop-tab${c === activeCat ? ' active' : ''}" data-cat="${c}">${c}</button>`
+            ).join('');
           }
-        });
+        }
 
         console.log('[supabase-sync] Shop config berhasil disync dari shop_config.');
       } else {
-        console.warn('[supabase-sync] shop_config kosong atau belum ada data dari admin panel.');
+        console.warn('[supabase-sync] shop_config kosong — belum ada data dari admin panel, atau belum pernah simpan.');
       }
     } catch (e) {
       console.warn('[supabase-sync] Gagal baca shop_config:', e);
@@ -135,6 +139,90 @@
 
   } catch (e) {
     console.warn('[supabase-sync] Error tidak terduga:', e);
+  }
+
+
+  /* ══════════════════════════════════════════════════════
+     Re-render kartu shop dengan data dari Supabase
+     Dipanggil setelah shop_config berhasil difetch
+     ══════════════════════════════════════════════════════ */
+  function reRenderShopCards(items) {
+    const gridEl = document.getElementById('shop-grid');
+    if (!gridEl || !items || !items.length) return;
+
+    // Ambil tab aktif saat ini
+    const tabsEl    = document.getElementById('shop-tabs');
+    const activeCat = tabsEl?.querySelector('.shop-tab.active')?.dataset.cat || 'Semua';
+
+    // Re-render semua kartu
+    // buildCard ada di shop.js (window scope tidak tersedia), jadi kita
+    // update harga langsung di kartu yang sudah ada di DOM
+    items.forEach(item => {
+      const btn = gridEl.querySelector(`.shop-btn-buy[onclick="shopOpenModal(${item.id})"], .shop-btn-sold`);
+      // Cari kartu berdasarkan tombol Pesan atau Habis
+      const allBtns = gridEl.querySelectorAll('.shop-btn-buy, .shop-btn-sold');
+      allBtns.forEach(b => {
+        const onclickAttr = b.getAttribute('onclick') || '';
+        if (onclickAttr.includes(`shopOpenModal(${item.id})`)) {
+          const card = b.closest('.shop-card');
+          if (!card) return;
+
+          // Update harga
+          const priceEl = card.querySelector('.shop-card-price');
+          if (priceEl) {
+            const p   = item.price || 0;
+            const fmt = p === 0
+              ? '<span style="color:#17dd62">GRATIS</span>'
+              : 'Rp\u00a0' + p.toLocaleString('id-ID');
+            const op = item.originalPrice || 0;
+            const origHtml = (op > 0 && op > p)
+              ? `<span class="shop-price-orig">Rp\u00a0${op.toLocaleString('id-ID')}</span>`
+              : '';
+            priceEl.innerHTML = fmt + origHtml;
+          }
+
+          // Update stok (ganti tombol jika perlu)
+          const footer = card.querySelector('.shop-card-footer');
+          if (footer) {
+            const existingBtn = footer.querySelector('.shop-btn');
+            if (existingBtn) {
+              if (item.stock === 'Habis') {
+                existingBtn.className = 'shop-btn shop-btn-sold';
+                existingBtn.disabled  = true;
+                existingBtn.textContent = 'HABIS';
+                existingBtn.removeAttribute('onclick');
+                card.classList.add('shop-sold-out');
+              } else {
+                existingBtn.className   = 'shop-btn shop-btn-buy';
+                existingBtn.disabled    = false;
+                existingBtn.textContent = 'Pesan';
+                existingBtn.setAttribute('onclick', `shopOpenModal(${item.id})`);
+                card.classList.remove('shop-sold-out');
+              }
+            }
+          }
+
+          // Update badge
+          const existingBadge = card.querySelector('.shop-badge');
+          if (existingBadge) {
+            if (item.badge) {
+              existingBadge.textContent = item.badge;
+            } else {
+              existingBadge.remove();
+            }
+          }
+
+          // Terapkan filter kategori aktif
+          if (activeCat !== 'Semua' && card.dataset.category !== activeCat) {
+            card.style.display = 'none';
+          } else {
+            card.style.display = '';
+          }
+        }
+      });
+    });
+
+    console.log('[supabase-sync] Kartu shop di-render ulang dengan data terbaru.');
   }
 
 
