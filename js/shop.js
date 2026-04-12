@@ -1769,12 +1769,6 @@ function renderShop() {
   });
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', renderShop);
-} else {
-  renderShop();
-}
-
 /* Re-render grid saat supabase-sync selesai fetch dari DB
    agar harga card & modal selalu sama (sumber: shop_items DB) */
 var _shopRendered = false;
