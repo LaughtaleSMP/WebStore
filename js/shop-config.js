@@ -1,7 +1,3 @@
-/* ══════════════════════════════════════════════════
-   shop.js — Laughtale SMP Store (Animated SVG Edition)
-   ⚠ Jangan edit file ini. Edit shop-config.js saja.
-══════════════════════════════════════════════════ */
 (function () {
 
 /* ── Inject CSS ── */
@@ -1509,7 +1505,6 @@ window.shopBuildCard = function buildCard(item) {
   return `<div class="shop-card${sold?' shop-sold-out':''}" data-category="${item.category}">
     ${badgeHtml(item,'position:absolute;top:12px;right:12px;z-index:2;')}
     ${animThumbHtml(item)}
-    <div class="shop-card-emoji">${item.emoji}</div>
     <div class="shop-card-name">${item.name}</div>
     <div class="shop-card-cat">${item.category}</div>
     <div class="shop-card-desc">${item.description}</div>
@@ -1589,7 +1584,6 @@ function buildModal(item) {
     <div class="shop-modal-box" onclick="event.stopPropagation()" data-price="${item.price}" data-itemid="${item.id}" data-canbuy="${!!item.canBuyMultiple}" data-max="${maxQty}" id="shop-order-form">
       <button class="shop-modal-close" onclick="shopCloseModal()">✕</button>
       <div style="text-align:center;margin-bottom:16px;">
-        <div class="shop-modal-emoji">${item.emoji}</div>
         ${badgeHtml(item,'margin-bottom:6px')}
         <div class="shop-modal-name">${item.name}</div>
         <div class="shop-card-cat" style="margin-top:4px">${item.category}</div>
