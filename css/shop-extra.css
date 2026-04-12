@@ -3,33 +3,32 @@
    Tambahkan di dalam <head> di index.html (setelah style.css)
 ════════════════════════════════════════════════════════════════ */
 
-/* ── Load Rajdhani — font compact khusus harga ── */
+/* ── Load Rajdhani — font compact khusus harga ──
+   Rajdhani: geometric, tegas, cocok untuk angka harga gaming UI.
+   Jauh lebih compact dari Press Start 2P tapi tetap berkarakter.
+   Sumber: Google Fonts (sudah include di bawah via @import)
+*/
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&display=swap');
 
-/* ── Harga kartu: fluid size — kecil di HP, normal di desktop ──
-   clamp(min, preferred, max)
-   - mobile 320px  → ~0.75rem (12px)
-   - tablet 600px  → ~0.88rem (14px)
-   - desktop 1024px → 1rem    (16px)
-*/
+/* ── Harga kartu: font Rajdhani, satu baris, rapat ── */
 .shop-card-price {
   display: flex !important;
   align-items: center !important;
-  gap: 4px !important;
+  gap: 6px !important;
   flex-wrap: nowrap !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   font-family: 'Rajdhani', sans-serif !important;
-  font-size: clamp(0.72rem, 1.8vw + 0.4rem, 1rem) !important;
+  font-size: 1rem !important;
   font-weight: 700 !important;
   letter-spacing: 0.01em !important;
   line-height: 1.2 !important;
 }
 
-/* Harga coret (merah) — selalu sedikit lebih kecil dari harga aktif */
+/* Harga coret (merah) */
 .shop-price-orig {
   font-family: 'Rajdhani', sans-serif !important;
-  font-size: clamp(0.65rem, 1.5vw + 0.35rem, 0.9rem) !important;
+  font-size: 0.9rem !important;
   font-weight: 600 !important;
   white-space: nowrap !important;
   flex-shrink: 0;

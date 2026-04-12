@@ -27,24 +27,6 @@
       const cfgRows = await cfgRes.json();
       const cfg = cfgRows[0] ? JSON.parse(cfgRows[0].value) : {};
 
-      /* Ambil template pesan WA dari shop_config key='wa_template' */
-      const tplRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/shop_config?key=eq.wa_template&select=value`,
-        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
-      );
-      let waTemplate = null;
-      let waGreeting = null;
-      if (tplRes.ok) {
-        const tplRows = await tplRes.json();
-        if (tplRows[0]?.value) {
-          try {
-            const parsed = JSON.parse(tplRows[0].value);
-            waTemplate = parsed.template || null;
-            waGreeting = parsed.greeting || null;
-          } catch { waTemplate = tplRows[0].value; }
-        }
-      }
-
       /* Susun ulang format agar cocok dengan yang diharapkan shop.js */
       const items = rows.map(r => ({
         id:             r.id,
@@ -71,13 +53,12 @@
 
       /* Override SHOP_CONFIG global dengan data live dari Supabase */
       window.SHOP_CONFIG = {
-        title:             cfg.title    || 'Laughtale Store',
-        subtitle:          cfg.subtitle || '',
-        categories:        cfg.categories || cats,
-        admins:            cfg.admins   || [],
-        gemAdmins:         cfg.gemAdmins || [],
-        whatsappGreeting:  waGreeting || cfg.whatsappGreeting || '',
-        waOrderTemplate:   waTemplate,
+        title:    cfg.title    || 'Laughtale Store',
+        subtitle: cfg.subtitle || '',
+        categories: cfg.categories || cats,
+        admins:   cfg.admins   || [],
+        gemAdmins: cfg.gemAdmins || [],
+        whatsappGreeting: cfg.whatsappGreeting || '',
         items,
       };
 
@@ -87,21 +68,9 @@
         gem:  cfg.gemAdmins || [],
       };
 
-      /* Expose template builder agar shop.js bisa pakai */
-      if (waTemplate) {
-        window._buildOrderMessage = function(item, qty, username, catatan) {
-          const harga = (Number(item.price || 0) * Number(qty || 1)).toLocaleString('id-ID');
-          return waTemplate
-            .replace(/\{item\}/g,     item.name     || '')
-            .replace(/\{qty\}/g,      qty           || '1')
-            .replace(/\{harga\}/g,    harga)
-            .replace(/\{username\}/g, username      || '-')
-            .replace(/\{catatan\}/g,  catatan       || '-')
-            .replace(/\{kategori\}/g, item.category || '');
-        };
-      }
-
       /* Trigger render ulang shop setelah data live dimuat */
+      /* Hanya dispatch event — biarkan supabase-sync.js yang handle re-render
+         agar tidak terjadi double render / race condition harga */
       document.dispatchEvent(new CustomEvent('shopDataReady'));
 
     } catch (err) {

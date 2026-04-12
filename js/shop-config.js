@@ -55,6 +55,7 @@ const CSS = `
   padding:3px 8px;border-radius:4px;width:fit-content;letter-spacing:0.06em;}
 
 /* ── Card text ── */
+.shop-card-emoji{font-size:1.6rem;line-height:1;margin:0;}
 .shop-card-name{font-family:'Press Start 2P',monospace;font-size:0.45rem;
   color:var(--s-text);line-height:1.5;}
 .shop-card-cat{font-size:0.72rem;color:var(--s-muted);font-weight:700;}
@@ -121,6 +122,7 @@ const CSS = `
   cursor:pointer;font-size:0.9rem;transition:all 0.15s;
   display:flex;align-items:center;justify-content:center;}
 .shop-modal-close:hover{color:var(--s-text);border-color:var(--s-red);}
+.shop-modal-emoji{font-size:3rem;line-height:1;margin-bottom:8px;}
 .shop-modal-name{font-family:'Press Start 2P',monospace;font-size:0.72rem;
   color:var(--s-text);line-height:1.5;margin-bottom:4px;}
 
@@ -1507,6 +1509,7 @@ window.shopBuildCard = function buildCard(item) {
   return `<div class="shop-card${sold?' shop-sold-out':''}" data-category="${item.category}">
     ${badgeHtml(item,'position:absolute;top:12px;right:12px;z-index:2;')}
     ${animThumbHtml(item)}
+    <div class="shop-card-emoji">${item.emoji}</div>
     <div class="shop-card-name">${item.name}</div>
     <div class="shop-card-cat">${item.category}</div>
     <div class="shop-card-desc">${item.description}</div>
@@ -1575,7 +1578,7 @@ function buildModal(item) {
     <div class="shop-modal-sec shop-total-sec" style="margin-top:14px;">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span class="shop-modal-label" style="margin:0">${canQty ? 'TOTAL' : 'HARGA'}</span>
-        <span id="modal-total" style="font-family:'Press Start 2P',monospace;font-size:0.82rem;color:var(--s-purple)">${fmtPlain(item.price)}</span>
+        <span id="modal-total" style="font-family:'Press Start 2P',monospace;font-size:0.82rem;color:var(--s-purple)">…</span>
       </div>
     </div>`;
 
@@ -1586,10 +1589,11 @@ function buildModal(item) {
     <div class="shop-modal-box" onclick="event.stopPropagation()" data-price="${item.price}" data-itemid="${item.id}" data-canbuy="${!!item.canBuyMultiple}" data-max="${maxQty}" id="shop-order-form">
       <button class="shop-modal-close" onclick="shopCloseModal()">✕</button>
       <div style="text-align:center;margin-bottom:16px;">
+        <div class="shop-modal-emoji">${item.emoji}</div>
         ${badgeHtml(item,'margin-bottom:6px')}
         <div class="shop-modal-name">${item.name}</div>
         <div class="shop-card-cat" style="margin-top:4px">${item.category}</div>
-        <div style="font-family:'Press Start 2P',monospace;font-size:0.7rem;color:var(--s-gold);margin-top:8px;">${fmtPlain(item.price)}</div>
+        <div style="font-family:'Press Start 2P',monospace;font-size:0.7rem;color:var(--s-gold);margin-top:8px;">${fmtPlain(item.price)}${origBadge}</div>
       </div>
       ${item.description ? `<div class="shop-modal-sec"><div class="shop-modal-text">${item.description}</div></div>` : ''}
       ${item.features && item.features.length ? `<div class="shop-modal-sec"><ul class="shop-feat-list" style="display:flex;">${item.features.map(f=>`<li>${f}</li>`).join('')}</ul></div>` : ''}
@@ -1727,7 +1731,10 @@ window.shopOpenModal = function(id) {
   if (!item) return;
   document.getElementById('shop-modal-overlay')?.remove();
   document.body.insertAdjacentHTML('beforeend', buildModal(item));
-  requestAnimationFrame(() => document.getElementById('shop-modal-overlay')?.classList.add('open'));
+  requestAnimationFrame(() => {
+    document.getElementById('shop-modal-overlay')?.classList.add('open');
+    updateTotal();
+  });
   document.body.style.overflow = 'hidden';
 };
 window.shopCloseModal = function() {
@@ -1767,6 +1774,12 @@ function renderShop() {
       c.style.display = (cat === 'Semua' || c.dataset.category === cat) ? '' : 'none';
     });
   });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderShop);
+} else {
+  renderShop();
 }
 
 /* Re-render grid saat supabase-sync selesai fetch dari DB
@@ -1812,3 +1825,4 @@ setTimeout(function() {
 }, 4000);
 
 })();
+
