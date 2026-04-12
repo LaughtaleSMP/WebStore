@@ -1583,7 +1583,7 @@ function buildModal(item) {
     </div>`;
 
   const origBadge = (item.originalPrice && item.originalPrice > item.price)
-    ? `<span style="font-size:0.65rem;color:var(--s-muted);text-decoration:line-through;margin-left:6px;display:inline-block; position:relative; top:-3px; line-height:1">${fmtPlain(item.originalPrice)}</span>` : '';
+    ? `<span style="font-size:0.7rem;color:var(--s-muted);text-decoration:line-through;margin-left:6px;vertical-align:top">${fmtPlain(item.originalPrice)}</span>` : '';
 
   return `<div id="shop-modal-overlay" class="shop-modal-overlay" onclick="shopCloseModal()">
     <div class="shop-modal-box" onclick="event.stopPropagation()" data-price="${item.price}" data-itemid="${item.id}" data-canbuy="${!!item.canBuyMultiple}" data-max="${maxQty}" id="shop-order-form">
@@ -1593,7 +1593,7 @@ function buildModal(item) {
         ${badgeHtml(item,'margin-bottom:6px')}
         <div class="shop-modal-name">${item.name}</div>
         <div class="shop-card-cat" style="margin-top:4px">${item.category}</div>
-        <div style="font-family:'Press Start 2P',monospace;font-size:0.7rem;color:var(--s-gold);margin-top:8px;">${fmtPlain(item.price)}${origBadge}</div>
+        <div style="font-family:'Press Start 2P',monospace;font-size:0.7rem;color:var(--s-gold);margin-top:8px;">${fmtPlain(item.price)}</div>
       </div>
       ${item.description ? `<div class="shop-modal-sec"><div class="shop-modal-text">${item.description}</div></div>` : ''}
       ${item.features && item.features.length ? `<div class="shop-modal-sec"><ul class="shop-feat-list" style="display:flex;">${item.features.map(f=>`<li>${f}</li>`).join('')}</ul></div>` : ''}
