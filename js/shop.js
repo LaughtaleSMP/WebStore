@@ -1774,9 +1774,17 @@ if (document.readyState === 'loading') {
 
 /* Re-render grid saat supabase-sync selesai fetch dari DB
    agar harga card & modal selalu sama (sumber: shop_items DB) */
+var _shopRendered = false;
+
 document.addEventListener('shopItemsReady', function(e) {
   var items = e.detail && e.detail.items;
   if (!items || !items.length) return;
+
+  /* Update SHOP_CONFIG agar shopOpenModal & shopOrderWA pakai harga DB */
+  if (window.SHOP_CONFIG) {
+    window.SHOP_CONFIG.items = items;
+  }
+
   var gridEl = document.getElementById('shop-grid');
   if (!gridEl) return;
   var tabsEl    = document.getElementById('shop-tabs');
@@ -1789,7 +1797,21 @@ document.addEventListener('shopItemsReady', function(e) {
       card.style.display = card.dataset.category === activeCat ? '' : 'none';
     });
   }
-  console.log('[shop.js] Grid re-render dari DB shopItemsReady (' + items.length + ' item).');
+  _shopRendered = true;
+  console.log('[shop.js] ✅ Grid & SHOP_CONFIG sinkron dari DB (' + items.length + ' item).');
 });
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderShop);
+} else {
+  renderShop();
+}
+
+/* Fallback: kalau 4 detik DB tidak balas, pakai harga statis */
+setTimeout(function() {
+  if (!_shopRendered) {
+    console.warn('[shop.js] ⚠️ DB timeout — harga dari shop-config.js (statis).');
+  }
+}, 4000);
 
 })();
