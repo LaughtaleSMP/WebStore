@@ -1748,11 +1748,14 @@ function renderShop() {
   if (titleEl)    titleEl.textContent    = cfg.title;
   if (subtitleEl) subtitleEl.textContent = cfg.subtitle;
   if (!tabsEl || !gridEl) return;
+if (!document.querySelector('.shop-join-info')) {
   tabsEl.insertAdjacentHTML('beforebegin', `
     <div class="shop-join-info">
       <span style="font-size:1.1rem;flex-shrink:0">📢</span>
       <span>Pendaftaran untuk <strong>masuk server</strong> hanya bisa dilakukan melalui <strong>Grup WhatsApp Community</strong> — bukan Discord atau platform lain.</span>
-    </div>`);
+    </div>
+  `);
+}
   tabsEl.innerHTML = cfg.categories.map((c,i) =>
     `<button class="shop-tab${i===0?' active':''}" data-cat="${c}">${c}</button>`
   ).join('');
