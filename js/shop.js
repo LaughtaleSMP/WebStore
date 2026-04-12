@@ -1672,8 +1672,11 @@ const GEM_ITEM_ID = 8;
 
 /* ── Send WA order ── */
 window.shopOrderWA = function(id) {
-  const cfg  = SHOP_CONFIG;
-  const item = cfg.items.find(i => i.id === id);
+  /* Prioritas: data live dari DB, fallback ke SHOP_CONFIG statis */
+  const _src = (window._shopItemsFromSupabase && window._shopItemsFromSupabase.length)
+    ? window._shopItemsFromSupabase
+    : SHOP_CONFIG.items;
+  const item = _src.find(i => i.id === id);
   if (!item) return;
   const errEl = document.getElementById('shop-form-error');
   errEl.style.display = 'none';
@@ -1720,7 +1723,11 @@ window.shopOrderWA = function(id) {
 
 /* ── Open / close modal ── */
 window.shopOpenModal = function(id) {
-  const item = SHOP_CONFIG.items.find(i => i.id === id);
+  /* Prioritas: data live dari DB, fallback ke SHOP_CONFIG statis */
+  const _src = (window._shopItemsFromSupabase && window._shopItemsFromSupabase.length)
+    ? window._shopItemsFromSupabase
+    : SHOP_CONFIG.items;
+  const item = _src.find(i => i.id === id);
   if (!item) return;
   document.getElementById('shop-modal-overlay')?.remove();
   document.body.insertAdjacentHTML('beforeend', buildModal(item));
