@@ -3,33 +3,37 @@
    Tambahkan di dalam <head> di index.html (setelah style.css)
 ════════════════════════════════════════════════════════════════ */
 
-/* ── Harga — fix Rp tidak kepotong & spasi terlalu jauh ── */
+/* ── Harga: Rp rapat ke angka, satu baris dengan harga coret ── */
 .shop-card-price {
-  display: inline-flex !important;
-  align-items: baseline !important;
-  gap: 5px !important;
-  flex-wrap: wrap !important;
-  font-size: 0.65rem !important;
-  white-space: normal !important;
-  line-height: 1.6 !important;
-  min-width: 0;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  font-size: 0.58rem !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.4 !important;
 }
 
-/* Harga aktif (kuning) */
-.shop-card-price > span:first-child {
+/* Harga aktif (kuning) — Rp rapat ke angka via letter-spacing */
+.shop-card-price > :first-child {
   white-space: nowrap !important;
   flex-shrink: 0;
+  letter-spacing: -0.03em !important;
 }
 
-/* Harga coret (merah) */
+/* Harga coret (merah) — sejajar satu baris */
 .shop-price-orig {
-  font-size: 0.6rem !important;
+  font-size: 0.55rem !important;
   white-space: nowrap !important;
   flex-shrink: 0;
+  letter-spacing: -0.03em !important;
   color: #ff5a5a;
   text-decoration: none;
   background: linear-gradient(#ff5a5a, #ff5a5a) no-repeat 0 50% / 100% 1.5px;
   line-height: inherit;
+  display: inline-block;
 }
 
 /* ── Quantity selector ── */
