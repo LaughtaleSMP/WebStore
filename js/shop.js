@@ -55,7 +55,6 @@ const CSS = `
   padding:3px 8px;border-radius:4px;width:fit-content;letter-spacing:0.06em;}
 
 /* ── Card text ── */
-.shop-card-emoji{font-size:1.6rem;line-height:1;margin:0;}
 .shop-card-name{font-family:'Press Start 2P',monospace;font-size:0.45rem;
   color:var(--s-text);line-height:1.5;}
 .shop-card-cat{font-size:0.72rem;color:var(--s-muted);font-weight:700;}
@@ -122,7 +121,6 @@ const CSS = `
   cursor:pointer;font-size:0.9rem;transition:all 0.15s;
   display:flex;align-items:center;justify-content:center;}
 .shop-modal-close:hover{color:var(--s-text);border-color:var(--s-red);}
-.shop-modal-emoji{font-size:3rem;line-height:1;margin-bottom:8px;}
 .shop-modal-name{font-family:'Press Start 2P',monospace;font-size:0.72rem;
   color:var(--s-text);line-height:1.5;margin-bottom:4px;}
 
@@ -1509,7 +1507,6 @@ window.shopBuildCard = function buildCard(item) {
   return `<div class="shop-card${sold?' shop-sold-out':''}" data-category="${item.category}">
     ${badgeHtml(item,'position:absolute;top:12px;right:12px;z-index:2;')}
     ${animThumbHtml(item)}
-    <div class="shop-card-emoji">${item.emoji}</div>
     <div class="shop-card-name">${item.name}</div>
     <div class="shop-card-cat">${item.category}</div>
     <div class="shop-card-desc">${item.description}</div>
@@ -1589,7 +1586,6 @@ function buildModal(item) {
     <div class="shop-modal-box" onclick="event.stopPropagation()" data-price="${item.price}" data-itemid="${item.id}" data-canbuy="${!!item.canBuyMultiple}" data-max="${maxQty}" id="shop-order-form">
       <button class="shop-modal-close" onclick="shopCloseModal()">✕</button>
       <div style="text-align:center;margin-bottom:16px;">
-        <div class="shop-modal-emoji">${item.emoji}</div>
         ${badgeHtml(item,'margin-bottom:6px')}
         <div class="shop-modal-name">${item.name}</div>
         <div class="shop-card-cat" style="margin-top:4px">${item.category}</div>
