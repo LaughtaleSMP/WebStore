@@ -1,122 +1,195 @@
 /* ============================================================
    RESET & BASE
 ============================================================ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    /* margin: 0; */
+    padding: 0;
+}
+
+/* ===== FONT LOKAL - OPTIMIZED WOFF2 ===== */
+@font-face {
+    font-family: "Press Start 2P";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/WebStore/assets/fonts/press-start-2p/PressStart2P-Regular.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Nunito";
+    font-style: normal;
+    font-weight: 400 900;
+    font-display: swap;
+    src: url("/WebStore/assets/fonts/nunito/Nunito-Variable.woff2") format("woff2-variations");
+}
+
+@font-face {
+    font-family: "Nunito";
+    font-style: italic;
+    font-weight: 400 900;
+    font-display: swap;
+    src: url("/WebStore/assets/fonts/nunito/Nunito-Italic-Variable.woff2") format("woff2-variations");
+}
 
 :root {
-  --green:   #a855f7;  /* NOTE: nama "green" adalah legacy — warnanya ungu/purple (#a855f7). Jangan ganti agar tidak break JS & CSS lain */
-  --accent:  #a855f7;  /* alias modern — gunakan --accent untuk code baru */
-  --emerald: #a855f7;  /* legacy alias */
-  --green2:  #7c3aed;
-  --diamond: #c084fc;
-  --gold:    #f4c430;
-  --redstone:#ff3a3a;
-  --purple:  #a855f7;
-  --bg:      #0d1117;
-  --bg2:     #111827;
-  --bg3:     #161f2e;
-  --border:  rgba(255,255,255,0.08);
-  --text:    #e8eaf0;
-  --text-muted: #8892a4;
-  --nav-h:   68px;
-  --radius-card: 14px;
-  --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
+    --green: #a855f7; /* NOTE: nama "green" adalah legacy — warnanya ungu/purple (#a855f7). Jangan ganti agar tidak break JS & CSS lain */
+    --accent: #a855f7; /* alias modern — gunakan --accent untuk code baru */
+    --emerald: #a855f7; /* legacy alias */
+    --green2: #7c3aed;
+    --diamond: #c084fc;
+    --gold: #f4c430;
+    --redstone: #ff3a3a;
+    --purple: #a855f7;
+    --bg: #0d1117;
+    --bg2: #111827;
+    --bg3: #161f2e;
+    --border: rgba(255, 255, 255, 0.08);
+    --text: #e8eaf0;
+    --text-muted: #8892a4;
+    --nav-h: 68px;
+    --radius-card: 14px;
+    --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
-html { scroll-behavior: smooth; overflow-x: clip; }
+html {
+    scroll-behavior: smooth;
+    overflow-x: clip;
+}
 body {
-  font-family: 'Nunito', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.6;
-  overflow-x: clip;
-  scrollbar-gutter: stable;
-  -webkit-text-size-adjust: 100%;
+    font-family: "Nunito", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: clip;
+    scrollbar-gutter: stable;
+    -webkit-text-size-adjust: 100%;
 }
 
-img, svg { max-width: 100%; display: block; }
-a { text-decoration: none; color: inherit; }
+img,
+svg {
+    max-width: 100%;
+    display: block;
+}
+a {
+    text-decoration: none;
+    color: inherit;
+}
 
 /* ============================================================
    SCROLLBAR
 ============================================================ */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg2); }
-::-webkit-scrollbar-thumb { background: var(--green); border-radius: 4px; }
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg2);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--green);
+    border-radius: 4px;
+}
 
 /* ============================================================
    UTILITIES
 ============================================================ */
-.container { max-width: 1160px; margin: 0 auto; padding: 0 clamp(1rem, 4vw, 2.5rem); }
+.container {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 0 clamp(1rem, 4vw, 2.5rem);
+}
 .section-label {
-  font-family: 'Press Start 2P', monospace;
-  font-size: clamp(0.45rem, 1.2vw, 0.6rem);
-  color: var(--green);
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  margin-bottom: 0.75rem;
+    font-family: "Press Start 2P", monospace;
+    font-size: clamp(0.45rem, 1.2vw, 0.6rem);
+    color: var(--green);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
 }
 .section-title {
-  font-family: 'Press Start 2P', monospace;
-  font-size: clamp(1rem, 3vw, 1.6rem);
-  color: var(--text);
-  margin-bottom: 1rem;
-  line-height: 1.5;
+    font-family: "Press Start 2P", monospace;
+    font-size: clamp(1rem, 3vw, 1.6rem);
+    color: var(--text);
+    margin-bottom: 1rem;
+    line-height: 1.5;
 }
 .section-desc {
-  font-size: clamp(0.85rem, 2vw, 0.98rem);
-  color: var(--text-muted);
-  max-width: 680px;
-  margin-bottom: 2.5rem;
-  line-height: 1.7;
+    font-size: clamp(0.85rem, 2vw, 0.98rem);
+    color: var(--text-muted);
+    max-width: 680px;
+    margin-bottom: 2.5rem;
+    line-height: 1.7;
 }
 
 /* ============================================================
    PIXEL BACKGROUND
 ============================================================ */
 .pixel-lines {
-  position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background-image:
-    linear-gradient(rgba(168,85,247,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(168,85,247,0.025) 1px, transparent 1px);
-  background-size: 48px 48px;
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+        linear-gradient(rgba(168, 85, 247, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(168, 85, 247, 0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
 }
-canvas#bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.35; }
-
+canvas#bg-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.35;
+}
 
 /* ============================================================
    NAVIGATION — IMPROVED KECE v2
 ============================================================ */
 nav {
-  position: fixed; top: 0; left: 0; right: 0;
-  width: 100%; max-width: 100vw; box-sizing: border-box;
-  height: var(--nav-h);
-  background: rgba(8,7,14,0.6);
-  backdrop-filter: blur(32px) saturate(180%) brightness(0.85);
-  -webkit-backdrop-filter: blur(32px) saturate(180%) brightness(0.85);
-  border-bottom: 1px solid rgba(168,85,247,0.08);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 clamp(0.75rem, 4vw, 2.5rem);
-  z-index: 1000;
-  /* Entrance: slide down + fade in */
-  animation: navEntrance 0.7s cubic-bezier(0.16,1,0.3,1) both;
-  transition:
-    background 0.6s cubic-bezier(0.16,1,0.3,1),
-    border-color 0.6s cubic-bezier(0.16,1,0.3,1),
-    box-shadow 0.6s cubic-bezier(0.16,1,0.3,1),
-    backdrop-filter 0.6s ease;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    height: var(--nav-h);
+    background: rgba(8, 7, 14, 0.6);
+    backdrop-filter: blur(32px) saturate(180%) brightness(0.85);
+    -webkit-backdrop-filter: blur(32px) saturate(180%) brightness(0.85);
+    border-bottom: 1px solid rgba(168, 85, 247, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 clamp(0.75rem, 4vw, 2.5rem);
+    z-index: 1000;
+    /* Entrance: slide down + fade in */
+    animation: navEntrance 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transition:
+        background 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+        border-color 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+        backdrop-filter 0.6s ease;
 }
 @keyframes navEntrance {
-  from { transform: translateY(-100%); opacity: 0; }
-  to   { transform: translateY(0);     opacity: 1; }
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 nav.scrolled {
-  background: rgba(6,5,11,0.92);
-  border-color: rgba(168,85,247,0.15);
-  box-shadow:
-    0 1px 0 rgba(168,85,247,0.1),
-    0 8px 40px rgba(0,0,0,0.55),
-    0 2px 12px rgba(0,0,0,0.3);
-  backdrop-filter: blur(40px) saturate(200%) brightness(0.8);
-  -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(0.8);
+    background: rgba(6, 5, 11, 0.92);
+    border-color: rgba(168, 85, 247, 0.15);
+    box-shadow:
+        0 1px 0 rgba(168, 85, 247, 0.1),
+        0 8px 40px rgba(0, 0, 0, 0.55),
+        0 2px 12px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(40px) saturate(200%) brightness(0.8);
+    -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(0.8);
 }

@@ -9,73 +9,75 @@
    shop_config, jadi perubahan admin langsung terlihat.
 ════════════════════════════════════════════════════════════════ */
 (function () {
-  'use strict';
+    "use strict";
 
-  /* ── State ── */
-  let items        = [];   // array item dari shop_items
-  let shopMeta     = {};   // {title, subtitle, admins, gemAdmins} dari shop_config
-  let editingId    = null; // id item yang sedang di-edit (null = tambah baru)
-  let dirty        = false;
-  let dirtyMeta    = false;
+    /* ── State ── */
+    let items = []; // array item dari shop_items
+    let shopMeta = {}; // {title, subtitle, admins, gemAdmins} dari shop_config
+    let editingId = null; // id item yang sedang di-edit (null = tambah baru)
+    let dirty = false;
+    let dirtyMeta = false;
 
-  function getSb() { return window._adminSb; }
+    function getSb() {
+        return window._adminSb;
+    }
 
-  /* ════════════════════════════════════════════
+    /* ════════════════════════════════════════════
      INIT
   ════════════════════════════════════════════ */
-  document.addEventListener('DOMContentLoaded', () => {
-    injectNav();
-    injectSection();
-  });
+    document.addEventListener("DOMContentLoaded", () => {
+        injectNav();
+        injectSection();
+    });
 
-  /* ── Sidebar nav ── */
-  function injectNav() {
-    const sidebar = document.querySelector('.sidebar');
-    if (!sidebar) return;
-    const grp = document.createElement('div');
-    grp.className = 'nav-group-label';
-    grp.textContent = 'Toko';
-    sidebar.appendChild(grp);
-    const item = document.createElement('div');
-    item.className = 'nav-item';
-    item.id = 'nav-shop';
-    item.innerHTML = `
+    /* ── Sidebar nav ── */
+    function injectNav() {
+        const sidebar = document.querySelector(".sidebar");
+        if (!sidebar) return;
+        const grp = document.createElement("div");
+        grp.className = "nav-group-label";
+        grp.textContent = "Toko";
+        sidebar.appendChild(grp);
+        const item = document.createElement("div");
+        item.className = "nav-item";
+        item.id = "nav-shop";
+        item.innerHTML = `
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
         <line x1="3" y1="6" x2="21" y2="6"/>
         <path d="M16 10a4 4 0 01-8 0"/>
       </svg>
       Shop`;
-    item.onclick = () => showShopSection(item);
-    sidebar.appendChild(item);
-  }
-
-  function showShopSection(el) {
-    if (typeof showSection === 'function') {
-      showSection('shop', el);
-    } else {
-      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      const sec = document.getElementById('sec-shop');
-      if (sec) sec.classList.add('active');
-      if (el)  el.classList.add('active');
-      const bc = document.getElementById('topbar-section');
-      if (bc) bc.textContent = 'Shop';
+        item.onclick = () => showShopSection(item);
+        sidebar.appendChild(item);
     }
-    loadData();
-  }
 
-  /* ════════════════════════════════════════════
+    function showShopSection(el) {
+        if (typeof showSection === "function") {
+            showSection("shop", el);
+        } else {
+            document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+            document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+            const sec = document.getElementById("sec-shop");
+            if (sec) sec.classList.add("active");
+            if (el) el.classList.add("active");
+            const bc = document.getElementById("topbar-section");
+            if (bc) bc.textContent = "Shop";
+        }
+        loadData();
+    }
+
+    /* ════════════════════════════════════════════
      INJECT HTML SECTION
   ════════════════════════════════════════════ */
-  function injectSection() {
-    const main = document.querySelector('.main-content');
-    if (!main) return;
+    function injectSection() {
+        const main = document.querySelector(".main-content");
+        if (!main) return;
 
-    const sec = document.createElement('div');
-    sec.className = 'section';
-    sec.id = 'sec-shop';
-    sec.innerHTML = `
+        const sec = document.createElement("div");
+        sec.className = "section";
+        sec.id = "sec-shop";
+        sec.innerHTML = `
       <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div>
           <div class="page-title">Konfigurasi Shop</div>
@@ -273,17 +275,17 @@
       </div>
     `;
 
-    injectStyles();
-    main.appendChild(sec);
-    registerGlobals();
-  }
+        injectStyles();
+        main.appendChild(sec);
+        registerGlobals();
+    }
 
-  /* ════════════════════════════════════════════
+    /* ════════════════════════════════════════════
      STYLES
   ════════════════════════════════════════════ */
-  function injectStyles() {
-    const s = document.createElement('style');
-    s.textContent = `
+    function injectStyles() {
+        const s = document.createElement("style");
+        s.textContent = `
       .shop-cfg-tabs { display:flex; gap:6px; margin-bottom:1.2rem; flex-wrap:wrap; }
       .scfg-tab {
         padding:7px 16px; border-radius:20px; font-size:12.5px;
@@ -364,145 +366,151 @@
         .scfg-item-actions { width:100%; justify-content:flex-end; }
       }
     `;
-    document.head.appendChild(s);
-  }
+        document.head.appendChild(s);
+    }
 
-  /* ════════════════════════════════════════════
+    /* ════════════════════════════════════════════
      GLOBALS
   ════════════════════════════════════════════ */
-  function registerGlobals() {
-    window._shopTab          = switchTab;
-    window._shopItemSearch   = filterItems;
-    window._shopNewItem      = newItem;
-    window._shopEditItem     = editItem;
-    window._shopDeleteItem   = deleteItem;
-    window._shopMoveItem     = moveItem;
-    window._shopCloseForm    = closeForm;
-    window._shopApplyItem    = applyItem;
-    window._shopSaveMeta     = saveMeta;
-    window._shopMetaDirty    = markMetaDirty;
-    window._shopToggleMaxQty = toggleMaxQty;
-    window._shopAddAdmin     = addAdminRow;
-    window._shopRemoveAdmin  = removeAdminRow;
-    window._shopAdminChange  = adminChange;
-  }
+    function registerGlobals() {
+        window._shopTab = switchTab;
+        window._shopItemSearch = filterItems;
+        window._shopNewItem = newItem;
+        window._shopEditItem = editItem;
+        window._shopDeleteItem = deleteItem;
+        window._shopMoveItem = moveItem;
+        window._shopCloseForm = closeForm;
+        window._shopApplyItem = applyItem;
+        window._shopSaveMeta = saveMeta;
+        window._shopMetaDirty = markMetaDirty;
+        window._shopToggleMaxQty = toggleMaxQty;
+        window._shopAddAdmin = addAdminRow;
+        window._shopRemoveAdmin = removeAdminRow;
+        window._shopAdminChange = adminChange;
+    }
 
-  /* ════════════════════════════════════════════
+    /* ════════════════════════════════════════════
      LOAD DATA — dari shop_items + shop_config
   ════════════════════════════════════════════ */
-  async function loadData() {
-    const loadEl = document.getElementById('shop-loading');
-    loadEl.style.display = 'block';
-    loadEl.textContent   = 'Memuat konfigurasi…';
-    document.getElementById('shop-tab-items').style.display   = 'none';
-    document.getElementById('shop-tab-general').style.display = 'none';
+    async function loadData() {
+        const loadEl = document.getElementById("shop-loading");
+        loadEl.style.display = "block";
+        loadEl.textContent = "Memuat konfigurasi…";
+        document.getElementById("shop-tab-items").style.display = "none";
+        document.getElementById("shop-tab-general").style.display = "none";
 
-    const sb = getSb();
-    if (!sb) {
-      loadEl.textContent = '⚠️ Supabase belum siap.';
-      return;
+        const sb = getSb();
+        if (!sb) {
+            loadEl.textContent = "⚠️ Supabase belum siap.";
+            return;
+        }
+
+        /* Fetch shop_items */
+        const { data: itemRows, error: itemErr } = await sb
+            .from("shop_items")
+            .select("*")
+            .order("sort_order", { ascending: true });
+
+        if (itemErr) {
+            loadEl.textContent = "⚠️ Gagal memuat item: " + itemErr.message;
+            return;
+        }
+        items = itemRows || [];
+
+        /* Fetch shop_config (meta: title, subtitle, admins WA) */
+        const { data: cfgRow } = await sb.from("shop_config").select("value").eq("key", "main").single();
+
+        try {
+            shopMeta = cfgRow?.value ? JSON.parse(cfgRow.value) : {};
+        } catch (e) {
+            shopMeta = {};
+        }
+        if (!shopMeta.admins) shopMeta.admins = [];
+        if (!shopMeta.gemAdmins) shopMeta.gemAdmins = [];
+        if (!shopMeta.title) shopMeta.title = "Laughtale Store";
+        if (!shopMeta.subtitle) shopMeta.subtitle = "";
+
+        dirty = false;
+        dirtyMeta = false;
+        updateMetaBtn();
+
+        loadEl.style.display = "none";
+        switchTab("items", document.querySelector('.scfg-tab[data-tab="items"]'));
     }
 
-    /* Fetch shop_items */
-    const { data: itemRows, error: itemErr } = await sb
-      .from('shop_items')
-      .select('*')
-      .order('sort_order', { ascending: true });
-
-    if (itemErr) {
-      loadEl.textContent = '⚠️ Gagal memuat item: ' + itemErr.message;
-      return;
-    }
-    items = itemRows || [];
-
-    /* Fetch shop_config (meta: title, subtitle, admins WA) */
-    const { data: cfgRow } = await sb
-      .from('shop_config')
-      .select('value')
-      .eq('key', 'main')
-      .single();
-
-    try { shopMeta = cfgRow?.value ? JSON.parse(cfgRow.value) : {}; } catch(e) { shopMeta = {}; }
-    if (!shopMeta.admins)    shopMeta.admins    = [];
-    if (!shopMeta.gemAdmins) shopMeta.gemAdmins = [];
-    if (!shopMeta.title)     shopMeta.title     = 'Laughtale Store';
-    if (!shopMeta.subtitle)  shopMeta.subtitle  = '';
-
-    dirty     = false;
-    dirtyMeta = false;
-    updateMetaBtn();
-
-    loadEl.style.display = 'none';
-    switchTab('items', document.querySelector('.scfg-tab[data-tab="items"]'));
-  }
-
-  /* ════════════════════════════════════════════
+    /* ════════════════════════════════════════════
      TABS
   ════════════════════════════════════════════ */
-  let currentTab = 'items';
-  let itemSearch = '';
+    let currentTab = "items";
+    let itemSearch = "";
 
-  function switchTab(tab, btn) {
-    currentTab = tab;
-    document.querySelectorAll('.scfg-tab').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-    document.querySelectorAll('.shop-tab-content').forEach(el => el.style.display = 'none');
-    const el = document.getElementById('shop-tab-' + tab);
-    if (el) el.style.display = 'block';
-    if (tab === 'items')   renderItemList();
-    if (tab === 'general') renderGeneral();
-  }
+    function switchTab(tab, btn) {
+        currentTab = tab;
+        document.querySelectorAll(".scfg-tab").forEach(b => b.classList.remove("active"));
+        if (btn) btn.classList.add("active");
+        document.querySelectorAll(".shop-tab-content").forEach(el => (el.style.display = "none"));
+        const el = document.getElementById("shop-tab-" + tab);
+        if (el) el.style.display = "block";
+        if (tab === "items") renderItemList();
+        if (tab === "general") renderGeneral();
+    }
 
-  /* ════════════════════════════════════════════
+    /* ════════════════════════════════════════════
      ITEM LIST
   ════════════════════════════════════════════ */
-  function filterItems(q) { itemSearch = q; renderItemList(); }
-
-  function renderItemList() {
-    const el = document.getElementById('shop-item-list');
-    if (!el) return;
-
-    let list = items;
-    if (itemSearch.trim()) {
-      const q = itemSearch.toLowerCase();
-      list = list.filter(i =>
-        (i.name||'').toLowerCase().includes(q) ||
-        (i.category||'').toLowerCase().includes(q)
-      );
+    function filterItems(q) {
+        itemSearch = q;
+        renderItemList();
     }
 
-    if (!list.length) {
-      el.innerHTML = '<div class="empty-state">Tidak ada item ditemukan.</div>';
-      return;
-    }
+    function renderItemList() {
+        const el = document.getElementById("shop-item-list");
+        if (!el) return;
 
-    /* update hint kategori di form */
-    const cats = [...new Set(items.map(i => i.category).filter(Boolean))];
-    const hint = document.getElementById('ef-category-hint');
-    if (hint) hint.textContent = cats.length ? 'Kategori yang ada: ' + cats.join(', ') : '';
+        let list = items;
+        if (itemSearch.trim()) {
+            const q = itemSearch.toLowerCase();
+            list = list.filter(
+                i => (i.name || "").toLowerCase().includes(q) || (i.category || "").toLowerCase().includes(q),
+            );
+        }
 
-    el.innerHTML = list.map((item) => {
-      const priceStr = 'Rp ' + Number(item.price||0).toLocaleString('id-ID');
-      const origStr  = item.original_price
-        ? ' <span style="text-decoration:line-through;opacity:.5">Rp ' + Number(item.original_price).toLocaleString('id-ID') + '</span>'
-        : '';
-      const badgeCls = item.badge_color ? `scfg-badge-${item.badge_color}` : 'scfg-badge-empty';
-      const badgeHtml = item.badge
-        ? `<span class="scfg-badge-preview ${badgeCls}">${esc(item.badge)}</span>`
-        : `<span class="scfg-badge-preview scfg-badge-empty" style="opacity:.4">no badge</span>`;
-      const stockHtml = item.stock === 'Habis'
-        ? `<span class="scfg-stock-out">❌ Habis</span>`
-        : `<span class="scfg-stock-ok">✅ Tersedia</span>`;
-      const activeTag = item.active === false
-        ? `<span style="color:var(--text-faint)">👁 Tersembunyi</span>` : '';
+        if (!list.length) {
+            el.innerHTML = '<div class="empty-state">Tidak ada item ditemukan.</div>';
+            return;
+        }
 
-      return `
-        <div class="scfg-item-row${item.active === false ? ' inactive' : ''}" id="srow-${item.id}">
-          <div class="scfg-item-emoji">${esc(item.emoji||'🛒')}</div>
+        /* update hint kategori di form */
+        const cats = [...new Set(items.map(i => i.category).filter(Boolean))];
+        const hint = document.getElementById("ef-category-hint");
+        if (hint) hint.textContent = cats.length ? "Kategori yang ada: " + cats.join(", ") : "";
+
+        el.innerHTML = list
+            .map(item => {
+                const priceStr = "Rp " + Number(item.price || 0).toLocaleString("id-ID");
+                const origStr = item.original_price
+                    ? ' <span style="text-decoration:line-through;opacity:.5">Rp ' +
+                      Number(item.original_price).toLocaleString("id-ID") +
+                      "</span>"
+                    : "";
+                const badgeCls = item.badge_color ? `scfg-badge-${item.badge_color}` : "scfg-badge-empty";
+                const badgeHtml = item.badge
+                    ? `<span class="scfg-badge-preview ${badgeCls}">${esc(item.badge)}</span>`
+                    : `<span class="scfg-badge-preview scfg-badge-empty" style="opacity:.4">no badge</span>`;
+                const stockHtml =
+                    item.stock === "Habis"
+                        ? `<span class="scfg-stock-out">❌ Habis</span>`
+                        : `<span class="scfg-stock-ok">✅ Tersedia</span>`;
+                const activeTag =
+                    item.active === false ? `<span style="color:var(--text-faint)">👁 Tersembunyi</span>` : "";
+
+                return `
+        <div class="scfg-item-row${item.active === false ? " inactive" : ""}" id="srow-${item.id}">
+          <div class="scfg-item-emoji">${esc(item.emoji || "🛒")}</div>
           <div class="scfg-item-info">
-            <div class="scfg-item-name">${esc(item.name||'(tanpa nama)')}</div>
+            <div class="scfg-item-name">${esc(item.name || "(tanpa nama)")}</div>
             <div class="scfg-item-meta">
-              <span>${esc(item.category||'—')}</span>
+              <span>${esc(item.category || "—")}</span>
               <span><strong>${priceStr}</strong>${origStr}</span>
               ${stockHtml}
               ${badgeHtml}
@@ -514,309 +522,360 @@
             <button class="btn-del"  onclick="window._shopDeleteItem(${item.id})" title="Hapus">🗑</button>
           </div>
         </div>`;
-    }).join('');
-  }
+            })
+            .join("");
+    }
 
-  /* ════════════════════════════════════════════
+    /* ════════════════════════════════════════════
      GENERAL TAB
   ════════════════════════════════════════════ */
-  function renderGeneral() {
-    document.getElementById('g-title').value    = shopMeta.title    || '';
-    document.getElementById('g-subtitle').value = shopMeta.subtitle || '';
-    renderAdminList('main');
-    renderAdminList('gem');
-  }
+    function renderGeneral() {
+        document.getElementById("g-title").value = shopMeta.title || "";
+        document.getElementById("g-subtitle").value = shopMeta.subtitle || "";
+        renderAdminList("main");
+        renderAdminList("gem");
+    }
 
-  function renderAdminList(type) {
-    const listId = type === 'main' ? 'g-admins-list' : 'g-gem-admins-list';
-    const arrKey = type === 'main' ? 'admins' : 'gemAdmins';
-    const el = document.getElementById(listId);
-    if (!el) return;
-    const arr = shopMeta[arrKey] || [];
-    el.innerHTML = arr.map((a, i) => `
+    function renderAdminList(type) {
+        const listId = type === "main" ? "g-admins-list" : "g-gem-admins-list";
+        const arrKey = type === "main" ? "admins" : "gemAdmins";
+        const el = document.getElementById(listId);
+        if (!el) return;
+        const arr = shopMeta[arrKey] || [];
+        el.innerHTML =
+            arr
+                .map(
+                    (a, i) => `
       <div class="scfg-admin-row">
-        <input placeholder="Nama admin" value="${esc(a.name||'')}"
+        <input placeholder="Nama admin" value="${esc(a.name || "")}"
           oninput="window._shopAdminChange('${type}',${i},'name',this.value)">
-        <input placeholder="Nomor WA (628…)" value="${esc(a.number||'')}"
+        <input placeholder="Nomor WA (628…)" value="${esc(a.number || "")}"
           oninput="window._shopAdminChange('${type}',${i},'number',this.value)"
           style="flex:1.5">
         <button class="btn-del" onclick="window._shopRemoveAdmin('${type}',${i})" title="Hapus">🗑</button>
-      </div>`).join('')
-      || '<div style="color:var(--text-faint);font-size:12px;padding:4px 0">Belum ada admin.</div>';
-  }
+      </div>`,
+                )
+                .join("") || '<div style="color:var(--text-faint);font-size:12px;padding:4px 0">Belum ada admin.</div>';
+    }
 
-  function adminChange(type, idx, field, val) {
-    const arrKey = type === 'main' ? 'admins' : 'gemAdmins';
-    shopMeta[arrKey][idx][field] = val;
-    markMetaDirty();
-  }
+    function adminChange(type, idx, field, val) {
+        const arrKey = type === "main" ? "admins" : "gemAdmins";
+        shopMeta[arrKey][idx][field] = val;
+        markMetaDirty();
+    }
 
-  function addAdminRow(type) {
-    const arrKey = type === 'main' ? 'admins' : 'gemAdmins';
-    shopMeta[arrKey].push({ name: '', number: '' });
-    markMetaDirty();
-    renderAdminList(type);
-  }
+    function addAdminRow(type) {
+        const arrKey = type === "main" ? "admins" : "gemAdmins";
+        shopMeta[arrKey].push({ name: "", number: "" });
+        markMetaDirty();
+        renderAdminList(type);
+    }
 
-  function removeAdminRow(type, idx) {
-    const arrKey = type === 'main' ? 'admins' : 'gemAdmins';
-    shopMeta[arrKey].splice(idx, 1);
-    markMetaDirty();
-    renderAdminList(type);
-  }
+    function removeAdminRow(type, idx) {
+        const arrKey = type === "main" ? "admins" : "gemAdmins";
+        shopMeta[arrKey].splice(idx, 1);
+        markMetaDirty();
+        renderAdminList(type);
+    }
 
-  /* ════════════════════════════════════════════
+    /* ════════════════════════════════════════════
      ITEM FORM — TAMBAH / EDIT
   ════════════════════════════════════════════ */
-  function newItem() {
-    editingId = null;
-    document.getElementById('scfg-modal-title').textContent = 'Tambah Item Baru';
-    clearForm();
-    openModal();
-  }
-
-  function editItem(id) {
-    const item = items.find(i => i.id === id);
-    if (!item) return;
-    editingId = id;
-    document.getElementById('scfg-modal-title').textContent = 'Edit Item';
-    document.getElementById('ef-name').value         = item.name           || '';
-    document.getElementById('ef-emoji').value        = item.emoji          || '';
-    document.getElementById('ef-category').value     = item.category       || '';
-    document.getElementById('ef-price').value        = item.price          ?? '';
-    document.getElementById('ef-price-orig').value   = item.original_price || '';
-    document.getElementById('ef-badge').value        = item.badge          || '';
-    document.getElementById('ef-badge-color').value  = item.badge_color    || '';
-    document.getElementById('ef-sort-order').value   = item.sort_order     ?? '';
-    document.getElementById('ef-stock').value        = item.stock          || 'Tersedia';
-    document.getElementById('ef-desc').value         = item.description    || '';
-    document.getElementById('ef-features').value     = (item.features||[]).join('\n');
-    setToggle('ef-active',          item.active !== false);
-    setToggle('ef-requires-design', !!item.requires_design);
-    setToggle('ef-needs-username',  item.needs_username !== false);
-    setToggle('ef-can-multi',       item.can_buy_multiple !== false);
-    document.getElementById('ef-max-qty').value      = item.max_quantity   || '';
-    toggleMaxQty();
-    openModal();
-  }
-
-  function clearForm() {
-    ['ef-name','ef-emoji','ef-category','ef-price','ef-price-orig',
-     'ef-badge','ef-sort-order','ef-desc','ef-features','ef-max-qty'].forEach(id => {
-      document.getElementById(id).value = '';
-    });
-    document.getElementById('ef-badge-color').value = '';
-    document.getElementById('ef-stock').value = 'Tersedia';
-    setToggle('ef-active',          true);
-    setToggle('ef-requires-design', false);
-    setToggle('ef-needs-username',  true);
-    setToggle('ef-can-multi',       true);
-    toggleMaxQty();
-  }
-
-  /* ── Simpan satu item ke Supabase (upsert) ── */
-  async function applyItem() {
-    const name  = document.getElementById('ef-name').value.trim();
-    const price = document.getElementById('ef-price').value.trim();
-    if (!name)       { toast('Nama item wajib diisi.', 'error'); return; }
-    if (price === '') { toast('Harga wajib diisi.',    'error'); return; }
-
-    const sb = getSb();
-    if (!sb) { toast('Supabase belum siap.', 'error'); return; }
-
-    const canMulti = document.getElementById('ef-can-multi').classList.contains('on');
-
-    /* Tentukan id: edit = id lama, tambah baru = max(id)+1 */
-    const newId = editingId !== null
-      ? editingId
-      : (items.length ? Math.max(...items.map(i => i.id || 0)) + 1 : 1);
-
-    const row = {
-      id:              newId,
-      name,
-      emoji:           document.getElementById('ef-emoji').value.trim()       || '🛒',
-      category:        document.getElementById('ef-category').value.trim()    || 'Lainnya',
-      price:           Number(price),
-      original_price:  Number(document.getElementById('ef-price-orig').value) || 0,
-      badge:           document.getElementById('ef-badge').value.trim(),
-      badge_color:     document.getElementById('ef-badge-color').value,
-      sort_order:      Number(document.getElementById('ef-sort-order').value) || 0,
-      stock:           document.getElementById('ef-stock').value,
-      active:          document.getElementById('ef-active').classList.contains('on'),
-      description:     document.getElementById('ef-desc').value.trim(),
-      features:        document.getElementById('ef-features').value
-                         .split('\n').map(s => s.trim()).filter(Boolean),
-      requires_design: document.getElementById('ef-requires-design').classList.contains('on'),
-      needs_username:  document.getElementById('ef-needs-username').classList.contains('on'),
-      can_buy_multiple:canMulti,
-      max_quantity:    canMulti ? (Number(document.getElementById('ef-max-qty').value) || 99) : 1,
-      images:          editingId !== null ? (items.find(i=>i.id===editingId)?.images || []) : [],
-    };
-
-    const saveBtn = document.getElementById('ef-save-btn');
-    saveBtn.disabled    = true;
-    saveBtn.textContent = 'Menyimpan…';
-
-    const { error } = await sb.from('shop_items').upsert(row, { onConflict: 'id' });
-
-    saveBtn.disabled    = false;
-    saveBtn.textContent = 'Simpan Item';
-
-    if (error) { toast('Gagal: ' + error.message, 'error'); return; }
-
-    /* Update local state */
-    if (editingId !== null) {
-      const idx = items.findIndex(i => i.id === editingId);
-      if (idx !== -1) items[idx] = row;
-    } else {
-      items.push(row);
+    function newItem() {
+        editingId = null;
+        document.getElementById("scfg-modal-title").textContent = "Tambah Item Baru";
+        clearForm();
+        openModal();
     }
-    /* Re-sort by sort_order */
-    items.sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
 
-    closeForm();
-    renderItemList();
-    toast(editingId !== null ? 'Item berhasil diperbarui ✅' : 'Item baru berhasil ditambahkan ✅');
-  }
+    function editItem(id) {
+        const item = items.find(i => i.id === id);
+        if (!item) return;
+        editingId = id;
+        document.getElementById("scfg-modal-title").textContent = "Edit Item";
+        document.getElementById("ef-name").value = item.name || "";
+        document.getElementById("ef-emoji").value = item.emoji || "";
+        document.getElementById("ef-category").value = item.category || "";
+        document.getElementById("ef-price").value = item.price ?? "";
+        document.getElementById("ef-price-orig").value = item.original_price || "";
+        document.getElementById("ef-badge").value = item.badge || "";
+        document.getElementById("ef-badge-color").value = item.badge_color || "";
+        document.getElementById("ef-sort-order").value = item.sort_order ?? "";
+        document.getElementById("ef-stock").value = item.stock || "Tersedia";
+        document.getElementById("ef-desc").value = item.description || "";
+        document.getElementById("ef-features").value = (item.features || []).join("\n");
+        setToggle("ef-active", item.active !== false);
+        setToggle("ef-requires-design", !!item.requires_design);
+        setToggle("ef-needs-username", item.needs_username !== false);
+        setToggle("ef-can-multi", item.can_buy_multiple !== false);
+        document.getElementById("ef-max-qty").value = item.max_quantity || "";
+        toggleMaxQty();
+        openModal();
+    }
 
-  /* ── Hapus item dari Supabase ── */
-  async function deleteItem(id) {
-    const item = items.find(i => i.id === id);
-    if (!confirm(`Hapus item "${item?.name}"?\nTindakan ini tidak bisa dibatalkan.`)) return;
-    const sb = getSb();
-    if (!sb) { toast('Supabase belum siap.', 'error'); return; }
-    const { error } = await sb.from('shop_items').delete().eq('id', id);
-    if (error) { toast('Gagal hapus: ' + error.message, 'error'); return; }
-    items = items.filter(i => i.id !== id);
-    renderItemList();
-    toast('Item dihapus.');
-  }
+    function clearForm() {
+        [
+            "ef-name",
+            "ef-emoji",
+            "ef-category",
+            "ef-price",
+            "ef-price-orig",
+            "ef-badge",
+            "ef-sort-order",
+            "ef-desc",
+            "ef-features",
+            "ef-max-qty",
+        ].forEach(id => {
+            document.getElementById(id).value = "";
+        });
+        document.getElementById("ef-badge-color").value = "";
+        document.getElementById("ef-stock").value = "Tersedia";
+        setToggle("ef-active", true);
+        setToggle("ef-requires-design", false);
+        setToggle("ef-needs-username", true);
+        setToggle("ef-can-multi", true);
+        toggleMaxQty();
+    }
 
-  /* ── Pindah urutan sort_order ── */
-  async function moveItem(id, dir) {
-    const idx    = items.findIndex(i => i.id === id);
-    const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= items.length) return;
-    const sb = getSb();
-    if (!sb) return;
+    /* ── Simpan satu item ke Supabase (upsert) ── */
+    async function applyItem() {
+        const name = document.getElementById("ef-name").value.trim();
+        const price = document.getElementById("ef-price").value.trim();
+        if (!name) {
+            toast("Nama item wajib diisi.", "error");
+            return;
+        }
+        if (price === "") {
+            toast("Harga wajib diisi.", "error");
+            return;
+        }
 
-    /* Tukar sort_order dua item */
-    const a = items[idx];
-    const b = items[newIdx];
-    const tmpSort = a.sort_order;
-    a.sort_order = b.sort_order;
-    b.sort_order = tmpSort;
+        const sb = getSb();
+        if (!sb) {
+            toast("Supabase belum siap.", "error");
+            return;
+        }
 
-    /* Upsert keduanya */
-    await sb.from('shop_items').upsert([
-      { id: a.id, sort_order: a.sort_order },
-      { id: b.id, sort_order: b.sort_order },
-    ], { onConflict: 'id' });
+        const canMulti = document.getElementById("ef-can-multi").classList.contains("on");
 
-    /* Tukar posisi di array lokal */
-    [items[idx], items[newIdx]] = [items[newIdx], items[idx]];
-    renderItemList();
-  }
+        /* Tentukan id: edit = id lama, tambah baru = max(id)+1 */
+        const newId = editingId !== null ? editingId : items.length ? Math.max(...items.map(i => i.id || 0)) + 1 : 1;
 
-  /* ════════════════════════════════════════════
+        const row = {
+            id: newId,
+            name,
+            emoji: document.getElementById("ef-emoji").value.trim() || "🛒",
+            category: document.getElementById("ef-category").value.trim() || "Lainnya",
+            price: Number(price),
+            original_price: Number(document.getElementById("ef-price-orig").value) || 0,
+            badge: document.getElementById("ef-badge").value.trim(),
+            badge_color: document.getElementById("ef-badge-color").value,
+            sort_order: Number(document.getElementById("ef-sort-order").value) || 0,
+            stock: document.getElementById("ef-stock").value,
+            active: document.getElementById("ef-active").classList.contains("on"),
+            description: document.getElementById("ef-desc").value.trim(),
+            features: document
+                .getElementById("ef-features")
+                .value.split("\n")
+                .map(s => s.trim())
+                .filter(Boolean),
+            requires_design: document.getElementById("ef-requires-design").classList.contains("on"),
+            needs_username: document.getElementById("ef-needs-username").classList.contains("on"),
+            can_buy_multiple: canMulti,
+            max_quantity: canMulti ? Number(document.getElementById("ef-max-qty").value) || 99 : 1,
+            images: editingId !== null ? items.find(i => i.id === editingId)?.images || [] : [],
+        };
+
+        const saveBtn = document.getElementById("ef-save-btn");
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Menyimpan…";
+
+        const { error } = await sb.from("shop_items").upsert(row, { onConflict: "id" });
+
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Simpan Item";
+
+        if (error) {
+            toast("Gagal: " + error.message, "error");
+            return;
+        }
+
+        /* Update local state */
+        if (editingId !== null) {
+            const idx = items.findIndex(i => i.id === editingId);
+            if (idx !== -1) items[idx] = row;
+        } else {
+            items.push(row);
+        }
+        /* Re-sort by sort_order */
+        items.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+        closeForm();
+        renderItemList();
+        toast(editingId !== null ? "Item berhasil diperbarui ✅" : "Item baru berhasil ditambahkan ✅");
+    }
+
+    /* ── Hapus item dari Supabase ── */
+    async function deleteItem(id) {
+        const item = items.find(i => i.id === id);
+        if (!confirm(`Hapus item "${item?.name}"?\nTindakan ini tidak bisa dibatalkan.`)) return;
+        const sb = getSb();
+        if (!sb) {
+            toast("Supabase belum siap.", "error");
+            return;
+        }
+        const { error } = await sb.from("shop_items").delete().eq("id", id);
+        if (error) {
+            toast("Gagal hapus: " + error.message, "error");
+            return;
+        }
+        items = items.filter(i => i.id !== id);
+        renderItemList();
+        toast("Item dihapus.");
+    }
+
+    /* ── Pindah urutan sort_order ── */
+    async function moveItem(id, dir) {
+        const idx = items.findIndex(i => i.id === id);
+        const newIdx = idx + dir;
+        if (newIdx < 0 || newIdx >= items.length) return;
+        const sb = getSb();
+        if (!sb) return;
+
+        /* Tukar sort_order dua item */
+        const a = items[idx];
+        const b = items[newIdx];
+        const tmpSort = a.sort_order;
+        a.sort_order = b.sort_order;
+        b.sort_order = tmpSort;
+
+        /* Upsert keduanya */
+        await sb.from("shop_items").upsert(
+            [
+                { id: a.id, sort_order: a.sort_order },
+                { id: b.id, sort_order: b.sort_order },
+            ],
+            { onConflict: "id" },
+        );
+
+        /* Tukar posisi di array lokal */
+        [items[idx], items[newIdx]] = [items[newIdx], items[idx]];
+        renderItemList();
+    }
+
+    /* ════════════════════════════════════════════
      SIMPAN META (title, subtitle, admins WA)
      → shop_config key='main'
   ════════════════════════════════════════════ */
-  async function saveMeta() {
-    if (!dirtyMeta) return;
-    const sb = getSb();
-    if (!sb) { toast('Supabase belum siap.', 'error'); return; }
+    async function saveMeta() {
+        if (!dirtyMeta) return;
+        const sb = getSb();
+        if (!sb) {
+            toast("Supabase belum siap.", "error");
+            return;
+        }
 
-    /* Baca dari DOM sebelum simpan */
-    const gTitle    = document.getElementById('g-title');
-    const gSubtitle = document.getElementById('g-subtitle');
-    if (gTitle)    shopMeta.title    = gTitle.value.trim()    || shopMeta.title;
-    if (gSubtitle) shopMeta.subtitle = gSubtitle.value.trim() || '';
+        /* Baca dari DOM sebelum simpan */
+        const gTitle = document.getElementById("g-title");
+        const gSubtitle = document.getElementById("g-subtitle");
+        if (gTitle) shopMeta.title = gTitle.value.trim() || shopMeta.title;
+        if (gSubtitle) shopMeta.subtitle = gSubtitle.value.trim() || "";
 
-    const btn = document.getElementById('shop-save-meta-btn');
-    btn.disabled    = true;
-    btn.textContent = 'Menyimpan…';
+        const btn = document.getElementById("shop-save-meta-btn");
+        btn.disabled = true;
+        btn.textContent = "Menyimpan…";
 
-    const { error } = await sb.from('shop_config').upsert({
-      key:        'main',
-      value:      JSON.stringify(shopMeta),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'key' });
+        const { error } = await sb.from("shop_config").upsert(
+            {
+                key: "main",
+                value: JSON.stringify(shopMeta),
+                updated_at: new Date().toISOString(),
+            },
+            { onConflict: "key" },
+        );
 
-    btn.disabled = false;
-    btn.innerHTML = metaBtnInner();
+        btn.disabled = false;
+        btn.innerHTML = metaBtnInner();
 
-    if (error) { toast('Gagal: ' + error.message, 'error'); markMetaDirty(); return; }
+        if (error) {
+            toast("Gagal: " + error.message, "error");
+            markMetaDirty();
+            return;
+        }
 
-    dirtyMeta = false;
-    btn.classList.remove('dirty');
-    btn.disabled = true;
-    toast('Pengaturan shop berhasil disimpan ✅');
-  }
-
-  function metaBtnInner() {
-    return `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Simpan Pengaturan`;
-  }
-
-  function markMetaDirty() {
-    dirtyMeta = true;
-    updateMetaBtn();
-  }
-
-  function updateMetaBtn() {
-    const btn = document.getElementById('shop-save-meta-btn');
-    if (!btn) return;
-    if (dirtyMeta) {
-      btn.disabled = false;
-      btn.style.opacity = '1';
-      btn.style.cursor  = 'pointer';
-      btn.classList.add('dirty');
-    } else {
-      btn.disabled = true;
-      btn.style.opacity = '.4';
-      btn.style.cursor  = 'not-allowed';
-      btn.classList.remove('dirty');
+        dirtyMeta = false;
+        btn.classList.remove("dirty");
+        btn.disabled = true;
+        toast("Pengaturan shop berhasil disimpan ✅");
     }
-  }
 
-  /* ════════════════════════════════════════════
+    function metaBtnInner() {
+        return `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Simpan Pengaturan`;
+    }
+
+    function markMetaDirty() {
+        dirtyMeta = true;
+        updateMetaBtn();
+    }
+
+    function updateMetaBtn() {
+        const btn = document.getElementById("shop-save-meta-btn");
+        if (!btn) return;
+        if (dirtyMeta) {
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.style.cursor = "pointer";
+            btn.classList.add("dirty");
+        } else {
+            btn.disabled = true;
+            btn.style.opacity = ".4";
+            btn.style.cursor = "not-allowed";
+            btn.classList.remove("dirty");
+        }
+    }
+
+    /* ════════════════════════════════════════════
      HELPERS
   ════════════════════════════════════════════ */
-  function openModal() {
-    document.getElementById('scfg-backdrop').classList.add('open');
-    document.getElementById('scfg-modal').classList.add('open');
-    document.getElementById('ef-name').focus();
-  }
+    function openModal() {
+        document.getElementById("scfg-backdrop").classList.add("open");
+        document.getElementById("scfg-modal").classList.add("open");
+        document.getElementById("ef-name").focus();
+    }
 
-  function closeForm() {
-    document.getElementById('scfg-backdrop').classList.remove('open');
-    document.getElementById('scfg-modal').classList.remove('open');
-    editingId = null;
-  }
+    function closeForm() {
+        document.getElementById("scfg-backdrop").classList.remove("open");
+        document.getElementById("scfg-modal").classList.remove("open");
+        editingId = null;
+    }
 
-  function toggleMaxQty() {
-    const canMulti = document.getElementById('ef-can-multi').classList.contains('on');
-    document.getElementById('ef-max-qty-wrap').style.display = canMulti ? '' : 'none';
-  }
+    function toggleMaxQty() {
+        const canMulti = document.getElementById("ef-can-multi").classList.contains("on");
+        document.getElementById("ef-max-qty-wrap").style.display = canMulti ? "" : "none";
+    }
 
-  function setToggle(id, on) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    on ? el.classList.add('on') : el.classList.remove('on');
-  }
+    function setToggle(id, on) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        on ? el.classList.add("on") : el.classList.remove("on");
+    }
 
-  function esc(s) {
-    return String(s||'')
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
+    function esc(s) {
+        return String(s || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
 
-  function toast(msg, type = 'success') {
-    const el = document.createElement('div');
-    el.className = 'toast-item toast-' + type;
-    el.textContent = msg;
-    const c = document.getElementById('toast');
-    if (c) { c.appendChild(el); setTimeout(() => el.remove(), 3200); }
-  }
-
+    function toast(msg, type = "success") {
+        const el = document.createElement("div");
+        el.className = "toast-item toast-" + type;
+        el.textContent = msg;
+        const c = document.getElementById("toast");
+        if (c) {
+            c.appendChild(el);
+            setTimeout(() => el.remove(), 3200);
+        }
+    }
 })();
