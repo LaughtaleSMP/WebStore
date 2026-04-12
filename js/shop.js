@@ -1583,7 +1583,7 @@ function buildModal(item) {
     </div>`;
 
   const origBadge = (item.originalPrice && item.originalPrice > item.price)
-    ? `<span style="font-size:0.7rem;color:var(--s-muted);text-decoration:line-through;margin-left:6px;position:relative;top:-3px">${fmtPlain(item.originalPrice)}</span>` : '';
+    ? `<span style="font-size:0.7rem;color:var(--s-muted);text-decoration:line-through;margin-left:6px;position:relative;top:-5px;vertical-align:middle">${fmtPlain(item.originalPrice)}</span>` : '';
 
   return `<div id="shop-modal-overlay" class="shop-modal-overlay" onclick="shopCloseModal()">
     <div class="shop-modal-box" onclick="event.stopPropagation()" data-price="${item.price}" data-itemid="${item.id}" data-canbuy="${!!item.canBuyMultiple}" data-max="${maxQty}" id="shop-order-form">
