@@ -3,12 +3,33 @@
    Tambahkan di dalam <head> di index.html (setelah style.css)
 ════════════════════════════════════════════════════════════════ */
 
-/* ── Harga coret ── */
+/* ── Harga — fix Rp tidak kepotong & spasi terlalu jauh ── */
 .shop-card-price {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
+  display: inline-flex !important;
+  align-items: baseline !important;
+  gap: 5px !important;
+  flex-wrap: wrap !important;
+  font-size: 0.65rem !important;
+  white-space: normal !important;
+  line-height: 1.6 !important;
+  min-width: 0;
+}
+
+/* Harga aktif (kuning) */
+.shop-card-price > span:first-child {
+  white-space: nowrap !important;
+  flex-shrink: 0;
+}
+
+/* Harga coret (merah) */
+.shop-price-orig {
+  font-size: 0.6rem !important;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  color: #ff5a5a;
+  text-decoration: none;
+  background: linear-gradient(#ff5a5a, #ff5a5a) no-repeat 0 50% / 100% 1.5px;
+  line-height: inherit;
 }
 
 /* ── Quantity selector ── */
