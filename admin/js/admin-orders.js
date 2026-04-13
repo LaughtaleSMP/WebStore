@@ -53,109 +53,100 @@ function showToast(msg, type) {
    Pemakaian: showConfirm({ title, message, confirmText, onConfirm })
 ───────────────────────────────────────────────────── */
 function showConfirm({ title, message, confirmText, onConfirm }) {
-  /* Hapus instance sebelumnya jika ada */
   const old = document.getElementById('custom-confirm-overlay');
   if (old) old.remove();
 
   const overlay = document.createElement('div');
   overlay.id = 'custom-confirm-overlay';
 
-  /* Gunakan style tag terpisah agar tidak bisa di-override */
-  const overlayStyle = document.createElement('style');
-  overlayStyle.id = 'custom-confirm-style';
-  const prevStyle = document.getElementById('custom-confirm-style');
-  if (prevStyle) prevStyle.remove();
-  overlayStyle.textContent = `
-    #custom-confirm-overlay {
-      position: fixed !important;
-      inset: 0 !important;
-      top: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-      z-index: 99999 !important;
-      background: rgba(0,0,0,0.6) !important;
-      backdrop-filter: blur(4px) !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      padding: 16px !important;
-      box-sizing: border-box !important;
-      margin: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      overflow: hidden !important;
-    }
-    #custom-confirm-box {
-      background: var(--surface1, #1a1a2e);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 14px;
-      width: 100%;
-      max-width: 360px;
-      padding: 24px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      margin: auto !important;
-      position: relative !important;
-      flex-shrink: 0;
-    }
-  `;
-  document.head.appendChild(overlayStyle);
+  /* Semua centering pakai inline style langsung — tidak bisa di-override CSS halaman */
+  Object.assign(overlay.style, {
+    position:        'fixed',
+    inset:           '0',
+    top:             '0',
+    left:            '0',
+    right:           '0',
+    bottom:          '0',
+    width:           '100vw',
+    height:          '100vh',
+    minHeight:       '100dvh',
+    zIndex:          '99999',
+    background:      'rgba(0,0,0,0.65)',
+    backdropFilter:  'blur(4px)',
+    display:         'grid',          /* grid + placeItems = centering paling kuat */
+    placeItems:      'center',
+    padding:         '16px',
+    boxSizing:       'border-box',
+    margin:          '0',
+    opacity:         '0',
+    transition:      'opacity 0.18s ease',
+    overflow:        'auto',
+  });
 
-  overlay.innerHTML = `
-    <div id="custom-confirm-box" style="
-      transform: scale(0.94) translateY(10px);
-      transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s ease;
-      opacity: 0;
-    ">
-      <!-- Icon -->
-      <div style="
-        width:44px; height:44px; border-radius:12px;
-        background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3);
-        display:flex; align-items:center; justify-content:center;
-        font-size:20px; margin-bottom:16px;
-      ">🗑️</div>
+  const box = document.createElement('div');
+  box.id = 'custom-confirm-box';
+  Object.assign(box.style, {
+    background:    'var(--surface1, #1a1a2e)',
+    border:        '1px solid rgba(255,255,255,0.1)',
+    borderRadius:  '14px',
+    width:         '100%',
+    maxWidth:      '360px',
+    padding:       '24px',
+    boxShadow:     '0 20px 60px rgba(0,0,0,0.5)',
+    transform:     'scale(0.94) translateY(12px)',
+    opacity:       '0',
+    transition:    'transform 0.22s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s ease',
+    flexShrink:    '0',
+  });
 
-      <!-- Title -->
-      <div style="font-size:15px;font-weight:700;color:var(--text-main,#fff);margin-bottom:6px;">
-        ${title || 'Hapus Pesanan?'}
-      </div>
+  box.innerHTML = `
+    <!-- Icon -->
+    <div style="
+      width:44px;height:44px;border-radius:12px;
+      background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);
+      display:flex;align-items:center;justify-content:center;
+      font-size:20px;margin-bottom:16px;
+    ">🗑️</div>
 
-      <!-- Message -->
-      <div style="font-size:13px;color:var(--text-faint,#888);line-height:1.5;margin-bottom:20px;">
-        ${message || 'Tindakan ini tidak bisa dibatalkan. Pesanan akan dihapus permanen dari database.'}
-      </div>
+    <!-- Title -->
+    <div style="font-size:15px;font-weight:700;color:var(--text-main,#fff);margin-bottom:6px;">
+      ${title || 'Hapus Pesanan?'}
+    </div>
 
-      <!-- Actions -->
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button id="cc-cancel" style="
-          padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600;
-          background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
-          color:var(--text-main,#ccc); cursor:pointer; font-family:inherit;
-          transition:background 0.15s;
-        ">Batal</button>
-        <button id="cc-confirm" style="
-          padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600;
-          background:rgba(239,68,68,0.85); border:1px solid rgba(239,68,68,0.4);
-          color:#fff; cursor:pointer; font-family:inherit;
-          transition:background 0.15s;
-        ">${confirmText || 'Ya, Hapus'}</button>
-      </div>
+    <!-- Message -->
+    <div style="font-size:13px;color:var(--text-faint,#888);line-height:1.5;margin-bottom:20px;">
+      ${message || 'Tindakan ini tidak bisa dibatalkan.'}
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button id="cc-cancel" style="
+        padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;
+        background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+        color:var(--text-main,#ccc);cursor:pointer;font-family:inherit;
+        transition:background 0.15s;
+      ">Batal</button>
+      <button id="cc-confirm" style="
+        padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;
+        background:rgba(239,68,68,0.85);border:1px solid rgba(239,68,68,0.4);
+        color:#fff;cursor:pointer;font-family:inherit;
+        transition:background 0.15s;
+      ">${confirmText || 'Ya, Hapus'}</button>
     </div>
   `;
 
-  /* Pasang ke body, bukan ke dalam elemen lain */
+  overlay.appendChild(box);
   document.body.appendChild(overlay);
 
-  /* Animasi masuk */
+  /* Animasi masuk — tunggu browser render overlay dulu */
   requestAnimationFrame(() => {
-    const box = document.getElementById('custom-confirm-box');
-    if (box) {
+    requestAnimationFrame(() => {
+      overlay.style.opacity = '1';
       box.style.opacity = '1';
       box.style.transform = 'scale(1) translateY(0)';
-    }
+    });
   });
 
-  /* Hover style tombol */
   const cancelBtn  = document.getElementById('cc-cancel');
   const confirmBtn = document.getElementById('cc-confirm');
 
@@ -165,29 +156,16 @@ function showConfirm({ title, message, confirmText, onConfirm }) {
   confirmBtn.addEventListener('mouseleave', () => confirmBtn.style.background = 'rgba(239,68,68,0.85)');
 
   function closeDialog() {
-    const box = document.getElementById('custom-confirm-box');
-    if (box) { box.style.opacity = '0'; box.style.transform = 'scale(0.94) translateY(10px)'; }
+    box.style.opacity   = '0';
+    box.style.transform = 'scale(0.94) translateY(12px)';
     overlay.style.opacity = '0';
-    setTimeout(() => {
-      overlay.remove();
-      const s = document.getElementById('custom-confirm-style');
-      if (s) s.remove();
-    }, 200);
+    setTimeout(() => overlay.remove(), 220);
   }
 
   cancelBtn.addEventListener('click', closeDialog);
+  confirmBtn.addEventListener('click', () => { closeDialog(); onConfirm && onConfirm(); });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDialog(); });
 
-  confirmBtn.addEventListener('click', () => {
-    closeDialog();
-    onConfirm && onConfirm();
-  });
-
-  /* Klik di luar box = cancel */
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeDialog();
-  });
-
-  /* Tekan Escape = cancel */
   function onKeyDown(e) {
     if (e.key === 'Escape') { closeDialog(); document.removeEventListener('keydown', onKeyDown); }
   }
@@ -217,7 +195,6 @@ function todayRange() {
   return { start, end };
 }
 
-/* Ambil 8 karakter pertama UUID sebagai ID singkat yang mudah dibaca */
 function shortId(uuid) {
   if (!uuid) return '—';
   return '#' + String(uuid).replace(/-/g, '').slice(0, 8).toUpperCase();
@@ -394,7 +371,7 @@ window.orderMarkDone = async function (id) {
 
 /* ─────────────────────────────────────────────────────
    DELETE ORDER
-   context: 'orders' (Pesanan Masuk) | 'all-orders' (Semua Pesanan)
+   context: 'orders' | 'all-orders'
 ───────────────────────────────────────────────────── */
 window.orderDelete = function (id, context) {
   showConfirm({
@@ -408,11 +385,9 @@ window.orderDelete = function (id, context) {
       const { error } = await sb.from('orders').delete().eq('id', id);
       if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
 
-      /* Hapus elemen dari DOM */
       const card = document.getElementById('ocard-' + id);
       if (card) card.remove();
 
-      /* Refresh section yang sesuai */
       if (context === 'all-orders') {
         window.allOrdersLoad();
       } else {
@@ -443,14 +418,10 @@ window.orderEdit = async function (id) {
   document.getElementById('oedit-note').value          = o.customer_note || '';
   document.getElementById('oedit-refund-reason').value = o.refund_reason || '';
 
-  /* Tampilkan ID singkat di header modal */
   const oeditIdLabel = document.getElementById('oedit-order-id-label');
   if (oeditIdLabel) oeditIdLabel.textContent = shortId(o.id);
 
-  /* Set radio status */
   _setOeditStatus(o.status || 'pending');
-
-  /* Tampilkan refund-reason hanya jika status refund/cancelled */
   _oeditToggleReason(o.status);
 
   document.getElementById('order-edit-modal').style.display = 'flex';
@@ -539,7 +510,6 @@ function _injectEditModal() {
 
   const style = document.createElement('style');
   style.textContent = `
-    /* ID Badge — tampil di card pesanan masuk & kolom tabel */
     .order-id-badge {
       display: inline-block;
       font-size: 10px;
@@ -554,7 +524,6 @@ function _injectEditModal() {
       vertical-align: middle;
       user-select: all;
     }
-
     #order-edit-modal {
       display: none;
       position: fixed;
@@ -578,138 +547,63 @@ function _injectEditModal() {
     }
     @keyframes oeditIn {
       from { opacity:0; transform:translateY(16px) scale(0.97); }
-      to   { opacity:1; transform:translateY(0)    scale(1); }
+      to   { opacity:1; transform:translateY(0) scale(1); }
     }
-    .oedit-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-    .oedit-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text-main, #fff);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
+    .oedit-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .oedit-title  { font-size:15px; font-weight:700; color:var(--text-main,#fff); display:flex; align-items:center; gap:8px; }
     .oedit-close-btn {
-      background: none;
-      border: none;
-      color: var(--text-faint, #888);
-      cursor: pointer;
-      font-size: 18px;
-      line-height: 1;
-      padding: 4px;
-      border-radius: 6px;
-      transition: color 0.15s, background 0.15s;
+      background:none; border:none; color:var(--text-faint,#888); cursor:pointer;
+      font-size:18px; line-height:1; padding:4px; border-radius:6px;
+      transition:color 0.15s,background 0.15s;
     }
-    .oedit-close-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
-    .oedit-field {
-      margin-bottom: 14px;
-    }
+    .oedit-close-btn:hover { color:#fff; background:rgba(255,255,255,0.08); }
+    .oedit-field { margin-bottom:14px; }
     .oedit-field label {
-      display: block;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.4px;
-      text-transform: uppercase;
-      color: var(--text-faint, #888);
-      margin-bottom: 5px;
+      display:block; font-size:11px; font-weight:600; letter-spacing:0.4px;
+      text-transform:uppercase; color:var(--text-faint,#888); margin-bottom:5px;
     }
-    .oedit-field input,
-    .oedit-field select,
-    .oedit-field textarea {
-      width: 100%;
-      box-sizing: border-box;
-      background: var(--surface2, #252535);
-      border: 1px solid var(--border, rgba(255,255,255,0.1));
-      border-radius: 8px;
-      color: var(--text-main, #fff);
-      font-size: 13px;
-      padding: 8px 12px;
-      outline: none;
-      transition: border-color 0.15s;
-      font-family: inherit;
+    .oedit-field input, .oedit-field select, .oedit-field textarea {
+      width:100%; box-sizing:border-box;
+      background:var(--surface2,#252535); border:1px solid var(--border,rgba(255,255,255,0.1));
+      border-radius:8px; color:var(--text-main,#fff); font-size:13px;
+      padding:8px 12px; outline:none; transition:border-color 0.15s; font-family:inherit;
     }
-    .oedit-field input:focus,
-    .oedit-field select:focus,
-    .oedit-field textarea:focus {
+    .oedit-field input:focus, .oedit-field select:focus, .oedit-field textarea:focus {
       border-color: var(--accent, #4f7df0);
     }
-    .oedit-field textarea { resize: vertical; min-height: 64px; }
-    .oedit-row-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .oedit-status-badges {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-top: 4px;
-    }
-    .oedit-status-opt {
-      display: none;
-    }
+    .oedit-field textarea { resize:vertical; min-height:64px; }
+    .oedit-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .oedit-status-badges { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+    .oedit-status-opt { display:none; }
     .oedit-status-label {
-      padding: 5px 12px;
-      border-radius: 20px;
-      font-size: 11.5px;
-      font-weight: 600;
-      cursor: pointer;
-      border: 1.5px solid transparent;
-      transition: all 0.15s;
-      user-select: none;
+      padding:5px 12px; border-radius:20px; font-size:11.5px; font-weight:600;
+      cursor:pointer; border:1.5px solid transparent; transition:all 0.15s; user-select:none;
     }
-    .oedit-status-opt:checked + .oedit-status-label { border-color: currentColor; }
-    .oedit-status-label-pending   { background: rgba(250,204,21,0.12);  color: #facc15; }
-    .oedit-status-label-selesai   { background: rgba(74,222,128,0.12);  color: #4ade80; }
-    .oedit-status-label-refund    { background: rgba(251,146,60,0.12);  color: #fb923c; }
-    .oedit-status-label-cancelled { background: rgba(248,113,113,0.12); color: #f87171; }
-    .oedit-status-opt:checked + .oedit-status-label-pending   { background: rgba(250,204,21,0.22); }
-    .oedit-status-opt:checked + .oedit-status-label-selesai   { background: rgba(74,222,128,0.22); }
-    .oedit-status-opt:checked + .oedit-status-label-refund    { background: rgba(251,146,60,0.22); }
-    .oedit-status-opt:checked + .oedit-status-label-cancelled { background: rgba(248,113,113,0.22); }
-    .oedit-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 20px;
-    }
+    .oedit-status-opt:checked + .oedit-status-label { border-color:currentColor; }
+    .oedit-status-label-pending   { background:rgba(250,204,21,0.12);  color:#facc15; }
+    .oedit-status-label-selesai   { background:rgba(74,222,128,0.12);  color:#4ade80; }
+    .oedit-status-label-refund    { background:rgba(251,146,60,0.12);  color:#fb923c; }
+    .oedit-status-label-cancelled { background:rgba(248,113,113,0.12); color:#f87171; }
+    .oedit-status-opt:checked + .oedit-status-label-pending   { background:rgba(250,204,21,0.22); }
+    .oedit-status-opt:checked + .oedit-status-label-selesai   { background:rgba(74,222,128,0.22); }
+    .oedit-status-opt:checked + .oedit-status-label-refund    { background:rgba(251,146,60,0.22); }
+    .oedit-status-opt:checked + .oedit-status-label-cancelled { background:rgba(248,113,113,0.22); }
+    .oedit-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
     .btn-edit-order {
-      background: rgba(79,125,240,0.12);
-      border: 1px solid rgba(79,125,240,0.3);
-      color: #4f7df0;
-      border-radius: 8px;
-      padding: 7px 14px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-      font-family: inherit;
+      background:rgba(79,125,240,0.12); border:1px solid rgba(79,125,240,0.3);
+      color:#4f7df0; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600;
+      cursor:pointer; transition:background 0.15s; font-family:inherit;
     }
-    .btn-edit-order:hover { background: rgba(79,125,240,0.22); }
-    .oedit-divider {
-      border: none;
-      border-top: 1px solid var(--border, rgba(255,255,255,0.08));
-      margin: 16px 0;
-    }
+    .btn-edit-order:hover { background:rgba(79,125,240,0.22); }
+    .oedit-divider { border:none; border-top:1px solid var(--border,rgba(255,255,255,0.08)); margin:16px 0; }
     .ao-status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 9px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      white-space: nowrap;
+      display:inline-flex; align-items:center; gap:4px; padding:3px 9px;
+      border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap;
     }
-    .ao-status-pending   { background: rgba(250,204,21,0.12); color: #facc15; }
-    .ao-status-selesai   { background: rgba(74,222,128,0.12); color: #4ade80; }
-    .ao-status-refund    { background: rgba(251,146,60,0.12);  color: #fb923c; }
-    .ao-status-cancelled { background: rgba(248,113,113,0.12); color: #f87171; }
+    .ao-status-pending   { background:rgba(250,204,21,0.12); color:#facc15; }
+    .ao-status-selesai   { background:rgba(74,222,128,0.12); color:#4ade80; }
+    .ao-status-refund    { background:rgba(251,146,60,0.12);  color:#fb923c; }
+    .ao-status-cancelled { background:rgba(248,113,113,0.12); color:#f87171; }
   `;
   document.head.appendChild(style);
 
@@ -724,38 +618,29 @@ function _injectEditModal() {
         </div>
         <button class="oedit-close-btn" onclick="oeditClose()">✕</button>
       </div>
-
       <input type="hidden" id="oedit-id">
-
       <div class="oedit-field">
         <label>Status Pesanan</label>
         <div class="oedit-status-badges">
           <input class="oedit-status-opt" type="radio" name="oedit-status" id="oedit-s-pending"   value="pending"   onchange="oeditStatusChange(this)">
           <label class="oedit-status-label oedit-status-label-pending"   for="oedit-s-pending">⏳ Pending</label>
-
           <input class="oedit-status-opt" type="radio" name="oedit-status" id="oedit-s-selesai"   value="selesai"   onchange="oeditStatusChange(this)">
           <label class="oedit-status-label oedit-status-label-selesai"   for="oedit-s-selesai">✅ Selesai</label>
-
           <input class="oedit-status-opt" type="radio" name="oedit-status" id="oedit-s-refund"    value="refund"    onchange="oeditStatusChange(this)">
           <label class="oedit-status-label oedit-status-label-refund"    for="oedit-s-refund">💸 Refund</label>
-
           <input class="oedit-status-opt" type="radio" name="oedit-status" id="oedit-s-cancelled" value="cancelled" onchange="oeditStatusChange(this)">
           <label class="oedit-status-label oedit-status-label-cancelled" for="oedit-s-cancelled">❌ Cancelled</label>
         </div>
       </div>
-
       <div class="oedit-field" id="oedit-reason-wrap" style="display:none">
         <label>Alasan Refund / Pembatalan</label>
         <textarea id="oedit-refund-reason" placeholder="Contoh: pembeli meminta cancel, item habis, dll..."></textarea>
       </div>
-
       <hr class="oedit-divider">
-
       <div class="oedit-field">
         <label>Nama Item</label>
         <input id="oedit-item-name" type="text" placeholder="Nama item...">
       </div>
-
       <div class="oedit-row-2">
         <div class="oedit-field">
           <label>Username Pembeli</label>
@@ -766,7 +651,6 @@ function _injectEditModal() {
           <input id="oedit-qty" type="number" min="1" placeholder="1">
         </div>
       </div>
-
       <div class="oedit-row-2">
         <div class="oedit-field">
           <label>Harga Satuan (Rp)</label>
@@ -777,12 +661,10 @@ function _injectEditModal() {
           <input id="oedit-total-price" type="number" min="0" placeholder="0">
         </div>
       </div>
-
       <div class="oedit-field">
         <label>Catatan Pembeli</label>
         <textarea id="oedit-note" placeholder="Catatan dari pembeli..."></textarea>
       </div>
-
       <div class="oedit-footer">
         <button class="btn-ghost" onclick="oeditClose()" style="padding:8px 18px;font-size:13px;">Batal</button>
         <button class="save-btn" id="oedit-save-btn" onclick="oeditSave()" style="padding:8px 20px;font-size:13px;">Simpan Perubahan</button>
@@ -790,7 +672,6 @@ function _injectEditModal() {
     </div>
   `;
   document.body.appendChild(modal);
-
   modal.addEventListener('click', function (e) {
     if (e.target === modal) oeditClose();
   });
@@ -802,20 +683,12 @@ function _injectEditModal() {
 function ordersSubscribe() {
   const sb = getSb();
   if (!sb || _ordersChannel) return;
-
   _ordersChannel = sb
     .channel('orders-live')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'orders' },
-      () => { ordersLoad(); }
-    )
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => ordersLoad())
     .subscribe();
 }
 
-/* ─────────────────────────────────────────────────────
-   REFRESH BUTTON
-───────────────────────────────────────────────────── */
 window.ordersRefresh = function () { ordersLoad(); };
 
 /* ─────────────────────────────────────────────────────
@@ -836,14 +709,12 @@ window.allOrdersLoad = async function () {
   if (statusFilter) q = q.eq('status', statusFilter);
 
   const { data, error } = await q;
-
   if (error) {
     container.innerHTML = `<div class="empty-state" style="color:#ff5a5a">Gagal memuat: ${error.message}</div>`;
     return;
   }
 
   let orders = data || [];
-
   if (searchVal) {
     orders = orders.filter(o =>
       (o.username  || '').toLowerCase().includes(searchVal) ||
@@ -870,9 +741,7 @@ window.allOrdersLoad = async function () {
 
   const rows = orders.map(o => `
     <tr>
-      <td style="white-space:nowrap;font-size:11px;">
-        <span class="order-id-badge">${shortId(o.id)}</span>
-      </td>
+      <td style="white-space:nowrap;font-size:11px;"><span class="order-id-badge">${shortId(o.id)}</span></td>
       <td style="white-space:nowrap;font-size:11px;color:var(--text-faint)">${fmtDate(o.created_at)}</td>
       <td>${o.item_emoji || '🛒'} <strong>${escHtml(o.item_name)}</strong></td>
       <td style="text-align:center">${o.qty || 1}</td>
@@ -889,19 +758,7 @@ window.allOrdersLoad = async function () {
 
   container.innerHTML = `
     <table class="fin-table" style="min-width:760px">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Waktu</th>
-          <th>Item</th>
-          <th>Qty</th>
-          <th>Username</th>
-          <th>Admin</th>
-          <th>Total</th>
-          <th>Status</th>
-          <th>Aksi</th>
-        </tr>
-      </thead>
+      <thead><tr><th>ID</th><th>Waktu</th><th>Item</th><th>Qty</th><th>Username</th><th>Admin</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div style="font-size:11px;color:var(--text-faint);padding:10px 4px 4px;">Total: ${orders.length} pesanan</div>
@@ -915,7 +772,6 @@ window.financeLoad = async function () {
   const monthEl = document.getElementById('finance-month');
   const month   = monthEl ? monthEl.value : '';
   if (!month) { showToast('Pilih bulan terlebih dahulu.', 'error'); return; }
-
   const [year, mon] = month.split('-').map(Number);
   const start = new Date(year, mon - 1, 1).toISOString();
   const end   = new Date(year, mon, 1).toISOString();
@@ -945,13 +801,9 @@ async function financeQuery(start, end, label) {
   q = q.order('completed_at', { ascending: false });
 
   const { data, error } = await q;
-  if (error) {
-    showToast('Gagal load laporan: ' + error.message, 'error');
-    return;
-  }
+  if (error) { showToast('Gagal load laporan: ' + error.message, 'error'); return; }
 
   const orders = data || [];
-
   const totalRev    = orders.reduce((s, o) => s + (o.total_price || 0), 0);
   const totalOrders = orders.length;
   const avgOrder    = totalOrders ? Math.round(totalRev / totalOrders) : 0;
@@ -970,19 +822,11 @@ async function financeQuery(start, end, label) {
 
   const adminRows = Object.entries(adminMap)
     .sort((a, b) => b[1].rev - a[1].rev)
-    .map(([name, d], i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td style="font-weight:600">${escHtml(name)}</td>
-        <td>${d.count}</td>
-        <td style="color:#4ade80;font-weight:600">${fmtRp(d.rev)}</td>
-      </tr>`).join('');
+    .map(([name, d], i) => `<tr><td>${i+1}</td><td style="font-weight:600">${escHtml(name)}</td><td>${d.count}</td><td style="color:#4ade80;font-weight:600">${fmtRp(d.rev)}</td></tr>`)
+    .join('');
 
   document.getElementById('finance-admin-table').innerHTML = adminRows
-    ? `<table class="fin-table">
-        <thead><tr><th>#</th><th>Admin</th><th>Order</th><th>Pendapatan</th></tr></thead>
-        <tbody>${adminRows}</tbody>
-       </table>`
+    ? `<table class="fin-table"><thead><tr><th>#</th><th>Admin</th><th>Order</th><th>Pendapatan</th></tr></thead><tbody>${adminRows}</tbody></table>`
     : '<div class="empty-state">Belum ada data.</div>';
 
   const itemMap = {};
@@ -996,26 +840,16 @@ async function financeQuery(start, end, label) {
 
   const itemRows = Object.entries(itemMap)
     .sort((a, b) => b[1].rev - a[1].rev)
-    .map(([name, d], i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${d.emoji} <strong>${escHtml(name)}</strong></td>
-        <td>${d.qty}</td>
-        <td style="color:#4ade80;font-weight:600">${fmtRp(d.rev)}</td>
-      </tr>`).join('');
+    .map(([name, d], i) => `<tr><td>${i+1}</td><td>${d.emoji} <strong>${escHtml(name)}</strong></td><td>${d.qty}</td><td style="color:#4ade80;font-weight:600">${fmtRp(d.rev)}</td></tr>`)
+    .join('');
 
   document.getElementById('finance-items-table').innerHTML = itemRows
-    ? `<table class="fin-table">
-        <thead><tr><th>#</th><th>Item</th><th>Qty Terjual</th><th>Pendapatan</th></tr></thead>
-        <tbody>${itemRows}</tbody>
-       </table>`
+    ? `<table class="fin-table"><thead><tr><th>#</th><th>Item</th><th>Qty Terjual</th><th>Pendapatan</th></tr></thead><tbody>${itemRows}</tbody></table>`
     : '<div class="empty-state">Belum ada data.</div>';
 
   const detailRows = orders.map(o => `
     <tr>
-      <td style="white-space:nowrap;font-size:11px;">
-        <span class="order-id-badge">${shortId(o.id)}</span>
-      </td>
+      <td style="white-space:nowrap;font-size:11px;"><span class="order-id-badge">${shortId(o.id)}</span></td>
       <td style="white-space:nowrap;font-size:11px;color:var(--text-faint)">${fmtDate(o.completed_at)}</td>
       <td>${o.item_emoji || '🛒'} ${escHtml(o.item_name)}</td>
       <td style="text-align:center">${o.qty || 1}</td>
@@ -1025,10 +859,7 @@ async function financeQuery(start, end, label) {
     </tr>`).join('');
 
   document.getElementById('finance-orders-table').innerHTML = detailRows
-    ? `<table class="fin-table" style="min-width:640px">
-        <thead><tr><th>ID</th><th>Waktu</th><th>Item</th><th>Qty</th><th>Username</th><th>Admin</th><th>Total</th></tr></thead>
-        <tbody>${detailRows}</tbody>
-       </table>`
+    ? `<table class="fin-table" style="min-width:640px"><thead><tr><th>ID</th><th>Waktu</th><th>Item</th><th>Qty</th><th>Username</th><th>Admin</th><th>Total</th></tr></thead><tbody>${detailRows}</tbody></table>`
     : '<div class="empty-state">Tidak ada order selesai pada periode ini.</div>';
 }
 
@@ -1048,7 +879,6 @@ function escHtml(s) {
    INIT
 ───────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
-
   _injectEditModal();
 
   const monthEl = document.getElementById('finance-month');
@@ -1064,6 +894,5 @@ document.addEventListener('DOMContentLoaded', () => {
     _origShowSection && _origShowSection(name, el);
     if (name === 'orders')     { ordersLoad(); ordersSubscribe(); }
     if (name === 'all-orders') { window.allOrdersLoad(); }
-    if (name === 'finance')    { /* user manual trigger */ }
   };
 });
