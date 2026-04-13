@@ -1,296 +1,260 @@
 /* ══════════════════════════════════════════════════
-   order-feed.css — Section Riwayat Pesanan Live
+   order-feed.css — Riwayat Pesanan Live (tabel compact)
 ══════════════════════════════════════════════════ */
 
 /* ── Section wrapper ──────────────────────────────────── */
 #order-feed {
   background: var(--bg);
-  padding: 4rem 0 3rem;
+  padding: 3.5rem 0 2.5rem;
   overflow: hidden;
   position: relative;
 }
-
 #order-feed::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(168,85,247,0.06) 0%, transparent 70%);
+  background: radial-gradient(ellipse at 50% 0%, rgba(168,85,247,0.05) 0%, transparent 70%);
   pointer-events: none;
 }
 
+/* ── Header baris atas ────────────────────────────────── */
 .of-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 1.75rem;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
 }
-
 .of-header-left {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
-
 .of-live-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(168,85,247,0.12);
-  border: 1px solid rgba(168,85,247,0.3);
+  gap: 5px;
+  background: rgba(168,85,247,0.1);
+  border: 1px solid rgba(168,85,247,0.25);
   border-radius: 99px;
-  padding: 3px 10px;
+  padding: 2px 9px;
   font-family: 'Press Start 2P', monospace;
-  font-size: 0.45rem;
+  font-size: 0.42rem;
   color: #c084fc;
   letter-spacing: 1.5px;
-  text-transform: uppercase;
 }
-
 .of-live-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #a855f7;
   animation: ofPulse 1.4s ease-in-out infinite;
   flex-shrink: 0;
 }
-
 @keyframes ofPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.4; transform: scale(0.75); }
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:0.4; transform:scale(0.7); }
 }
-
 .of-counter {
   font-family: 'Press Start 2P', monospace;
-  font-size: 0.45rem;
+  font-size: 0.42rem;
   color: var(--text-muted, #888);
   letter-spacing: 1px;
 }
-
 .of-refresh-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 6px;
-  padding: 5px 12px;
-  font-size: 0.62rem;
+  gap: 4px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-size: 0.58rem;
   font-family: 'Press Start 2P', monospace;
   color: var(--text-muted, #888);
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
   white-space: nowrap;
 }
-
 .of-refresh-btn:hover {
-  background: rgba(168,85,247,0.12);
+  background: rgba(168,85,247,0.1);
   color: #c084fc;
-  border-color: rgba(168,85,247,0.4);
+  border-color: rgba(168,85,247,0.35);
 }
-
 .of-last-updated {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--text-muted, #888);
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
-/* ── Grid cards ─────────────────────────────────────────── */
-.of-feed-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
-  gap: 0.75rem;
-}
-
-/* ── Card base ───────────────────────────────────────────── */
-.of-card {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  background: var(--bg3, rgba(255,255,255,0.03));
-  border: 1px solid rgba(255,255,255,0.07);
+/* ── Table wrapper (scroll horizontal di mobile) ────────── */
+.of-table-wrap {
+  width: 100%;
+  overflow-x: auto;
   border-radius: 10px;
-  padding: 0.85rem 1rem;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.3s ease, transform 0.3s ease,
-              background 0.2s, border-color 0.2s;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.02);
 }
 
-.of-card--visible {
-  opacity: 1;
-  transform: translateY(0);
+/* ── Tabel utama ──────────────────────────────────────── */
+.of-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
 }
 
-.of-card:hover {
-  background: rgba(168,85,247,0.06);
-  border-color: rgba(168,85,247,0.2);
+/* Header kolom */
+.of-table thead tr {
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
-
-/* Card pending — border kiri kuning amber */
-.of-card--pending {
-  border-left: 2px solid rgba(245,158,11,0.5);
-}
-.of-card--pending:hover {
-  background: rgba(245,158,11,0.06);
-  border-color: rgba(245,158,11,0.35);
-}
-
-/* Card selesai — border kiri hijau */
-.of-card--selesai {
-  border-left: 2px solid rgba(93,189,58,0.5);
-}
-.of-card--selesai:hover {
-  background: rgba(93,189,58,0.05);
-  border-color: rgba(93,189,58,0.3);
-}
-
-/* NEW highlight */
-.of-card--new {
-  animation: ofNewFlash 1.6s ease forwards;
-}
-
-@keyframes ofNewFlash {
-  0%   { background: rgba(168,85,247,0.18); border-color: rgba(168,85,247,0.5); }
-  100% { background: var(--bg3, rgba(255,255,255,0.03)); border-color: rgba(255,255,255,0.07); }
-}
-
-.of-card-emoji {
-  font-size: 1.6rem;
-  flex-shrink: 0;
-  line-height: 1;
-  width: 40px;
-  text-align: center;
-}
-
-.of-card-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.of-card-user {
-  font-size: 0.72rem;
-  color: var(--text-muted, #aaa);
-  margin-bottom: 2px;
-}
-
-.of-card-user strong {
-  color: var(--diamond, #c084fc);
-}
-
-.of-card-item {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text, #e2e8f0);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 220px;
-}
-
-.of-card-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.of-card-price {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #f4c430;
-}
-
-.of-card-time {
-  font-size: 0.63rem;
-  color: var(--text-muted, #888);
-  white-space: nowrap;
-}
-
-/* ── Badge base ────────────────────────────────────────────── */
-.of-card-badge {
+.of-table thead th {
+  padding: 0.6rem 0.85rem;
+  text-align: left;
   font-family: 'Press Start 2P', monospace;
   font-size: 0.38rem;
-  border-radius: 4px;
-  padding: 2px 5px;
-  letter-spacing: 1px;
-  border: 1px solid;
+  font-weight: 400;
+  color: var(--text-muted, #666);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.of-table thead th.of-col-price,
+.of-table thead th.of-col-status,
+.of-table thead th.of-col-time {
+  text-align: right;
 }
 
-/* Badge SELESAI — hijau */
+/* ── Baris data ─────────────────────────────────────────── */
+.of-row {
+  opacity: 0;
+  transition: opacity 0.25s ease, background 0.15s;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.of-row:last-child { border-bottom: none; }
+.of-row--visible  { opacity: 1; }
+.of-row:hover     { background: rgba(168,85,247,0.04); }
+
+/* Row pending — subtle left indicator via box-shadow */
+.of-row--pending td:first-child {
+  box-shadow: inset 2px 0 0 rgba(245,158,11,0.6);
+}
+.of-row--selesai td:first-child {
+  box-shadow: inset 2px 0 0 rgba(93,189,58,0.5);
+}
+
+/* Flash row baru */
+.of-row--new {
+  animation: ofRowFlash 1.8s ease forwards;
+}
+@keyframes ofRowFlash {
+  0%   { background: rgba(168,85,247,0.12); }
+  100% { background: transparent; }
+}
+
+/* Sel-sel */
+.of-row td {
+  padding: 0.55rem 0.85rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.of-col-id {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.42rem;
+  color: var(--text-muted, #666);
+  letter-spacing: 0.5px;
+}
+.of-col-user {
+  color: #c084fc;
+  font-weight: 600;
+  font-size: 0.78rem;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.of-col-item {
+  color: var(--text, #e2e8f0);
+  font-size: 0.78rem;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.of-col-price {
+  text-align: right;
+  font-weight: 700;
+  color: #f4c430;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.of-col-status {
+  text-align: right;
+}
+.of-col-time {
+  text-align: right;
+  font-size: 0.65rem;
+  color: var(--text-muted, #666);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Badge status ────────────────────────────────────────── */
+.of-badge {
+  display: inline-block;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.36rem;
+  border-radius: 4px;
+  padding: 2px 6px;
+  border: 1px solid;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
 .of-badge--selesai {
-  background: rgba(93,189,58,0.14);
-  border-color: rgba(93,189,58,0.35);
+  background: rgba(93,189,58,0.12);
+  border-color: rgba(93,189,58,0.3);
   color: #5dbd3a;
 }
-
-/* Badge PENDING — amber/kuning */
 .of-badge--pending {
-  background: rgba(245,158,11,0.14);
-  border-color: rgba(245,158,11,0.4);
+  background: rgba(245,158,11,0.12);
+  border-color: rgba(245,158,11,0.35);
   color: #f59e0b;
-  animation: ofPendingPulse 2s ease-in-out infinite;
+  animation: ofPendingBlink 2.2s ease-in-out infinite;
+}
+@keyframes ofPendingBlink {
+  0%,100% { opacity:1; }
+  50%      { opacity:0.55; }
 }
 
-@keyframes ofPendingPulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.6; }
-}
-
-/* ── Skeleton ───────────────────────────────────────────────── */
-.of-skeleton {
-  pointer-events: none;
-}
-
-.of-skel-circle {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
-  background-size: 200% 100%;
-  animation: ofShimmer 1.4s ease-in-out infinite;
-}
-
+/* ── Skeleton rows ─────────────────────────────────────────── */
+.of-skeleton { pointer-events: none; }
 .of-skel-line {
-  height: 10px;
-  border-radius: 4px;
+  height: 9px;
+  border-radius: 3px;
   background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
   background-size: 200% 100%;
   animation: ofShimmer 1.4s ease-in-out infinite;
 }
-
 @keyframes ofShimmer {
   0%   { background-position: -200% 0; }
   100% { background-position:  200% 0; }
 }
 
-/* ── Empty state ────────────────────────────────────────────── */
+/* ── Empty state ───────────────────────────────────────────── */
 .of-empty {
   display: none;
   text-align: center;
-  padding: 3rem 1rem;
+  padding: 2.5rem 1rem;
   color: var(--text-muted, #888);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
 }
+.of-empty-icon { font-size: 2rem; margin-bottom: 0.5rem; }
 
-.of-empty-icon {
-  font-size: 2.5rem;
-  margin-bottom: 0.75rem;
-}
-
-/* ── Ticker vertikal (sidebar kanan, hidden di mobile kecil) ── */
-.of-ticker-wrap {
-  display: none;
-}
-
+/* ── Ticker (desktop) ───────────────────────────────────────── */
+.of-ticker-wrap { display: none; }
 @media (min-width: 1024px) {
   .of-layout {
     display: grid;
-    grid-template-columns: 1fr 200px;
+    grid-template-columns: 1fr 190px;
     gap: 1.5rem;
     align-items: start;
   }
@@ -299,77 +263,72 @@
     background: rgba(255,255,255,0.02);
     border: 1px solid rgba(255,255,255,0.07);
     border-radius: 10px;
-    padding: 1rem;
-    max-height: 480px;
+    padding: 0.85rem;
+    max-height: 440px;
     overflow: hidden;
     position: sticky;
     top: 80px;
   }
   .of-ticker-title {
     font-family: 'Press Start 2P', monospace;
-    font-size: 0.4rem;
+    font-size: 0.38rem;
     color: var(--text-muted, #888);
     letter-spacing: 1.5px;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.65rem;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
   }
   .of-ticker-list {
     list-style: none;
-    padding: 0;
-    margin: 0;
+    padding: 0; margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 0;
     animation: ofTickerScroll linear infinite;
     animation-duration: calc(var(--of-item-count, 10) * 2.5s);
   }
   .of-ticker-list:hover { animation-play-state: paused; }
   .of-ticker-item {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     color: var(--text-muted, #aaa);
-    padding: 0.55rem 0;
+    padding: 0.45rem 0;
     border-bottom: 1px solid rgba(255,255,255,0.05);
     line-height: 1.4;
   }
   .of-ticker-item strong { color: #c084fc; }
-  .of-ticker-item em { color: var(--text, #e2e8f0); font-style: normal; }
+  .of-ticker-item em     { color: var(--text, #e2e8f0); font-style: normal; }
   @keyframes ofTickerScroll {
     0%   { transform: translateY(0); }
     100% { transform: translateY(-50%); }
   }
 }
 
-/* ── CTA bawah ───────────────────────────────────────────────── */
+/* ── CTA bawah ─────────────────────────────────────────────── */
 .of-cta-wrap {
   text-align: center;
-  margin-top: 1.75rem;
+  margin-top: 1.5rem;
 }
-
 .of-cta-wrap p {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-muted, #aaa);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.65rem;
 }
-
 .of-cta-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(168,85,247,0.08));
-  border: 1px solid rgba(168,85,247,0.4);
-  border-radius: 8px;
-  padding: 0.65rem 1.4rem;
+  background: linear-gradient(135deg, rgba(168,85,247,0.18), rgba(168,85,247,0.07));
+  border: 1px solid rgba(168,85,247,0.35);
+  border-radius: 7px;
+  padding: 0.6rem 1.3rem;
   font-family: 'Press Start 2P', monospace;
-  font-size: 0.55rem;
+  font-size: 0.52rem;
   color: #c084fc;
   letter-spacing: 1px;
   text-decoration: none;
   transition: background 0.2s, transform 0.15s;
 }
-
 .of-cta-btn:hover {
-  background: linear-gradient(135deg, rgba(168,85,247,0.35), rgba(168,85,247,0.15));
+  background: linear-gradient(135deg, rgba(168,85,247,0.3), rgba(168,85,247,0.12));
   transform: translateY(-1px);
 }
