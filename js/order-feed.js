@@ -50,20 +50,22 @@
   }
 
   // ── Fetch pesanan selesai ───────────────────────────────────────────────
+  // FIX: quantity → qty, updated_at → completed_at (sesuai skema tabel)
   async function fetchOrders() {
-    const url = `${SUPABASE_URL}/rest/v1/orders?status=eq.selesai&order=updated_at.desc&limit=${LIMIT}&select=id,username,item_name,item_emoji,quantity,total_price,updated_at`;
+    const url = `${SUPABASE_URL}/rest/v1/orders?status=eq.selesai&order=completed_at.desc&limit=${LIMIT}&select=id,username,item_name,item_emoji,qty,total_price,completed_at`;
     const res = await fetch(url, { headers: HEADERS });
     if (!res.ok) throw new Error('Gagal fetch orders');
     return res.json();
   }
 
   // ── Render satu card pesanan ─────────────────────────────────────────────
+  // FIX: order.quantity → order.qty, order.updated_at → order.completed_at
   function renderCard(order, isNew) {
     const emoji = order.item_emoji || getItemEmoji({ name: order.item_name });
     const user  = maskUser(order.username);
     const price = fmtPrice(order.total_price);
-    const qty   = order.quantity > 1 ? ` ×${order.quantity}` : '';
-    const time  = timeAgo(order.updated_at);
+    const qty   = order.qty > 1 ? ` ×${order.qty}` : '';
+    const time  = timeAgo(order.completed_at);
 
     const card = document.createElement('div');
     card.className = 'of-card' + (isNew ? ' of-card--new' : '');
