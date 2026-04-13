@@ -8,12 +8,10 @@
 ───────────────────────────────────────────────────── */
 function showToast(msg, type) {
   type = type || 'success';
-  /* Gunakan fungsi global jika ada (misal dari admin-init.js) */
   if (typeof window.showAdminToast === 'function') {
     window.showAdminToast(msg, type);
     return;
   }
-  /* Fallback: buat elemen toast sendiri */
   let container = document.getElementById('toast');
   if (!container) {
     container = document.createElement('div');
@@ -74,7 +72,20 @@ function todayRange() {
 }
 
 /* ─────────────────────────────────────────────────────
-   SHARED: get Supabase client (wait until ready)
+   RADIO STATUS HELPERS (pengganti getElementById override)
+───────────────────────────────────────────────────── */
+function _getOeditStatus() {
+  const checked = document.querySelector('input[name="oedit-status"]:checked');
+  return checked ? checked.value : 'pending';
+}
+
+function _setOeditStatus(v) {
+  const radio = document.querySelector(`input[name="oedit-status"][value="${v}"]`);
+  if (radio) radio.checked = true;
+}
+
+/* ─────────────────────────────────────────────────────
+   SHARED: get Supabase client
 ───────────────────────────────────────────────────── */
 function getSb() {
   return window._adminSb;
@@ -251,21 +262,21 @@ window.orderEdit = async function (id) {
   const { data: o, error } = await sb.from('orders').select('*').eq('id', id).single();
   if (error || !o) { showToast('Gagal ambil data pesanan.', 'error'); return; }
 
-  /* Isi modal */
   document.getElementById('oedit-id').value            = o.id;
   document.getElementById('oedit-item-name').value     = o.item_name || '';
   document.getElementById('oedit-username').value      = o.username || '';
   document.getElementById('oedit-qty').value           = o.qty || 1;
   document.getElementById('oedit-unit-price').value    = o.unit_price || 0;
   document.getElementById('oedit-total-price').value   = o.total_price || 0;
-  document.getElementById('oedit-status').value        = o.status || 'pending';
   document.getElementById('oedit-note').value          = o.customer_note || '';
   document.getElementById('oedit-refund-reason').value = o.refund_reason || '';
+
+  /* Set radio status */
+  _setOeditStatus(o.status || 'pending');
 
   /* Tampilkan refund-reason hanya jika status refund/cancelled */
   _oeditToggleReason(o.status);
 
-  /* Buka modal */
   document.getElementById('order-edit-modal').style.display = 'flex';
 };
 
@@ -275,8 +286,8 @@ function _oeditToggleReason(status) {
   wrap.style.display = (status === 'refund' || status === 'cancelled') ? 'block' : 'none';
 }
 
-window.oeditStatusChange = function (sel) {
-  _oeditToggleReason(sel.value);
+window.oeditStatusChange = function (radio) {
+  _oeditToggleReason(radio.value);
 };
 
 window.oeditClose = function () {
@@ -288,7 +299,7 @@ window.oeditSave = async function () {
   if (!sb) return;
 
   const id         = document.getElementById('oedit-id').value;
-  const status     = document.getElementById('oedit-status').value;
+  const status     = _getOeditStatus();                                    /* ← pakai helper */
   const itemName   = document.getElementById('oedit-item-name').value.trim();
   const username   = document.getElementById('oedit-username').value.trim();
   const qty        = parseInt(document.getElementById('oedit-qty').value) || 1;
@@ -311,14 +322,12 @@ window.oeditSave = async function () {
     refund_reason:  (status === 'refund' || status === 'cancelled') ? reason : null,
   };
 
-  /* Kalau status di-set ke selesai lewat edit, catat completed_at */
   if (status === 'selesai') {
-    payload.completed_at        = new Date().toISOString();
-    payload.completed_by_name   = adminName;
+    payload.completed_at         = new Date().toISOString();
+    payload.completed_by_name    = adminName;
     payload.completed_by_user_id = user ? user.id : null;
   }
 
-  /* Kalau status refund/cancelled, catat siapa yang proses */
   if (status === 'refund' || status === 'cancelled') {
     payload.refunded_by_name    = adminName;
     payload.refunded_by_user_id = user ? user.id : null;
@@ -352,7 +361,6 @@ window.oeditSave = async function () {
 function _injectEditModal() {
   if (document.getElementById('order-edit-modal')) return;
 
-  /* ── CSS ── */
   const style = document.createElement('style');
   style.textContent = `
     #order-edit-modal {
@@ -493,7 +501,6 @@ function _injectEditModal() {
       border-top: 1px solid var(--border, rgba(255,255,255,0.08));
       margin: 16px 0;
     }
-    /* ── Semua Pesanan table styles ── */
     .ao-status-badge {
       display: inline-flex;
       align-items: center;
@@ -511,7 +518,6 @@ function _injectEditModal() {
   `;
   document.head.appendChild(style);
 
-  /* ── HTML MODAL ── */
   const modal = document.createElement('div');
   modal.id = 'order-edit-modal';
   modal.innerHTML = `
@@ -523,7 +529,6 @@ function _injectEditModal() {
 
       <input type="hidden" id="oedit-id">
 
-      <!-- Status pilihan -->
       <div class="oedit-field">
         <label>Status Pesanan</label>
         <div class="oedit-status-badges">
@@ -541,7 +546,6 @@ function _injectEditModal() {
         </div>
       </div>
 
-      <!-- Alasan refund/cancel (muncul kondisional) -->
       <div class="oedit-field" id="oedit-reason-wrap" style="display:none">
         <label>Alasan Refund / Pembatalan</label>
         <textarea id="oedit-refund-reason" placeholder="Contoh: pembeli meminta cancel, item habis, dll..."></textarea>
@@ -549,7 +553,6 @@ function _injectEditModal() {
 
       <hr class="oedit-divider">
 
-      <!-- Info pesanan -->
       <div class="oedit-field">
         <label>Nama Item</label>
         <input id="oedit-item-name" type="text" placeholder="Nama item...">
@@ -590,40 +593,10 @@ function _injectEditModal() {
   `;
   document.body.appendChild(modal);
 
-  /* Tutup modal saat klik backdrop */
   modal.addEventListener('click', function (e) {
     if (e.target === modal) oeditClose();
   });
 }
-
-/* Override getter/setter status untuk radio buttons */
-Object.defineProperty(window, '_oeditStatusValue', {
-  get() {
-    const checked = document.querySelector('input[name="oedit-status"]:checked');
-    return checked ? checked.value : 'pending';
-  }
-});
-
-/* Patch oedit-status get/set sebagai proxy ke radio */
-Object.defineProperty(document, 'getElementById', {
-  value: (function(orig) {
-    return function(id) {
-      if (id === 'oedit-status') {
-        return {
-          get value() {
-            const checked = document.querySelector('input[name="oedit-status"]:checked');
-            return checked ? checked.value : 'pending';
-          },
-          set value(v) {
-            const radio = document.querySelector(`input[name="oedit-status"][value="${v}"]`);
-            if (radio) radio.checked = true;
-          }
-        };
-      }
-      return orig.call(document, id);
-    };
-  })(document.getElementById)
-});
 
 /* ─────────────────────────────────────────────────────
    REALTIME SUBSCRIPTION
@@ -671,7 +644,6 @@ window.allOrdersLoad = async function () {
 
   let orders = data || [];
 
-  /* Client-side search (username / item name) */
   if (searchVal) {
     orders = orders.filter(o =>
       (o.username  || '').toLowerCase().includes(searchVal) ||
@@ -869,7 +841,6 @@ function escHtml(s) {
 ───────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
 
-  /* Inject modal edit */
   _injectEditModal();
 
   const monthEl = document.getElementById('finance-month');
