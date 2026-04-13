@@ -4,6 +4,53 @@
 ══════════════════════════════════════════════════════ */
 
 /* ─────────────────────────────────────────────────────
+   TOAST HELPER (local)
+───────────────────────────────────────────────────── */
+function showToast(msg, type) {
+  type = type || 'success';
+  /* Gunakan fungsi global jika ada (misal dari admin-init.js) */
+  if (typeof window.showAdminToast === 'function') {
+    window.showAdminToast(msg, type);
+    return;
+  }
+  /* Fallback: buat elemen toast sendiri */
+  let container = document.getElementById('toast');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast';
+    container.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+    document.body.appendChild(container);
+  }
+  const el = document.createElement('div');
+  el.style.cssText = [
+    'padding:10px 16px',
+    'border-radius:10px',
+    'font-size:13px',
+    'font-weight:500',
+    'color:#fff',
+    'box-shadow:0 4px 16px rgba(0,0,0,.35)',
+    'opacity:0',
+    'transform:translateY(8px)',
+    'transition:opacity .22s,transform .22s',
+    'pointer-events:none',
+    type === 'error'
+      ? 'background:rgba(239,68,68,.92)'
+      : 'background:rgba(34,197,94,.88)',
+  ].join(';');
+  el.textContent = msg;
+  container.appendChild(el);
+  requestAnimationFrame(() => {
+    el.style.opacity = '1';
+    el.style.transform = 'translateY(0)';
+  });
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(8px)';
+    setTimeout(() => el.remove(), 260);
+  }, 3200);
+}
+
+/* ─────────────────────────────────────────────────────
    UTILS
 ───────────────────────────────────────────────────── */
 function fmtRp(n) {
@@ -185,6 +232,7 @@ window.orderMarkDone = async function (id) {
 window.orderDelete = async function (id) {
   if (!confirm('Hapus pesanan ini dari database?')) return;
   const sb = getSb();
+  if (!sb) { showToast('Supabase belum siap.', 'error'); return; }
   const { error } = await sb.from('orders').delete().eq('id', id);
   if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
   const card = document.getElementById('ocard-' + id);
