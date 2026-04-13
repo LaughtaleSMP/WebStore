@@ -102,8 +102,8 @@
   table-layout: fixed;
 }
 
-/* Lebar kolom — total ~100% */
-.of-col-id     { width: 38px; }
+/* Lebar kolom — ID diperlebar, item ambil sisa */
+.of-col-id     { width: 52px; }
 .of-col-user   { width: 62px; }
 .of-col-item   { width: auto; }
 .of-col-price  { width: 52px; }
@@ -163,7 +163,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* kolom pertama sedikit lebih kiri */
 .of-row td:first-child,
 .of-table thead th:first-child {
   padding-left: 0.5rem;
@@ -173,6 +172,8 @@
   font-family: 'Press Start 2P', monospace;
   font-size: 0.32rem;
   color: var(--text-muted, #555);
+  overflow: visible;
+  white-space: nowrap;
 }
 .of-col-user {
   color: #c084fc;
