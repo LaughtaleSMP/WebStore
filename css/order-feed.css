@@ -1,0 +1,257 @@
+/* ══════════════════════════════════════════════════
+   order-feed.css — Riwayat Pesanan Live (tabel compact)
+══════════════════════════════════════════════════ */
+
+#order-feed {
+  background: var(--bg);
+  padding: 2.5rem 0 2rem;
+  overflow: hidden;
+  position: relative;
+}
+#order-feed::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(168,85,247,0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.of-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.9rem;
+}
+.of-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.of-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(168,85,247,0.1);
+  border: 1px solid rgba(168,85,247,0.25);
+  border-radius: 99px;
+  padding: 2px 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.4rem;
+  color: #c084fc;
+  letter-spacing: 1.5px;
+}
+.of-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a855f7;
+  animation: ofPulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes ofPulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:0.4; transform:scale(0.7); }
+}
+.of-counter {
+  font-size: 0.68rem;
+  color: var(--text-muted, #888);
+}
+.of-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 5px;
+  padding: 3px 9px;
+  font-size: 0.68rem;
+  color: var(--text-muted, #888);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+.of-refresh-btn:hover {
+  background: rgba(168,85,247,0.1);
+  color: #c084fc;
+  border-color: rgba(168,85,247,0.3);
+}
+.of-last-updated {
+  font-size: 0.62rem;
+  color: var(--text-muted, #888);
+  opacity: 0.55;
+}
+
+.of-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.015);
+}
+
+.of-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+.of-table thead tr {
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.of-table thead th {
+  padding: 0.45rem 0.65rem;
+  text-align: left;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.36rem;
+  font-weight: 400;
+  color: var(--text-muted, #555);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.of-table thead th.of-col-price,
+.of-table thead th.of-col-status,
+.of-table thead th.of-col-time {
+  text-align: right;
+}
+
+.of-row {
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.15s;
+  border-bottom: 1px solid rgba(255,255,255,0.035);
+}
+.of-row:last-child { border-bottom: none; }
+.of-row--visible   { opacity: 1; }
+.of-row:hover      { background: rgba(168,85,247,0.04); }
+
+.of-row--pending td:first-child {
+  box-shadow: inset 2px 0 0 rgba(245,158,11,0.55);
+}
+.of-row--selesai td:first-child {
+  box-shadow: inset 2px 0 0 rgba(93,189,58,0.45);
+}
+.of-row--new {
+  animation: ofRowFlash 1.8s ease forwards;
+}
+@keyframes ofRowFlash {
+  0%   { background: rgba(168,85,247,0.1); }
+  100% { background: transparent; }
+}
+
+.of-row td {
+  padding: 0.42rem 0.65rem;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.of-col-id {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.38rem;
+  color: var(--text-muted, #555);
+}
+.of-col-user {
+  color: #c084fc;
+  font-weight: 600;
+  font-size: 0.75rem;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.of-col-item {
+  color: var(--text, #e2e8f0);
+  font-size: 0.75rem;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.of-col-price {
+  text-align: right;
+  font-weight: 700;
+  color: #f4c430;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+.of-col-status { text-align: right; }
+.of-col-time {
+  text-align: right;
+  font-size: 0.62rem;
+  color: var(--text-muted, #666);
+  font-variant-numeric: tabular-nums;
+}
+
+.of-badge {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 600;
+  border-radius: 3px;
+  padding: 1px 5px;
+  border: 1px solid;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  text-transform: lowercase;
+}
+.of-badge--selesai {
+  background: rgba(93,189,58,0.1);
+  border-color: rgba(93,189,58,0.25);
+  color: #5dbd3a;
+}
+.of-badge--pending {
+  background: rgba(245,158,11,0.1);
+  border-color: rgba(245,158,11,0.3);
+  color: #f59e0b;
+}
+
+.of-skeleton { pointer-events: none; }
+.of-skel-line {
+  height: 8px;
+  border-radius: 3px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: ofShimmer 1.4s ease-in-out infinite;
+}
+@keyframes ofShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.of-empty {
+  display: none;
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-muted, #888);
+  font-size: 0.75rem;
+}
+.of-empty-icon { font-size: 1.6rem; margin-bottom: 0.4rem; }
+
+.of-cta-wrap {
+  text-align: center;
+  margin-top: 1.2rem;
+}
+.of-cta-wrap p {
+  font-size: 0.75rem;
+  color: var(--text-muted, #aaa);
+  margin-bottom: 0.5rem;
+}
+.of-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(168,85,247,0.12);
+  border: 1px solid rgba(168,85,247,0.3);
+  border-radius: 6px;
+  padding: 0.5rem 1.1rem;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.48rem;
+  color: #c084fc;
+  letter-spacing: 1px;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.15s;
+}
+.of-cta-btn:hover {
+  background: rgba(168,85,247,0.22);
+  transform: translateY(-1px);
+}
