@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════
    order-feed.js — Riwayat Pesanan Live di halaman utama
-   Mengambil pesanan dengan status 'selesai' dari Supabase
+   Mengambil pesanan dengan status 'pending' & 'selesai'
    dan menampilkannya sebagai live feed yang auto-refresh.
 ══════════════════════════════════════════════════ */
 (function () {
@@ -15,20 +15,21 @@
   function getItemEmoji(item) {
     if (item && item.emoji) return item.emoji;
     const name = (item && item.name) ? item.name.toLowerCase() : '';
-    if (name.includes('rank'))    return '👑';
-    if (name.includes('title'))   return '🏷️';
+    if (name.includes('rank'))     return '👑';
+    if (name.includes('title'))    return '🏷️';
     if (name.includes('particle')) return '✨';
-    if (name.includes('bundle'))  return '📦';
-    if (name.includes('key'))     return '🔑';
-    if (name.includes('crate'))   return '🎁';
+    if (name.includes('bundle'))   return '📦';
+    if (name.includes('key'))      return '🔑';
+    if (name.includes('crate'))    return '🎁';
     return '🛒';
   }
 
   // ── Format waktu relatif ────────────────────────────────────────────────
   function timeAgo(dateStr) {
+    if (!dateStr) return '';
     const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (diff < 60)   return `${diff}d lalu`;
-    if (diff < 3600) return `${Math.floor(diff/60)}m lalu`;
+    if (diff < 60)    return `${diff}d lalu`;
+    if (diff < 3600)  return `${Math.floor(diff/60)}m lalu`;
     if (diff < 86400) return `${Math.floor(diff/3600)}j lalu`;
     return `${Math.floor(diff/86400)} hari lalu`;
   }
@@ -45,30 +46,37 @@
   function maskUser(name) {
     if (!name || name.length <= 2) return name || '???';
     if (name.length <= 4) return name[0] + '*'.repeat(name.length-2) + name[name.length-1];
-    const show = 2;
-    return name.slice(0, show) + '***' + name.slice(-1);
+    return name.slice(0, 2) + '***' + name.slice(-1);
   }
 
-  // ── Fetch pesanan selesai ───────────────────────────────────────────────
-  // FIX: quantity → qty, updated_at → completed_at (sesuai skema tabel)
+  // ── Badge per status ───────────────────────────────────────────────────────────
+  function statusBadge(status) {
+    if (status === 'selesai')  return '<span class="of-card-badge of-badge--selesai">✓ SELESAI</span>';
+    if (status === 'pending')  return '<span class="of-card-badge of-badge--pending">⏳ PENDING</span>';
+    return `<span class="of-card-badge">${status.toUpperCase()}</span>`;
+  }
+
+  // ── Fetch pesanan pending & selesai ───────────────────────────────────
   async function fetchOrders() {
-    const url = `${SUPABASE_URL}/rest/v1/orders?status=eq.selesai&order=completed_at.desc&limit=${LIMIT}&select=id,username,item_name,item_emoji,qty,total_price,completed_at`;
+    // Gunakan `or` filter Supabase untuk dua status sekaligus
+    const url = `${SUPABASE_URL}/rest/v1/orders?or=(status.eq.selesai,status.eq.pending)&order=created_at.desc&limit=${LIMIT}&select=id,username,item_name,item_emoji,qty,total_price,status,created_at,completed_at`;
     const res = await fetch(url, { headers: HEADERS });
     if (!res.ok) throw new Error('Gagal fetch orders');
     return res.json();
   }
 
   // ── Render satu card pesanan ─────────────────────────────────────────────
-  // FIX: order.quantity → order.qty, order.updated_at → order.completed_at
   function renderCard(order, isNew) {
-    const emoji = order.item_emoji || getItemEmoji({ name: order.item_name });
-    const user  = maskUser(order.username);
-    const price = fmtPrice(order.total_price);
-    const qty   = order.qty > 1 ? ` ×${order.qty}` : '';
-    const time  = timeAgo(order.completed_at);
+    const emoji  = order.item_emoji || getItemEmoji({ name: order.item_name });
+    const user   = maskUser(order.username);
+    const price  = fmtPrice(order.total_price);
+    const qty    = order.qty > 1 ? ` ×${order.qty}` : '';
+    // Untuk pending pakai created_at, selesai pakai completed_at
+    const timeRef = order.status === 'selesai' ? order.completed_at : order.created_at;
+    const time   = timeAgo(timeRef);
 
     const card = document.createElement('div');
-    card.className = 'of-card' + (isNew ? ' of-card--new' : '');
+    card.className = 'of-card of-card--' + order.status + (isNew ? ' of-card--new' : '');
     card.setAttribute('data-id', order.id);
     card.innerHTML = `
       <div class="of-card-emoji">${emoji}</div>
@@ -78,8 +86,8 @@
       </div>
       <div class="of-card-meta">
         ${price ? `<span class="of-card-price">${price}</span>` : ''}
-        <span class="of-card-time">${time}</span>
-        <span class="of-card-badge">✓ SELESAI</span>
+        ${time   ? `<span class="of-card-time">${time}</span>`   : ''}
+        ${statusBadge(order.status)}
       </div>
     `;
     return card;
@@ -127,13 +135,11 @@
 
     orders.forEach(order => {
       const isNew = !lastIds.has(order.id) && lastIds.size > 0;
-      const card  = renderCard(order, isNew);
-      container.appendChild(card);
+      container.appendChild(renderCard(order, isNew));
     });
 
     lastIds = newIds;
 
-    // Animasi masuk
     requestAnimationFrame(() => {
       container.querySelectorAll('.of-card').forEach((c, i) => {
         c.style.animationDelay = `${i * 0.04}s`;
@@ -142,20 +148,13 @@
     });
   }
 
-  // ── Ticker auto-scroll (marquee vertikal kanan) ──────────────────────────
+  // ── Ticker auto-scroll ──────────────────────────────────────────────────────
   function updateTicker(orders) {
     const ticker = document.getElementById('of-ticker-list');
     if (!ticker || !orders || orders.length === 0) return;
     ticker.innerHTML = '';
-    orders.forEach(order => {
-      const emoji = order.item_emoji || getItemEmoji({ name: order.item_name });
-      const li = document.createElement('li');
-      li.className = 'of-ticker-item';
-      li.innerHTML = `${emoji} <strong>${maskUser(order.username)}</strong> beli <em>${order.item_name}</em>`;
-      ticker.appendChild(li);
-    });
-    // Duplikat agar looping mulus
-    orders.forEach(order => {
+    const allItems = [...orders, ...orders]; // duplikat untuk looping mulus
+    allItems.forEach(order => {
       const emoji = order.item_emoji || getItemEmoji({ name: order.item_name });
       const li = document.createElement('li');
       li.className = 'of-ticker-item';
@@ -176,9 +175,7 @@
   async function loadFeed(showSkeleton = false) {
     const container = document.getElementById('of-feed-list');
     if (!container) return;
-
     if (showSkeleton) renderSkeletons(container);
-
     try {
       const orders = await fetchOrders();
       renderFeed(orders);
@@ -199,8 +196,6 @@
   function init() {
     loadFeed(true);
     setInterval(() => loadFeed(false), REFRESH_MS);
-
-    // Tombol refresh manual
     const btn = document.getElementById('of-refresh-btn');
     if (btn) btn.addEventListener('click', () => loadFeed(false));
   }
