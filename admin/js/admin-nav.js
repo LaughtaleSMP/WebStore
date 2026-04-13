@@ -6,22 +6,26 @@ function showSection(name, el) {
   if (sec) sec.classList.add('active');
   if (el)  el.classList.add('active');
   const labels = {
-    'server':        'Info Server',
-    'maintenance':   'Maintenance',
-    'motd':          'MOTD / Pengumuman',
-    'season':        'Season & World',
-    'admins-wa':     'Admin WhatsApp',
-    'server-status': 'Server Status Config',
-    'shop':          'Shop Items',
-    'orders':        'Pesanan Masuk',
-    'finance':       'Laporan Keuangan',
+    'server':           'Info Server',
+    'maintenance':      'Maintenance',
+    'motd':             'MOTD / Pengumuman',
+    'season':           'Season & World',
+    'admins-wa':        'Admin WhatsApp',
+    'server-status':    'Server Status Config',
+    'shop':             'Shop Items',
+    'orders':           'Pesanan Masuk',
+    'all-orders':       'Semua Pesanan',
+    'finance':          'Laporan Keuangan',
+    'access-requests':  'Permintaan Akses',
   };
   document.getElementById('topbar-section').textContent = labels[name] || name;
+
+  if (name === 'access-requests' && typeof window.loadAccessRequests === 'function') {
+    window.loadAccessRequests();
+  }
 }
 
-/* expose ke window agar bisa dipanggil dari file JS lain (mis. admin-shop.js) */
 window.showSection = showSection;
-
 
 // ==================== SIDEBAR TOGGLE (MOBILE) ====================
 function toggleSidebar() {
@@ -47,7 +51,6 @@ function closeSidebar() {
   icon.innerHTML = '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>';
 }
 
-// Close sidebar when a nav item is clicked on mobile
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.nav-item, .sidebar-back').forEach(item => {
     item.addEventListener('click', () => {
