@@ -36,7 +36,7 @@ function getSb() {
 /* ─────────────────────────────────────────────────────
    PESANAN MASUK — load & render
 ───────────────────────────────────────────────────── */
-let _ordersChannel = null; // Realtime subscription
+let _ordersChannel = null;
 
 async function ordersLoad() {
   const sb = getSb();
@@ -92,6 +92,7 @@ function ordersRenderList(orders) {
       ${o.customer_note ? `<div class="order-note">"${escHtml(o.customer_note)}"</div>` : ''}
       <div class="order-actions">
         <button class="btn-done" onclick="orderMarkDone('${o.id}')">✅ Selesai</button>
+        <button class="btn-edit-order" onclick="orderEdit('${o.id}')">✏️ Edit</button>
         <button class="btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="orderDelete('${o.id}')">🗑 Hapus</button>
       </div>
     </div>
@@ -103,13 +104,11 @@ async function ordersLoadStats() {
   if (!sb) return;
   const { start, end } = todayRange();
 
-  /* pending count */
   const { count: pendingCount } = await sb
     .from('orders')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'pending');
 
-  /* selesai hari ini */
   const { count: doneToday } = await sb
     .from('orders')
     .select('id', { count: 'exact', head: true })
@@ -117,7 +116,6 @@ async function ordersLoadStats() {
     .gte('completed_at', start)
     .lt('completed_at', end);
 
-  /* revenue hari ini */
   const { data: revData } = await sb
     .from('orders')
     .select('total_price')
@@ -171,7 +169,6 @@ window.orderMarkDone = async function (id) {
     return;
   }
 
-  /* animasi hilang */
   const card = document.getElementById('ocard-' + id);
   if (card) {
     card.style.transition = 'opacity 0.3s, transform 0.3s';
@@ -197,6 +194,375 @@ window.orderDelete = async function (id) {
 };
 
 /* ─────────────────────────────────────────────────────
+   EDIT ORDER — modal buka
+───────────────────────────────────────────────────── */
+window.orderEdit = async function (id) {
+  const sb = getSb();
+  if (!sb) return;
+
+  const { data: o, error } = await sb.from('orders').select('*').eq('id', id).single();
+  if (error || !o) { showToast('Gagal ambil data pesanan.', 'error'); return; }
+
+  /* Isi modal */
+  document.getElementById('oedit-id').value            = o.id;
+  document.getElementById('oedit-item-name').value     = o.item_name || '';
+  document.getElementById('oedit-username').value      = o.username || '';
+  document.getElementById('oedit-qty').value           = o.qty || 1;
+  document.getElementById('oedit-unit-price').value    = o.unit_price || 0;
+  document.getElementById('oedit-total-price').value   = o.total_price || 0;
+  document.getElementById('oedit-status').value        = o.status || 'pending';
+  document.getElementById('oedit-note').value          = o.customer_note || '';
+  document.getElementById('oedit-refund-reason').value = o.refund_reason || '';
+
+  /* Tampilkan refund-reason hanya jika status refund/cancelled */
+  _oeditToggleReason(o.status);
+
+  /* Buka modal */
+  document.getElementById('order-edit-modal').style.display = 'flex';
+};
+
+function _oeditToggleReason(status) {
+  const wrap = document.getElementById('oedit-reason-wrap');
+  if (!wrap) return;
+  wrap.style.display = (status === 'refund' || status === 'cancelled') ? 'block' : 'none';
+}
+
+window.oeditStatusChange = function (sel) {
+  _oeditToggleReason(sel.value);
+};
+
+window.oeditClose = function () {
+  document.getElementById('order-edit-modal').style.display = 'none';
+};
+
+window.oeditSave = async function () {
+  const sb = getSb();
+  if (!sb) return;
+
+  const id         = document.getElementById('oedit-id').value;
+  const status     = document.getElementById('oedit-status').value;
+  const itemName   = document.getElementById('oedit-item-name').value.trim();
+  const username   = document.getElementById('oedit-username').value.trim();
+  const qty        = parseInt(document.getElementById('oedit-qty').value) || 1;
+  const unitPrice  = parseFloat(document.getElementById('oedit-unit-price').value) || 0;
+  const totalPrice = parseFloat(document.getElementById('oedit-total-price').value) || 0;
+  const note       = document.getElementById('oedit-note').value.trim();
+  const reason     = document.getElementById('oedit-refund-reason').value.trim();
+
+  const user = window.currentUser;
+  const adminName = user ? (user.user_metadata?.full_name || user.email || 'admin') : 'admin';
+
+  const payload = {
+    item_name:      itemName,
+    username:       username,
+    qty:            qty,
+    unit_price:     unitPrice,
+    total_price:    totalPrice,
+    customer_note:  note,
+    status:         status,
+    refund_reason:  (status === 'refund' || status === 'cancelled') ? reason : null,
+  };
+
+  /* Kalau status di-set ke selesai lewat edit, catat completed_at */
+  if (status === 'selesai') {
+    payload.completed_at        = new Date().toISOString();
+    payload.completed_by_name   = adminName;
+    payload.completed_by_user_id = user ? user.id : null;
+  }
+
+  /* Kalau status refund/cancelled, catat siapa yang proses */
+  if (status === 'refund' || status === 'cancelled') {
+    payload.refunded_by_name    = adminName;
+    payload.refunded_by_user_id = user ? user.id : null;
+    payload.refunded_at         = new Date().toISOString();
+  }
+
+  const saveBtn = document.getElementById('oedit-save-btn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Menyimpan...';
+
+  const { error } = await sb.from('orders').update(payload).eq('id', id);
+
+  saveBtn.disabled = false;
+  saveBtn.textContent = 'Simpan Perubahan';
+
+  if (error) {
+    showToast('Gagal simpan: ' + error.message, 'error');
+    return;
+  }
+
+  oeditClose();
+  ordersLoad();
+
+  const label = status === 'refund' ? '💸 Refund' : status === 'cancelled' ? '❌ Cancelled' : '✅ Tersimpan';
+  showToast(`Order diupdate — ${label}`, 'success');
+};
+
+/* ─────────────────────────────────────────────────────
+   INJECT MODAL & CSS ke DOM (sekali saja)
+───────────────────────────────────────────────────── */
+function _injectEditModal() {
+  if (document.getElementById('order-edit-modal')) return;
+
+  /* ── CSS ── */
+  const style = document.createElement('style');
+  style.textContent = `
+    #order-edit-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .oedit-box {
+      background: var(--surface1, #1a1a2e);
+      border: 1px solid var(--border, rgba(255,255,255,0.1));
+      border-radius: 16px;
+      width: 100%;
+      max-width: 480px;
+      padding: 24px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+      animation: oeditIn 0.22s ease;
+    }
+    @keyframes oeditIn {
+      from { opacity:0; transform:translateY(16px) scale(0.97); }
+      to   { opacity:1; transform:translateY(0)    scale(1); }
+    }
+    .oedit-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .oedit-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main, #fff);
+    }
+    .oedit-close-btn {
+      background: none;
+      border: none;
+      color: var(--text-faint, #888);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .oedit-close-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    .oedit-field {
+      margin-bottom: 14px;
+    }
+    .oedit-field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: var(--text-faint, #888);
+      margin-bottom: 5px;
+    }
+    .oedit-field input,
+    .oedit-field select,
+    .oedit-field textarea {
+      width: 100%;
+      box-sizing: border-box;
+      background: var(--surface2, #252535);
+      border: 1px solid var(--border, rgba(255,255,255,0.1));
+      border-radius: 8px;
+      color: var(--text-main, #fff);
+      font-size: 13px;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    .oedit-field input:focus,
+    .oedit-field select:focus,
+    .oedit-field textarea:focus {
+      border-color: var(--accent, #4f7df0);
+    }
+    .oedit-field textarea { resize: vertical; min-height: 64px; }
+    .oedit-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .oedit-status-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .oedit-status-opt {
+      display: none;
+    }
+    .oedit-status-label {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .oedit-status-opt:checked + .oedit-status-label { border-color: currentColor; }
+    .oedit-status-label-pending   { background: rgba(250,204,21,0.12);  color: #facc15; }
+    .oedit-status-label-selesai   { background: rgba(74,222,128,0.12);  color: #4ade80; }
+    .oedit-status-label-refund    { background: rgba(251,146,60,0.12);  color: #fb923c; }
+    .oedit-status-label-cancelled { background: rgba(248,113,113,0.12); color: #f87171; }
+    .oedit-status-opt:checked + .oedit-status-label-pending   { background: rgba(250,204,21,0.22); }
+    .oedit-status-opt:checked + .oedit-status-label-selesai   { background: rgba(74,222,128,0.22); }
+    .oedit-status-opt:checked + .oedit-status-label-refund    { background: rgba(251,146,60,0.22); }
+    .oedit-status-opt:checked + .oedit-status-label-cancelled { background: rgba(248,113,113,0.22); }
+    .oedit-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .btn-edit-order {
+      background: rgba(79,125,240,0.12);
+      border: 1px solid rgba(79,125,240,0.3);
+      color: #4f7df0;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-family: inherit;
+    }
+    .btn-edit-order:hover { background: rgba(79,125,240,0.22); }
+    .oedit-divider {
+      border: none;
+      border-top: 1px solid var(--border, rgba(255,255,255,0.08));
+      margin: 16px 0;
+    }
+  `;
+  document.head.appendChild(style);
+
+  /* ── HTML MODAL ── */
+  const modal = document.createElement('div');
+  modal.id = 'order-edit-modal';
+  modal.innerHTML = `
+    <div class="oedit-box">
+      <div class="oedit-header">
+        <div class="oedit-title">✏️ Edit Pesanan</div>
+        <button class="oedit-close-btn" onclick="oeditClose()">✕</button>
+      </div>
+
+      <input type="hidden" id="oedit-id">
+
+      <!-- Status pilihan -->
+      <div class="oedit-field">
+        <label>Status Pesanan</label>
+        <div class="oedit-status-badges">
+          <input class="oedit-status-opt" type="radio" name="oedit-status" id="oedit-s-pending"   value="pending"   onchange="oeditStatusChange(this)">
+          <label class="oedit-status-label oedit-status-label-pending"   for="oedit-s-pending">⏳ Pending</label>
+
+          <input class="oedit-status-opt" type="radio" name="oedit-status" id="oedit-s-selesai"   value="selesai"   onchange="oeditStatusChange(this)">
+          <label class="oedit-status-label oedit-status-label-selesai"   for="oedit-s-selesai">✅ Selesai</label>
+
+          <input class="oedit-status-opt" type="radio" name="oedit-status" id="oedit-s-refund"    value="refund"    onchange="oeditStatusChange(this)">
+          <label class="oedit-status-label oedit-status-label-refund"    for="oedit-s-refund">💸 Refund</label>
+
+          <input class="oedit-status-opt" type="radio" name="oedit-status" id="oedit-s-cancelled" value="cancelled" onchange="oeditStatusChange(this)">
+          <label class="oedit-status-label oedit-status-label-cancelled" for="oedit-s-cancelled">❌ Cancelled</label>
+        </div>
+      </div>
+
+      <!-- Alasan refund/cancel (muncul kondisional) -->
+      <div class="oedit-field" id="oedit-reason-wrap" style="display:none">
+        <label>Alasan Refund / Pembatalan</label>
+        <textarea id="oedit-refund-reason" placeholder="Contoh: pembeli meminta cancel, item habis, dll..."></textarea>
+      </div>
+
+      <hr class="oedit-divider">
+
+      <!-- Info pesanan -->
+      <div class="oedit-field">
+        <label>Nama Item</label>
+        <input id="oedit-item-name" type="text" placeholder="Nama item...">
+      </div>
+
+      <div class="oedit-row-2">
+        <div class="oedit-field">
+          <label>Username Pembeli</label>
+          <input id="oedit-username" type="text" placeholder="username">
+        </div>
+        <div class="oedit-field">
+          <label>Qty</label>
+          <input id="oedit-qty" type="number" min="1" placeholder="1">
+        </div>
+      </div>
+
+      <div class="oedit-row-2">
+        <div class="oedit-field">
+          <label>Harga Satuan (Rp)</label>
+          <input id="oedit-unit-price" type="number" min="0" placeholder="0">
+        </div>
+        <div class="oedit-field">
+          <label>Total Harga (Rp)</label>
+          <input id="oedit-total-price" type="number" min="0" placeholder="0">
+        </div>
+      </div>
+
+      <div class="oedit-field">
+        <label>Catatan Pembeli</label>
+        <textarea id="oedit-note" placeholder="Catatan dari pembeli..."></textarea>
+      </div>
+
+      <div class="oedit-footer">
+        <button class="btn-ghost" onclick="oeditClose()" style="padding:8px 18px;font-size:13px;">Batal</button>
+        <button class="save-btn" id="oedit-save-btn" onclick="oeditSave()" style="padding:8px 20px;font-size:13px;">Simpan Perubahan</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  /* Tutup modal saat klik backdrop */
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) oeditClose();
+  });
+}
+
+/* Override getter/setter status untuk radio buttons */
+Object.defineProperty(window, '_oeditStatusValue', {
+  get() {
+    const checked = document.querySelector('input[name="oedit-status"]:checked');
+    return checked ? checked.value : 'pending';
+  }
+});
+
+/* Patch oedit-status get/set sebagai proxy ke radio */
+Object.defineProperty(document, 'getElementById', {
+  value: (function(orig) {
+    return function(id) {
+      if (id === 'oedit-status') {
+        return {
+          get value() {
+            const checked = document.querySelector('input[name="oedit-status"]:checked');
+            return checked ? checked.value : 'pending';
+          },
+          set value(v) {
+            const radio = document.querySelector(`input[name="oedit-status"][value="${v}"]`);
+            if (radio) radio.checked = true;
+          }
+        };
+      }
+      return orig.call(document, id);
+    };
+  })(document.getElementById)
+});
+
+/* ─────────────────────────────────────────────────────
    REALTIME SUBSCRIPTION
 ───────────────────────────────────────────────────── */
 function ordersSubscribe() {
@@ -206,7 +572,6 @@ function ordersSubscribe() {
   _ordersChannel = sb
     .channel('orders-live')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-      /* Reload saat ada INSERT, UPDATE, DELETE di tabel orders */
       ordersLoad();
     })
     .subscribe();
@@ -239,7 +604,6 @@ async function financeQuery(start, end, label) {
   const sb = getSb();
   if (!sb) return;
 
-  /* Show loading */
   ['finance-admin-table','finance-items-table','finance-orders-table'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '<div class="empty-state">Memuat...</div>';
@@ -262,7 +626,6 @@ async function financeQuery(start, end, label) {
 
   const orders = data || [];
 
-  /* ── Summary ── */
   const totalRev    = orders.reduce((s, o) => s + (o.total_price || 0), 0);
   const totalOrders = orders.length;
   const avgOrder    = totalOrders ? Math.round(totalRev / totalOrders) : 0;
@@ -271,7 +634,6 @@ async function financeQuery(start, end, label) {
   document.getElementById('fin-total-orders').textContent = totalOrders;
   document.getElementById('fin-avg-order').textContent    = fmtRp(avgOrder);
 
-  /* ── Per-admin ── */
   const adminMap = {};
   orders.forEach(o => {
     const k = o.completed_by_name || o.wa_admin_name || 'Unknown';
@@ -297,7 +659,6 @@ async function financeQuery(start, end, label) {
        </table>`
     : '<div class="empty-state">Belum ada data.</div>';
 
-  /* ── Item breakdown ── */
   const itemMap = {};
   orders.forEach(o => {
     const k = o.item_name || 'Unknown';
@@ -324,7 +685,6 @@ async function financeQuery(start, end, label) {
        </table>`
     : '<div class="empty-state">Belum ada data.</div>';
 
-  /* ── Detail orders table ── */
   const detailRows = orders.map(o => `
     <tr>
       <td style="white-space:nowrap;font-size:11px;color:var(--text-faint)">${fmtDate(o.completed_at)}</td>
@@ -356,11 +716,13 @@ function escHtml(s) {
 }
 
 /* ─────────────────────────────────────────────────────
-   INIT — hook ke showSection agar load saat tab dibuka
+   INIT
 ───────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
 
-  /* Default finance month = bulan ini */
+  /* Inject modal edit */
+  _injectEditModal();
+
   const monthEl = document.getElementById('finance-month');
   if (monthEl) {
     const now  = new Date();
@@ -369,22 +731,18 @@ document.addEventListener('DOMContentLoaded', () => {
     monthEl.value = `${yyyy}-${mm}`;
   }
 
-  /* Patch showSection untuk auto-load */
   const _origShowSection = window.showSection;
   window.showSection = function (name, el) {
     _origShowSection && _origShowSection(name, el);
     if (name === 'orders')  { ordersLoad(); ordersSubscribe(); }
-    if (name === 'finance') { /* user klik Tampilkan sendiri */ }
   };
 
-  /* Auto-subscribe jika user sudah di halaman orders */
   const secOrders = document.getElementById('sec-orders');
   if (secOrders && secOrders.classList.contains('active')) {
     ordersLoad();
     ordersSubscribe();
   }
 
-  /* Juga load badge count setiap kali admin buka panel */
   setTimeout(async () => {
     const sb = getSb();
     if (!sb) return;
@@ -393,7 +751,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .select('id', { count: 'exact', head: true })
       .eq('status', 'pending');
     ordersUpdateBadge(count || 0);
-    /* Auto subscribe untuk update badge */
     ordersSubscribe();
   }, 1500);
 });
