@@ -22,6 +22,72 @@ let configData  = {};
 let waAdmins    = { main: [], gem: [] };
 let waAddingFor = null;
 
+// ==================== GLOBAL UTILS ====================
+
+/**
+ * escHtml — escape karakter HTML berbahaya untuk mencegah XSS.
+ * Dipakai oleh admin-orders.js, admin-shop.js, dan file lainnya.
+ */
+function escHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+window.escHtml = escHtml;
+
+/**
+ * showAdminToast — toast notifikasi global admin panel.
+ * Alias: toast() juga tersedia agar file lama tetap kompatibel.
+ */
+function showAdminToast(msg, type) {
+  type = type || 'success';
+  let container = document.getElementById('admin-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'admin-toast-container';
+    container.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+    document.body.appendChild(container);
+  }
+  const el = document.createElement('div');
+  el.style.cssText = [
+    'padding:10px 16px',
+    'border-radius:10px',
+    'font-size:13px',
+    'font-weight:500',
+    'color:#fff',
+    'box-shadow:0 4px 16px rgba(0,0,0,.35)',
+    'opacity:0',
+    'transform:translateY(8px)',
+    'transition:opacity .22s,transform .22s',
+    'pointer-events:none',
+    'max-width:320px',
+    'word-break:break-word',
+    type === 'error'
+      ? 'background:rgba(239,68,68,.92)'
+      : 'background:rgba(34,197,94,.88)',
+  ].join(';');
+  el.textContent = msg;
+  container.appendChild(el);
+  requestAnimationFrame(() => {
+    el.style.opacity = '1';
+    el.style.transform = 'translateY(0)';
+  });
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(8px)';
+    setTimeout(() => el.remove(), 260);
+  }, 3200);
+}
+window.showAdminToast = showAdminToast;
+
+// Alias agar admin-config.js (yang pakai toast()) tetap bekerja
+function toast(msg, type) { showAdminToast(msg, type); }
+window.toast = toast;
+
 // ==================== IDLE AUTO-LOGOUT (1 jam) ====================
 (function () {
   const IDLE_LIMIT = 60 * 60 * 1000; // 1 jam = 3.600.000 ms
