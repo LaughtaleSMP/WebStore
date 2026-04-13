@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════
-   admin-orders.js — Pesanan Masuk + Laporan Keuangan
+   admin-orders.js — Pesanan Masuk + Semua Pesanan + Laporan Keuangan
    Requires: window._adminSb (dari admin-init.js)
 ══════════════════════════════════════════════════════ */
 
@@ -445,6 +445,21 @@ function _injectEditModal() {
       border-top: 1px solid var(--border, rgba(255,255,255,0.08));
       margin: 16px 0;
     }
+    /* ── Semua Pesanan table styles ── */
+    .ao-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .ao-status-pending   { background: rgba(250,204,21,0.12); color: #facc15; }
+    .ao-status-selesai   { background: rgba(74,222,128,0.12); color: #4ade80; }
+    .ao-status-refund    { background: rgba(251,146,60,0.12);  color: #fb923c; }
+    .ao-status-cancelled { background: rgba(248,113,113,0.12); color: #f87171; }
   `;
   document.head.appendChild(style);
 
@@ -581,6 +596,92 @@ function ordersSubscribe() {
    REFRESH BUTTON
 ───────────────────────────────────────────────────── */
 window.ordersRefresh = function () { ordersLoad(); };
+
+/* ─────────────────────────────────────────────────────
+   SEMUA PESANAN — load & render
+───────────────────────────────────────────────────── */
+window.allOrdersLoad = async function () {
+  const sb = getSb();
+  if (!sb) return;
+
+  const container = document.getElementById('all-orders-table');
+  if (!container) return;
+  container.innerHTML = '<div class="empty-state">Memuat...</div>';
+
+  const statusFilter = document.getElementById('ao-filter-status')?.value || '';
+  const searchVal    = (document.getElementById('ao-search')?.value || '').trim().toLowerCase();
+
+  let q = sb.from('orders').select('*').order('created_at', { ascending: false });
+  if (statusFilter) q = q.eq('status', statusFilter);
+
+  const { data, error } = await q;
+
+  if (error) {
+    container.innerHTML = `<div class="empty-state" style="color:#ff5a5a">Gagal memuat: ${error.message}</div>`;
+    return;
+  }
+
+  let orders = data || [];
+
+  /* Client-side search (username / item name) */
+  if (searchVal) {
+    orders = orders.filter(o =>
+      (o.username  || '').toLowerCase().includes(searchVal) ||
+      (o.item_name || '').toLowerCase().includes(searchVal)
+    );
+  }
+
+  if (!orders.length) {
+    container.innerHTML = '<div class="empty-state">Tidak ada pesanan ditemukan.</div>';
+    return;
+  }
+
+  const statusBadge = (s) => {
+    const map = {
+      pending:   ['ao-status-pending',   '⏳ Pending'],
+      selesai:   ['ao-status-selesai',   '✅ Selesai'],
+      refund:    ['ao-status-refund',    '💸 Refund'],
+      cancelled: ['ao-status-cancelled', '❌ Cancelled'],
+    };
+    const [cls, label] = map[s] || ['', s];
+    return `<span class="ao-status-badge ${cls}">${label}</span>`;
+  };
+
+  const rows = orders.map(o => `
+    <tr>
+      <td style="white-space:nowrap;font-size:11px;color:var(--text-faint)">${fmtDate(o.created_at)}</td>
+      <td>${o.item_emoji || '🛒'} <strong>${escHtml(o.item_name)}</strong></td>
+      <td style="text-align:center">${o.qty || 1}</td>
+      <td>${o.username ? escHtml(o.username) : '—'}</td>
+      <td>${escHtml(o.wa_admin_name || '—')}</td>
+      <td style="color:#4ade80;font-weight:600;white-space:nowrap">${fmtRp(o.total_price)}</td>
+      <td>${statusBadge(o.status)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-edit-order" style="font-size:11px;padding:4px 10px;" onclick="orderEdit('${o.id}')">✏️ Edit</button>
+        <button class="btn-ghost" style="font-size:11px;padding:4px 10px;margin-left:4px;" onclick="orderDelete('${o.id}')">🗑</button>
+      </td>
+    </tr>
+  `).join('');
+
+  container.innerHTML = `
+    <table class="fin-table" style="min-width:700px">
+      <thead>
+        <tr>
+          <th>Waktu</th>
+          <th>Item</th>
+          <th>Qty</th>
+          <th>Username</th>
+          <th>Admin</th>
+          <th>Total</th>
+          <th>Status</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="font-size:11px;color:var(--text-faint);padding:10px 4px 4px;">Total: ${orders.length} pesanan</div>
+  `;
+};
 
 /* ─────────────────────────────────────────────────────
    LAPORAN KEUANGAN
@@ -734,7 +835,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const _origShowSection = window.showSection;
   window.showSection = function (name, el) {
     _origShowSection && _origShowSection(name, el);
-    if (name === 'orders')  { ordersLoad(); ordersSubscribe(); }
+    if (name === 'orders')     { ordersLoad(); ordersSubscribe(); }
+    if (name === 'all-orders') { allOrdersLoad(); }
   };
 
   const secOrders = document.getElementById('sec-orders');
