@@ -59,15 +59,34 @@ function showConfirm({ title, message, confirmText, onConfirm }) {
 
   const overlay = document.createElement('div');
   overlay.id = 'custom-confirm-overlay';
-  overlay.style.cssText = [
-    'position:fixed', 'inset:0', 'z-index:10000',
-    'background:rgba(0,0,0,0.55)', 'backdrop-filter:blur(3px)',
-    'display:flex', 'align-items:center', 'justify-content:center', 'padding:16px',
-    'opacity:0', 'transition:opacity 0.18s ease',
-  ].join(';');
 
-  overlay.innerHTML = `
-    <div id="custom-confirm-box" style="
+  /* Gunakan style tag terpisah agar tidak bisa di-override */
+  const overlayStyle = document.createElement('style');
+  overlayStyle.id = 'custom-confirm-style';
+  const prevStyle = document.getElementById('custom-confirm-style');
+  if (prevStyle) prevStyle.remove();
+  overlayStyle.textContent = `
+    #custom-confirm-overlay {
+      position: fixed !important;
+      inset: 0 !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      z-index: 99999 !important;
+      background: rgba(0,0,0,0.6) !important;
+      backdrop-filter: blur(4px) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 16px !important;
+      box-sizing: border-box !important;
+      margin: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      overflow: hidden !important;
+    }
+    #custom-confirm-box {
       background: var(--surface1, #1a1a2e);
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 14px;
@@ -75,6 +94,15 @@ function showConfirm({ title, message, confirmText, onConfirm }) {
       max-width: 360px;
       padding: 24px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      margin: auto !important;
+      position: relative !important;
+      flex-shrink: 0;
+    }
+  `;
+  document.head.appendChild(overlayStyle);
+
+  overlay.innerHTML = `
+    <div id="custom-confirm-box" style="
       transform: scale(0.94) translateY(10px);
       transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s ease;
       opacity: 0;
@@ -115,11 +143,11 @@ function showConfirm({ title, message, confirmText, onConfirm }) {
     </div>
   `;
 
+  /* Pasang ke body, bukan ke dalam elemen lain */
   document.body.appendChild(overlay);
 
   /* Animasi masuk */
   requestAnimationFrame(() => {
-    overlay.style.opacity = '1';
     const box = document.getElementById('custom-confirm-box');
     if (box) {
       box.style.opacity = '1';
@@ -137,10 +165,14 @@ function showConfirm({ title, message, confirmText, onConfirm }) {
   confirmBtn.addEventListener('mouseleave', () => confirmBtn.style.background = 'rgba(239,68,68,0.85)');
 
   function closeDialog() {
-    overlay.style.opacity = '0';
     const box = document.getElementById('custom-confirm-box');
     if (box) { box.style.opacity = '0'; box.style.transform = 'scale(0.94) translateY(10px)'; }
-    setTimeout(() => overlay.remove(), 200);
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+      overlay.remove();
+      const s = document.getElementById('custom-confirm-style');
+      if (s) s.remove();
+    }, 200);
   }
 
   cancelBtn.addEventListener('click', closeDialog);
