@@ -2,7 +2,7 @@
    order-feed.css — Section Riwayat Pesanan Live
 ══════════════════════════════════════════════════ */
 
-/* ── Section wrapper ────────────────────────────── */
+/* ── Section wrapper ──────────────────────────────────── */
 #order-feed {
   background: var(--bg);
   padding: 4rem 0 3rem;
@@ -98,14 +98,14 @@
   opacity: 0.7;
 }
 
-/* ── Grid cards ─────────────────────────────────── */
+/* ── Grid cards ─────────────────────────────────────────── */
 .of-feed-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
   gap: 0.75rem;
 }
 
-/* ── Card ───────────────────────────────────────── */
+/* ── Card base ───────────────────────────────────────────── */
 .of-card {
   display: flex;
   align-items: center;
@@ -128,6 +128,24 @@
 .of-card:hover {
   background: rgba(168,85,247,0.06);
   border-color: rgba(168,85,247,0.2);
+}
+
+/* Card pending — border kiri kuning amber */
+.of-card--pending {
+  border-left: 2px solid rgba(245,158,11,0.5);
+}
+.of-card--pending:hover {
+  background: rgba(245,158,11,0.06);
+  border-color: rgba(245,158,11,0.35);
+}
+
+/* Card selesai — border kiri hijau */
+.of-card--selesai {
+  border-left: 2px solid rgba(93,189,58,0.5);
+}
+.of-card--selesai:hover {
+  background: rgba(93,189,58,0.05);
+  border-color: rgba(93,189,58,0.3);
 }
 
 /* NEW highlight */
@@ -193,18 +211,37 @@
   white-space: nowrap;
 }
 
+/* ── Badge base ────────────────────────────────────────────── */
 .of-card-badge {
   font-family: 'Press Start 2P', monospace;
   font-size: 0.38rem;
-  background: rgba(93,189,58,0.14);
-  border: 1px solid rgba(93,189,58,0.35);
-  color: #5dbd3a;
   border-radius: 4px;
   padding: 2px 5px;
   letter-spacing: 1px;
+  border: 1px solid;
 }
 
-/* ── Skeleton ───────────────────────────────────── */
+/* Badge SELESAI — hijau */
+.of-badge--selesai {
+  background: rgba(93,189,58,0.14);
+  border-color: rgba(93,189,58,0.35);
+  color: #5dbd3a;
+}
+
+/* Badge PENDING — amber/kuning */
+.of-badge--pending {
+  background: rgba(245,158,11,0.14);
+  border-color: rgba(245,158,11,0.4);
+  color: #f59e0b;
+  animation: ofPendingPulse 2s ease-in-out infinite;
+}
+
+@keyframes ofPendingPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* ── Skeleton ───────────────────────────────────────────────── */
 .of-skeleton {
   pointer-events: none;
 }
@@ -231,7 +268,7 @@
   100% { background-position:  200% 0; }
 }
 
-/* ── Empty state ────────────────────────────────── */
+/* ── Empty state ────────────────────────────────────────────── */
 .of-empty {
   display: none;
   text-align: center;
@@ -304,7 +341,7 @@
   }
 }
 
-/* ── CTA bawah ───────────────────────────────────── */
+/* ── CTA bawah ───────────────────────────────────────────────── */
 .of-cta-wrap {
   text-align: center;
   margin-top: 1.75rem;
