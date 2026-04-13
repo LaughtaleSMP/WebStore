@@ -151,7 +151,7 @@ function ordersRenderList(orders) {
       <div class="order-actions">
         <button class="btn-done" onclick="orderMarkDone('${o.id}')">✅ Selesai</button>
         <button class="btn-edit-order" onclick="orderEdit('${o.id}')">✏️ Edit</button>
-        <button class="btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="orderDelete('${o.id}')">🗑 Hapus</button>
+        <button class="btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="orderDelete('${o.id}','orders')">🗑 Hapus</button>
       </div>
     </div>
   `).join('');
@@ -239,16 +239,27 @@ window.orderMarkDone = async function (id) {
 
 /* ─────────────────────────────────────────────────────
    DELETE ORDER
+   context: 'orders' (Pesanan Masuk) | 'all-orders' (Semua Pesanan)
 ───────────────────────────────────────────────────── */
-window.orderDelete = async function (id) {
+window.orderDelete = async function (id, context) {
   if (!confirm('Hapus pesanan ini dari database?')) return;
   const sb = getSb();
   if (!sb) { showToast('Supabase belum siap.', 'error'); return; }
+
   const { error } = await sb.from('orders').delete().eq('id', id);
   if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
+
+  /* Hapus elemen dari DOM (berlaku untuk card maupun row tabel) */
   const card = document.getElementById('ocard-' + id);
   if (card) card.remove();
-  ordersLoad();
+
+  /* Refresh tabel/section yang sesuai */
+  if (context === 'all-orders') {
+    window.allOrdersLoad();
+  } else {
+    ordersLoad();
+  }
+
   showToast('Order dihapus.', 'success');
 };
 
@@ -600,6 +611,7 @@ function _injectEditModal() {
 
 /* ─────────────────────────────────────────────────────
    REALTIME SUBSCRIPTION
+   Menggunakan single-object params agar tidak deprecated
 ───────────────────────────────────────────────────── */
 function ordersSubscribe() {
   const sb = getSb();
@@ -607,9 +619,11 @@ function ordersSubscribe() {
 
   _ordersChannel = sb
     .channel('orders-live')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-      ordersLoad();
-    })
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'orders' },
+      () => { ordersLoad(); }
+    )
     .subscribe();
 }
 
@@ -678,7 +692,7 @@ window.allOrdersLoad = async function () {
       <td>${statusBadge(o.status)}</td>
       <td style="white-space:nowrap">
         <button class="btn-edit-order" style="font-size:11px;padding:4px 10px;" onclick="orderEdit('${o.id}')">✏️ Edit</button>
-        <button class="btn-ghost" style="font-size:11px;padding:4px 10px;margin-left:4px;" onclick="orderDelete('${o.id}')">🗑</button>
+        <button class="btn-ghost" style="font-size:11px;padding:4px 10px;margin-left:4px;" onclick="orderDelete('${o.id}','all-orders')">🗑</button>
       </td>
     </tr>
   `).join('');
@@ -855,23 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.showSection = function (name, el) {
     _origShowSection && _origShowSection(name, el);
     if (name === 'orders')     { ordersLoad(); ordersSubscribe(); }
-    if (name === 'all-orders') { allOrdersLoad(); }
+    if (name === 'all-orders') { window.allOrdersLoad(); }
+    if (name === 'finance')    { /* user manual trigger */ }
   };
-
-  const secOrders = document.getElementById('sec-orders');
-  if (secOrders && secOrders.classList.contains('active')) {
-    ordersLoad();
-    ordersSubscribe();
-  }
-
-  setTimeout(async () => {
-    const sb = getSb();
-    if (!sb) return;
-    const { count } = await sb
-      .from('orders')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'pending');
-    ordersUpdateBadge(count || 0);
-    ordersSubscribe();
-  }, 1500);
 });
