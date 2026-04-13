@@ -26,6 +26,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- FIX: shop-extra.css wajib di-load agar form, gallery, qty, tombol WA terstyle -->
 <link rel="stylesheet" href="css/shop-extra.css">
+<link rel="stylesheet" href="css/order-feed.css">
 
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/nav.css">
@@ -927,6 +928,52 @@
   </div>
 </section>
 
+<!-- ORDER FEED -->
+<section id="order-feed">
+  <div class="container">
+    <div class="of-header">
+      <div class="of-header-left">
+        <span class="of-live-pill">
+          <span class="of-live-dot"></span>LIVE
+        </span>
+        <h2 class="section-label no-dot" style="margin:0;font-size:clamp(0.42rem,1vw,0.55rem)">TRANSAKSI TERBARU</h2>
+        <span class="of-counter" id="of-counter"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span class="of-last-updated" id="of-last-updated"></span>
+        <button class="of-refresh-btn" id="of-refresh-btn">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <div class="of-layout">
+      <div id="of-feed-list" class="of-feed-list"></div>
+      <div class="of-ticker-wrap">
+        <div class="of-ticker-title">
+          <span class="of-live-dot" style="width:6px;height:6px;border-radius:50%;background:#a855f7;display:inline-block;margin-right:4px;"></span>
+          LIVE TICKER
+        </div>
+        <ul class="of-ticker-list" id="of-ticker-list"></ul>
+      </div>
+    </div>
+
+    <div class="of-empty" id="of-empty">
+      <div class="of-empty-icon">🛒</div>
+      <p>Belum ada transaksi yang ditampilkan.</p>
+    </div>
+
+    <div class="of-cta-wrap">
+      <p>Tertarik? Kunjungi toko kami dan temukan item eksklusif.</p>
+      <a href="#shop" class="of-cta-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        BUKA TOKO
+      </a>
+    </div>
+  </div>
+</section>
+
 <!-- ============================================================
      KOMUNITAS
 ============================================================ -->
@@ -1299,5 +1346,6 @@ function showConnectHint(msg, type) {
 }
 </script>
 <script src="js/supabase-sync.js" defer></script>
+<script src="js/order-feed.js" defer></script>
 </body>
 </html>
