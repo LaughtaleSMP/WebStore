@@ -1,0 +1,338 @@
+/* ══════════════════════════════════════════════════
+   order-feed.css — Section Riwayat Pesanan Live
+══════════════════════════════════════════════════ */
+
+/* ── Section wrapper ────────────────────────────── */
+#order-feed {
+  background: var(--bg);
+  padding: 4rem 0 3rem;
+  overflow: hidden;
+  position: relative;
+}
+
+#order-feed::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(168,85,247,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.of-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+
+.of-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.of-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(168,85,247,0.12);
+  border: 1px solid rgba(168,85,247,0.3);
+  border-radius: 99px;
+  padding: 3px 10px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.45rem;
+  color: #c084fc;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.of-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #a855f7;
+  animation: ofPulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes ofPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}
+
+.of-counter {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.45rem;
+  color: var(--text-muted, #888);
+  letter-spacing: 1px;
+}
+
+.of-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 0.62rem;
+  font-family: 'Press Start 2P', monospace;
+  color: var(--text-muted, #888);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.of-refresh-btn:hover {
+  background: rgba(168,85,247,0.12);
+  color: #c084fc;
+  border-color: rgba(168,85,247,0.4);
+}
+
+.of-last-updated {
+  font-size: 0.7rem;
+  color: var(--text-muted, #888);
+  opacity: 0.7;
+}
+
+/* ── Grid cards ─────────────────────────────────── */
+.of-feed-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 0.75rem;
+}
+
+/* ── Card ───────────────────────────────────────── */
+.of-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: var(--bg3, rgba(255,255,255,0.03));
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.3s ease, transform 0.3s ease,
+              background 0.2s, border-color 0.2s;
+}
+
+.of-card--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.of-card:hover {
+  background: rgba(168,85,247,0.06);
+  border-color: rgba(168,85,247,0.2);
+}
+
+/* NEW highlight */
+.of-card--new {
+  animation: ofNewFlash 1.6s ease forwards;
+}
+
+@keyframes ofNewFlash {
+  0%   { background: rgba(168,85,247,0.18); border-color: rgba(168,85,247,0.5); }
+  100% { background: var(--bg3, rgba(255,255,255,0.03)); border-color: rgba(255,255,255,0.07); }
+}
+
+.of-card-emoji {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  line-height: 1;
+  width: 40px;
+  text-align: center;
+}
+
+.of-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.of-card-user {
+  font-size: 0.72rem;
+  color: var(--text-muted, #aaa);
+  margin-bottom: 2px;
+}
+
+.of-card-user strong {
+  color: var(--diamond, #c084fc);
+}
+
+.of-card-item {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text, #e2e8f0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.of-card-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.of-card-price {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #f4c430;
+}
+
+.of-card-time {
+  font-size: 0.63rem;
+  color: var(--text-muted, #888);
+  white-space: nowrap;
+}
+
+.of-card-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.38rem;
+  background: rgba(93,189,58,0.14);
+  border: 1px solid rgba(93,189,58,0.35);
+  color: #5dbd3a;
+  border-radius: 4px;
+  padding: 2px 5px;
+  letter-spacing: 1px;
+}
+
+/* ── Skeleton ───────────────────────────────────── */
+.of-skeleton {
+  pointer-events: none;
+}
+
+.of-skel-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: ofShimmer 1.4s ease-in-out infinite;
+}
+
+.of-skel-line {
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: ofShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes ofShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ── Empty state ────────────────────────────────── */
+.of-empty {
+  display: none;
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted, #888);
+  font-size: 0.8rem;
+}
+
+.of-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ── Ticker vertikal (sidebar kanan, hidden di mobile kecil) ── */
+.of-ticker-wrap {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .of-layout {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .of-ticker-wrap {
+    display: block;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 1rem;
+    max-height: 480px;
+    overflow: hidden;
+    position: sticky;
+    top: 80px;
+  }
+  .of-ticker-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.4rem;
+    color: var(--text-muted, #888);
+    letter-spacing: 1.5px;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .of-ticker-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    animation: ofTickerScroll linear infinite;
+    animation-duration: calc(var(--of-item-count, 10) * 2.5s);
+  }
+  .of-ticker-list:hover { animation-play-state: paused; }
+  .of-ticker-item {
+    font-size: 0.7rem;
+    color: var(--text-muted, #aaa);
+    padding: 0.55rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    line-height: 1.4;
+  }
+  .of-ticker-item strong { color: #c084fc; }
+  .of-ticker-item em { color: var(--text, #e2e8f0); font-style: normal; }
+  @keyframes ofTickerScroll {
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+  }
+}
+
+/* ── CTA bawah ───────────────────────────────────── */
+.of-cta-wrap {
+  text-align: center;
+  margin-top: 1.75rem;
+}
+
+.of-cta-wrap p {
+  font-size: 0.8rem;
+  color: var(--text-muted, #aaa);
+  margin-bottom: 0.75rem;
+}
+
+.of-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(168,85,247,0.08));
+  border: 1px solid rgba(168,85,247,0.4);
+  border-radius: 8px;
+  padding: 0.65rem 1.4rem;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.55rem;
+  color: #c084fc;
+  letter-spacing: 1px;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.of-cta-btn:hover {
+  background: linear-gradient(135deg, rgba(168,85,247,0.35), rgba(168,85,247,0.15));
+  transform: translateY(-1px);
+}
