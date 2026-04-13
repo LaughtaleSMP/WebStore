@@ -71,6 +71,12 @@ function todayRange() {
   return { start, end };
 }
 
+/* Ambil 8 karakter pertama UUID sebagai ID singkat yang mudah dibaca */
+function shortId(uuid) {
+  if (!uuid) return '—';
+  return '#' + String(uuid).replace(/-/g, '').slice(0, 8).toUpperCase();
+}
+
 /* ─────────────────────────────────────────────────────
    RADIO STATUS HELPERS (pengganti getElementById override)
 ───────────────────────────────────────────────────── */
@@ -136,7 +142,10 @@ function ordersRenderList(orders) {
           <span class="order-emoji">${o.item_emoji || '🛒'}</span>
           <div>
             <div class="order-item-name">${escHtml(o.item_name)}</div>
-            <div class="order-meta">${escHtml(o.item_category || '')} &nbsp;·&nbsp; ${fmtDate(o.created_at)}</div>
+            <div class="order-meta">
+              <span class="order-id-badge">${shortId(o.id)}</span>
+              &nbsp;·&nbsp;${escHtml(o.item_category || '')} &nbsp;·&nbsp; ${fmtDate(o.created_at)}
+            </div>
           </div>
         </div>
         <div class="order-price">${fmtRp(o.total_price)}</div>
@@ -282,6 +291,10 @@ window.orderEdit = async function (id) {
   document.getElementById('oedit-note').value          = o.customer_note || '';
   document.getElementById('oedit-refund-reason').value = o.refund_reason || '';
 
+  /* Tampilkan ID singkat di header modal */
+  const oeditIdLabel = document.getElementById('oedit-order-id-label');
+  if (oeditIdLabel) oeditIdLabel.textContent = shortId(o.id);
+
   /* Set radio status */
   _setOeditStatus(o.status || 'pending');
 
@@ -310,7 +323,7 @@ window.oeditSave = async function () {
   if (!sb) return;
 
   const id         = document.getElementById('oedit-id').value;
-  const status     = _getOeditStatus();                                    /* ← pakai helper */
+  const status     = _getOeditStatus();
   const itemName   = document.getElementById('oedit-item-name').value.trim();
   const username   = document.getElementById('oedit-username').value.trim();
   const qty        = parseInt(document.getElementById('oedit-qty').value) || 1;
@@ -374,6 +387,22 @@ function _injectEditModal() {
 
   const style = document.createElement('style');
   style.textContent = `
+    /* ID Badge — tampil di card pesanan masuk & kolom tabel */
+    .order-id-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.5px;
+      color: var(--accent, #4f7df0);
+      background: rgba(79,125,240,0.12);
+      border: 1px solid rgba(79,125,240,0.25);
+      border-radius: 5px;
+      padding: 1px 6px;
+      vertical-align: middle;
+      user-select: all;
+    }
+
     #order-edit-modal {
       display: none;
       position: fixed;
@@ -409,6 +438,9 @@ function _injectEditModal() {
       font-size: 15px;
       font-weight: 700;
       color: var(--text-main, #fff);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .oedit-close-btn {
       background: none;
@@ -534,7 +566,10 @@ function _injectEditModal() {
   modal.innerHTML = `
     <div class="oedit-box">
       <div class="oedit-header">
-        <div class="oedit-title">✏️ Edit Pesanan</div>
+        <div class="oedit-title">
+          ✏️ Edit Pesanan
+          <span class="order-id-badge" id="oedit-order-id-label"></span>
+        </div>
         <button class="oedit-close-btn" onclick="oeditClose()">✕</button>
       </div>
 
@@ -611,7 +646,6 @@ function _injectEditModal() {
 
 /* ─────────────────────────────────────────────────────
    REALTIME SUBSCRIPTION
-   Menggunakan single-object params agar tidak deprecated
 ───────────────────────────────────────────────────── */
 function ordersSubscribe() {
   const sb = getSb();
@@ -661,7 +695,8 @@ window.allOrdersLoad = async function () {
   if (searchVal) {
     orders = orders.filter(o =>
       (o.username  || '').toLowerCase().includes(searchVal) ||
-      (o.item_name || '').toLowerCase().includes(searchVal)
+      (o.item_name || '').toLowerCase().includes(searchVal) ||
+      shortId(o.id).toLowerCase().includes(searchVal)
     );
   }
 
@@ -683,6 +718,9 @@ window.allOrdersLoad = async function () {
 
   const rows = orders.map(o => `
     <tr>
+      <td style="white-space:nowrap;font-size:11px;">
+        <span class="order-id-badge">${shortId(o.id)}</span>
+      </td>
       <td style="white-space:nowrap;font-size:11px;color:var(--text-faint)">${fmtDate(o.created_at)}</td>
       <td>${o.item_emoji || '🛒'} <strong>${escHtml(o.item_name)}</strong></td>
       <td style="text-align:center">${o.qty || 1}</td>
@@ -698,9 +736,10 @@ window.allOrdersLoad = async function () {
   `).join('');
 
   container.innerHTML = `
-    <table class="fin-table" style="min-width:700px">
+    <table class="fin-table" style="min-width:760px">
       <thead>
         <tr>
+          <th>ID</th>
           <th>Waktu</th>
           <th>Item</th>
           <th>Qty</th>
@@ -822,6 +861,9 @@ async function financeQuery(start, end, label) {
 
   const detailRows = orders.map(o => `
     <tr>
+      <td style="white-space:nowrap;font-size:11px;">
+        <span class="order-id-badge">${shortId(o.id)}</span>
+      </td>
       <td style="white-space:nowrap;font-size:11px;color:var(--text-faint)">${fmtDate(o.completed_at)}</td>
       <td>${o.item_emoji || '🛒'} ${escHtml(o.item_name)}</td>
       <td style="text-align:center">${o.qty || 1}</td>
@@ -831,8 +873,8 @@ async function financeQuery(start, end, label) {
     </tr>`).join('');
 
   document.getElementById('finance-orders-table').innerHTML = detailRows
-    ? `<table class="fin-table" style="min-width:600px">
-        <thead><tr><th>Waktu</th><th>Item</th><th>Qty</th><th>Username</th><th>Admin</th><th>Total</th></tr></thead>
+    ? `<table class="fin-table" style="min-width:640px">
+        <thead><tr><th>ID</th><th>Waktu</th><th>Item</th><th>Qty</th><th>Username</th><th>Admin</th><th>Total</th></tr></thead>
         <tbody>${detailRows}</tbody>
        </table>`
     : '<div class="empty-state">Tidak ada order selesai pada periode ini.</div>';
