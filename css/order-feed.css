@@ -67,7 +67,7 @@
   background: transparent;
   border: 1px solid rgba(255,255,255,0.09);
   border-radius: 5px;
-  padding: 3px 8px;
+  padding: 3px 7px;
   font-size: 0.65rem;
   color: var(--text-muted, #888);
   cursor: pointer;
@@ -102,25 +102,25 @@
   table-layout: fixed;
 }
 
-/* Lebar kolom eksplisit supaya tidak overflow */
-.of-col-id     { width: 44px; }
-.of-col-user   { width: 68px; }
-.of-col-item   { width: auto; }   /* sisa space */
-.of-col-price  { width: 58px; }
-.of-col-status { width: 58px; }
-.of-col-time   { width: 34px; }
+/* Lebar kolom — total ~100% */
+.of-col-id     { width: 38px; }
+.of-col-user   { width: 62px; }
+.of-col-item   { width: auto; }
+.of-col-price  { width: 52px; }
+.of-col-status { width: 54px; }
+.of-col-time   { width: 30px; }
 
 .of-table thead tr {
   border-bottom: 1px solid rgba(255,255,255,0.07);
 }
 .of-table thead th {
-  padding: 0.4rem 0.45rem;
+  padding: 0.38rem 0.3rem;
   text-align: left;
   font-family: 'Press Start 2P', monospace;
-  font-size: 0.32rem;
+  font-size: 0.3rem;
   font-weight: 400;
   color: var(--text-muted, #555);
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
@@ -157,31 +157,37 @@
 
 /* ── Sel ── */
 .of-row td {
-  padding: 0.4rem 0.45rem;
+  padding: 0.38rem 0.3rem;
   vertical-align: middle;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* kolom pertama sedikit lebih kiri */
+.of-row td:first-child,
+.of-table thead th:first-child {
+  padding-left: 0.5rem;
+}
+
 .of-col-id {
   font-family: 'Press Start 2P', monospace;
-  font-size: 0.34rem;
+  font-size: 0.32rem;
   color: var(--text-muted, #555);
 }
 .of-col-user {
   color: #c084fc;
   font-weight: 600;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
 }
 .of-col-item {
   color: var(--text, #e2e8f0);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
 }
 .of-col-price {
   text-align: right;
   font-weight: 700;
   color: #f4c430;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-variant-numeric: tabular-nums;
 }
 .of-col-status { text-align: right; }
@@ -195,10 +201,10 @@
 /* ── Badge status ── */
 .of-badge {
   display: inline-block;
-  font-size: 0.55rem;
+  font-size: 0.52rem;
   font-weight: 600;
   border-radius: 3px;
-  padding: 1px 4px;
+  padding: 1px 3px;
   border: 1px solid;
   letter-spacing: 0.2px;
   white-space: nowrap;
