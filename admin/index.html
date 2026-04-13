@@ -82,65 +82,9 @@
         <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
       </div>
 
-<button class="btn-primary" onclick="doLogin()" id="login-btn">Masuk ke Panel</button>
+      <button class="btn-primary" onclick="doLogin()" id="login-btn">Masuk ke Panel</button>
 
-<!-- ── Daftarkan Admin Baru ── -->
-<div style="margin-top:1.4rem;padding-top:1.25rem;border-top:1px solid rgba(255,255,255,0.06);">
-  <button id="toggle-register-btn" onclick="toggleRegisterForm()"
-    style="width:100%;padding:9px;border-radius:9px;
-           border:1px solid rgba(91,127,244,0.2);
-           background:rgba(91,127,244,0.05);color:var(--text-muted);
-           font-family:'Inter',sans-serif;font-size:12px;
-           font-weight:500;cursor:pointer;letter-spacing:0.2px;
-           transition:all 0.18s;display:flex;align-items:center;
-           justify-content:center;gap:7px;">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-      <circle cx="9" cy="7" r="4"/>
-      <line x1="19" y1="8" x2="19" y2="14"/>
-      <line x1="22" y1="11" x2="16" y2="11"/>
-    </svg>
-    Daftarkan Admin Baru
-  </button>
-
-  <div id="register-form-wrap" style="display:none;margin-top:1.1rem;">
-    <div id="register-error" class="alert alert-error" style="display:none">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span id="register-error-msg"></span>
     </div>
-    <div id="register-success" class="alert"
-      style="display:none;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#86efac;">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-      <span id="register-success-msg"></span>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Nama Tampilan</label>
-      <input class="form-input" id="reg-display" type="text" placeholder="cth: Blackdamen" autocomplete="off">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Email Admin</label>
-      <input class="form-input" id="reg-email" type="email" placeholder="admin@laughtale.my.id" autocomplete="off">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Password (min. 6 karakter)</label>
-      <input class="form-input" id="reg-password" type="password" placeholder="••••••••" autocomplete="new-password">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Role</label>
-      <select class="form-input" id="reg-role"
-        style="-webkit-appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2372728a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 11px center;padding-right:32px;">
-        <option value="admin">Admin</option>
-        <option value="super_admin">Super Admin</option>
-        <option value="moderator">Moderator</option>
-      </select>
-    </div>
-    <button class="btn-primary" id="register-btn" onclick="doRegisterAdmin()" style="margin-top:4px;">
-      Daftarkan Admin
-    </button>
-  </div>
-</div>
-
-      </div>
   </div>
 </div>
 
@@ -231,7 +175,6 @@
           <div class="page-sub">Pengaturan dasar server Laughtale SMP</div>
         </div>
 
-        <!-- Live status -->
         <div class="server-live" id="server-live-card">
           <div class="live-indicator">
             <div class="live-indicator-dot" id="live-orb-dot"></div>
@@ -274,7 +217,6 @@
               <input id="cfg-server_name" placeholder="Laughtale SMP">
             </div>
           </div>
-
           <div class="divider"></div>
           <div style="font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Preview</div>
           <div class="preview-box" id="server-preview">
@@ -297,7 +239,6 @@
           <div class="page-sub">Atur bagaimana data status server diambil dan ditampilkan</div>
         </div>
 
-        <!-- Live preview card -->
         <div class="server-live" id="ss-live-card">
           <div class="live-indicator">
             <div class="live-indicator-dot" id="ss-orb-dot"></div>
@@ -319,7 +260,6 @@
               <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
             </div>
           </div>
-
           <div class="field-group">
             <div class="field">
               <label>API Provider</label>
@@ -336,7 +276,6 @@
               <div class="field-hint">Min 30 detik, maks 600 detik (10 menit)</div>
             </div>
           </div>
-
           <div class="field-group full" id="ss-custom-url-wrap" style="display:none">
             <div class="field">
               <label>Custom API URL</label>
@@ -344,10 +283,8 @@
               <div class="field-hint">Gunakan <code style="background:var(--surface3);padding:1px 5px;border-radius:4px;font-size:11px">{host}</code> dan <code style="background:var(--surface3);padding:1px 5px;border-radius:4px;font-size:11px">{port}</code> sebagai placeholder</div>
             </div>
           </div>
-
           <div class="divider"></div>
           <div style="font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-faint);margin-bottom:10px;">Tampilan Widget</div>
-
           <div class="toggle-row">
             <div class="toggle-label">
               <strong>Tampilkan Latency</strong>
@@ -369,10 +306,7 @@
             </div>
             <div class="toggle on" id="toggle-status_pause_hidden" onclick="this.classList.toggle('on')"></div>
           </div>
-
           <div class="divider"></div>
-
-          <!-- Preview URL -->
           <div style="font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Preview URL API</div>
           <div class="preview-box">
             <div class="preview-row">
@@ -387,9 +321,7 @@
         </div>
 
         <div class="save-bar">
-          <button class="btn-ghost" onclick="testStatusConnection()" style="border-color:rgba(79,125,240,0.3);color:var(--accent)">
-            ⚡ Test Koneksi
-          </button>
+          <button class="btn-ghost" onclick="testStatusConnection()" style="border-color:rgba(79,125,240,0.3);color:var(--accent)">⚡ Test Koneksi</button>
           <button class="save-btn" onclick="saveSection('server-status')">Simpan Konfigurasi</button>
         </div>
       </div>
@@ -400,15 +332,11 @@
           <div class="page-title">Maintenance Mode</div>
           <div class="page-sub">Aktifkan saat server sedang dalam perbaikan</div>
         </div>
-
         <div class="card">
           <div class="card-header">
             <div class="card-title">Status Maintenance</div>
-            <span class="status-pill pill-online" id="maint-status-pill">
-              <span class="pill-dot"></span>Normal
-            </span>
+            <span class="status-pill pill-online" id="maint-status-pill"><span class="pill-dot"></span>Normal</span>
           </div>
-
           <div class="toggle-row">
             <div class="toggle-label">
               <strong>Maintenance Mode</strong>
@@ -416,12 +344,10 @@
             </div>
             <div class="toggle" id="toggle-maintenance" onclick="toggleMaintenance(this)"></div>
           </div>
-
           <div id="maint-on-preview" class="maint-preview-box" style="display:none">
             <strong>Mode Maintenance Aktif</strong>
             Website sedang dalam mode perbaikan dan tidak dapat diakses pengunjung.
           </div>
-
           <div class="divider"></div>
           <div class="field-group full">
             <div class="field">
@@ -441,7 +367,6 @@
             </div>
           </div>
         </div>
-
         <div class="save-bar">
           <span class="save-bar-hint">Hati-hati: aktifkan hanya saat diperlukan.</span>
           <button class="save-btn" onclick="saveSection('maintenance')">Simpan Maintenance</button>
@@ -454,15 +379,11 @@
           <div class="page-title">MOTD / Pengumuman</div>
           <div class="page-sub">Pesan yang muncul di halaman utama website</div>
         </div>
-
         <div class="card">
           <div class="card-header">
             <div class="card-title">Pengumuman Website</div>
-            <div class="card-icon">
-              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            </div>
+            <div class="card-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
           </div>
-
           <div class="toggle-row">
             <div class="toggle-label">
               <strong>Tampilkan Banner Pengumuman</strong>
@@ -470,9 +391,7 @@
             </div>
             <div class="toggle" id="toggle-motd-active" onclick="this.classList.toggle('on')"></div>
           </div>
-
           <div class="divider"></div>
-
           <div class="field-group full">
             <div class="field">
               <label>Teks Pengumuman</label>
@@ -501,7 +420,6 @@
             </div>
           </div>
         </div>
-
         <div class="save-bar">
           <span class="save-bar-hint">Banner akan langsung tampil setelah disimpan.</span>
           <button class="save-btn" onclick="saveSection('motd')">Simpan Pengumuman</button>
@@ -514,15 +432,11 @@
           <div class="page-title">Season & World</div>
           <div class="page-sub">Informasi season dan dunia saat ini</div>
         </div>
-
         <div class="card">
           <div class="card-header">
             <div class="card-title">Info Season</div>
-            <div class="card-icon">
-              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </div>
+            <div class="card-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
           </div>
-
           <div class="field-group">
             <div class="field">
               <label>Nomor Season</label>
@@ -554,7 +468,6 @@
             </div>
           </div>
         </div>
-
         <div class="save-bar">
           <span class="save-bar-hint">Info season tampil di halaman utama dan about.</span>
           <button class="save-btn" onclick="saveSection('season')">Simpan Season</button>
@@ -567,7 +480,6 @@
           <div class="page-title">Admin WhatsApp</div>
           <div class="page-sub">Nomor WhatsApp admin untuk pemesanan di toko</div>
         </div>
-
         <div class="card">
           <div class="card-header">
             <div class="card-title">Admin Utama (Shop)</div>
@@ -578,7 +490,6 @@
           </div>
           <div id="wa-main-list"><div class="empty-state">Memuat data...</div></div>
         </div>
-
         <div class="card">
           <div class="card-header">
             <div class="card-title">Admin Gem Coins</div>
@@ -589,8 +500,6 @@
           </div>
           <div id="wa-gem-list"><div class="empty-state">Memuat data...</div></div>
         </div>
-
-        <!-- Add form -->
         <div class="card" id="wa-add-form" style="display:none">
           <div class="card-header">
             <div class="card-title" id="wa-add-title">Tambah Admin</div>
@@ -619,36 +528,17 @@
           <div class="page-title">Pesanan Masuk</div>
           <div class="page-sub">Order yang belum diproses — update real-time</div>
         </div>
-
-        <!-- Stats strip -->
         <div class="orders-stats-strip" id="orders-stats-strip">
-          <div class="ostat-card">
-            <div class="ostat-num" id="ostat-pending">—</div>
-            <div class="ostat-label">Pending</div>
-          </div>
-          <div class="ostat-card">
-            <div class="ostat-num" id="ostat-done-today">—</div>
-            <div class="ostat-label">Selesai Hari Ini</div>
-          </div>
-          <div class="ostat-card">
-            <div class="ostat-num" id="ostat-rev-today">—</div>
-            <div class="ostat-label">Pemasukan Hari Ini</div>
-          </div>
+          <div class="ostat-card"><div class="ostat-num" id="ostat-pending">—</div><div class="ostat-label">Pending</div></div>
+          <div class="ostat-card"><div class="ostat-num" id="ostat-done-today">—</div><div class="ostat-label">Selesai Hari Ini</div></div>
+          <div class="ostat-card"><div class="ostat-num" id="ostat-rev-today">—</div><div class="ostat-label">Pemasukan Hari Ini</div></div>
         </div>
-
-        <!-- Live badge -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
-          <span class="live-pill">
-            <span class="live-pill-dot"></span>LIVE
-          </span>
+          <span class="live-pill"><span class="live-pill-dot"></span>LIVE</span>
           <span style="font-size:12px;color:var(--text-faint)">Halaman ini otomatis update saat pesanan baru masuk.</span>
           <button class="btn-ghost" style="margin-left:auto;font-size:12px;padding:5px 12px;" onclick="ordersRefresh()">⟳ Refresh</button>
         </div>
-
-        <!-- Orders list -->
-        <div id="orders-list">
-          <div class="empty-state">Memuat pesanan...</div>
-        </div>
+        <div id="orders-list"><div class="empty-state">Memuat pesanan...</div></div>
       </div>
 
       <!-- ============ SEMUA PESANAN ============ -->
@@ -657,8 +547,6 @@
           <div class="page-title">Semua Pesanan</div>
           <div class="page-sub">Riwayat seluruh pesanan — pending, selesai, refund, cancelled</div>
         </div>
-
-        <!-- Filter bar -->
         <div class="card" style="padding:16px 20px;">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <label style="font-size:12px;color:var(--text-faint);font-weight:600;">Status:</label>
@@ -675,12 +563,8 @@
             <button class="btn-ghost" style="padding:7px 14px;font-size:12px;margin-left:auto;" onclick="allOrdersLoad()">⟳ Refresh</button>
           </div>
         </div>
-
-        <!-- Table -->
         <div class="card">
-          <div id="all-orders-table" style="overflow-x:auto;">
-            <div class="empty-state">Klik Tampilkan untuk memuat data.</div>
-          </div>
+          <div id="all-orders-table" style="overflow-x:auto;"><div class="empty-state">Klik Tampilkan untuk memuat data.</div></div>
         </div>
       </div>
 
@@ -690,8 +574,6 @@
           <div class="page-title">Laporan Keuangan</div>
           <div class="page-sub">Rekap pendapatan &amp; performa admin</div>
         </div>
-
-        <!-- Filter bar -->
         <div class="card" style="padding:16px 20px;">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <label style="font-size:12px;color:var(--text-faint);font-weight:600;">Filter Bulan:</label>
@@ -700,51 +582,22 @@
             <button class="btn-ghost" style="padding:7px 18px;font-size:12px;" onclick="financeLoadAll()">Semua Waktu</button>
           </div>
         </div>
-
-        <!-- Summary cards -->
         <div class="finance-summary" id="finance-summary">
-          <div class="fin-card fin-card-green">
-            <div class="fin-card-label">Total Pendapatan</div>
-            <div class="fin-card-val" id="fin-total-rev">—</div>
-          </div>
-          <div class="fin-card fin-card-blue">
-            <div class="fin-card-label">Order Selesai</div>
-            <div class="fin-card-val" id="fin-total-orders">—</div>
-          </div>
-          <div class="fin-card fin-card-purple">
-            <div class="fin-card-label">Rata-rata Order</div>
-            <div class="fin-card-val" id="fin-avg-order">—</div>
-          </div>
+          <div class="fin-card fin-card-green"><div class="fin-card-label">Total Pendapatan</div><div class="fin-card-val" id="fin-total-rev">—</div></div>
+          <div class="fin-card fin-card-blue"><div class="fin-card-label">Order Selesai</div><div class="fin-card-val" id="fin-total-orders">—</div></div>
+          <div class="fin-card fin-card-purple"><div class="fin-card-label">Rata-rata Order</div><div class="fin-card-val" id="fin-avg-order">—</div></div>
         </div>
-
-        <!-- Per-admin table -->
         <div class="card">
-          <div class="card-header">
-            <div class="card-title">Performa per Admin</div>
-          </div>
-          <div id="finance-admin-table">
-            <div class="empty-state">Pilih bulan dan klik Tampilkan.</div>
-          </div>
+          <div class="card-header"><div class="card-title">Performa per Admin</div></div>
+          <div id="finance-admin-table"><div class="empty-state">Pilih bulan dan klik Tampilkan.</div></div>
         </div>
-
-        <!-- Item breakdown -->
         <div class="card">
-          <div class="card-header">
-            <div class="card-title">Item Terlaris</div>
-          </div>
-          <div id="finance-items-table">
-            <div class="empty-state">Pilih bulan dan klik Tampilkan.</div>
-          </div>
+          <div class="card-header"><div class="card-title">Item Terlaris</div></div>
+          <div id="finance-items-table"><div class="empty-state">Pilih bulan dan klik Tampilkan.</div></div>
         </div>
-
-        <!-- Orders table -->
         <div class="card">
-          <div class="card-header">
-            <div class="card-title">Detail Semua Order Selesai</div>
-          </div>
-          <div id="finance-orders-table" style="overflow-x:auto;">
-            <div class="empty-state">Pilih bulan dan klik Tampilkan.</div>
-          </div>
+          <div class="card-header"><div class="card-title">Detail Semua Order Selesai</div></div>
+          <div id="finance-orders-table" style="overflow-x:auto;"><div class="empty-state">Pilih bulan dan klik Tampilkan.</div></div>
         </div>
       </div>
 
@@ -758,9 +611,7 @@
 <!-- Toast -->
 <div id="toast"></div>
 
-<!-- Supabase SDK pinned ke v2.49.4 (versi stabil, tidak ada bug feature_collector) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
-<!-- admin-init.js tanpa defer agar createClient dipanggil setelah SDK siap -->
 <script src="js/admin-init.js"></script>
 <script src="js/admin-auth.js"          defer></script>
 <script src="js/admin-config.js"        defer></script>
@@ -768,6 +619,6 @@
 <script src="js/admin-nav.js"           defer></script>
 <script src="js/admin-server-status.js" defer></script>
 <script src="js/admin-shop.js"          defer></script>
-<script src="js/admin-orders.js"          defer></script>
+<script src="js/admin-orders.js"        defer></script>
 </body>
 </html>
