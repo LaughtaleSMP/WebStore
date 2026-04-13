@@ -8,23 +8,10 @@
   const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI';
   const HEADERS = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
-  const LIMIT = 10; // tampilkan 10 transaksi terakhir
-  const REFRESH_MS = 30000; // auto-refresh tiap 30 detik
+  const LIMIT = 10;
+  const REFRESH_MS = 30000;
 
-  // ── Emoji item berdasar kategori / nama (opsional fallback) ─────────────
-  function getItemEmoji(item) {
-    if (item && item.emoji) return item.emoji;
-    const name = (item && item.name) ? item.name.toLowerCase() : '';
-    if (name.includes('rank'))     return '👑';
-    if (name.includes('title'))    return '🏷️';
-    if (name.includes('particle')) return '✨';
-    if (name.includes('bundle'))   return '📦';
-    if (name.includes('key'))      return '🔑';
-    if (name.includes('crate'))    return '🎁';
-    return '🛒';
-  }
-
-  // ── Format waktu relatif ────────────────────────────────────────────────
+  // ── Format waktu relatif ────────────────────────────────────────────
   function timeAgo(dateStr) {
     if (!dateStr) return '';
     const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -34,7 +21,7 @@
     return `${Math.floor(diff/86400)} hari lalu`;
   }
 
-  // ── Format harga ke IDR singkat ─────────────────────────────────────────
+  // ── Format harga ke IDR singkat ─────────────────────────────────────
   function fmtPrice(num) {
     if (!num && num !== 0) return '';
     if (num >= 1000000) return 'Rp' + (num/1000000).toFixed(num%1000000===0?0:1) + 'jt';
@@ -42,65 +29,60 @@
     return 'Rp' + num;
   }
 
-  // ── Sensor username: ganti tengah dengan * ──────────────────────────────
+  // ── Sensor username: ganti tengah dengan * ──────────────────────────
   function maskUser(name) {
     if (!name || name.length <= 2) return name || '???';
     if (name.length <= 4) return name[0] + '*'.repeat(name.length-2) + name[name.length-1];
     return name.slice(0, 2) + '***' + name.slice(-1);
   }
 
-  // ── Badge per status ───────────────────────────────────────────────────────────
+  // ── Badge per status ─────────────────────────────────────────────────
   function statusBadge(status) {
-    if (status === 'selesai')  return '<span class="of-card-badge of-badge--selesai">✓ SELESAI</span>';
-    if (status === 'pending')  return '<span class="of-card-badge of-badge--pending">⏳ PENDING</span>';
+    if (status === 'selesai') return '<span class="of-card-badge of-badge--selesai">✓ SELESAI</span>';
+    if (status === 'pending') return '<span class="of-card-badge of-badge--pending">⏳ PENDING</span>';
     return `<span class="of-card-badge">${status.toUpperCase()}</span>`;
   }
 
-  // ── Fetch pesanan pending & selesai ───────────────────────────────────
+  // ── Fetch pesanan pending & selesai ─────────────────────────────────
   async function fetchOrders() {
-    // Gunakan `or` filter Supabase untuk dua status sekaligus
-    const url = `${SUPABASE_URL}/rest/v1/orders?or=(status.eq.selesai,status.eq.pending)&order=created_at.desc&limit=${LIMIT}&select=id,username,item_name,item_emoji,qty,total_price,status,created_at,completed_at`;
+    const url = `${SUPABASE_URL}/rest/v1/orders?or=(status.eq.selesai,status.eq.pending)&order=created_at.desc&limit=${LIMIT}&select=id,username,item_name,qty,total_price,status,created_at,completed_at`;
     const res = await fetch(url, { headers: HEADERS });
     if (!res.ok) throw new Error('Gagal fetch orders');
     return res.json();
   }
 
-  // ── Render satu card pesanan ─────────────────────────────────────────────
+  // ── Render satu card pesanan ───────────────────────────────────────────
   function renderCard(order, isNew) {
-    const emoji  = order.item_emoji || getItemEmoji({ name: order.item_name });
-    const user   = maskUser(order.username);
-    const price  = fmtPrice(order.total_price);
-    const qty    = order.qty > 1 ? ` ×${order.qty}` : '';
-    // Untuk pending pakai created_at, selesai pakai completed_at
+    const user  = maskUser(order.username);
+    const price = fmtPrice(order.total_price);
+    const qty   = order.qty > 1 ? ` ×${order.qty}` : '';
     const timeRef = order.status === 'selesai' ? order.completed_at : order.created_at;
-    const time   = timeAgo(timeRef);
+    const time  = timeAgo(timeRef);
 
     const card = document.createElement('div');
     card.className = 'of-card of-card--' + order.status + (isNew ? ' of-card--new' : '');
     card.setAttribute('data-id', order.id);
     card.innerHTML = `
-      <div class="of-card-emoji">${emoji}</div>
       <div class="of-card-body">
         <div class="of-card-user">🎮 <strong>${user}</strong> membeli</div>
         <div class="of-card-item">${order.item_name}${qty}</div>
       </div>
       <div class="of-card-meta">
         ${price ? `<span class="of-card-price">${price}</span>` : ''}
-        ${time   ? `<span class="of-card-time">${time}</span>`   : ''}
+        ${time  ? `<span class="of-card-time">${time}</span>`   : ''}
         ${statusBadge(order.status)}
       </div>
     `;
     return card;
   }
 
-  // ── Skeleton loading cards ───────────────────────────────────────────────
+  // ── Skeleton loading cards ────────────────────────────────────────────
   function renderSkeletons(container, count = 6) {
     container.innerHTML = '';
     for (let i = 0; i < count; i++) {
       const s = document.createElement('div');
       s.className = 'of-card of-skeleton';
       s.innerHTML = `
-        <div class="of-card-emoji of-skel-circle"></div>
         <div class="of-card-body">
           <div class="of-skel-line" style="width:55%"></div>
           <div class="of-skel-line" style="width:80%;margin-top:6px"></div>
@@ -113,7 +95,7 @@
     }
   }
 
-  // ── Render semua cards ───────────────────────────────────────────────────
+  // ── Render semua cards ───────────────────────────────────────────────
   let lastIds = new Set();
 
   function renderFeed(orders) {
@@ -148,22 +130,21 @@
     });
   }
 
-  // ── Ticker auto-scroll ──────────────────────────────────────────────────────
+  // ── Ticker auto-scroll ────────────────────────────────────────────────
   function updateTicker(orders) {
     const ticker = document.getElementById('of-ticker-list');
     if (!ticker || !orders || orders.length === 0) return;
     ticker.innerHTML = '';
-    const allItems = [...orders, ...orders]; // duplikat untuk looping mulus
+    const allItems = [...orders, ...orders];
     allItems.forEach(order => {
-      const emoji = order.item_emoji || getItemEmoji({ name: order.item_name });
       const li = document.createElement('li');
       li.className = 'of-ticker-item';
-      li.innerHTML = `${emoji} <strong>${maskUser(order.username)}</strong> beli <em>${order.item_name}</em>`;
+      li.innerHTML = `🎮 <strong>${maskUser(order.username)}</strong> beli <em>${order.item_name}</em>`;
       ticker.appendChild(li);
     });
   }
 
-  // ── Update timestamp terakhir ─────────────────────────────────────────────
+  // ── Update timestamp terakhir ──────────────────────────────────────────
   function updateTimestamp() {
     const el = document.getElementById('of-last-updated');
     if (!el) return;
@@ -171,7 +152,7 @@
     el.textContent = `Diperbarui: ${now.getHours().toString().padStart(2,'0')}.${now.getMinutes().toString().padStart(2,'0')} WIB`;
   }
 
-  // ── Main load ──────────────────────────────────────────────────────────────
+  // ── Main load ──────────────────────────────────────────────────────
   async function loadFeed(showSkeleton = false) {
     const container = document.getElementById('of-feed-list');
     if (!container) return;
@@ -192,7 +173,7 @@
     }
   }
 
-  // ── Init ───────────────────────────────────────────────────────────────────
+  // ── Init ───────────────────────────────────────────────────────────────
   function init() {
     loadFeed(true);
     setInterval(() => loadFeed(false), REFRESH_MS);
