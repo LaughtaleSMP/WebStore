@@ -193,6 +193,26 @@
   padding:8px 12px;background:rgba(255,58,58,0.08);
   border:1px solid rgba(255,58,58,0.25);border-radius:6px;}
 
+/* ── QRIS Step ── */
+.shop-qris-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:4px;}
+.shop-qris-total-box{width:100%;background:rgba(168,85,247,0.08);border:1.5px solid rgba(168,85,247,0.35);border-radius:12px;padding:14px 18px;text-align:center;}
+.shop-qris-total-label{font-family:'Press Start 2P',monospace;font-size:0.42rem;color:var(--s-muted);letter-spacing:0.12em;margin-bottom:6px;}
+.shop-qris-total-amount{font-family:'Press Start 2P',monospace;font-size:1rem;color:var(--s-purple);line-height:1.3;}
+.shop-qris-img-wrap{width:210px;height:210px;border-radius:14px;overflow:hidden;border:2px solid rgba(168,85,247,0.3);background:#fff;display:flex;align-items:center;justify-content:center;}
+.shop-qris-img-wrap img{width:100%;height:100%;object-fit:contain;}
+.shop-qris-steps{width:100%;display:flex;flex-direction:column;gap:8px;}
+.shop-qris-step{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:9px;}
+.shop-qris-step-num{width:22px;height:22px;border-radius:50%;background:rgba(168,85,247,0.2);border:1px solid rgba(168,85,247,0.5);color:var(--s-purple);font-family:'Press Start 2P',monospace;font-size:0.45rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.shop-qris-step-text{font-size:0.8rem;color:var(--s-muted);line-height:1.5;}
+.shop-qris-step-text strong{color:var(--s-text);}
+.shop-qris-note{width:100%;font-size:0.75rem;color:var(--s-muted);text-align:center;padding:10px 14px;background:rgba(244,196,48,0.05);border:1px solid rgba(244,196,48,0.2);border-radius:9px;line-height:1.6;}
+.shop-qris-note strong{color:var(--s-gold);}
+.shop-wa-btn-confirm{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;font-family:'Press Start 2P',monospace;font-size:0.52rem;cursor:pointer;transition:opacity 0.15s,transform 0.1s;letter-spacing:0.04em;}
+.shop-wa-btn-confirm:hover{opacity:0.9;transform:translateY(-2px);}
+.shop-wa-btn-confirm:active{transform:translateY(0);}
+.shop-qris-back{background:none;border:1px solid var(--s-border);color:var(--s-muted);border-radius:8px;padding:8px 16px;font-size:0.75rem;cursor:pointer;transition:border-color 0.15s,color 0.15s;width:100%;}
+.shop-qris-back:hover{border-color:var(--s-muted);color:var(--s-text);}
+
 /* ── Responsive ── */
 @media(max-width:640px){
   .shop-grid{grid-template-columns:1fr 1fr;gap:8px;}
@@ -983,9 +1003,9 @@
         <div class="shop-err" id="shop-form-error"></div>
         <button class="shop-wa-btn" onclick="shopOrderWA(${item.id})">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          PESAN VIA WHATSAPP
+          LANJUT KE PEMBAYARAN
         </button>
-        <div style="text-align:center;font-size:0.72rem;color:var(--s-muted);margin-top:8px;">Kamu akan diarahkan ke WhatsApp Admin.</div>
+        <div style="text-align:center;font-size:0.72rem;color:var(--s-muted);margin-top:8px;">Bayar via QRIS → kirim bukti ke WhatsApp Admin.</div>
       </div>
     </div>
   </div>`;
@@ -1047,6 +1067,9 @@
     const GEM_ITEM_ID = 8;
 
     /* ── Send WA order ── */
+    /* ── Pending order (disimpan sementara setelah validasi form) ── */
+    window._pendingWAOrder = null;
+
     window.shopOrderWA = function (id) {
         const _src =
             window._shopItemsFromSupabase && window._shopItemsFromSupabase.length
@@ -1092,14 +1115,123 @@
             _lines.push("📎 File desain akan saya kirimkan langsung di sini.");
         }
         _lines.push("");
+        _lines.push("💳 *Bukti pembayaran QRIS* terlampir.");
+        _lines.push("");
         _lines.push("Terima kasih! 🙏");
 
         const msg = _lines.join("\n");
-        window.open(
-            "https://wa.me/" + admin.number.replace(/\D/g, "") + "?text=" + encodeURIComponent(msg),
-            "_blank",
-            "noopener",
-        );
+        const totalAmount = fmtPlain(item.price * qty);
+
+        /* Simpan pending order (url + data untuk Supabase), lalu tampilkan QRIS step */
+        window._pendingWAOrder = {
+            url: "https://wa.me/" + admin.number.replace(/\D/g, "") + "?text=" + encodeURIComponent(msg),
+            orderData: {
+                item_id:        String(item.id),
+                item_name:      item.name,
+                item_emoji:     item.emoji || "🛒",
+                item_category:  item.category,
+                qty:            qty,
+                unit_price:     item.price,
+                total_price:    item.price * qty,
+                username:       un || null,
+                customer_note:  note || null,
+                wa_admin_name:  admin.name,
+                wa_admin_number: admin.number,
+                status:         "pending",
+            },
+        };
+        shopShowQRIS(totalAmount, item.price === 0);
+    };
+
+    /* ── Tampilkan QRIS payment step di dalam modal box ── */
+    window.shopShowQRIS = function (totalAmount, isFree) {
+        const box = document.getElementById("shop-order-form");
+        if (!box) return;
+
+        /* Determine QRIS image path relative to page */
+        const qrisImg = (function () {
+            /* coba dari root, fallback ke assets/ */
+            const scripts = document.querySelectorAll("script[src]");
+            for (const s of scripts) {
+                if (s.src && s.src.includes("shop.js")) {
+                    const base = s.src.replace(/js\/shop\.js.*$/, "");
+                    return base + "assets/Laughtale-Qris-Payment.jpeg";
+                }
+            }
+            return "assets/Laughtale-Qris-Payment.jpeg";
+        })();
+
+        const freeNote = `<div class="shop-qris-note">Item ini <strong>GRATIS</strong> — tidak perlu pembayaran.<br>Langsung kirim konfirmasi ke WhatsApp Admin.</div>`;
+        const qrisContent = isFree ? freeNote : `
+            <div class="shop-qris-img-wrap">
+                <img src="${qrisImg}" alt="QRIS Laughtale SMP" loading="lazy">
+            </div>
+            <div class="shop-qris-steps">
+                <div class="shop-qris-step">
+                    <div class="shop-qris-step-num">1</div>
+                    <div class="shop-qris-step-text">Buka aplikasi dompet digital atau mobile banking kamu, lalu <strong>scan kode QRIS</strong> di atas.</div>
+                </div>
+                <div class="shop-qris-step">
+                    <div class="shop-qris-step-num">2</div>
+                    <div class="shop-qris-step-text">Transfer tepat <strong>${totalAmount}</strong> sesuai total pesanan.</div>
+                </div>
+                <div class="shop-qris-step">
+                    <div class="shop-qris-step-num">3</div>
+                    <div class="shop-qris-step-text">Klik tombol di bawah, lalu <strong>kirim screenshot bukti bayar</strong> ke WhatsApp Admin.</div>
+                </div>
+            </div>
+            <div class="shop-qris-note">⚠️ <strong>Pesanan belum diproses</strong> sebelum admin menerima bukti pembayaran.</div>`;
+
+        box.innerHTML = `
+            <button class="shop-modal-close" onclick="shopCloseModal()">✕</button>
+            <div style="text-align:center;margin-bottom:16px;">
+                <div style="font-family:'Press Start 2P',monospace;font-size:0.52rem;color:var(--s-muted);letter-spacing:0.1em;margin-bottom:8px;">LANGKAH 2 / 2</div>
+                <div style="font-family:'Press Start 2P',monospace;font-size:0.72rem;color:var(--s-text);line-height:1.6;">PEMBAYARAN QRIS</div>
+            </div>
+            <div class="shop-qris-wrap">
+                <div class="shop-qris-total-box">
+                    <div class="shop-qris-total-label">TOTAL PEMBAYARAN</div>
+                    <div class="shop-qris-total-amount">${totalAmount}</div>
+                </div>
+                ${qrisContent}
+                <button class="shop-wa-btn-confirm" onclick="shopPaidGoWA()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    SUDAH BAYAR — KIRIM BUKTI KE WA
+                </button>
+                <button class="shop-qris-back" onclick="shopCloseModal()">← Batalkan</button>
+            </div>`;
+
+        /* Scroll ke atas modal box */
+        box.scrollTop = 0;
+    };
+
+    /* ── Setelah user klik "Sudah Bayar", simpan ke Supabase lalu buka WhatsApp ── */
+    window.shopPaidGoWA = async function () {
+        if (!window._pendingWAOrder) return;
+        const { url, orderData } = window._pendingWAOrder;
+
+        /* Simpan ke tabel orders (anon insert, RLS allow) */
+        try {
+            const SUPABASE_URL = "https://jlxtnbnrirxhwuyqjlzw.supabase.co";
+            const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI";
+            await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": `Bearer ${SUPABASE_KEY}`,
+                    "Prefer": "return=minimal",
+                },
+                body: JSON.stringify(orderData),
+            });
+        } catch (err) {
+            /* Jangan blokir user — order tetap dikirim ke WA meskipun DB error */
+            console.warn("[shop.js] Gagal simpan order ke DB:", err.message);
+        }
+
+        window.open(url, "_blank", "noopener");
+        window._pendingWAOrder = null;
+        window.shopCloseModal();
     };
 
     /* ── Open / close modal ── */

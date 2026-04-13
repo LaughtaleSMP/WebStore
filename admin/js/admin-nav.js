@@ -12,7 +12,9 @@ function showSection(name, el) {
     'season':        'Season & World',
     'admins-wa':     'Admin WhatsApp',
     'server-status': 'Server Status Config',
-    'shop':          'Shop Items'
+    'shop':          'Shop Items',
+    'orders':        'Pesanan Masuk',
+    'finance':       'Laporan Keuangan',
   };
   document.getElementById('topbar-section').textContent = labels[name] || name;
 }

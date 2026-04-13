@@ -1361,3 +1361,200 @@ a {
         justify-content: center;
     }
 }
+
+/* ═══════════════════════════════════════════════════
+   PESANAN MASUK + LAPORAN KEUANGAN
+═══════════════════════════════════════════════════ */
+
+/* ── Nav badge ── */
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: auto;
+  line-height: 1;
+}
+
+/* ── Live pill ── */
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #f87171;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.live-pill-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: livePulse 1.4s ease-in-out infinite;
+}
+@keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── Orders stats strip ── */
+.orders-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.ostat-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.ostat-num {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.ostat-label {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* ── Order card ── */
+.order-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+.order-card:hover { border-color: rgba(79,125,240,0.35); }
+.order-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.order-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.order-emoji { font-size: 26px; line-height: 1; flex-shrink: 0; }
+.order-item-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 3px;
+}
+.order-meta { font-size: 12px; color: var(--text-faint); }
+.order-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: #4ade80;
+  white-space: nowrap;
+}
+.order-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.order-tag {
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.order-note {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-style: italic;
+  background: var(--surface3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-left: 3px solid var(--accent);
+}
+.order-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.btn-done {
+  padding: 7px 18px;
+  background: rgba(74,222,128,0.12);
+  border: 1px solid rgba(74,222,128,0.35);
+  color: #4ade80;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-done:hover { background: rgba(74,222,128,0.22); }
+.btn-done:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Finance summary ── */
+.finance-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.fin-card {
+  border-radius: 12px;
+  padding: 18px;
+  border: 1px solid var(--border);
+}
+.fin-card-green { background: rgba(74,222,128,0.07); border-color: rgba(74,222,128,0.25); }
+.fin-card-blue  { background: rgba(79,125,240,0.07); border-color: rgba(79,125,240,0.25); }
+.fin-card-purple{ background: rgba(168,85,247,0.07); border-color: rgba(168,85,247,0.25); }
+.fin-card-label { font-size: 11px; color: var(--text-faint); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+.fin-card-val   { font-size: 20px; font-weight: 700; color: var(--text-main); }
+
+/* ── Finance table ── */
+.fin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.fin-table th {
+  text-align: left;
+  padding: 9px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  border-bottom: 1px solid var(--border);
+}
+.fin-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  vertical-align: middle;
+}
+.fin-table tbody tr:last-child td { border-bottom: none; }
+.fin-table tbody tr:hover td { background: var(--surface3); }
+
+@media (max-width: 640px) {
+  .orders-stats-strip,
+  .finance-summary { grid-template-columns: 1fr; }
+}

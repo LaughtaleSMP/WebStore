@@ -149,6 +149,15 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.37 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.27-.73a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         Admin WhatsApp
       </div>
+      <div class="nav-item" onclick="showSection('orders', this)" id="nav-orders">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        Pesanan Masuk
+        <span class="nav-badge" id="orders-badge" style="display:none">0</span>
+      </div>
+      <div class="nav-item" onclick="showSection('finance', this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Laporan Keuangan
+      </div>
     </div>
 
     <!-- Main content -->
@@ -543,6 +552,108 @@
         </div>
       </div>
 
+      <!-- ============ PESANAN MASUK ============ -->
+      <div class="section" id="sec-orders">
+        <div class="page-header">
+          <div class="page-title">Pesanan Masuk</div>
+          <div class="page-sub">Order yang belum diproses — update real-time</div>
+        </div>
+
+        <!-- Stats strip -->
+        <div class="orders-stats-strip" id="orders-stats-strip">
+          <div class="ostat-card">
+            <div class="ostat-num" id="ostat-pending">—</div>
+            <div class="ostat-label">Pending</div>
+          </div>
+          <div class="ostat-card">
+            <div class="ostat-num" id="ostat-done-today">—</div>
+            <div class="ostat-label">Selesai Hari Ini</div>
+          </div>
+          <div class="ostat-card">
+            <div class="ostat-num" id="ostat-rev-today">—</div>
+            <div class="ostat-label">Pemasukan Hari Ini</div>
+          </div>
+        </div>
+
+        <!-- Live badge -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+          <span class="live-pill">
+            <span class="live-pill-dot"></span>LIVE
+          </span>
+          <span style="font-size:12px;color:var(--text-faint)">Halaman ini otomatis update saat pesanan baru masuk.</span>
+          <button class="btn-ghost" style="margin-left:auto;font-size:12px;padding:5px 12px;" onclick="ordersRefresh()">⟳ Refresh</button>
+        </div>
+
+        <!-- Orders list -->
+        <div id="orders-list">
+          <div class="empty-state">Memuat pesanan...</div>
+        </div>
+      </div>
+
+      <!-- ============ LAPORAN KEUANGAN ============ -->
+      <div class="section" id="sec-finance">
+        <div class="page-header">
+          <div class="page-title">Laporan Keuangan</div>
+          <div class="page-sub">Rekap pendapatan &amp; performa admin</div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="card" style="padding:16px 20px;">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <label style="font-size:12px;color:var(--text-faint);font-weight:600;">Filter Bulan:</label>
+            <input type="month" id="finance-month" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text-main);padding:6px 12px;font-size:13px;outline:none;">
+            <button class="save-btn" style="padding:7px 18px;font-size:12px;" onclick="financeLoad()">Tampilkan</button>
+            <button class="btn-ghost" style="padding:7px 18px;font-size:12px;" onclick="financeLoadAll()">Semua Waktu</button>
+          </div>
+        </div>
+
+        <!-- Summary cards -->
+        <div class="finance-summary" id="finance-summary">
+          <div class="fin-card fin-card-green">
+            <div class="fin-card-label">Total Pendapatan</div>
+            <div class="fin-card-val" id="fin-total-rev">—</div>
+          </div>
+          <div class="fin-card fin-card-blue">
+            <div class="fin-card-label">Order Selesai</div>
+            <div class="fin-card-val" id="fin-total-orders">—</div>
+          </div>
+          <div class="fin-card fin-card-purple">
+            <div class="fin-card-label">Rata-rata Order</div>
+            <div class="fin-card-val" id="fin-avg-order">—</div>
+          </div>
+        </div>
+
+        <!-- Per-admin table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Performa per Admin</div>
+          </div>
+          <div id="finance-admin-table">
+            <div class="empty-state">Pilih bulan dan klik Tampilkan.</div>
+          </div>
+        </div>
+
+        <!-- Item breakdown -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Item Terlaris</div>
+          </div>
+          <div id="finance-items-table">
+            <div class="empty-state">Pilih bulan dan klik Tampilkan.</div>
+          </div>
+        </div>
+
+        <!-- Orders table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Detail Semua Order Selesai</div>
+          </div>
+          <div id="finance-orders-table" style="overflow-x:auto;">
+            <div class="empty-state">Pilih bulan dan klik Tampilkan.</div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /main-content -->
   </div>
 </div>
@@ -563,5 +674,6 @@
 <script src="js/admin-nav.js"           defer></script>
 <script src="js/admin-server-status.js" defer></script>
 <script src="js/admin-shop.js"          defer></script>
+<script src="js/admin-orders.js"          defer></script>
 </body>
 </html>
