@@ -221,6 +221,49 @@ function getSb() {
 }
 
 /* ─────────────────────────────────────────────────────
+   BADGE ONLY — fetch count pending & update badge
+   Dipanggil saat halaman pertama load (tanpa perlu buka section orders)
+───────────────────────────────────────────────────── */
+async function _ordersFetchBadge() {
+  const sb = getSb();
+  if (!sb) return;
+  const { count, error } = await sb
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending');
+  if (!error) ordersUpdateBadge(count || 0);
+}
+
+/* ─────────────────────────────────────────────────────
+   REALTIME BADGE SUBSCRIPTION
+   Hanya untuk update badge — subscribe sekali saat login
+───────────────────────────────────────────────────── */
+let _ordersBadgeChannel = null;
+
+function _ordersBadgeSubscribe() {
+  const sb = getSb();
+  if (!sb || _ordersBadgeChannel) return;
+  _ordersBadgeChannel = sb
+    .channel('orders-badge-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+      _ordersFetchBadge();
+      /* Kalau section orders sedang terbuka, refresh list-nya juga */
+      const sec = document.getElementById('sec-orders');
+      if (sec && sec.classList.contains('active')) ordersLoad();
+    })
+    .subscribe();
+}
+
+/**
+ * ordersInitBadge() — panggil ini setelah login berhasil.
+ * Langsung fetch count + subscribe realtime tanpa membuka section orders.
+ */
+window.ordersInitBadge = function () {
+  _ordersFetchBadge();
+  _ordersBadgeSubscribe();
+};
+
+/* ─────────────────────────────────────────────────────
    PESANAN MASUK — load & render
 ───────────────────────────────────────────────────── */
 let _ordersChannel = null;
@@ -678,7 +721,7 @@ function _injectEditModal() {
 }
 
 /* ─────────────────────────────────────────────────────
-   REALTIME SUBSCRIPTION
+   REALTIME SUBSCRIPTION (untuk section orders)
 ───────────────────────────────────────────────────── */
 function ordersSubscribe() {
   const sb = getSb();
