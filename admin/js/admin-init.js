@@ -2,13 +2,15 @@
 const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq';
 
-// createClient dipanggil di scope global — SDK sudah pasti tersedia
-// karena script ini dimuat SETELAH tag <script> Supabase CDN (tanpa defer)
+// createClient dengan format object tunggal (menghindari deprecated warning)
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+  },
+  global: {
+    headers: {},
   },
 });
 window._adminSb = sb;
