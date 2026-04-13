@@ -53,6 +53,11 @@ async function afterLogin(user, roleData = null) {
 
   await loadAllConfig();
   await loadWAAdmins();
+
+  // Tampilkan badge pesanan masuk langsung setelah login
+  if (typeof window.ordersInitBadge === 'function') {
+    window.ordersInitBadge();
+  }
 }
 
 async function doLogout() {
