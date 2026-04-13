@@ -8,6 +8,71 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/admin.css">
+<style>
+/* ── Auth Tab Switcher ── */
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 28px;
+  border-radius: 10px;
+  background: var(--surface2, #1a1a2e);
+  padding: 4px;
+  border: 1px solid var(--border, rgba(255,255,255,0.08));
+}
+.auth-tab {
+  flex: 1;
+  padding: 9px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-faint, #666);
+  background: none;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  letter-spacing: 0.2px;
+}
+.auth-tab.active {
+  background: var(--surface3, #252540);
+  color: var(--text-main, #e8e8f0);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+.auth-tab:hover:not(.active) {
+  color: var(--text-sub, #a0a0b8);
+}
+
+/* ── Tab Panels ── */
+.auth-panel { display: none; }
+.auth-panel.active { display: block; }
+
+/* ── Register specific ── */
+.auth-form-title-sub {
+  font-size: 12px;
+  color: var(--text-faint, #666);
+  margin-top: 4px;
+  margin-bottom: 20px;
+}
+.alert-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #4ade80;
+  margin-bottom: 14px;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 480px) {
+  .form-row { grid-template-columns: 1fr; }
+}
+</style>
 </head>
 
 <body>
@@ -65,24 +130,85 @@
   <!-- Right form panel -->
   <div class="auth-right">
     <div class="auth-form-wrap">
-      <div class="auth-form-title">Selamat datang</div>
-      <p class="auth-form-sub">Masuk menggunakan akun admin yang sudah terdaftar.</p>
 
-      <div id="auth-error" class="alert alert-error" style="display:none">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span id="auth-error-msg"></span>
+      <!-- Tab switcher -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login-btn" onclick="switchAuthTab('login')">Masuk</button>
+        <button class="auth-tab" id="tab-register-btn" onclick="switchAuthTab('register')">Daftar Admin</button>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input class="form-input" id="login-email" type="email" placeholder="admin@laughtale.my.id" autocomplete="email">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
+      <!-- ── LOGIN PANEL ── -->
+      <div class="auth-panel active" id="panel-login">
+        <div class="auth-form-title">Selamat datang</div>
+        <p class="auth-form-sub">Masuk menggunakan akun admin yang sudah terdaftar.</p>
+
+        <div id="auth-error" class="alert alert-error" style="display:none">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="auth-error-msg"></span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" id="login-email" type="email" placeholder="admin@laughtale.my.id" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+
+        <button class="btn-primary" onclick="doLogin()" id="login-btn">Masuk ke Panel</button>
       </div>
 
-      <button class="btn-primary" onclick="doLogin()" id="login-btn">Masuk ke Panel</button>
+      <!-- ── REGISTER PANEL ── -->
+      <div class="auth-panel" id="panel-register">
+        <div class="auth-form-title">Daftarkan Admin Baru</div>
+        <p class="auth-form-sub" style="margin-bottom:20px;">Hanya super admin yang boleh mendaftarkan akun baru. Login terlebih dahulu untuk melanjutkan.</p>
+
+        <div id="register-error" class="alert alert-error" style="display:none">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="register-error-msg"></span>
+        </div>
+
+        <div id="register-success" class="alert-success" style="display:none">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="register-success-msg"></span>
+        </div>
+
+        <!-- Gating: harus login dulu -->
+        <div id="reg-gate" style="text-align:center;padding:20px 0 8px;">
+          <div style="font-size:32px;margin-bottom:12px;">🔒</div>
+          <p style="font-size:13px;color:var(--text-faint,#666);line-height:1.6;margin-bottom:20px;">Kamu harus <strong style="color:var(--text-sub,#a0a0b8)">masuk sebagai super admin</strong> terlebih dahulu sebelum mendaftarkan akun baru.</p>
+          <button class="btn-primary" style="width:100%" onclick="switchAuthTab('login')">Masuk Dulu</button>
+        </div>
+
+        <!-- Form daftar (hanya muncul setelah login) -->
+        <div id="reg-form-inner" style="display:none">
+          <div class="form-group">
+            <label class="form-label">Nama Tampilan</label>
+            <input class="form-input" id="reg-display" type="text" placeholder="cth: Blackdamen">
+          </div>
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Email</label>
+              <input class="form-input" id="reg-email" type="email" placeholder="admin@laughtale.my.id">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Role</label>
+              <select class="form-input" id="reg-role">
+                <option value="admin">Admin</option>
+                <option value="superadmin">Super Admin</option>
+                <option value="moderator">Moderator</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:12px">
+            <label class="form-label">Password</label>
+            <input class="form-input" id="reg-password" type="password" placeholder="Min. 6 karakter" autocomplete="new-password">
+          </div>
+          <button class="btn-primary" onclick="doRegisterAdmin()" id="register-btn">Daftarkan Admin</button>
+          <p style="font-size:11.5px;color:var(--text-faint,#666);text-align:center;margin-top:12px;line-height:1.5;">Admin baru akan langsung bisa masuk setelah terdaftar.</p>
+        </div>
+      </div>
 
     </div>
   </div>
@@ -620,5 +746,84 @@
 <script src="js/admin-server-status.js" defer></script>
 <script src="js/admin-shop.js"          defer></script>
 <script src="js/admin-orders.js"        defer></script>
+
+<script>
+// ── Tab Switcher Auth ──
+function switchAuthTab(tab) {
+  document.getElementById('panel-login').classList.toggle('active', tab === 'login');
+  document.getElementById('panel-register').classList.toggle('active', tab === 'register');
+  document.getElementById('tab-login-btn').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register-btn').classList.toggle('active', tab === 'register');
+
+  // Cek apakah sudah login saat buka tab daftar
+  if (tab === 'register') {
+    checkRegisterGate();
+  }
+}
+
+function checkRegisterGate() {
+  // Cek apakah ada sesi aktif
+  if (typeof sb !== 'undefined' && sb.auth) {
+    sb.auth.getSession().then(({ data }) => {
+      const loggedIn = !!data?.session;
+      document.getElementById('reg-gate').style.display = loggedIn ? 'none' : 'block';
+      document.getElementById('reg-form-inner').style.display = loggedIn ? 'block' : 'none';
+    });
+  }
+}
+
+// Override doRegisterAdmin agar pakai elemen yang baru
+window.doRegisterAdmin = async function() {
+  const email   = document.getElementById('reg-email').value.trim();
+  const pw      = document.getElementById('reg-password').value;
+  const display = document.getElementById('reg-display').value.trim();
+  const role    = document.getElementById('reg-role').value;
+  const errEl   = document.getElementById('register-error');
+  const errMsg  = document.getElementById('register-error-msg');
+  const sucEl   = document.getElementById('register-success');
+  const sucMsg  = document.getElementById('register-success-msg');
+  const btn     = document.getElementById('register-btn');
+
+  errEl.style.display = 'none';
+  sucEl.style.display = 'none';
+
+  if (!email || !pw || !display) {
+    errMsg.textContent = 'Email, password, dan nama tampilan wajib diisi.';
+    errEl.style.display = 'flex'; return;
+  }
+  if (pw.length < 6) {
+    errMsg.textContent = 'Password minimal 6 karakter.';
+    errEl.style.display = 'flex'; return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Mendaftarkan...';
+
+  try {
+    const { data, error } = await sb.auth.signUp({ email, password: pw });
+    if (error) throw error;
+
+    const userId = data?.user?.id;
+    if (!userId) throw new Error('Gagal mendapatkan ID user baru.');
+
+    const { error: roleErr } = await sb.from('admin_roles').insert({
+      user_id: userId, role, display_name: display
+    });
+    if (roleErr) throw roleErr;
+
+    sucMsg.textContent = `Admin "${display}" (${email}) berhasil didaftarkan!`;
+    sucEl.style.display = 'flex';
+    document.getElementById('reg-email').value = '';
+    document.getElementById('reg-password').value = '';
+    document.getElementById('reg-display').value = '';
+  } catch(e) {
+    errMsg.textContent = 'Gagal: ' + (e.message || 'Terjadi kesalahan.');
+    errEl.style.display = 'flex';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Daftarkan Admin';
+};
+</script>
 </body>
 </html>
