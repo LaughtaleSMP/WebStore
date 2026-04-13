@@ -49,6 +49,120 @@ function showToast(msg, type) {
 }
 
 /* ─────────────────────────────────────────────────────
+   CUSTOM CONFIRM DIALOG
+   Pemakaian: showConfirm({ title, message, confirmText, onConfirm })
+───────────────────────────────────────────────────── */
+function showConfirm({ title, message, confirmText, onConfirm }) {
+  /* Hapus instance sebelumnya jika ada */
+  const old = document.getElementById('custom-confirm-overlay');
+  if (old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'custom-confirm-overlay';
+  overlay.style.cssText = [
+    'position:fixed', 'inset:0', 'z-index:10000',
+    'background:rgba(0,0,0,0.55)', 'backdrop-filter:blur(3px)',
+    'display:flex', 'align-items:center', 'justify-content:center', 'padding:16px',
+    'opacity:0', 'transition:opacity 0.18s ease',
+  ].join(';');
+
+  overlay.innerHTML = `
+    <div id="custom-confirm-box" style="
+      background: var(--surface1, #1a1a2e);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 360px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      transform: scale(0.94) translateY(10px);
+      transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s ease;
+      opacity: 0;
+    ">
+      <!-- Icon -->
+      <div style="
+        width:44px; height:44px; border-radius:12px;
+        background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3);
+        display:flex; align-items:center; justify-content:center;
+        font-size:20px; margin-bottom:16px;
+      ">🗑️</div>
+
+      <!-- Title -->
+      <div style="font-size:15px;font-weight:700;color:var(--text-main,#fff);margin-bottom:6px;">
+        ${title || 'Hapus Pesanan?'}
+      </div>
+
+      <!-- Message -->
+      <div style="font-size:13px;color:var(--text-faint,#888);line-height:1.5;margin-bottom:20px;">
+        ${message || 'Tindakan ini tidak bisa dibatalkan. Pesanan akan dihapus permanen dari database.'}
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button id="cc-cancel" style="
+          padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600;
+          background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+          color:var(--text-main,#ccc); cursor:pointer; font-family:inherit;
+          transition:background 0.15s;
+        ">Batal</button>
+        <button id="cc-confirm" style="
+          padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600;
+          background:rgba(239,68,68,0.85); border:1px solid rgba(239,68,68,0.4);
+          color:#fff; cursor:pointer; font-family:inherit;
+          transition:background 0.15s;
+        ">${confirmText || 'Ya, Hapus'}</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  /* Animasi masuk */
+  requestAnimationFrame(() => {
+    overlay.style.opacity = '1';
+    const box = document.getElementById('custom-confirm-box');
+    if (box) {
+      box.style.opacity = '1';
+      box.style.transform = 'scale(1) translateY(0)';
+    }
+  });
+
+  /* Hover style tombol */
+  const cancelBtn  = document.getElementById('cc-cancel');
+  const confirmBtn = document.getElementById('cc-confirm');
+
+  cancelBtn.addEventListener('mouseenter',  () => cancelBtn.style.background  = 'rgba(255,255,255,0.12)');
+  cancelBtn.addEventListener('mouseleave',  () => cancelBtn.style.background  = 'rgba(255,255,255,0.06)');
+  confirmBtn.addEventListener('mouseenter', () => confirmBtn.style.background = 'rgba(239,68,68,1)');
+  confirmBtn.addEventListener('mouseleave', () => confirmBtn.style.background = 'rgba(239,68,68,0.85)');
+
+  function closeDialog() {
+    overlay.style.opacity = '0';
+    const box = document.getElementById('custom-confirm-box');
+    if (box) { box.style.opacity = '0'; box.style.transform = 'scale(0.94) translateY(10px)'; }
+    setTimeout(() => overlay.remove(), 200);
+  }
+
+  cancelBtn.addEventListener('click', closeDialog);
+
+  confirmBtn.addEventListener('click', () => {
+    closeDialog();
+    onConfirm && onConfirm();
+  });
+
+  /* Klik di luar box = cancel */
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeDialog();
+  });
+
+  /* Tekan Escape = cancel */
+  function onKeyDown(e) {
+    if (e.key === 'Escape') { closeDialog(); document.removeEventListener('keydown', onKeyDown); }
+  }
+  document.addEventListener('keydown', onKeyDown);
+}
+
+/* ─────────────────────────────────────────────────────
    UTILS
 ───────────────────────────────────────────────────── */
 function fmtRp(n) {
@@ -78,7 +192,7 @@ function shortId(uuid) {
 }
 
 /* ─────────────────────────────────────────────────────
-   RADIO STATUS HELPERS (pengganti getElementById override)
+   RADIO STATUS HELPERS
 ───────────────────────────────────────────────────── */
 function _getOeditStatus() {
   const checked = document.querySelector('input[name="oedit-status"]:checked');
@@ -250,26 +364,32 @@ window.orderMarkDone = async function (id) {
    DELETE ORDER
    context: 'orders' (Pesanan Masuk) | 'all-orders' (Semua Pesanan)
 ───────────────────────────────────────────────────── */
-window.orderDelete = async function (id, context) {
-  if (!confirm('Hapus pesanan ini dari database?')) return;
-  const sb = getSb();
-  if (!sb) { showToast('Supabase belum siap.', 'error'); return; }
+window.orderDelete = function (id, context) {
+  showConfirm({
+    title:       'Hapus Pesanan?',
+    message:     `Pesanan <strong>${shortId(id)}</strong> akan dihapus permanen dari database. Tindakan ini tidak bisa dibatalkan.`,
+    confirmText: '🗑️ Ya, Hapus',
+    onConfirm:   async () => {
+      const sb = getSb();
+      if (!sb) { showToast('Supabase belum siap.', 'error'); return; }
 
-  const { error } = await sb.from('orders').delete().eq('id', id);
-  if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
+      const { error } = await sb.from('orders').delete().eq('id', id);
+      if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
 
-  /* Hapus elemen dari DOM (berlaku untuk card maupun row tabel) */
-  const card = document.getElementById('ocard-' + id);
-  if (card) card.remove();
+      /* Hapus elemen dari DOM */
+      const card = document.getElementById('ocard-' + id);
+      if (card) card.remove();
 
-  /* Refresh tabel/section yang sesuai */
-  if (context === 'all-orders') {
-    window.allOrdersLoad();
-  } else {
-    ordersLoad();
-  }
+      /* Refresh section yang sesuai */
+      if (context === 'all-orders') {
+        window.allOrdersLoad();
+      } else {
+        ordersLoad();
+      }
 
-  showToast('Order dihapus.', 'success');
+      showToast('Order dihapus.', 'success');
+    },
+  });
 };
 
 /* ─────────────────────────────────────────────────────
