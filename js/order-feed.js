@@ -8,7 +8,7 @@
   const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI';
   const HEADERS = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
-  const LIMIT = 12;
+  const LIMIT = 10; // tampilkan 10 transaksi terakhir
   const REFRESH_MS = 30000; // auto-refresh tiap 30 detik
 
   // ── Emoji item berdasar kategori / nama (opsional fallback) ─────────────
