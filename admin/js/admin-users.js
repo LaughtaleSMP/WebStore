@@ -1,30 +1,85 @@
 /* ════════════════════════════════════════════════════════════════
    admin-users.js — Manajemen Admin (Super Admin Only)
-   Fitur:
-   • Lihat semua admin yang terdaftar (dari tabel admin_roles)
-   • Edit role & nama tampilan
-   • Hapus akses admin (delete dari admin_roles)
-   • Lihat & kelola permintaan akses (approve / reject)
+   
+   FIX UTAMA vs versi lama:
+   • signUp() dilakukan via sbTemp (non-persistent client) sehingga
+     session super admin yang sedang login TIDAK ter-replace / logout.
+   • Semua approve/reject dipusatkan di sini; admin-auth.js cukup delegate.
+   • Better error handling + loading state di setiap tombol.
    
    Tabel yang dipakai:
-   • admin_roles   → daftar user yang punya akses panel
+   • admin_roles    → daftar user yang punya akses panel
    • admin_requests → permintaan akses dari pendaftar baru
 ════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
 
+  /* ── helpers ── */
   function getSb() { return window._adminSb; }
+
+  /**
+   * Buat Supabase client sementara (non-persistent) untuk signUp.
+   * Tanpa ini, signUp() akan mengganti session aktif super admin → logout!
+   */
+  function makeTempClient() {
+    if (!window.supabase || !window._supabaseUrl || !window._supabaseKey) {
+      throw new Error('Supabase library atau config belum tersedia.');
+    }
+    return window.supabase.createClient(
+      window._supabaseUrl,
+      window._supabaseKey,
+      {
+        auth: {
+          persistSession:      false,
+          autoRefreshToken:    false,
+          detectSessionInUrl:  false,
+          // In-memory storage — tidak sentuh localStorage sama sekali
+          storage: {
+            getItem:    () => null,
+            setItem:    () => {},
+            removeItem: () => {},
+          },
+        },
+      }
+    );
+  }
+
+  function generateTempPw() {
+    return (
+      Math.random().toString(36).slice(2, 10) +
+      Math.random().toString(36).slice(2, 10) +
+      'Aa1!'
+    );
+  }
+
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function toast(msg, type = 'success') {
+    if (typeof window.showAdminToast === 'function') {
+      window.showAdminToast(msg, type); return;
+    }
+    const el = document.createElement('div');
+    el.className = 'toast-item toast-' + type;
+    el.textContent = msg;
+    const c = document.getElementById('toast');
+    if (c) { c.appendChild(el); setTimeout(() => el.remove(), 3200); }
+  }
 
   /* ══════════════════════════════════════════════════
      INJECT NAV ITEM (dipanggil setelah login, hanya superadmin)
   ══════════════════════════════════════════════════ */
   window.usersInjectNav = function () {
-    if (document.getElementById('nav-manage-admins')) return; // sudah ada
+    if (document.getElementById('nav-manage-admins')) return;
 
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
 
-    /* Cari atau buat group label "Super Admin" */
     let grp = document.getElementById('nav-grp-superadmin');
     if (!grp) {
       grp = document.createElement('div');
@@ -98,15 +153,11 @@
 
       <!-- ══ TAB: REQUESTS ══ -->
       <div id="mgr-tab-requests" class="mgr-tab-content" style="display:none">
-
-        <!-- Stats strip -->
         <div class="orders-stats-strip" style="margin-bottom:16px">
           <div class="ostat-card"><div class="ostat-num" id="mgr-stat-pending">—</div><div class="ostat-label">Menunggu</div></div>
           <div class="ostat-card"><div class="ostat-num" id="mgr-stat-approved">—</div><div class="ostat-label">Disetujui</div></div>
           <div class="ostat-card"><div class="ostat-num" id="mgr-stat-rejected">—</div><div class="ostat-label">Ditolak</div></div>
         </div>
-
-        <!-- Filter bar -->
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
           <select id="mgr-req-filter" onchange="window._mgrLoadRequests()"
             style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;
@@ -119,14 +170,11 @@
           <button class="btn-ghost" style="padding:6px 14px;font-size:12px;margin-left:auto"
             onclick="window._mgrLoadRequests()">⟳ Refresh</button>
         </div>
-
         <div id="mgr-requests-list"></div>
       </div>
 
       <!-- ══ TAB: ADMINS ══ -->
       <div id="mgr-tab-admins" class="mgr-tab-content" style="display:none">
-
-        <!-- Search -->
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
           <input id="mgr-admin-search" placeholder="🔍 Cari nama atau email…"
             oninput="window._mgrFilterAdmins(this.value)"
@@ -135,7 +183,6 @@
           <button class="btn-ghost" style="padding:6px 14px;font-size:12px"
             onclick="window._mgrLoadAdmins()">⟳ Refresh</button>
         </div>
-
         <div id="mgr-admins-list"></div>
       </div>
 
@@ -147,8 +194,7 @@
         <div style="
           background:var(--surface1,#1a1a2e);border:1px solid var(--border,rgba(255,255,255,0.1));
           border-radius:16px;width:100%;max-width:420px;padding:24px;
-          box-shadow:0 24px 64px rgba(0,0,0,0.5);
-          animation:oeditIn .22s ease;">
+          box-shadow:0 24px 64px rgba(0,0,0,0.5);animation:oeditIn .22s ease;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
             <div style="font-size:15px;font-weight:700;color:var(--text)">✏️ Edit Admin</div>
             <button onclick="window._mgrCloseEdit()"
@@ -156,10 +202,7 @@
                      font-size:18px;padding:4px 8px;border-radius:6px;transition:color .15s"
               onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-faint)'">✕</button>
           </div>
-
           <input type="hidden" id="mgr-edit-user-id">
-          <input type="hidden" id="mgr-edit-role-id">
-
           <div class="oedit-field">
             <label>Nama Tampilan</label>
             <input id="mgr-edit-display" type="text" placeholder="Nama admin…">
@@ -176,9 +219,8 @@
             </select>
           </div>
           <div style="font-size:11.5px;color:var(--text-faint);margin-top:8px;line-height:1.5">
-            ⚠️ Mengubah role akan langsung berpengaruh saat admin tersebut login berikutnya.
+            ⚠️ Mengubah role berlaku saat admin tersebut login berikutnya.
           </div>
-
           <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
             <button class="btn-ghost" onclick="window._mgrCloseEdit()"
               style="padding:8px 18px;font-size:13px">Batal</button>
@@ -199,7 +241,6 @@
     const s = document.createElement('style');
     s.id = 'mgr-styles';
     s.textContent = `
-      /* Tab styling (reuse .scfg-tab jika sudah ada) */
       .scfg-tab {
         padding:7px 16px;border-radius:20px;font-size:12.5px;
         background:var(--surface2);border:1px solid var(--border);
@@ -209,8 +250,6 @@
       .scfg-tab.active {
         background:var(--accent-muted);border-color:rgba(79,125,240,.3);color:var(--accent);
       }
-
-      /* Request card */
       .mgr-req-card {
         background:var(--surface);border:1px solid var(--border);
         border-radius:12px;padding:16px 18px;margin-bottom:10px;
@@ -218,8 +257,6 @@
         transition:border-color .2s;
       }
       .mgr-req-card:hover { border-color:var(--border2); }
-
-      /* Admin row */
       .mgr-admin-row {
         background:var(--surface);border:1px solid var(--border);
         border-radius:12px;padding:14px 18px;margin-bottom:8px;
@@ -241,12 +278,9 @@
       .mgr-role-superadmin { background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3); }
       .mgr-role-admin      { background:var(--accent-muted);color:var(--accent);border:1px solid rgba(91,127,244,.25); }
       .mgr-role-moderator  { background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.25); }
-
-      /* req status pills */
-      .mgr-status-pending   { background:rgba(250,204,21,.1);color:#facc15;border:1px solid rgba(250,204,21,.25); }
-      .mgr-status-approved  { background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.25); }
-      .mgr-status-rejected  { background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.25); }
-
+      .mgr-status-pending  { background:rgba(250,204,21,.1);color:#facc15;border:1px solid rgba(250,204,21,.25); }
+      .mgr-status-approved { background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.25); }
+      .mgr-status-rejected { background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.25); }
       @media(max-width:600px){
         .mgr-req-card,.mgr-admin-row { flex-direction:column; align-items:flex-start; }
       }
@@ -258,17 +292,17 @@
      GLOBALS
   ══════════════════════════════════════════════════ */
   function registerGlobals() {
-    window._mgrTab         = switchTab;
-    window._mgrLoad        = mgrLoad;
-    window._mgrLoadRequests= loadRequests;
-    window._mgrLoadAdmins  = loadAdmins;
-    window._mgrFilterAdmins= filterAdmins;
-    window._mgrApprove     = approveRequest;
-    window._mgrReject      = rejectRequest;
-    window._mgrEditOpen    = openEditModal;
-    window._mgrCloseEdit   = closeEditModal;
-    window._mgrSaveEdit    = saveEdit;
-    window._mgrDeleteAdmin = deleteAdmin;
+    window._mgrTab          = switchTab;
+    window._mgrLoad         = mgrLoad;
+    window._mgrLoadRequests = loadRequests;
+    window._mgrLoadAdmins   = loadAdmins;
+    window._mgrFilterAdmins = filterAdmins;
+    window._mgrApprove      = approveRequest;
+    window._mgrReject       = rejectRequest;
+    window._mgrEditOpen     = openEditModal;
+    window._mgrCloseEdit    = closeEditModal;
+    window._mgrSaveEdit     = saveEdit;
+    window._mgrDeleteAdmin  = deleteAdmin;
   }
 
   /* ══════════════════════════════════════════════════
@@ -280,7 +314,7 @@
     currentTab = tab;
     document.querySelectorAll('#mgr-tabs .scfg-tab').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
-    document.querySelectorAll('.mgr-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.mgr-tab-content').forEach(el => (el.style.display = 'none'));
     const el = document.getElementById('mgr-tab-' + tab);
     if (el) el.style.display = 'block';
     if (tab === 'requests') loadRequests();
@@ -288,13 +322,12 @@
   }
 
   /* ══════════════════════════════════════════════════
-     LOAD ALL (main entry point)
+     LOAD ALL
   ══════════════════════════════════════════════════ */
   async function mgrLoad() {
     const loadEl = document.getElementById('mgr-loading');
     if (loadEl) loadEl.style.display = 'block';
-
-    document.querySelectorAll('.mgr-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.mgr-tab-content').forEach(el => (el.style.display = 'none'));
 
     await loadRequestStats();
     await loadRequests();
@@ -304,41 +337,43 @@
   }
 
   /* ══════════════════════════════════════════════════
-     PERMINTAAN AKSES
+     PERMINTAAN AKSES — STATS
   ══════════════════════════════════════════════════ */
   async function loadRequestStats() {
     const sb = getSb();
     if (!sb) return;
 
-    for (const status of ['pending', 'approved', 'rejected']) {
-      const { count } = await sb.from('admin_requests')
+    const statuses = ['pending', 'approved', 'rejected'];
+    for (const status of statuses) {
+      const { count } = await sb
+        .from('admin_requests')
         .select('*', { count: 'exact', head: true })
         .eq('status', status);
-
       const el = document.getElementById('mgr-stat-' + status);
       if (el) el.textContent = count ?? '—';
     }
 
-    /* Badge di nav & tab */
-    const { count: pendingCount } = await sb.from('admin_requests')
+    const { count: pendingCount } = await sb
+      .from('admin_requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
-
     updatePendingBadge(pendingCount || 0);
   }
 
   function updatePendingBadge(n) {
-    const badges = [
+    [
       document.getElementById('mgr-req-badge'),
       document.getElementById('mgr-tab-req-badge'),
-    ];
-    badges.forEach(b => {
+    ].forEach(b => {
       if (!b) return;
       b.textContent = n;
       b.style.display = n > 0 ? 'inline-flex' : 'none';
     });
   }
 
+  /* ══════════════════════════════════════════════════
+     PERMINTAAN AKSES — LIST
+  ══════════════════════════════════════════════════ */
   async function loadRequests() {
     const sb = getSb();
     if (!sb) return;
@@ -363,17 +398,14 @@
       return;
     }
 
-    const statusLabel = { pending: '⏳ Menunggu', approved: '✅ Disetujui', rejected: '❌ Ditolak' };
-    const statusCls   = { pending: 'mgr-status-pending', approved: 'mgr-status-approved', rejected: 'mgr-status-rejected' };
+    const statusLabel = { pending:'⏳ Menunggu', approved:'✅ Disetujui', rejected:'❌ Ditolak' };
+    const statusCls   = { pending:'mgr-status-pending', approved:'mgr-status-approved', rejected:'mgr-status-rejected' };
 
     container.innerHTML = data.map(r => `
       <div class="mgr-req-card" id="mgr-req-${r.id}">
-        <!-- Avatar -->
         <div class="mgr-admin-avatar" style="width:44px;height:44px;border-radius:12px;font-size:16px">
           ${esc((r.display_name || '?')[0]).toUpperCase()}
         </div>
-
-        <!-- Info -->
         <div style="flex:1;min-width:200px">
           <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px">
             ${esc(r.display_name || '(tanpa nama)')}
@@ -381,33 +413,34 @@
           <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">${esc(r.email)}</div>
           <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
             <span class="mgr-role-pill mgr-role-${esc(r.role)}">${esc(r.role)}</span>
-            <span class="mgr-role-pill ${statusCls[r.status] || ''}">${statusLabel[r.status] || esc(r.status)}</span>
+            <span class="mgr-role-pill ${statusCls[r.status]||''}">${statusLabel[r.status]||esc(r.status)}</span>
             <span style="font-size:11px;color:var(--text-faint)">
-              ${new Date(r.created_at).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+              ${new Date(r.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
             </span>
           </div>
           ${r.reason ? `<div style="font-size:12px;color:var(--text-muted);margin-top:6px;
               font-style:italic;border-left:3px solid var(--border2);padding-left:8px">
               "${esc(r.reason)}"</div>` : ''}
         </div>
-
-        <!-- Aksi -->
         <div style="display:flex;gap:8px;flex-shrink:0;align-items:center;flex-wrap:wrap">
           ${r.status === 'pending' ? `
-            <button onclick="window._mgrApprove('${r.id}')"
+            <button id="btn-approve-${r.id}"
+              onclick="window._mgrApprove('${r.id}')"
               style="padding:7px 16px;border-radius:8px;background:rgba(74,222,128,.15);
                      color:#4ade80;font-size:12px;font-weight:600;cursor:pointer;
                      border:1px solid rgba(74,222,128,.25);transition:background .15s;font-family:inherit"
               onmouseover="this.style.background='rgba(74,222,128,.25)'"
               onmouseout="this.style.background='rgba(74,222,128,.15)'">✓ Setujui</button>
-            <button onclick="window._mgrReject('${r.id}')"
+            <button id="btn-reject-${r.id}"
+              onclick="window._mgrReject('${r.id}')"
               style="padding:7px 16px;border-radius:8px;background:rgba(248,113,113,.12);
                      color:#f87171;font-size:12px;font-weight:600;cursor:pointer;
                      border:1px solid rgba(248,113,113,.25);transition:background .15s;font-family:inherit"
               onmouseover="this.style.background='rgba(248,113,113,.22)'"
               onmouseout="this.style.background='rgba(248,113,113,.12)'">✗ Tolak</button>
           ` : r.status === 'rejected' ? `
-            <button onclick="window._mgrApprove('${r.id}')"
+            <button id="btn-approve-${r.id}"
+              onclick="window._mgrApprove('${r.id}')"
               style="padding:6px 14px;border-radius:8px;background:rgba(91,127,244,.1);
                      color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;
                      border:1px solid rgba(91,127,244,.25);transition:background .15s;font-family:inherit"
@@ -419,71 +452,150 @@
     `).join('');
   }
 
+  /* ══════════════════════════════════════════════════
+     APPROVE REQUEST
+     Menggunakan temp client (non-persistent) untuk signUp
+     agar session super admin yang sedang login TIDAK terputus.
+  ══════════════════════════════════════════════════ */
   async function approveRequest(reqId) {
     const sb = getSb();
     if (!sb) return;
 
-    const { data: r, error: fetchErr } = await sb.from('admin_requests').select('*').eq('id', reqId).single();
-    if (fetchErr || !r) { toast('Data tidak ditemukan.', 'error'); return; }
+    // Disable tombol agar tidak double-click
+    const approveBtn = document.getElementById('btn-approve-' + reqId);
+    const rejectBtn  = document.getElementById('btn-reject-' + reqId);
+    if (approveBtn) { approveBtn.disabled = true; approveBtn.textContent = '⏳ Memproses…'; }
+    if (rejectBtn)  rejectBtn.disabled = true;
 
     const card = document.getElementById('mgr-req-' + reqId);
-    if (card) card.style.opacity = '0.5';
+    if (card) card.style.opacity = '0.6';
 
     try {
-      /* Cek apakah sudah ada di admin_roles (kasus approve ulang) */
-      const { data: existingRole } = await sb.from('admin_roles')
+      // 1. Ambil data request
+      const { data: r, error: fetchErr } = await sb
+        .from('admin_requests')
+        .select('*')
+        .eq('id', reqId)
+        .single();
+
+      if (fetchErr || !r) throw new Error('Data permintaan tidak ditemukan.');
+      if (!r.email)       throw new Error('Email pendaftar tidak tersedia di data request.');
+
+      let userId = r.user_id || null;
+
+      // 2. Jika belum punya user_id, buat akun Supabase Auth baru
+      if (!userId) {
+        const password = r.password_temp || generateTempPw();
+
+        let sbTemp;
+        try {
+          sbTemp = makeTempClient();
+        } catch (clientErr) {
+          throw new Error('Gagal inisialisasi client: ' + clientErr.message);
+        }
+
+        const { data: signUpData, error: signUpErr } = await sbTemp.auth.signUp({
+          email:    r.email,
+          password: password,
+        });
+
+        if (signUpErr) {
+          // Kalau user sudah ada (misalnya approve ulang), coba ambil user id dari admin_roles
+          if (signUpErr.message?.toLowerCase().includes('already registered')) {
+            // Cek di admin_roles berdasarkan email
+            const { data: existingRoleByEmail } = await sb
+              .from('admin_roles')
+              .select('user_id')
+              .eq('email', r.email)
+              .maybeSingle();
+            if (existingRoleByEmail?.user_id) {
+              userId = existingRoleByEmail.user_id;
+            } else {
+              throw new Error(
+                'Email sudah terdaftar di Supabase Auth tapi tidak ditemukan di admin_roles. ' +
+                'Hubungi super admin untuk mengurus manual.'
+              );
+            }
+          } else {
+            throw signUpErr;
+          }
+        } else {
+          userId = signUpData?.user?.id;
+          if (!userId) {
+            throw new Error(
+              'Gagal mendapatkan user ID setelah signUp. ' +
+              'Pastikan "Email Confirmations" DINONAKTIFKAN di Supabase Auth → Settings.'
+            );
+          }
+        }
+
+        // Simpan user_id ke tabel request untuk referensi
+        await sb.from('admin_requests').update({ user_id: userId }).eq('id', reqId);
+      }
+
+      // 3. Cek apakah sudah ada di admin_roles
+      const { data: existingRole } = await sb
+        .from('admin_roles')
         .select('id')
-        .eq('user_id', r.user_id || '')
+        .eq('user_id', userId)
         .maybeSingle();
 
-      if (r.user_id && existingRole) {
-        /* Update role saja */
-        await sb.from('admin_roles').update({ role: r.role, display_name: r.display_name }).eq('user_id', r.user_id);
-      } else if (!r.user_id) {
-        /* Buat akun auth baru */
-        const { data: signUpData, error: signUpErr } = await sb.auth.signUp({
-          email: r.email,
-          password: r.password_temp || generateTempPw(),
-        });
-        if (signUpErr) throw signUpErr;
-
-        const userId = signUpData?.user?.id;
-        if (!userId) throw new Error('Gagal mendapatkan user ID dari Supabase.');
-
-        /* Simpan user_id ke request agar bisa dipakai lagi */
-        await sb.from('admin_requests').update({ user_id: userId }).eq('id', reqId);
-
-        /* Tambahkan ke admin_roles */
+      if (existingRole) {
+        // Update role & display_name
+        const { error: updateErr } = await sb
+          .from('admin_roles')
+          .update({ role: r.role, display_name: r.display_name })
+          .eq('user_id', userId);
+        if (updateErr) throw new Error('Gagal update role: ' + updateErr.message);
+      } else {
+        // Insert baru
         const { error: roleErr } = await sb.from('admin_roles').insert({
           user_id:      userId,
           role:         r.role,
           display_name: r.display_name,
           email:        r.email,
         });
-        if (roleErr) throw roleErr;
+        if (roleErr) throw new Error('Gagal tambah ke admin_roles: ' + roleErr.message);
       }
 
-      await sb.from('admin_requests').update({
-        status:      'approved',
-        approved_by: window.currentUser?.id || null,
-        approved_at: new Date().toISOString(),
-        password_temp: null,
+      // 4. Update status request → approved, hapus password_temp
+      const { error: updateReqErr } = await sb.from('admin_requests').update({
+        status:        'approved',
+        approved_by:   window.currentUser?.id || null,
+        approved_at:   new Date().toISOString(),
+        password_temp: null,          // hapus password setelah approved
       }).eq('id', reqId);
+      if (updateReqErr) throw new Error('Gagal update status: ' + updateReqErr.message);
 
       toast(`✅ ${r.display_name} (${r.email}) berhasil disetujui!`);
       await loadRequests();
 
     } catch (e) {
+      // Restore card & button
       if (card) card.style.opacity = '1';
+      if (approveBtn) {
+        approveBtn.disabled = false;
+        approveBtn.textContent = '✓ Setujui';
+      }
+      if (rejectBtn) rejectBtn.disabled = false;
+
+      console.error('[mgrApprove] Error:', e);
       toast('Gagal menyetujui: ' + (e.message || 'Error tidak diketahui'), 'error');
     }
   }
 
+  /* ══════════════════════════════════════════════════
+     REJECT REQUEST
+  ══════════════════════════════════════════════════ */
   async function rejectRequest(reqId) {
     const sb = getSb();
     if (!sb) return;
 
-    const { data: r } = await sb.from('admin_requests').select('display_name').eq('id', reqId).single();
+    const { data: r } = await sb
+      .from('admin_requests')
+      .select('display_name')
+      .eq('id', reqId)
+      .single();
 
     showMgrConfirm({
       title:       'Tolak Permintaan?',
@@ -491,12 +603,19 @@
       confirmText: '✗ Ya, Tolak',
       danger:      true,
       onConfirm:   async () => {
+        const rejectBtn = document.getElementById('btn-reject-' + reqId);
+        if (rejectBtn) { rejectBtn.disabled = true; rejectBtn.textContent = '⏳…'; }
+
         const { error } = await sb.from('admin_requests').update({
-          status:       'rejected',
+          status:        'rejected',
           password_temp: null,
         }).eq('id', reqId);
 
-        if (error) { toast('Gagal menolak.', 'error'); return; }
+        if (error) {
+          toast('Gagal menolak: ' + error.message, 'error');
+          if (rejectBtn) { rejectBtn.disabled = false; rejectBtn.textContent = '✗ Tolak'; }
+          return;
+        }
         toast('Permintaan ditolak.');
         await loadRequests();
       },
@@ -535,8 +654,8 @@
     const lq = q.toLowerCase();
     renderAdminList(allAdmins.filter(a =>
       (a.display_name || '').toLowerCase().includes(lq) ||
-      (a.email || '').toLowerCase().includes(lq) ||
-      (a.role || '').toLowerCase().includes(lq)
+      (a.email        || '').toLowerCase().includes(lq) ||
+      (a.role         || '').toLowerCase().includes(lq)
     ));
   }
 
@@ -563,6 +682,15 @@
         ? 'background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.25);color:#4ade80'
         : 'background:var(--accent-muted2);border-color:rgba(91,127,244,.2);color:var(--accent)';
 
+      // Serialize adminData untuk dikirim ke modal (pakai data-attribute, bukan inline JSON)
+      const adminDataStr = esc(JSON.stringify({
+        user_id:      a.user_id,
+        id:           a.id,
+        display_name: a.display_name,
+        role:         a.role,
+        email:        a.email,
+      }));
+
       return `
         <div class="mgr-admin-row" id="mgr-admin-${a.user_id}">
           <div class="mgr-admin-avatar" style="${avatarColor}">${initials}</div>
@@ -575,13 +703,15 @@
             <span class="mgr-role-pill mgr-role-${esc(a.role)}">${esc(a.role)}</span>
           </div>
           <div style="font-size:11px;color:var(--text-faint);text-align:right;min-width:80px">
-            ${a.created_at ? new Date(a.created_at).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' }) : '—'}
+            ${a.created_at ? new Date(a.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}) : '—'}
           </div>
           <div style="display:flex;gap:8px;flex-shrink:0">
-            <button class="btn-edit" onclick="window._mgrEditOpen(${JSON.stringify(a).replace(/"/g,'&quot;')})"
+            <button class="btn-edit"
+              onclick="window._mgrEditOpen('${adminDataStr}')"
               title="Edit admin">✏️ Edit</button>
             ${!isMe ? `
-              <button class="btn-del" onclick="window._mgrDeleteAdmin('${esc(a.user_id)}','${esc(a.display_name || a.email || '')}')"
+              <button class="btn-del"
+                onclick="window._mgrDeleteAdmin('${esc(a.user_id)}','${esc(a.display_name || a.email || '')}')"
                 title="Hapus akses">🗑</button>
             ` : ''}
           </div>
@@ -593,21 +723,33 @@
   /* ══════════════════════════════════════════════════
      EDIT ADMIN
   ══════════════════════════════════════════════════ */
-  function openEditModal(adminData) {
-    /* adminData bisa berupa string (dari onclick) atau object */
-    const a = typeof adminData === 'string' ? JSON.parse(adminData) : adminData;
+  function openEditModal(adminDataRaw) {
+    let a;
+    try {
+      // adminDataRaw bisa berupa string JSON (dari onclick) atau object
+      a = typeof adminDataRaw === 'string' ? JSON.parse(adminDataRaw) : adminDataRaw;
+    } catch (e) {
+      toast('Gagal membuka form edit.', 'error');
+      return;
+    }
 
-    document.getElementById('mgr-edit-user-id').value  = a.user_id || '';
-    document.getElementById('mgr-edit-role-id').value  = a.id || '';
-    document.getElementById('mgr-edit-display').value  = a.display_name || '';
-    document.getElementById('mgr-edit-role').value     = a.role || 'admin';
+    document.getElementById('mgr-edit-user-id').value = a.user_id || '';
+    document.getElementById('mgr-edit-display').value = a.display_name || '';
+    document.getElementById('mgr-edit-role').value    = a.role || 'admin';
 
     const modal = document.getElementById('mgr-edit-modal');
     modal.style.display = 'flex';
+
+    // Focus ke field nama
+    setTimeout(() => {
+      const inp = document.getElementById('mgr-edit-display');
+      if (inp) inp.focus();
+    }, 50);
   }
 
   function closeEditModal() {
-    document.getElementById('mgr-edit-modal').style.display = 'none';
+    const modal = document.getElementById('mgr-edit-modal');
+    if (modal) modal.style.display = 'none';
   }
 
   async function saveEdit() {
@@ -619,12 +761,14 @@
     const role        = document.getElementById('mgr-edit-role').value;
 
     if (!displayName) { toast('Nama tampilan tidak boleh kosong.', 'error'); return; }
+    if (!userId)      { toast('User ID tidak ditemukan.', 'error'); return; }
 
     const btn = document.getElementById('mgr-edit-save-btn');
     btn.disabled = true;
     btn.textContent = 'Menyimpan…';
 
-    const { error } = await sb.from('admin_roles')
+    const { error } = await sb
+      .from('admin_roles')
       .update({ display_name: displayName, role })
       .eq('user_id', userId);
 
@@ -644,7 +788,7 @@
   function deleteAdmin(userId, displayName) {
     showMgrConfirm({
       title:       'Cabut Akses Admin?',
-      message:     `Akses panel admin untuk <strong>${esc(displayName)}</strong> akan dicabut. Mereka tidak bisa login lagi ke panel ini.`,
+      message:     `Akses panel untuk <strong>${esc(displayName)}</strong> akan dicabut. Mereka tidak bisa login lagi ke panel.`,
       confirmText: '🗑️ Ya, Cabut Akses',
       danger:      true,
       onConfirm:   async () => {
@@ -657,14 +801,12 @@
         const row = document.getElementById('mgr-admin-' + userId);
         if (row) {
           row.style.transition = 'opacity .3s, transform .3s';
-          row.style.opacity = '0';
-          row.style.transform = 'translateX(20px)';
+          row.style.opacity    = '0';
+          row.style.transform  = 'translateX(20px)';
           setTimeout(() => row.remove(), 320);
         }
 
-        /* Update local array */
         allAdmins = allAdmins.filter(a => a.user_id !== userId);
-
         toast('Akses admin berhasil dicabut.');
       },
     });
@@ -686,16 +828,16 @@
       opacity: '0', transition: 'opacity .18s',
     });
 
-    const confirmColor = danger ? 'rgba(239,68,68,.85)' : 'var(--accent)';
-    const confirmBorder = danger ? 'rgba(239,68,68,.4)' : 'rgba(91,127,244,.4)';
+    const confirmColor  = danger ? 'rgba(239,68,68,.85)' : 'var(--accent)';
+    const confirmBorder = danger ? 'rgba(239,68,68,.4)'  : 'rgba(91,127,244,.4)';
 
     overlay.innerHTML = `
-      <div style="background:var(--surface1,#1a1a2e);border:1px solid rgba(255,255,255,.1);
-                  border-radius:14px;width:100%;max-width:360px;padding:24px;
-                  box-shadow:0 20px 60px rgba(0,0,0,.5);
-                  transform:scale(.94) translateY(12px);
-                  transition:transform .22s cubic-bezier(.34,1.56,.64,1),opacity .18s;opacity:0"
-           id="mgr-confirm-box">
+      <div id="mgr-confirm-box"
+        style="background:var(--surface1,#1a1a2e);border:1px solid rgba(255,255,255,.1);
+               border-radius:14px;width:100%;max-width:360px;padding:24px;
+               box-shadow:0 20px 60px rgba(0,0,0,.5);
+               transform:scale(.94) translateY(12px);
+               transition:transform .22s cubic-bezier(.34,1.56,.64,1),opacity .18s;opacity:0">
         <div style="font-size:15px;font-weight:700;color:var(--text,#fff);margin-bottom:8px">${title}</div>
         <div style="font-size:13px;color:var(--text-faint,#888);line-height:1.55;margin-bottom:20px">${message}</div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -715,58 +857,42 @@
       requestAnimationFrame(() => {
         overlay.style.opacity = '1';
         const box = document.getElementById('mgr-confirm-box');
-        box.style.opacity = '1';
-        box.style.transform = 'scale(1) translateY(0)';
+        if (box) { box.style.opacity = '1'; box.style.transform = 'scale(1) translateY(0)'; }
       });
     });
 
-    function close() {
+    function closeConfirm() {
       const box = document.getElementById('mgr-confirm-box');
       if (box) { box.style.opacity = '0'; box.style.transform = 'scale(.94) translateY(12px)'; }
       overlay.style.opacity = '0';
       setTimeout(() => overlay.remove(), 220);
     }
 
-    document.getElementById('mgr-cc-cancel').onclick  = close;
-    document.getElementById('mgr-cc-confirm').onclick = () => { close(); onConfirm && onConfirm(); };
-    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-    document.addEventListener('keydown', function esc(e) {
-      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
-    });
+    document.getElementById('mgr-cc-cancel').onclick  = closeConfirm;
+    document.getElementById('mgr-cc-confirm').onclick = () => { closeConfirm(); onConfirm && onConfirm(); };
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeConfirm(); });
+
+    function onKey(e) {
+      if (e.key === 'Escape') { closeConfirm(); document.removeEventListener('keydown', onKey); }
+    }
+    document.addEventListener('keydown', onKey);
   }
 
   /* ══════════════════════════════════════════════════
-     HELPERS
-  ══════════════════════════════════════════════════ */
-  function esc(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function generateTempPw() {
-    return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
-  }
-
-  function toast(msg, type = 'success') {
-    if (typeof window.showAdminToast === 'function') { window.showAdminToast(msg, type); return; }
-    const el = document.createElement('div');
-    el.className = 'toast-item toast-' + type;
-    el.textContent = msg;
-    const c = document.getElementById('toast');
-    if (c) { c.appendChild(el); setTimeout(() => el.remove(), 3200); }
-  }
-
-  /* ══════════════════════════════════════════════════
-     INIT — inject section saat DOM siap
+     INIT
   ══════════════════════════════════════════════════ */
   document.addEventListener('DOMContentLoaded', () => {
     injectSection();
 
-    /* Tutup edit modal klik di luar */
-    document.getElementById('mgr-edit-modal')?.addEventListener('click', function (e) {
-      if (e.target === this) closeEditModal();
-    });
+    // Tutup edit modal klik di luar
+    const editModal = document.getElementById('mgr-edit-modal');
+    if (editModal) {
+      editModal.addEventListener('click', function (e) {
+        if (e.target === this) closeEditModal();
+      });
+    }
 
-    /* Hook showSection agar mgrLoad() dipanggil saat tab dibuka */
+    // Hook showSection agar mgrLoad() dipanggil saat section dibuka
     const _orig = window.showSection;
     window.showSection = function (name, el) {
       _orig && _orig(name, el);
@@ -774,11 +900,12 @@
     };
   });
 
-  /* Expose badge updater agar bisa dipanggil dari admin-auth.js */
+  /* Expose badge updater — dipanggil dari admin-auth.js setelah login */
   window.mgrUpdateBadge = async function () {
     const sb = getSb();
     if (!sb) return;
-    const { count } = await sb.from('admin_requests')
+    const { count } = await sb
+      .from('admin_requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
     updatePendingBadge(count || 0);
