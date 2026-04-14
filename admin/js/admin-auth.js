@@ -1,3 +1,14 @@
+// ==================== TAB SWITCHER ====================
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+  const tabBtn = document.getElementById('tab-' + tab + '-btn');
+  const panel  = document.getElementById('panel-' + tab);
+  if (tabBtn) tabBtn.classList.add('active');
+  if (panel)  panel.classList.add('active');
+}
+window.switchAuthTab = switchAuthTab;
+
 // ==================== AUTH ====================
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
