@@ -126,7 +126,7 @@ window.doRequestAccess = async function () {
   try {
     // Cek apakah email sudah ada di pending requests
     const { data: existing } = await sb
-      .from('admin_requests')
+      .from('admin_pending_requests')
       .select('id,status')
       .eq('email', email)
       .maybeSingle();
@@ -141,13 +141,19 @@ window.doRequestAccess = async function () {
       }
     }
 
-    const { error: insertErr } = await sb.from('admin_requests').insert({
+    // Daftarkan user ke Supabase Auth terlebih dahulu
+    const { data: signUpData, error: signUpErr } = await sb.auth.signUp({ email, password: pw });
+    if (signUpErr) throw signUpErr;
+
+    const userId = signUpData?.user?.id;
+    if (!userId) throw new Error('Gagal mendapatkan user ID setelah registrasi.');
+
+    const { error: insertErr } = await sb.from('admin_pending_requests').insert({
+      user_id:      userId,
       email,
-      display_name:  display,
-      role,
-      reason:        reason || null,
-      status:        'pending',
-      password_temp: pw,
+      display_name: display,
+      reason:       reason || null,
+      status:       'pending',
     });
     if (insertErr) throw insertErr;
 
@@ -169,7 +175,7 @@ window.doRequestAccess = async function () {
 // ==================== BADGE PERMINTAAN AKSES (legacy fallback) ====================
 async function loadAccessRequestBadge() {
   const { count } = await sb
-    .from('admin_requests')
+    .from('admin_pending_requests')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'pending');
 
@@ -216,7 +222,7 @@ window.loadAccessRequests = async function () {
   container.innerHTML = '<div class="empty-state">Memuat data...</div>';
 
   const { data, error } = await sb
-    .from('admin_requests')
+    .from('admin_pending_requests')
     .select('*')
     .order('created_at', { ascending: false });
 
@@ -234,7 +240,7 @@ window.loadAccessRequests = async function () {
         <div class="req-card-name">${escHtml(r.display_name)}</div>
         <div class="req-card-email">${escHtml(r.email)}</div>
         <div class="req-card-meta">
-          <span class="req-role-badge">${escHtml(r.role)}</span>
+          <span class="req-role-badge">${escHtml(r.role || '-')}</span>
           <span style="font-size:11px;color:${statusColor[r.status]||'#888'}">
             ${statusLabel[r.status]||r.status}
           </span>
