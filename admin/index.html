@@ -3,135 +3,307 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Server Settings — Laughtale SMP</title>
+<title>Admin Panel — Laughtale SMP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/admin.css">
 <link rel="stylesheet" href="css/finance.css">
 <style>
-/* ── AUTH SCREEN — Responsive Sliding ── */
+/* ─────────────────────────────────────────────
+   AUTH SCREEN
+───────────────────────────────────────────── */
 #auth-screen {
   position: fixed; inset: 0; z-index: 999;
   display: flex; background: var(--bg); overflow: hidden;
   min-height: 100dvh;
 }
+
+/* Left brand panel */
 .auth-left {
-  width: 380px; flex-shrink: 0;
-  background: var(--surface); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; padding: 2.75rem 2.25rem;
+  width: 360px; flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 2.5rem 2rem;
   position: relative; overflow: hidden;
 }
-.auth-left-noise {
+.auth-left-glow {
+  position: absolute; top: -120px; left: -120px;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(91,127,244,0.1) 0%, transparent 65%);
+  pointer-events: none;
+}
+.auth-left-grid {
   position: absolute; inset: 0;
-  background-image: linear-gradient(rgba(255,255,255,0.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.012) 1px,transparent 1px);
-  background-size: 32px 32px; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.013) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.013) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
 }
-.auth-left::before {
-  content:""; position:absolute; top:-80px; left:-80px; width:320px; height:320px;
-  background:radial-gradient(circle,rgba(91,127,244,0.12) 0%,transparent 70%); pointer-events:none;
-}
-.auth-wordmark { display:flex; align-items:center; gap:9px; position:relative; z-index:1; }
-.auth-wordmark-icon { width:32px;height:32px;background:rgba(91,127,244,0.14);border:1px solid rgba(91,127,244,0.22);border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--accent); }
-.auth-wordmark-text { font-size:13.5px;font-weight:600;color:var(--text); }
-.auth-hero { margin-top:auto;padding-bottom:2.25rem;position:relative;z-index:1; }
-.auth-hero-label { font-size:10.5px;font-weight:600;letter-spacing:1.8px;text-transform:uppercase;color:var(--accent);opacity:.7;margin-bottom:.9rem; }
-.auth-hero-title { font-size:1.9rem;font-weight:700;color:var(--text);line-height:1.2;letter-spacing:-.6px;margin-bottom:.7rem; }
-.auth-hero-sub { font-size:13px;color:var(--text-muted);line-height:1.7;max-width:270px; }
-.auth-info-list { display:flex;flex-direction:column;gap:7px;margin-top:2rem;position:relative;z-index:1; }
-.auth-info-row { display:flex;align-items:center;justify-content:space-between;padding:10px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-md);transition:border-color .15s; }
-.auth-info-row:hover { border-color:var(--border2); }
-.auth-info-row-left { display:flex;align-items:center;gap:10px; }
-.auth-info-row-left svg { color:var(--text-muted);flex-shrink:0; }
-.auth-info-row-name { font-size:12.5px;font-weight:500;color:var(--text); }
-.auth-info-row-sub { font-size:11px;color:var(--text-faint);display:block;margin-top:1px; }
-.status-dot-inline { width:7px;height:7px;border-radius:50%;flex-shrink:0; }
-.dot-green { background:var(--green);box-shadow:0 0 8px rgba(34,197,94,.5); }
-.dot-blue  { background:var(--accent); }
-.auth-foot { padding-top:1.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1; }
-.auth-foot span { font-size:11px;color:var(--text-faint); }
 
-/* Right sliding panel */
-.auth-right { flex:1;display:flex;flex-direction:column;background:var(--bg);position:relative;overflow:hidden;min-height:0; }
-.auth-tabs-bar { display:flex;padding:1.5rem 2rem 0;gap:0;position:relative;z-index:2;flex-shrink:0; }
-.auth-tab-pill {
-  flex:1;padding:11px 16px;font-size:13px;font-weight:600;
-  color:var(--text-faint);background:none;border:none;
-  border-bottom:2px solid var(--border);
-  cursor:pointer;transition:color .2s,border-color .2s;
-  text-align:center;letter-spacing:.1px;font-family:inherit;
+.auth-brand {
+  display: flex; align-items: center; gap: 10px;
+  position: relative; z-index: 1;
 }
-.auth-tab-pill.active { color:var(--text);border-bottom-color:var(--accent); }
-.auth-tab-pill:hover:not(.active) { color:var(--text-muted); }
+.auth-brand-mark {
+  width: 34px; height: 34px;
+  background: rgba(91,127,244,0.12);
+  border: 1px solid rgba(91,127,244,0.2);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent);
+}
+.auth-brand-name {
+  font-size: 13.5px; font-weight: 600; color: var(--text);
+  letter-spacing: -0.2px;
+}
 
-.auth-slide-track { display:flex;flex:1;overflow:hidden;position:relative;min-height:0; }
+.auth-hero {
+  margin-top: auto;
+  padding-bottom: 2rem;
+  position: relative; z-index: 1;
+}
+.auth-hero-eyebrow {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--accent); opacity: 0.6;
+  margin-bottom: 1rem;
+}
+.auth-hero-title {
+  font-size: 1.85rem; font-weight: 700;
+  color: var(--text); line-height: 1.18;
+  letter-spacing: -0.7px; margin-bottom: 0.75rem;
+}
+.auth-hero-desc {
+  font-size: 12.5px; color: var(--text-muted);
+  line-height: 1.75; max-width: 260px;
+}
+
+.auth-status-list {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 1.75rem; position: relative; z-index: 1;
+}
+.auth-status-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  transition: border-color .15s;
+}
+.auth-status-item:hover { border-color: var(--border2); }
+.auth-status-left { display: flex; align-items: center; gap: 9px; }
+.auth-status-left svg { color: var(--text-faint); flex-shrink: 0; }
+.auth-status-label { font-size: 12.5px; font-weight: 500; color: var(--text); }
+.auth-status-sub { font-size: 10.5px; color: var(--text-faint); display: block; margin-top: 1px; }
+.auth-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.auth-dot-green { background: var(--green); box-shadow: 0 0 0 3px rgba(34,197,94,.15); }
+.auth-dot-blue  { background: var(--accent); }
+
+.auth-left-foot {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: relative; z-index: 1;
+}
+.auth-left-foot span { font-size: 10.5px; color: var(--text-faint); }
+
+/* Right form area */
+.auth-right {
+  flex: 1; display: flex; flex-direction: column;
+  background: var(--bg); position: relative;
+  overflow: hidden; min-height: 0;
+}
+
+.auth-tabs-bar {
+  display: flex; padding: 1.5rem 2.25rem 0;
+  gap: 0; position: relative; z-index: 2; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.auth-tab {
+  padding: 10px 18px; font-size: 13px; font-weight: 500;
+  color: var(--text-faint); background: none; border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer; transition: color .18s, border-color .18s;
+  font-family: inherit; letter-spacing: -0.1px;
+}
+.auth-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.auth-tab:hover:not(.active) { color: var(--text-muted); }
+
+.auth-slide-track {
+  display: flex; flex: 1; overflow: hidden;
+  position: relative; min-height: 0;
+}
 .auth-slide-panel {
-  min-width:100%;flex-shrink:0;overflow-y:auto;
-  padding:1.75rem 2rem 3.5rem;
-  transition:transform .42s cubic-bezier(.25,1,.5,1);
-  -webkit-overflow-scrolling:touch;
+  min-width: 100%; flex-shrink: 0; overflow-y: auto;
+  padding: 2rem 2.25rem 4rem;
+  transition: transform .4s cubic-bezier(.25,1,.5,1);
+  -webkit-overflow-scrolling: touch;
 }
-.auth-slide-panel::-webkit-scrollbar { width:3px; }
-.auth-slide-panel::-webkit-scrollbar-thumb { background:var(--surface4);border-radius:3px; }
-.auth-slide-track.show-register .auth-slide-panel { transform:translateX(-100%); }
+.auth-slide-panel::-webkit-scrollbar { width: 3px; }
+.auth-slide-panel::-webkit-scrollbar-thumb { background: var(--surface4); border-radius: 3px; }
+.auth-slide-track.show-register .auth-slide-panel { transform: translateX(-100%); }
 
-.auth-form-wrap { width:100%;max-width:370px;margin:0 auto; }
-.auth-form-title { font-size:1.45rem;font-weight:700;color:var(--text);letter-spacing:-.5px;margin-bottom:.3rem; }
-.auth-form-sub { font-size:13px;color:var(--text-muted);margin-bottom:1.75rem;line-height:1.6; }
-.alert { display:flex;align-items:flex-start;gap:9px;padding:11px 13px;border-radius:var(--r-md);font-size:13px;margin-bottom:1rem;line-height:1.5; }
-.alert-error  { background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.18);color:#fca5a5; }
-.alert-success{ background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:#4ade80; display:flex; }
-.alert svg { flex-shrink:0;margin-top:1px; }
-.form-label { display:block;font-size:11.5px;font-weight:500;color:var(--text-muted);letter-spacing:.1px;margin-bottom:6px; }
+.auth-form-wrap { width: 100%; max-width: 360px; margin: 0 auto; }
+.auth-form-heading { font-size: 1.35rem; font-weight: 700; color: var(--text); letter-spacing: -0.5px; margin-bottom: 0.3rem; }
+.auth-form-sub { font-size: 12.5px; color: var(--text-muted); margin-bottom: 1.75rem; line-height: 1.65; }
+
+.alert {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 10px 13px; border-radius: var(--r-md);
+  font-size: 12.5px; margin-bottom: 1rem; line-height: 1.5;
+}
+.alert-error  { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.18); color: #fca5a5; }
+.alert-success{ background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.18); color: #4ade80; }
+.alert svg { flex-shrink: 0; margin-top: 1px; }
+
+/* Input wrapper with optional icon slot */
+.input-wrap { position: relative; }
+.input-wrap .input-icon {
+  position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint); pointer-events: none;
+  display: flex; align-items: center;
+}
+.input-wrap .form-input { padding-left: 36px; }
+.input-wrap .input-eye {
+  position: absolute; right: 11px; top: 50%;
+  transform: translateY(-50%);
+  background: none; border: none; cursor: pointer;
+  color: var(--text-faint); padding: 3px;
+  display: flex; align-items: center;
+  transition: color .15s;
+}
+.input-wrap .input-eye:hover { color: var(--text-muted); }
+
+.form-label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 6px; }
 .form-input {
-  width:100%;background:var(--surface2);border:1px solid var(--border2);
-  border-radius:var(--r-md);padding:10px 13px;color:var(--text);font-size:13.5px;
-  transition:border-color .15s,background .15s,box-shadow .15s;font-family:inherit;
+  width: 100%; background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r-md); padding: 10px 13px;
+  color: var(--text); font-size: 13.5px;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+  font-family: inherit;
 }
-.form-input:focus { outline:none;border-color:rgba(91,127,244,.45);background:var(--surface3);box-shadow:0 0 0 3px rgba(91,127,244,.08); }
-.form-input::placeholder { color:var(--text-faint); }
-.form-group { margin-bottom:14px; }
-.form-row-2 { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+.form-input:focus { outline: none; border-color: rgba(91,127,244,.5); background: var(--surface3); box-shadow: 0 0 0 3px rgba(91,127,244,.08); }
+.form-input::placeholder { color: var(--text-faint); }
+.form-group { margin-bottom: 14px; }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
 .btn-primary {
-  width:100%;padding:10.5px;background:var(--accent);color:#fff;border:none;
-  border-radius:var(--r-md);font-size:13.5px;font-weight:600;cursor:pointer;
-  transition:background .15s,transform .1s,box-shadow .15s;
-  letter-spacing:-.15px;margin-top:4px;font-family:inherit;
+  width: 100%; padding: 11px; background: var(--accent); color: #fff;
+  border: none; border-radius: var(--r-md); font-size: 13.5px;
+  font-weight: 600; cursor: pointer; letter-spacing: -0.1px;
+  transition: background .15s, transform .1s, box-shadow .15s;
+  margin-top: 4px; font-family: inherit;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
 }
-.btn-primary:hover { background:var(--accent-hover);box-shadow:0 4px 16px rgba(91,127,244,.3); }
-.btn-primary:active { transform:scale(.99); }
-.btn-primary:disabled { opacity:.5;cursor:not-allowed; }
-.auth-switch-link { text-align:center;margin-top:1.25rem;font-size:13px;color:var(--text-muted); }
-.auth-switch-link button { background:none;border:none;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;padding:0;transition:opacity .15s;font-family:inherit; }
-.auth-switch-link button:hover { opacity:.75; }
+.btn-primary:hover { background: var(--accent-hover); box-shadow: 0 4px 18px rgba(91,127,244,.28); }
+.btn-primary:active { transform: scale(.99); }
+.btn-primary:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+
+.auth-switch { text-align: center; margin-top: 1.25rem; font-size: 12.5px; color: var(--text-muted); }
+.auth-switch button { background: none; border: none; color: var(--accent); font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 0; font-family: inherit; transition: opacity .15s; }
+.auth-switch button:hover { opacity: .75; }
 
 /* ── Request cards ── */
-.req-card { background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;transition:opacity .2s; }
-.req-card-info { flex:1;min-width:200px; }
-.req-card-name { font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px; }
-.req-card-email { font-size:12px;color:var(--text-faint);margin-bottom:4px; }
-.req-card-meta { display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
-.req-role-badge { font-size:11px;background:var(--surface3);padding:2px 8px;border-radius:20px;color:var(--text-muted); }
-.req-card-reason { font-size:12px;color:var(--text-muted);margin-top:6px;font-style:italic; }
-.req-card-actions { display:flex;gap:8px;flex-shrink:0; }
-.btn-approve { padding:7px 16px;border-radius:8px;background:rgba(74,222,128,.15);color:#4ade80;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(74,222,128,.25);transition:all .18s; }
-.btn-approve:hover { background:rgba(74,222,128,.25); }
-.btn-reject { padding:7px 16px;border-radius:8px;background:rgba(248,113,113,.12);color:#f87171;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(248,113,113,.25);transition:all .18s; }
-.btn-reject:hover { background:rgba(248,113,113,.22); }
-.req-filter-bar { display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px; }
-.req-filter-bar select, .req-filter-bar input { background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 12px;font-size:13px;outline:none; }
+.req-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 14px 16px;
+  margin-bottom: 10px; display: flex; align-items: center;
+  gap: 14px; flex-wrap: wrap; transition: border-color .15s;
+}
+.req-card:hover { border-color: var(--border2); }
+.req-card-info { flex: 1; min-width: 200px; }
+.req-card-name { font-size: 13.5px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.req-card-email { font-size: 12px; color: var(--text-faint); margin-bottom: 5px; }
+.req-card-meta { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.req-role-badge { font-size: 10.5px; background: var(--surface3); padding: 2px 8px; border-radius: 20px; color: var(--text-muted); border: 1px solid var(--border); }
+.req-card-reason { font-size: 12px; color: var(--text-muted); margin-top: 6px; font-style: italic; }
+.req-card-actions { display: flex; gap: 7px; flex-shrink: 0; }
+.btn-approve {
+  padding: 6px 14px; border-radius: var(--r-md);
+  background: rgba(34,197,94,.1); color: var(--green);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  border: 1px solid rgba(34,197,94,.22); transition: all .15s;
+}
+.btn-approve:hover { background: rgba(34,197,94,.18); }
+.btn-reject {
+  padding: 6px 14px; border-radius: var(--r-md);
+  background: rgba(239,68,68,.1); color: #f87171;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  border: 1px solid rgba(239,68,68,.22); transition: all .15s;
+}
+.btn-reject:hover { background: rgba(239,68,68,.18); }
+.req-filter-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.req-filter-bar select,
+.req-filter-bar input {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-md); color: var(--text);
+  padding: 6px 11px; font-size: 12.5px; outline: none; font-family: inherit;
+}
 
-@media(max-width:768px) {
-  .auth-left { display:none; }
-  .auth-tabs-bar { padding:1.25rem 1.25rem 0; }
-  .auth-slide-panel { padding:1.5rem 1.25rem 4rem; }
-  .form-row-2 { grid-template-columns:1fr; }
+/* ─────────────────────────────────────────────
+   APP TOPBAR OVERRIDE — slimmer & tighter
+───────────────────────────────────────────── */
+.topbar {
+  height: 50px;
+  padding: 0 16px;
+}
+.topbar-brand-name { font-size: 12.5px; }
+.topbar-breadcrumb { font-size: 12px; }
+
+/* ─────────────────────────────────────────────
+   SIDEBAR OVERRIDE
+───────────────────────────────────────────── */
+.nav-group-label {
+  padding: 12px 14px 4px;
+  font-size: 9.5px; letter-spacing: 1.4px;
+}
+.nav-item {
+  font-size: 12.5px;
+  padding: 7px 13px;
+  margin: 0 5px;
+  border-radius: var(--r-md);
+  gap: 8px;
+}
+
+/* ─────────────────────────────────────────────
+   FILTER BARS (orders, finance) — inline style
+   override to use design token classes instead
+───────────────────────────────────────────── */
+.filter-bar {
+  display: flex; align-items: center; gap: 9px;
+  flex-wrap: wrap; margin-bottom: 14px;
+}
+.filter-bar label { font-size: 11.5px; color: var(--text-faint); font-weight: 600; }
+.filter-bar select,
+.filter-bar input {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-md); color: var(--text);
+  padding: 6px 11px; font-size: 12.5px; outline: none;
+  font-family: inherit; transition: border-color .15s;
+}
+.filter-bar select:focus,
+.filter-bar input:focus { border-color: rgba(91,127,244,.4); }
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .auth-left { display: none; }
+  .auth-tabs-bar { padding: 1.25rem 1.25rem 0; }
+  .auth-slide-panel { padding: 1.5rem 1.25rem 4rem; }
+  .form-row-2 { grid-template-columns: 1fr; }
   .auth-right { overflow-y: auto; }
   .auth-slide-track { overflow: visible; min-height: unset; }
 }
-@media(max-width:400px) {
-  .auth-tabs-bar { padding:1rem 1rem 0; }
-  .auth-slide-panel { padding:1.25rem 1rem 4rem; }
+@media (max-width: 400px) {
+  .auth-tabs-bar { padding: 1rem 1rem 0; }
+  .auth-slide-panel { padding: 1.25rem 1rem 4rem; }
 }
 </style>
 </head>
@@ -140,90 +312,177 @@
 
 <!-- ═══════════════════════ AUTH SCREEN ═══════════════════════ -->
 <div id="auth-screen">
+
+  <!-- Left: Brand panel -->
   <div class="auth-left">
-    <div class="auth-left-noise"></div>
-    <div class="auth-wordmark">
-      <div class="auth-wordmark-icon">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    <div class="auth-left-glow"></div>
+    <div class="auth-left-grid"></div>
+
+    <div class="auth-brand">
+      <div class="auth-brand-mark">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
       </div>
-      <span class="auth-wordmark-text">Laughtale SMP</span>
+      <span class="auth-brand-name">Laughtale SMP</span>
     </div>
+
     <div class="auth-hero">
-      <div class="auth-hero-label">Admin Panel</div>
+      <div class="auth-hero-eyebrow">Admin Panel</div>
       <div class="auth-hero-title">Server<br>Configuration</div>
-      <p class="auth-hero-sub">Kelola konfigurasi server Laughtale SMP dari satu panel terpusat yang aman.</p>
-      <div class="auth-info-list">
-        <div class="auth-info-row">
-          <div class="auth-info-row-left">
+      <p class="auth-hero-desc">Kelola konfigurasi server Laughtale SMP dari satu panel terpusat yang aman.</p>
+
+      <div class="auth-status-list">
+        <div class="auth-status-item">
+          <div class="auth-status-left">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            <div><span class="auth-info-row-name">Server Status</span><span class="auth-info-row-sub">laughtale.my.id</span></div>
+            <div>
+              <span class="auth-status-label">Server Status</span>
+              <span class="auth-status-sub">laughtale.my.id</span>
+            </div>
           </div>
-          <div class="status-dot-inline dot-green"></div>
+          <div class="auth-dot auth-dot-green"></div>
         </div>
-        <div class="auth-info-row">
-          <div class="auth-info-row-left">
+        <div class="auth-status-item">
+          <div class="auth-status-left">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <div><span class="auth-info-row-name">Supabase Auth</span><span class="auth-info-row-sub">Row Level Security aktif</span></div>
+            <div>
+              <span class="auth-status-label">Supabase Auth</span>
+              <span class="auth-status-sub">Row Level Security aktif</span>
+            </div>
           </div>
-          <div class="status-dot-inline dot-blue"></div>
+          <div class="auth-dot auth-dot-blue"></div>
         </div>
       </div>
     </div>
-    <div class="auth-foot">
-      <span>2025 Laughtale SMP</span><span>Server Settings</span>
+
+    <div class="auth-left-foot">
+      <span>2025 Laughtale SMP</span>
+      <span>v2.0</span>
     </div>
   </div>
 
+  <!-- Right: Form area -->
   <div class="auth-right">
     <div class="auth-tabs-bar">
-      <button class="auth-tab-pill active" id="tab-pill-login" onclick="switchAuthTab('login')">Masuk</button>
-      <button class="auth-tab-pill" id="tab-pill-register" onclick="switchAuthTab('register')">Daftar Admin</button>
+      <button class="auth-tab active" id="tab-pill-login" onclick="switchAuthTab('login')">Masuk</button>
+      <button class="auth-tab" id="tab-pill-register" onclick="switchAuthTab('register')">Daftar Admin</button>
     </div>
+
     <div class="auth-slide-track" id="auth-slide-track">
-      <!-- Panel LOGIN -->
+
+      <!-- Panel: LOGIN -->
       <div class="auth-slide-panel" id="auth-panel-login">
         <div class="auth-form-wrap">
-          <div class="auth-form-title">Selamat datang</div>
+          <div class="auth-form-heading">Selamat datang</div>
           <p class="auth-form-sub">Masuk menggunakan akun admin yang sudah terdaftar.</p>
+
           <div id="auth-error" class="alert alert-error" style="display:none">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span id="auth-error-msg"></span>
           </div>
-          <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="login-email" type="email" placeholder="admin@laughtale.my.id" autocomplete="email"></div>
-          <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password"></div>
-          <button class="btn-primary" onclick="doLogin()" id="login-btn">Masuk ke Panel</button>
-          <div class="auth-switch-link">Belum punya akses? <button onclick="switchAuthTab('register')">Daftar sekarang →</button></div>
+
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <div class="input-wrap">
+              <span class="input-icon"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+              <input class="form-input" id="login-email" type="email" placeholder="admin@laughtale.my.id" autocomplete="email">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="input-wrap">
+              <span class="input-icon"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+              <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
+              <button class="input-eye" type="button" onclick="togglePw('login-password',this)" tabindex="-1">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <button class="btn-primary" onclick="doLogin()" id="login-btn">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Masuk ke Panel
+          </button>
+          <div class="auth-switch">Belum punya akses? <button onclick="switchAuthTab('register')">Daftar sekarang</button></div>
         </div>
       </div>
-      <!-- Panel REGISTER -->
+
+      <!-- Panel: REGISTER -->
       <div class="auth-slide-panel" id="auth-panel-register">
         <div class="auth-form-wrap">
-          <div class="auth-form-title">Ajukan Akses</div>
+          <div class="auth-form-heading">Ajukan Akses</div>
           <p class="auth-form-sub">Permintaanmu dikirim ke super admin untuk di-review dan disetujui.</p>
-          <div id="req-error" class="alert alert-error" style="display:none"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span id="req-error-msg"></span></div>
-          <div id="req-success" class="alert alert-success" style="display:none"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Permintaan terkirim! Tunggu persetujuan super admin.</span></div>
-          <div class="form-group"><label class="form-label">Nama Tampilan</label><input class="form-input" id="req-display" type="text" placeholder="cth: Blackdamen"></div>
-          <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="req-email" type="email" placeholder="kamu@email.com"></div>
-          <div class="form-row-2">
-            <div class="form-group" style="margin-bottom:0"><label class="form-label">Password</label><input class="form-input" id="req-password" type="password" placeholder="Min. 6 karakter" autocomplete="new-password"></div>
-            <div class="form-group" style="margin-bottom:0"><label class="form-label">Konfirmasi</label><input class="form-input" id="req-password2" type="password" placeholder="Ulangi password" autocomplete="new-password"></div>
+
+          <div id="req-error" class="alert alert-error" style="display:none">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="req-error-msg"></span>
           </div>
-          <div class="form-group" style="margin-top:14px"><label class="form-label">Role yang Diminta</label><select class="form-input" id="req-role"><option value="admin">Admin</option><option value="moderator">Moderator</option></select></div>
-          <div class="form-group"><label class="form-label">Alasan <span style="color:var(--text-faint);font-weight:400">(opsional)</span></label><textarea class="form-input" id="req-reason" rows="2" placeholder="Kenapa kamu ingin jadi admin?..." style="resize:vertical;min-height:60px;"></textarea></div>
-          <button class="btn-primary" onclick="doRequestAccess()" id="req-submit-btn">Kirim Permintaan</button>
-          <div class="auth-switch-link">Sudah punya akun? <button onclick="switchAuthTab('login')">← Masuk di sini</button></div>
-          <p style="font-size:11.5px;color:var(--text-faint);text-align:center;margin-top:10px;line-height:1.5;">Akunmu aktif setelah disetujui super admin.</p>
+          <div id="req-success" class="alert alert-success" style="display:none">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Permintaan terkirim! Tunggu persetujuan super admin.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nama Tampilan</label>
+            <div class="input-wrap">
+              <span class="input-icon"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+              <input class="form-input" id="req-display" type="text" placeholder="cth: Blackdamen">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <div class="input-wrap">
+              <span class="input-icon"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+              <input class="form-input" id="req-email" type="email" placeholder="kamu@email.com">
+            </div>
+          </div>
+          <div class="form-row-2" style="margin-bottom:14px">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Password</label>
+              <div class="input-wrap">
+                <span class="input-icon"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                <input class="form-input" id="req-password" type="password" placeholder="Min. 6 karakter" autocomplete="new-password">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Konfirmasi</label>
+              <div class="input-wrap">
+                <span class="input-icon"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                <input class="form-input" id="req-password2" type="password" placeholder="Ulangi password" autocomplete="new-password">
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role yang Diminta</label>
+            <select class="form-input" id="req-role">
+              <option value="admin">Admin</option>
+              <option value="moderator">Moderator</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Alasan <span style="color:var(--text-faint);font-weight:400;text-transform:none;letter-spacing:0">(opsional)</span></label>
+            <textarea class="form-input" id="req-reason" rows="2" placeholder="Kenapa kamu ingin jadi admin?" style="resize:vertical;min-height:62px;"></textarea>
+          </div>
+
+          <button class="btn-primary" onclick="doRequestAccess()" id="req-submit-btn">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Kirim Permintaan
+          </button>
+          <div class="auth-switch">Sudah punya akun? <button onclick="switchAuthTab('login')">Masuk di sini</button></div>
+          <p style="font-size:11px;color:var(--text-faint);text-align:center;margin-top:12px;line-height:1.6;">Akunmu aktif setelah disetujui super admin.</p>
         </div>
       </div>
+
     </div>
   </div>
 </div>
+<!-- /auth-screen -->
+
 
 <!-- ═══════════════════════ APP ═══════════════════════ -->
 <div id="app">
   <div class="topbar">
     <button class="hamburger" id="hamburger-btn" aria-label="Buka menu" onclick="toggleSidebar()">
-      <svg id="hamburger-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <svg id="hamburger-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <div class="topbar-brand">
       <div class="topbar-brand-mark"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
@@ -242,7 +501,7 @@
     <div class="sidebar">
       <div class="sidebar-back" onclick="goToMain()">
         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-        Kembali ke Panel Utama
+        Panel Utama
       </div>
       <div class="nav-group-label">Server</div>
       <div class="nav-item active" onclick="showSection('server', this)">
@@ -283,11 +542,10 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Laporan Keuangan
       </div>
-      <!-- NEW: Finance V2 -->
       <div class="nav-item" onclick="showSection('finance-v2', this)" id="nav-finance-v2">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
         Manajemen Keuangan
-        <span style="font-size:9px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:20px;margin-left:4px;font-weight:700">NEU</span>
+        <span style="font-size:9px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:20px;margin-left:auto;font-weight:700;letter-spacing:.3px;flex-shrink:0;">NEW</span>
       </div>
       <div class="nav-item" id="nav-access-requests" style="display:none" onclick="showSection('access-requests', this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -314,19 +572,19 @@
           </div>
           <div class="field-group full"><div class="field"><label>Nama Server</label><input id="cfg-server_name" placeholder="Laughtale SMP"></div></div>
           <div class="divider"></div>
-          <div style="font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Preview</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Preview</div>
           <div class="preview-box">
             <div class="preview-row"><span class="preview-key">IP Server</span><span class="preview-val" id="pv-ip">—</span></div>
             <div class="preview-row"><span class="preview-key">Platform</span><span class="preview-val" id="pv-type">—</span></div>
             <div class="preview-row"><span class="preview-key">Nama</span><span class="preview-val" id="pv-name">—</span></div>
           </div>
         </div>
-        <div class="save-bar"><span class="save-bar-hint">Perubahan akan langsung tersimpan ke Supabase.</span><button class="save-btn" onclick="saveSection('server')">Simpan Info Server</button></div>
+        <div class="save-bar"><span class="save-bar-hint">Perubahan tersimpan langsung ke Supabase.</span><button class="save-btn" onclick="saveSection('server')">Simpan Info Server</button></div>
       </div>
 
-      <!-- ── SERVER STATUS CONFIG ── -->
+      <!-- ── SERVER STATUS ── -->
       <div class="section" id="sec-server-status">
-        <div class="page-header"><div class="page-title">Konfigurasi Server Status</div><div class="page-sub">Atur bagaimana data status server diambil dan ditampilkan</div></div>
+        <div class="page-header"><div class="page-title">Server Status</div><div class="page-sub">Atur bagaimana data status server diambil dan ditampilkan</div></div>
         <div class="server-live"><div class="live-indicator"><div class="live-indicator-dot" id="ss-orb-dot"></div></div><div class="server-live-info"><h4 id="ss-status-text">Belum dicek</h4><p id="ss-ip-text">Tekan "Test Koneksi" untuk cek sekarang</p></div><div class="server-live-meta"><strong id="ss-players">—</strong><span id="ss-latency">— ms</span></div></div>
         <div class="card">
           <div class="card-header"><div class="card-title">API &amp; Polling</div><div class="card-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg></div></div>
@@ -342,7 +600,13 @@
           <div class="divider"></div>
           <div class="preview-box"><div class="preview-row"><span class="preview-key">URL yang akan dipakai</span><span class="preview-val" id="pv-api-url" style="font-size:11.5px;word-break:break-all;text-align:right;max-width:65%">—</span></div><div class="preview-row"><span class="preview-key">Interval Refresh</span><span class="preview-val" id="pv-refresh-interval">—</span></div></div>
         </div>
-        <div class="save-bar"><button class="btn-ghost" onclick="testStatusConnection()" style="border-color:rgba(79,125,240,.3);color:var(--accent)">⚡ Test Koneksi</button><button class="save-btn" onclick="saveSection('server-status')">Simpan Konfigurasi</button></div>
+        <div class="save-bar">
+          <button class="btn-ghost" onclick="testStatusConnection()">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Test Koneksi
+          </button>
+          <button class="save-btn" onclick="saveSection('server-status')">Simpan Konfigurasi</button>
+        </div>
       </div>
 
       <!-- ── MAINTENANCE ── -->
@@ -376,7 +640,7 @@
           </div>
           <div class="field-group full"><div class="field"><label>URL Tombol (opsional)</label><input id="cfg-motd_url" placeholder="https://discord.gg/..."></div></div>
         </div>
-        <div class="save-bar"><span class="save-bar-hint">Banner akan langsung tampil setelah disimpan.</span><button class="save-btn" onclick="saveSection('motd')">Simpan Pengumuman</button></div>
+        <div class="save-bar"><span class="save-bar-hint">Banner tampil langsung setelah disimpan.</span><button class="save-btn" onclick="saveSection('motd')">Simpan Pengumuman</button></div>
       </div>
 
       <!-- ── SEASON ── -->
@@ -412,56 +676,77 @@
       <!-- ── PESANAN MASUK ── -->
       <div class="section" id="sec-orders">
         <div class="page-header"><div class="page-title">Pesanan Masuk</div><div class="page-sub">Order yang belum diproses — update real-time</div></div>
-        <div class="orders-stats-strip"><div class="ostat-card"><div class="ostat-num" id="ostat-pending">—</div><div class="ostat-label">Pending</div></div><div class="ostat-card"><div class="ostat-num" id="ostat-done-today">—</div><div class="ostat-label">Selesai Hari Ini</div></div><div class="ostat-card"><div class="ostat-num" id="ostat-rev-today">—</div><div class="ostat-label">Pemasukan Hari Ini</div></div></div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;"><span class="live-pill"><span class="live-pill-dot"></span>LIVE</span><span style="font-size:12px;color:var(--text-faint)">Halaman ini otomatis update saat pesanan baru masuk.</span><button class="btn-ghost" style="margin-left:auto;font-size:12px;padding:5px 12px;" onclick="ordersRefresh()">⟳ Refresh</button></div>
+        <div class="orders-stats-strip">
+          <div class="ostat-card"><div class="ostat-num" id="ostat-pending">—</div><div class="ostat-label">Pending</div></div>
+          <div class="ostat-card"><div class="ostat-num" id="ostat-done-today">—</div><div class="ostat-label">Selesai Hari Ini</div></div>
+          <div class="ostat-card"><div class="ostat-num" id="ostat-rev-today">—</div><div class="ostat-label">Pemasukan Hari Ini</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <span class="live-pill"><span class="live-pill-dot"></span>LIVE</span>
+          <span style="font-size:12px;color:var(--text-faint)">Update otomatis saat pesanan baru masuk.</span>
+          <button class="btn-ghost" style="margin-left:auto;font-size:12px;padding:5px 12px;display:flex;align-items:center;gap:5px;" onclick="ordersRefresh()">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Refresh
+          </button>
+        </div>
         <div id="orders-list"><div class="empty-state">Memuat pesanan...</div></div>
       </div>
 
       <!-- ── SEMUA PESANAN ── -->
       <div class="section" id="sec-all-orders">
         <div class="page-header"><div class="page-title">Semua Pesanan</div><div class="page-sub">Riwayat seluruh pesanan — pending, selesai, refund, cancelled</div></div>
-        <div class="card" style="padding:16px 20px;">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <label style="font-size:12px;color:var(--text-faint);font-weight:600;">Status:</label>
-            <select id="ao-filter-status" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 12px;font-size:13px;outline:none;"><option value="">Semua</option><option value="pending">⏳ Pending</option><option value="selesai">✅ Selesai</option><option value="refund">💸 Refund</option><option value="cancelled">❌ Cancelled</option></select>
-            <label style="font-size:12px;color:var(--text-faint);font-weight:600;">Cari:</label>
-            <input id="ao-search" placeholder="username / item..." style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 12px;font-size:13px;outline:none;min-width:160px;">
-            <button class="save-btn" style="padding:7px 18px;font-size:12px;" onclick="allOrdersLoad()">Tampilkan</button>
-            <button class="btn-ghost" style="padding:7px 14px;font-size:12px;margin-left:auto;" onclick="allOrdersLoad()">⟳ Refresh</button>
+        <div class="card" style="padding:14px 18px;">
+          <div class="filter-bar">
+            <label>Status</label>
+            <select id="ao-filter-status">
+              <option value="">Semua</option>
+              <option value="pending">Pending</option>
+              <option value="selesai">Selesai</option>
+              <option value="refund">Refund</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <label>Cari</label>
+            <input id="ao-search" placeholder="username / item..." style="min-width:150px;">
+            <button class="save-btn" style="padding:6px 16px;font-size:12px;" onclick="allOrdersLoad()">Tampilkan</button>
+            <button class="btn-ghost" style="padding:6px 12px;font-size:12px;display:flex;align-items:center;gap:5px;margin-left:auto;" onclick="allOrdersLoad()">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Refresh
+            </button>
           </div>
         </div>
         <div class="card"><div id="all-orders-table" style="overflow-x:auto;"><div class="empty-state">Klik Tampilkan untuk memuat data.</div></div></div>
       </div>
 
-      <!-- ── LAPORAN KEUANGAN (lama) ── -->
+      <!-- ── LAPORAN KEUANGAN ── -->
       <div class="section" id="sec-finance">
         <div class="page-header"><div class="page-title">Laporan Keuangan</div><div class="page-sub">Rekap pendapatan &amp; performa admin</div></div>
-        <div class="card" style="padding:16px 20px;">
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-            <label style="font-size:12px;color:var(--text-faint);font-weight:600;">Filter Bulan:</label>
-            <input type="month" id="finance-month" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 12px;font-size:13px;outline:none;">
-            <button class="save-btn" style="padding:7px 18px;font-size:12px;" onclick="financeLoad()">Tampilkan</button>
-            <button class="btn-ghost" style="padding:7px 18px;font-size:12px;" onclick="financeLoadAll()">Semua Waktu</button>
+        <div class="card" style="padding:14px 18px;">
+          <div class="filter-bar">
+            <label>Filter Bulan</label>
+            <input type="month" id="finance-month">
+            <button class="save-btn" style="padding:6px 16px;font-size:12px;" onclick="financeLoad()">Tampilkan</button>
+            <button class="btn-ghost" style="padding:6px 14px;font-size:12px;" onclick="financeLoadAll()">Semua Waktu</button>
           </div>
         </div>
-        <div class="finance-summary"><div class="fin-card fin-card-green"><div class="fin-card-label">Total Pendapatan</div><div class="fin-card-val" id="fin-total-rev">—</div></div><div class="fin-card fin-card-blue"><div class="fin-card-label">Order Selesai</div><div class="fin-card-val" id="fin-total-orders">—</div></div><div class="fin-card fin-card-purple"><div class="fin-card-label">Rata-rata Order</div><div class="fin-card-val" id="fin-avg-order">—</div></div></div>
+        <div class="finance-summary">
+          <div class="fin-card fin-card-green"><div class="fin-card-label">Total Pendapatan</div><div class="fin-card-val" id="fin-total-rev">—</div></div>
+          <div class="fin-card fin-card-blue"><div class="fin-card-label">Order Selesai</div><div class="fin-card-val" id="fin-total-orders">—</div></div>
+          <div class="fin-card fin-card-purple"><div class="fin-card-label">Rata-rata Order</div><div class="fin-card-val" id="fin-avg-order">—</div></div>
+        </div>
         <div class="card"><div class="card-header"><div class="card-title">Performa per Admin</div></div><div id="finance-admin-table"><div class="empty-state">Pilih bulan dan klik Tampilkan.</div></div></div>
         <div class="card"><div class="card-header"><div class="card-title">Item Terlaris</div></div><div id="finance-items-table"><div class="empty-state">Pilih bulan dan klik Tampilkan.</div></div></div>
-        <div class="card"><div class="card-header"><div class="card-title">Detail Semua Order Selesai</div></div><div id="finance-orders-table" style="overflow-x:auto;"><div class="empty-state">Pilih bulan dan klik Tampilkan.</div></div></div>
+        <div class="card"><div class="card-header"><div class="card-title">Detail Order Selesai</div></div><div id="finance-orders-table" style="overflow-x:auto;"><div class="empty-state">Pilih bulan dan klik Tampilkan.</div></div></div>
       </div>
 
-      <!-- ───────────────────────────────────
-           MANAJEMEN KEUANGAN V2 (NEW)
-         ─────────────────────────────────── -->
+      <!-- ── MANAJEMEN KEUANGAN V2 ── -->
       <div class="section" id="sec-finance-v2">
         <div class="page-header">
           <div class="page-title">Manajemen Keuangan</div>
-          <div class="page-sub">Catat & kelola semua transaksi — pemasukan, pengeluaran, donasi, dan lebih</div>
+          <div class="page-sub">Catat &amp; kelola semua transaksi — pemasukan, pengeluaran, donasi, dan lebih</div>
         </div>
 
-        <!-- Period selector -->
         <div class="fv2-period-bar">
-          <span style="font-size:12px;font-weight:600;color:var(--text-faint);margin-right:4px;">Periode:</span>
+          <span style="font-size:11.5px;font-weight:600;color:var(--text-faint);margin-right:4px;">Periode</span>
           <button class="fv2-period-btn" onclick="fv2SetPeriod('today',this)">Hari Ini</button>
           <button class="fv2-period-btn" onclick="fv2SetPeriod('week',this)">7 Hari</button>
           <button class="fv2-period-btn active" onclick="fv2SetPeriod('month',this)">Bulan Ini</button>
@@ -470,33 +755,31 @@
           <input type="hidden" id="fv2-period" value="month">
         </div>
 
-        <!-- Summary cards -->
         <div class="fv2-summary">
           <div class="fv2-sum-card c-in">
-            <div class="fv2-sum-icon">💰</div>
+            <div class="fv2-sum-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
             <div class="fv2-sum-label">Total Pemasukan</div>
             <div class="fv2-sum-val" id="fv2-sum-in">—</div>
           </div>
           <div class="fv2-sum-card c-out">
-            <div class="fv2-sum-icon">💸</div>
+            <div class="fv2-sum-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
             <div class="fv2-sum-label">Total Pengeluaran</div>
             <div class="fv2-sum-val" id="fv2-sum-out">—</div>
           </div>
           <div class="fv2-sum-card c-don">
-            <div class="fv2-sum-icon">🎁</div>
+            <div class="fv2-sum-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></div>
             <div class="fv2-sum-label">Total Donasi</div>
             <div class="fv2-sum-val" id="fv2-sum-don">—</div>
           </div>
           <div class="fv2-sum-card c-bal">
-            <div class="fv2-sum-icon">📊</div>
+            <div class="fv2-sum-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
             <div class="fv2-sum-label">Saldo Bersih</div>
             <div class="fv2-sum-val" id="fv2-sum-bal">—</div>
           </div>
         </div>
 
-        <!-- Quick action buttons -->
         <div class="fv2-actions">
-          <button class="fv2-btn fv2-btn-in"  onclick="financeV2ShowForm('income')">
+          <button class="fv2-btn fv2-btn-in" onclick="financeV2ShowForm('income')">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Pemasukan
           </button>
@@ -505,13 +788,16 @@
             Pengeluaran
           </button>
           <button class="fv2-btn fv2-btn-don" onclick="financeV2ShowForm('donation')">
-            🎁 Donasi
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/></svg>
+            Donasi
           </button>
-          <button class="fv2-btn fv2-btn-tr"  onclick="financeV2ShowForm('transfer')">
-            🔄 Transfer
+          <button class="fv2-btn fv2-btn-tr" onclick="financeV2ShowForm('transfer')">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            Transfer
           </button>
           <button class="fv2-btn fv2-btn-adj" onclick="financeV2ShowForm('adjustment')">
-            ⚙️ Penyesuaian
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            Penyesuaian
           </button>
           <button class="fv2-btn fv2-btn-exp" onclick="financeV2Export()" style="margin-left:auto;">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -519,26 +805,23 @@
           </button>
         </div>
 
-        <!-- Tabs: Transaksi / Cashflow -->
         <div class="fv2-tabs">
           <button class="fv2-tab active" onclick="fv2SwitchTab('transactions',this)">Semua Transaksi</button>
           <button class="fv2-tab" onclick="fv2SwitchTab('cashflow',this)">Cashflow Bulanan</button>
         </div>
 
-        <!-- Tab: Transaksi -->
         <div class="fv2-tab-panel active" id="fv2-panel-transactions">
-          <!-- Filter bar -->
           <div class="fv2-filter-bar">
-            <label>Tipe:</label>
+            <label>Tipe</label>
             <select id="fv2-filter-type" onchange="financeV2LoadList()">
               <option value="">Semua</option>
-              <option value="income">💰 Pemasukan</option>
-              <option value="expense">💸 Pengeluaran</option>
-              <option value="donation">🎁 Donasi</option>
-              <option value="transfer">🔄 Transfer</option>
-              <option value="adjustment">⚙️ Penyesuaian</option>
+              <option value="income">Pemasukan</option>
+              <option value="expense">Pengeluaran</option>
+              <option value="donation">Donasi</option>
+              <option value="transfer">Transfer</option>
+              <option value="adjustment">Penyesuaian</option>
             </select>
-            <label>Kategori:</label>
+            <label>Kategori</label>
             <select id="fv2-filter-cat" onchange="financeV2LoadList()">
               <option value="">Semua</option>
               <option value="shop">Toko</option>
@@ -549,43 +832,59 @@
               <option value="event">Event</option>
               <option value="misc">Lainnya</option>
             </select>
-            <label>Dari:</label>
+            <label>Dari</label>
             <input type="date" id="fv2-from" onchange="financeV2LoadList()">
-            <label>Sampai:</label>
+            <label>Sampai</label>
             <input type="date" id="fv2-to" onchange="financeV2LoadList()">
-            <input id="fv2-search" placeholder="Cari catatan / referensi..." style="flex:1;min-width:140px;" oninput="financeV2LoadList()">
-            <button class="btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="financeV2LoadList()">⟳</button>
+            <input id="fv2-search" placeholder="Cari catatan / referensi..." style="flex:1;min-width:130px;" oninput="financeV2LoadList()">
+            <button class="btn-ghost" style="padding:5px 10px;font-size:12px;display:flex;align-items:center;" onclick="financeV2LoadList()">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            </button>
           </div>
           <div id="fv2-list"><div class="empty-state">Memuat data...</div></div>
         </div>
 
-        <!-- Tab: Cashflow -->
         <div class="fv2-tab-panel" id="fv2-panel-cashflow">
           <div id="fv2-cashflow"><div class="empty-state">Klik tab Cashflow untuk memuat.</div></div>
         </div>
 
-        <!-- Setup DB helper -->
-        <div style="margin-top:20px;">
-          <button class="btn-ghost" style="font-size:12px;padding:7px 14px;" onclick="financeV2SetupDB()">
-            🛠 Setup Database (pertama kali)
+        <div style="margin-top:18px;">
+          <button class="btn-ghost" style="font-size:12px;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;" onclick="financeV2SetupDB()">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            Setup Database (pertama kali)
           </button>
           <div class="fv2-sql-box" id="fv2-sql-box">
             <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Salin SQL ini ke <strong>Supabase &rarr; SQL Editor</strong> lalu jalankan:</p>
             <pre id="fv2-sql-code"></pre>
-            <button class="btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="financeV2CopySQL()">📋 Salin SQL</button>
+            <button class="btn-ghost" style="font-size:12px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;" onclick="financeV2CopySQL()">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Salin SQL
+            </button>
           </div>
         </div>
-
-      </div><!-- /sec-finance-v2 -->
+      </div>
+      <!-- /sec-finance-v2 -->
 
       <!-- ── PERMINTAAN AKSES ── -->
       <div class="section" id="sec-access-requests">
         <div class="page-header"><div class="page-title">Permintaan Akses Admin</div><div class="page-sub">Review dan setujui atau tolak pendaftaran admin baru</div></div>
-        <div class="orders-stats-strip"><div class="ostat-card"><div class="ostat-num" id="req-stat-pending">—</div><div class="ostat-label">Menunggu</div></div><div class="ostat-card"><div class="ostat-num" id="req-stat-approved">—</div><div class="ostat-label">Disetujui</div></div><div class="ostat-card"><div class="ostat-num" id="req-stat-rejected">—</div><div class="ostat-label">Ditolak</div></div></div>
+        <div class="orders-stats-strip">
+          <div class="ostat-card"><div class="ostat-num" id="req-stat-pending">—</div><div class="ostat-label">Menunggu</div></div>
+          <div class="ostat-card"><div class="ostat-num" id="req-stat-approved">—</div><div class="ostat-label">Disetujui</div></div>
+          <div class="ostat-card"><div class="ostat-num" id="req-stat-rejected">—</div><div class="ostat-label">Ditolak</div></div>
+        </div>
         <div class="req-filter-bar">
-          <label style="font-size:12px;color:var(--text-faint);font-weight:600;">Filter:</label>
-          <select id="req-filter-status" onchange="loadAccessRequests()"><option value="">Semua</option><option value="pending">⏳ Menunggu</option><option value="approved">✅ Disetujui</option><option value="rejected">❌ Ditolak</option></select>
-          <button class="btn-ghost" style="padding:6px 14px;font-size:12px;margin-left:auto;" onclick="loadAccessRequests()">⟳ Refresh</button>
+          <label style="font-size:11.5px;color:var(--text-faint);font-weight:600;">Filter</label>
+          <select id="req-filter-status" onchange="loadAccessRequests()">
+            <option value="">Semua</option>
+            <option value="pending">Menunggu</option>
+            <option value="approved">Disetujui</option>
+            <option value="rejected">Ditolak</option>
+          </select>
+          <button class="btn-ghost" style="padding:5px 12px;font-size:12px;display:inline-flex;align-items:center;gap:5px;margin-left:auto;" onclick="loadAccessRequests()">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Refresh
+          </button>
         </div>
         <div id="access-requests-list"><div class="empty-state">Memuat data...</div></div>
       </div>
@@ -594,12 +893,15 @@
   </div>
 </div><!-- /app -->
 
-<!-- ═══════════════════════ FINANCE V2 MODAL ═══════════════════════ -->
+
+<!-- ── FINANCE V2 MODAL ── -->
 <div class="fv2-modal-overlay" id="fv2-modal" onclick="if(event.target===this)financeV2CloseModal()">
   <div class="fv2-modal">
     <div class="fv2-modal-header">
       <div class="fv2-modal-title" id="fv2-modal-title">Tambah Transaksi</div>
-      <button class="fv2-modal-close" onclick="financeV2CloseModal()">×</button>
+      <button class="fv2-modal-close" onclick="financeV2CloseModal()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
     <input type="hidden" id="fv2-form-type" value="income">
     <div class="form-group">
@@ -645,6 +947,17 @@
 <script src="js/admin-finance.js" defer></script>
 
 <script>
+/* ── togglePw ── */
+function togglePw(inputId, btn) {
+  var inp = document.getElementById(inputId);
+  if (!inp) return;
+  var isText = inp.type === 'text';
+  inp.type = isText ? 'password' : 'text';
+  btn.innerHTML = isText
+    ? '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
+    : '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+}
+
 /* ── switchAuthTab ── */
 function switchAuthTab(tab) {
   var track = document.getElementById('auth-slide-track');
@@ -709,25 +1022,25 @@ window.loadAccessRequests = async function() {
     container.innerHTML = '<div class="empty-state">Tidak ada permintaan' + (filter ? ' dengan status ini' : '') + '.</div>';
     return;
   }
-  var statusColor = { pending:'#f4c430', approved:'#4ade80', rejected:'#f87171' };
-  var statusLabel = { pending:'⏳ Menunggu', approved:'✅ Disetujui', rejected:'❌ Ditolak' };
-  function esc(s) { var d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
+  var statusColor = { pending:'#f4c430', approved:'var(--green)', rejected:'#f87171' };
+  var statusLabel = { pending:'Menunggu', approved:'Disetujui', rejected:'Ditolak' };
+  function _esc(s) { var d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
   container.innerHTML = data.map(function(r) {
     return '<div class="req-card" id="req-card-' + r.id + '">' +
       '<div class="req-card-info">' +
-        '<div class="req-card-name">' + esc(r.display_name) + '</div>' +
-        '<div class="req-card-email">' + esc(r.email) + '</div>' +
+        '<div class="req-card-name">' + _esc(r.display_name) + '</div>' +
+        '<div class="req-card-email">' + _esc(r.email) + '</div>' +
         '<div class="req-card-meta">' +
-          '<span class="req-role-badge">' + esc(r.role) + '</span>' +
+          '<span class="req-role-badge">' + _esc(r.role) + '</span>' +
           '<span style="font-size:11px;color:' + (statusColor[r.status]||'#888') + '">' + (statusLabel[r.status]||r.status) + '</span>' +
           '<span style="font-size:11px;color:var(--text-faint)">' + new Date(r.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}) + '</span>' +
         '</div>' +
-        (r.reason ? '<div class="req-card-reason">"' + esc(r.reason) + '"</div>' : '') +
+        (r.reason ? '<div class="req-card-reason">"' + _esc(r.reason) + '"</div>' : '') +
       '</div>' +
       (r.status === 'pending' ?
         '<div class="req-card-actions">' +
-          '<button class="btn-approve" onclick="approveRequest(\'' + r.id + '\')">✓ Setujui</button>' +
-          '<button class="btn-reject" onclick="rejectRequest(\'' + r.id + '\')">✗ Tolak</button>' +
+          '<button class="btn-approve" onclick="approveRequest(\'' + r.id + '\')">Setujui</button>' +
+          '<button class="btn-reject" onclick="rejectRequest(\'' + r.id + '\')">Tolak</button>' +
         '</div>' : '') +
     '</div>';
   }).join('');
