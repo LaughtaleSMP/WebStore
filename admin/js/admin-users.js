@@ -14,13 +14,8 @@
 (function () {
   'use strict';
 
-  /* ── helpers ── */
   function getSb() { return window._adminSb; }
 
-  /**
-   * Buat Supabase client sementara (non-persistent) untuk signUp.
-   * Tanpa ini, signUp() akan mengganti session aktif super admin → logout!
-   */
   function makeTempClient() {
     if (!window.supabase || !window._supabaseUrl || !window._supabaseKey) {
       throw new Error('Supabase library atau config belum tersedia.');
@@ -30,39 +25,26 @@
       window._supabaseKey,
       {
         auth: {
-          persistSession:      false,
-          autoRefreshToken:    false,
-          detectSessionInUrl:  false,
-          storage: {
-            getItem:    () => null,
-            setItem:    () => {},
-            removeItem: () => {},
-          },
+          persistSession:     false,
+          autoRefreshToken:   false,
+          detectSessionInUrl: false,
+          storage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
         },
       }
     );
   }
 
   function generateTempPw() {
-    return (
-      Math.random().toString(36).slice(2, 10) +
-      Math.random().toString(36).slice(2, 10) +
-      'Aa1!'
-    );
+    return Math.random().toString(36).slice(2,10) + Math.random().toString(36).slice(2,10) + 'Aa1!';
   }
 
   function esc(s) {
     return String(s || '')
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;');
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   function toast(msg, type = 'success') {
-    if (typeof window.showAdminToast === 'function') {
-      window.showAdminToast(msg, type); return;
-    }
+    if (typeof window.showAdminToast === 'function') { window.showAdminToast(msg, type); return; }
     const el = document.createElement('div');
     el.className = 'toast-item toast-' + type;
     el.textContent = msg;
@@ -70,15 +52,11 @@
     if (c) { c.appendChild(el); setTimeout(() => el.remove(), 3200); }
   }
 
-  /* ══════════════════════════════════════════════════
-     INJECT NAV ITEM (dipanggil setelah login, hanya superadmin)
-  ══════════════════════════════════════════════════ */
+  /* ══ INJECT NAV ══ */
   window.usersInjectNav = function () {
     if (document.getElementById('nav-manage-admins')) return;
-
     const sidebar = document.querySelector('.sidebar');
     if (!sidebar) return;
-
     let grp = document.getElementById('nav-grp-superadmin');
     if (!grp) {
       grp = document.createElement('div');
@@ -87,7 +65,6 @@
       grp.textContent = 'Super Admin';
       sidebar.appendChild(grp);
     }
-
     const item = document.createElement('div');
     item.className = 'nav-item';
     item.id = 'nav-manage-admins';
@@ -119,13 +96,10 @@
     mgrLoad();
   }
 
-  /* ══════════════════════════════════════════════════
-     INJECT HTML SECTION
-  ══════════════════════════════════════════════════ */
+  /* ══ INJECT SECTION HTML ══ */
   function injectSection() {
     const main = document.querySelector('.main-content');
     if (!main || document.getElementById('sec-manage-admins')) return;
-
     const sec = document.createElement('div');
     sec.className = 'section';
     sec.id = 'sec-manage-admins';
@@ -134,23 +108,16 @@
         <div class="page-title">Manajemen Admin</div>
         <div class="page-sub">Kelola akses admin panel — setujui pendaftar, edit role, atau cabut akses</div>
       </div>
-
-      <!-- TABS -->
       <div style="display:flex;gap:6px;margin-bottom:1.2rem;flex-wrap:wrap" id="mgr-tabs">
         <button class="scfg-tab active" data-tab="requests" onclick="window._mgrTab('requests',this)">
           📥 Permintaan Akses
           <span id="mgr-tab-req-badge" style="display:none;background:#ef4444;color:#fff;
             font-size:10px;font-weight:700;border-radius:999px;padding:1px 6px;margin-left:4px;">0</span>
         </button>
-        <button class="scfg-tab" data-tab="admins" onclick="window._mgrTab('admins',this)">
-          👥 Daftar Admin
-        </button>
+        <button class="scfg-tab" data-tab="admins" onclick="window._mgrTab('admins',this)">👥 Daftar Admin</button>
       </div>
-
-      <!-- LOADING -->
       <div id="mgr-loading" style="padding:2rem;color:var(--text-faint);font-size:13px">Memuat data…</div>
-
-      <!-- ══ TAB: REQUESTS ══ -->
+      <!-- TAB: REQUESTS -->
       <div id="mgr-tab-requests" class="mgr-tab-content" style="display:none">
         <div class="orders-stats-strip" style="margin-bottom:16px">
           <div class="ostat-card"><div class="ostat-num" id="mgr-stat-pending">—</div><div class="ostat-label">Menunggu</div></div>
@@ -171,8 +138,7 @@
         </div>
         <div id="mgr-requests-list"></div>
       </div>
-
-      <!-- ══ TAB: ADMINS ══ -->
+      <!-- TAB: ADMINS -->
       <div id="mgr-tab-admins" class="mgr-tab-content" style="display:none">
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
           <input id="mgr-admin-search" placeholder="🔍 Cari nama atau email…"
@@ -184,14 +150,11 @@
         </div>
         <div id="mgr-admins-list"></div>
       </div>
-
-      <!-- ══ EDIT MODAL ══ -->
-      <div id="mgr-edit-modal" style="
-        display:none;position:fixed;inset:0;z-index:9999;
+      <!-- EDIT MODAL -->
+      <div id="mgr-edit-modal" style="display:none;position:fixed;inset:0;z-index:9999;
         background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);
         align-items:center;justify-content:center;padding:16px;">
-        <div style="
-          background:var(--surface1,#1a1a2e);border:1px solid var(--border,rgba(255,255,255,0.1));
+        <div style="background:var(--surface1,#1a1a2e);border:1px solid var(--border,rgba(255,255,255,0.1));
           border-radius:16px;width:100%;max-width:420px;padding:24px;
           box-shadow:0 24px 64px rgba(0,0,0,0.5);animation:oeditIn .22s ease;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
@@ -229,7 +192,6 @@
         </div>
       </div>
     `;
-
     injectStyles();
     main.appendChild(sec);
     registerGlobals();
@@ -246,9 +208,7 @@
         color:var(--text-muted);cursor:pointer;transition:all .15s;
       }
       .scfg-tab:hover { color:var(--text);border-color:var(--border3); }
-      .scfg-tab.active {
-        background:var(--accent-muted);border-color:rgba(79,125,240,.3);color:var(--accent);
-      }
+      .scfg-tab.active { background:var(--accent-muted);border-color:rgba(79,125,240,.3);color:var(--accent); }
       .mgr-req-card {
         background:var(--surface);border:1px solid var(--border);
         border-radius:12px;padding:16px 18px;margin-bottom:10px;
@@ -280,6 +240,12 @@
       .mgr-status-pending  { background:rgba(250,204,21,.1);color:#facc15;border:1px solid rgba(250,204,21,.25); }
       .mgr-status-approved { background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.25); }
       .mgr-status-rejected { background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.25); }
+      .mgr-btn-del-req {
+        padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;
+        background:rgba(248,113,113,.1);color:#f87171;
+        border:1px solid rgba(248,113,113,.25);transition:background .15s;font-family:inherit;
+      }
+      .mgr-btn-del-req:hover { background:rgba(248,113,113,.22); }
       @media(max-width:600px){
         .mgr-req-card,.mgr-admin-row { flex-direction:column; align-items:flex-start; }
       }
@@ -287,26 +253,23 @@
     document.head.appendChild(s);
   }
 
-  /* ══════════════════════════════════════════════════
-     GLOBALS
-  ══════════════════════════════════════════════════ */
+  /* ══ GLOBALS ══ */
   function registerGlobals() {
-    window._mgrTab          = switchTab;
-    window._mgrLoad         = mgrLoad;
-    window._mgrLoadRequests = loadRequests;
-    window._mgrLoadAdmins   = loadAdmins;
-    window._mgrFilterAdmins = filterAdmins;
-    window._mgrApprove      = approveRequest;
-    window._mgrReject       = rejectRequest;
-    window._mgrEditOpen     = openEditModal;
-    window._mgrCloseEdit    = closeEditModal;
-    window._mgrSaveEdit     = saveEdit;
-    window._mgrDeleteAdmin  = deleteAdmin;
+    window._mgrTab           = switchTab;
+    window._mgrLoad          = mgrLoad;
+    window._mgrLoadRequests  = loadRequests;
+    window._mgrLoadAdmins    = loadAdmins;
+    window._mgrFilterAdmins  = filterAdmins;
+    window._mgrApprove       = approveRequest;
+    window._mgrReject        = rejectRequest;
+    window._mgrDeleteRequest = deleteRequest;
+    window._mgrEditOpen      = openEditModal;
+    window._mgrCloseEdit     = closeEditModal;
+    window._mgrSaveEdit      = saveEdit;
+    window._mgrDeleteAdmin   = deleteAdmin;
   }
 
-  /* ══════════════════════════════════════════════════
-     TABS
-  ══════════════════════════════════════════════════ */
+  /* ══ TABS ══ */
   let currentTab = 'requests';
 
   function switchTab(tab, btn) {
@@ -320,30 +283,22 @@
     if (tab === 'admins')   loadAdmins();
   }
 
-  /* ══════════════════════════════════════════════════
-     LOAD ALL
-  ══════════════════════════════════════════════════ */
+  /* ══ LOAD ALL ══ */
   async function mgrLoad() {
     const loadEl = document.getElementById('mgr-loading');
     if (loadEl) loadEl.style.display = 'block';
     document.querySelectorAll('.mgr-tab-content').forEach(el => (el.style.display = 'none'));
-
     await loadRequestStats();
     await loadRequests();
-
     if (loadEl) loadEl.style.display = 'none';
     switchTab(currentTab, document.querySelector(`#mgr-tabs [data-tab="${currentTab}"]`));
   }
 
-  /* ══════════════════════════════════════════════════
-     PERMINTAAN AKSES — STATS
-  ══════════════════════════════════════════════════ */
+  /* ══ STATS ══ */
   async function loadRequestStats() {
     const sb = getSb();
     if (!sb) return;
-
-    const statuses = ['pending', 'approved', 'rejected'];
-    for (const status of statuses) {
+    for (const status of ['pending','approved','rejected']) {
       const { count } = await sb
         .from('admin_pending_requests')
         .select('*', { count: 'exact', head: true })
@@ -351,7 +306,6 @@
       const el = document.getElementById('mgr-stat-' + status);
       if (el) el.textContent = count ?? '—';
     }
-
     const { count: pendingCount } = await sb
       .from('admin_pending_requests')
       .select('*', { count: 'exact', head: true })
@@ -370,13 +324,10 @@
     });
   }
 
-  /* ══════════════════════════════════════════════════
-     PERMINTAAN AKSES — LIST
-  ══════════════════════════════════════════════════ */
+  /* ══ LIST REQUESTS ══ */
   async function loadRequests() {
     const sb = getSb();
     if (!sb) return;
-
     const container = document.getElementById('mgr-requests-list');
     if (!container) return;
     container.innerHTML = '<div class="empty-state">Memuat…</div>';
@@ -400,204 +351,149 @@
     const statusLabel = { pending:'⏳ Menunggu', approved:'✅ Disetujui', rejected:'❌ Ditolak' };
     const statusCls   = { pending:'mgr-status-pending', approved:'mgr-status-approved', rejected:'mgr-status-rejected' };
 
-    container.innerHTML = data.map(r => `
-      <div class="mgr-req-card" id="mgr-req-${r.id}">
-        <div class="mgr-admin-avatar" style="width:44px;height:44px;border-radius:12px;font-size:16px">
-          ${esc((r.display_name || '?')[0]).toUpperCase()}
-        </div>
-        <div style="flex:1;min-width:200px">
-          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px">
-            ${esc(r.display_name || '(tanpa nama)')}
+    container.innerHTML = data.map(r => {
+      /* tombol aksi sesuai status */
+      let actionBtns = '';
+
+      if (r.status === 'pending') {
+        actionBtns = `
+          <button id="btn-approve-${r.id}" onclick="window._mgrApprove('${r.id}')"
+            style="padding:7px 16px;border-radius:8px;background:rgba(74,222,128,.15);
+                   color:#4ade80;font-size:12px;font-weight:600;cursor:pointer;
+                   border:1px solid rgba(74,222,128,.25);transition:background .15s;font-family:inherit"
+            onmouseover="this.style.background='rgba(74,222,128,.25)'"
+            onmouseout="this.style.background='rgba(74,222,128,.15)'">✓ Setujui</button>
+          <button id="btn-reject-${r.id}" onclick="window._mgrReject('${r.id}')"
+            style="padding:7px 16px;border-radius:8px;background:rgba(248,113,113,.12);
+                   color:#f87171;font-size:12px;font-weight:600;cursor:pointer;
+                   border:1px solid rgba(248,113,113,.25);transition:background .15s;font-family:inherit"
+            onmouseover="this.style.background='rgba(248,113,113,.22)'"
+            onmouseout="this.style.background='rgba(248,113,113,.12)'">✗ Tolak</button>`;
+      } else if (r.status === 'rejected') {
+        actionBtns = `
+          <button id="btn-approve-${r.id}" onclick="window._mgrApprove('${r.id}')"
+            style="padding:6px 14px;border-radius:8px;background:rgba(91,127,244,.1);
+                   color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;
+                   border:1px solid rgba(91,127,244,.25);transition:background .15s;font-family:inherit"
+            onmouseover="this.style.background='rgba(91,127,244,.2)'"
+            onmouseout="this.style.background='rgba(91,127,244,.1)'">↩ Setujui Ulang</button>
+          <button class="mgr-btn-del-req" onclick="window._mgrDeleteRequest('${r.id}','${esc(r.display_name||r.email||'')}')"
+            title="Hapus permintaan ini">🗑 Hapus</button>`;
+      } else if (r.status === 'approved') {
+        actionBtns = `
+          <button class="mgr-btn-del-req" onclick="window._mgrDeleteRequest('${r.id}','${esc(r.display_name||r.email||'')}')"
+            title="Hapus riwayat permintaan ini">🗑 Hapus</button>`;
+      }
+
+      return `
+        <div class="mgr-req-card" id="mgr-req-${r.id}">
+          <div class="mgr-admin-avatar" style="width:44px;height:44px;border-radius:12px;font-size:16px">
+            ${esc((r.display_name || '?')[0]).toUpperCase()}
           </div>
-          <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">${esc(r.email)}</div>
-          <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
-            <span class="mgr-role-pill ${statusCls[r.status]||''}">${statusLabel[r.status]||esc(r.status)}</span>
-            <span style="font-size:11px;color:var(--text-faint)">
-              ${new Date(r.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-            </span>
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px">
+              ${esc(r.display_name || '(tanpa nama)')}
+            </div>
+            <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">${esc(r.email)}</div>
+            <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+              <span class="mgr-role-pill ${statusCls[r.status]||''}">${statusLabel[r.status]||esc(r.status)}</span>
+              <span style="font-size:11px;color:var(--text-faint)">
+                ${new Date(r.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+              </span>
+            </div>
+            ${r.reason ? `<div style="font-size:12px;color:var(--text-muted);margin-top:6px;
+                font-style:italic;border-left:3px solid var(--border2);padding-left:8px">
+                "${esc(r.reason)}"</div>` : ''}
           </div>
-          ${r.reason ? `<div style="font-size:12px;color:var(--text-muted);margin-top:6px;
-              font-style:italic;border-left:3px solid var(--border2);padding-left:8px">
-              "${esc(r.reason)}"</div>` : ''}
+          <div style="display:flex;gap:8px;flex-shrink:0;align-items:center;flex-wrap:wrap">
+            ${actionBtns}
+          </div>
         </div>
-        <div style="display:flex;gap:8px;flex-shrink:0;align-items:center;flex-wrap:wrap">
-          ${r.status === 'pending' ? `
-            <button id="btn-approve-${r.id}"
-              onclick="window._mgrApprove('${r.id}')"
-              style="padding:7px 16px;border-radius:8px;background:rgba(74,222,128,.15);
-                     color:#4ade80;font-size:12px;font-weight:600;cursor:pointer;
-                     border:1px solid rgba(74,222,128,.25);transition:background .15s;font-family:inherit"
-              onmouseover="this.style.background='rgba(74,222,128,.25)'"
-              onmouseout="this.style.background='rgba(74,222,128,.15)'">✓ Setujui</button>
-            <button id="btn-reject-${r.id}"
-              onclick="window._mgrReject('${r.id}')"
-              style="padding:7px 16px;border-radius:8px;background:rgba(248,113,113,.12);
-                     color:#f87171;font-size:12px;font-weight:600;cursor:pointer;
-                     border:1px solid rgba(248,113,113,.25);transition:background .15s;font-family:inherit"
-              onmouseover="this.style.background='rgba(248,113,113,.22)'"
-              onmouseout="this.style.background='rgba(248,113,113,.12)'">✗ Tolak</button>
-          ` : r.status === 'rejected' ? `
-            <button id="btn-approve-${r.id}"
-              onclick="window._mgrApprove('${r.id}')"
-              style="padding:6px 14px;border-radius:8px;background:rgba(91,127,244,.1);
-                     color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;
-                     border:1px solid rgba(91,127,244,.25);transition:background .15s;font-family:inherit"
-              onmouseover="this.style.background='rgba(91,127,244,.2)'"
-              onmouseout="this.style.background='rgba(91,127,244,.1)'">↩ Setujui Ulang</button>
-          ` : ''}
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
-  /* ══════════════════════════════════════════════════
-     APPROVE REQUEST
-  ══════════════════════════════════════════════════ */
+  /* ══ APPROVE ══ */
   async function approveRequest(reqId) {
     const sb = getSb();
     if (!sb) return;
-
     const approveBtn = document.getElementById('btn-approve-' + reqId);
-    const rejectBtn  = document.getElementById('btn-reject-' + reqId);
+    const rejectBtn  = document.getElementById('btn-reject-'  + reqId);
     if (approveBtn) { approveBtn.disabled = true; approveBtn.textContent = '⏳ Memproses…'; }
     if (rejectBtn)  rejectBtn.disabled = true;
-
     const card = document.getElementById('mgr-req-' + reqId);
     if (card) card.style.opacity = '0.6';
 
     try {
-      // 1. Ambil data request dari admin_pending_requests
       const { data: r, error: fetchErr } = await sb
-        .from('admin_pending_requests')
-        .select('*')
-        .eq('id', reqId)
-        .single();
-
+        .from('admin_pending_requests').select('*').eq('id', reqId).single();
       if (fetchErr || !r) throw new Error('Data permintaan tidak ditemukan.');
-      if (!r.email)       throw new Error('Email pendaftar tidak tersedia di data request.');
+      if (!r.email)       throw new Error('Email pendaftar tidak tersedia.');
 
       let userId = r.user_id || null;
 
-      // 2. Jika belum punya user_id, buat akun Supabase Auth baru
       if (!userId) {
-        const password = generateTempPw();
-
         let sbTemp;
-        try {
-          sbTemp = makeTempClient();
-        } catch (clientErr) {
-          throw new Error('Gagal inisialisasi client: ' + clientErr.message);
-        }
+        try { sbTemp = makeTempClient(); } catch (e) { throw new Error('Gagal inisialisasi client: ' + e.message); }
 
         const { data: signUpData, error: signUpErr } = await sbTemp.auth.signUp({
-          email:    r.email,
-          password: password,
+          email: r.email, password: generateTempPw(),
         });
 
         if (signUpErr) {
           if (signUpErr.message?.toLowerCase().includes('already registered')) {
-            const { data: existingRoleByEmail } = await sb
-              .from('admin_roles')
-              .select('user_id')
-              .eq('email', r.email)
-              .maybeSingle();
-            if (existingRoleByEmail?.user_id) {
-              userId = existingRoleByEmail.user_id;
-            } else {
-              throw new Error(
-                'Email sudah terdaftar di Supabase Auth tapi tidak ditemukan di admin_roles. ' +
-                'Hubungi super admin untuk mengurus manual.'
-              );
-            }
-          } else {
-            throw signUpErr;
-          }
+            const { data: ex } = await sb.from('admin_roles').select('user_id').eq('email', r.email).maybeSingle();
+            if (ex?.user_id) { userId = ex.user_id; }
+            else throw new Error('Email sudah terdaftar tapi tidak ada di admin_roles.');
+          } else { throw signUpErr; }
         } else {
           userId = signUpData?.user?.id;
-          if (!userId) {
-            throw new Error(
-              'Gagal mendapatkan user ID setelah signUp. ' +
-              'Pastikan "Email Confirmations" DINONAKTIFKAN di Supabase Auth → Settings.'
-            );
-          }
+          if (!userId) throw new Error('Gagal mendapat user ID setelah signUp. Pastikan Email Confirmations DINONAKTIFKAN.');
         }
-
-        // Simpan user_id ke tabel request
         await sb.from('admin_pending_requests').update({ user_id: userId }).eq('id', reqId);
       }
 
-      // 3. Cek apakah sudah ada di admin_roles
-      const { data: existingRole } = await sb
-        .from('admin_roles')
-        .select('user_id')
-        .eq('user_id', userId)
-        .maybeSingle();
-
+      const { data: existingRole } = await sb.from('admin_roles').select('user_id').eq('user_id', userId).maybeSingle();
       if (existingRole) {
-        const { error: updateErr } = await sb
-          .from('admin_roles')
-          .update({ display_name: r.display_name })
-          .eq('user_id', userId);
-        if (updateErr) throw new Error('Gagal update role: ' + updateErr.message);
+        const { error: ue } = await sb.from('admin_roles').update({ display_name: r.display_name }).eq('user_id', userId);
+        if (ue) throw new Error('Gagal update role: ' + ue.message);
       } else {
-        const { error: roleErr } = await sb.from('admin_roles').insert({
-          user_id:      userId,
-          role:         'admin',
-          display_name: r.display_name,
-        });
-        if (roleErr) throw new Error('Gagal tambah ke admin_roles: ' + roleErr.message);
+        const { error: ie } = await sb.from('admin_roles').insert({ user_id: userId, role: 'admin', display_name: r.display_name });
+        if (ie) throw new Error('Gagal tambah ke admin_roles: ' + ie.message);
       }
 
-      // 4. Update status request → approved
-      const { error: updateReqErr } = await sb.from('admin_pending_requests').update({
-        status:      'approved',
-        reviewed_at: new Date().toISOString(),
+      const { error: ure } = await sb.from('admin_pending_requests').update({
+        status: 'approved', reviewed_at: new Date().toISOString(),
       }).eq('id', reqId);
-      if (updateReqErr) throw new Error('Gagal update status: ' + updateReqErr.message);
+      if (ure) throw new Error('Gagal update status: ' + ure.message);
 
       toast(`✅ ${r.display_name} (${r.email}) berhasil disetujui!`);
       await loadRequests();
-
     } catch (e) {
       if (card) card.style.opacity = '1';
-      if (approveBtn) {
-        approveBtn.disabled = false;
-        approveBtn.textContent = '✓ Setujui';
-      }
-      if (rejectBtn) rejectBtn.disabled = false;
-
-      console.error('[mgrApprove] Error:', e);
+      if (approveBtn) { approveBtn.disabled = false; approveBtn.textContent = '✓ Setujui'; }
+      if (rejectBtn)  rejectBtn.disabled = false;
+      console.error('[mgrApprove]', e);
       toast('Gagal menyetujui: ' + (e.message || 'Error tidak diketahui'), 'error');
     }
   }
 
-  /* ══════════════════════════════════════════════════
-     REJECT REQUEST
-  ══════════════════════════════════════════════════ */
+  /* ══ REJECT ══ */
   async function rejectRequest(reqId) {
     const sb = getSb();
     if (!sb) return;
-
-    const { data: r } = await sb
-      .from('admin_pending_requests')
-      .select('display_name')
-      .eq('id', reqId)
-      .single();
-
+    const { data: r } = await sb.from('admin_pending_requests').select('display_name').eq('id', reqId).single();
     showMgrConfirm({
-      title:       'Tolak Permintaan?',
-      message:     `Permintaan akses dari <strong>${esc(r?.display_name || '?')}</strong> akan ditolak.`,
+      title: 'Tolak Permintaan?',
+      message: `Permintaan akses dari <strong>${esc(r?.display_name || '?')}</strong> akan ditolak.`,
       confirmText: '✗ Ya, Tolak',
-      danger:      true,
-      onConfirm:   async () => {
+      danger: true,
+      onConfirm: async () => {
         const rejectBtn = document.getElementById('btn-reject-' + reqId);
         if (rejectBtn) { rejectBtn.disabled = true; rejectBtn.textContent = '⏳…'; }
-
         const { error } = await sb.from('admin_pending_requests').update({
-          status:      'rejected',
-          reviewed_at: new Date().toISOString(),
+          status: 'rejected', reviewed_at: new Date().toISOString(),
         }).eq('id', reqId);
-
         if (error) {
           toast('Gagal menolak: ' + error.message, 'error');
           if (rejectBtn) { rejectBtn.disabled = false; rejectBtn.textContent = '✗ Tolak'; }
@@ -609,29 +505,45 @@
     });
   }
 
-  /* ══════════════════════════════════════════════════
-     DAFTAR ADMIN
-  ══════════════════════════════════════════════════ */
+  /* ══ DELETE REQUEST (hapus baris dari tabel) ══ */
+  async function deleteRequest(reqId, displayName) {
+    showMgrConfirm({
+      title: 'Hapus Permintaan?',
+      message: `Riwayat permintaan dari <strong>${esc(displayName)}</strong> akan dihapus permanen dari daftar.`,
+      confirmText: '🗑 Ya, Hapus',
+      danger: true,
+      onConfirm: async () => {
+        const sb = getSb();
+        if (!sb) { toast('Supabase belum siap.', 'error'); return; }
+        const { error } = await sb.from('admin_pending_requests').delete().eq('id', reqId);
+        if (error) { toast('Gagal hapus: ' + error.message, 'error'); return; }
+        const card = document.getElementById('mgr-req-' + reqId);
+        if (card) {
+          card.style.transition = 'opacity .3s, transform .3s';
+          card.style.opacity = '0';
+          card.style.transform = 'translateX(20px)';
+          setTimeout(() => card.remove(), 320);
+        }
+        toast('Permintaan berhasil dihapus.');
+        await loadRequestStats();
+      },
+    });
+  }
+
+  /* ══ DAFTAR ADMIN ══ */
   let allAdmins = [];
 
   async function loadAdmins() {
     const sb = getSb();
     if (!sb) return;
-
     const container = document.getElementById('mgr-admins-list');
     if (!container) return;
     container.innerHTML = '<div class="empty-state">Memuat…</div>';
-
-    const { data, error } = await sb
-      .from('admin_roles')
-      .select('*')
-      .order('role', { ascending: true });
-
+    const { data, error } = await sb.from('admin_roles').select('*').order('role', { ascending: true });
     if (error) {
       container.innerHTML = `<div class="empty-state" style="color:#f87171">Gagal memuat: ${esc(error.message)}</div>`;
       return;
     }
-
     allAdmins = data || [];
     renderAdminList(allAdmins);
   }
@@ -649,17 +561,10 @@
   function renderAdminList(list) {
     const container = document.getElementById('mgr-admins-list');
     if (!container) return;
-
     const me = window.currentUser?.id;
-
-    if (!list.length) {
-      container.innerHTML = '<div class="empty-state">Tidak ada admin ditemukan.</div>';
-      return;
-    }
-
+    if (!list.length) { container.innerHTML = '<div class="empty-state">Tidak ada admin ditemukan.</div>'; return; }
     const roleOrder = { superadmin: 0, admin: 1, moderator: 2 };
     const sorted = [...list].sort((a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9));
-
     container.innerHTML = sorted.map(a => {
       const isMe = a.user_id === me;
       const initials = (a.display_name || a.email || '?')[0].toUpperCase();
@@ -668,15 +573,7 @@
         : a.role === 'moderator'
         ? 'background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.25);color:#4ade80'
         : 'background:var(--accent-muted2);border-color:rgba(91,127,244,.2);color:var(--accent)';
-
-      const adminDataStr = esc(JSON.stringify({
-        user_id:      a.user_id,
-        id:           a.id,
-        display_name: a.display_name,
-        role:         a.role,
-        email:        a.email,
-      }));
-
+      const adminDataStr = esc(JSON.stringify({ user_id: a.user_id, id: a.id, display_name: a.display_name, role: a.role, email: a.email }));
       return `
         <div class="mgr-admin-row" id="mgr-admin-${a.user_id}">
           <div class="mgr-admin-avatar" style="${avatarColor}">${initials}</div>
@@ -692,43 +589,25 @@
             ${a.created_at ? new Date(a.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}) : '—'}
           </div>
           <div style="display:flex;gap:8px;flex-shrink:0">
-            <button class="btn-edit"
-              onclick="window._mgrEditOpen('${adminDataStr}')"
-              title="Edit admin">✏️ Edit</button>
-            ${!isMe ? `
-              <button class="btn-del"
-                onclick="window._mgrDeleteAdmin('${esc(a.user_id)}','${esc(a.display_name || a.email || '')}')"
-                title="Hapus akses">🗑</button>
-            ` : ''}
+            <button class="btn-edit" onclick="window._mgrEditOpen('${adminDataStr}')" title="Edit admin">✏️ Edit</button>
+            ${!isMe ? `<button class="btn-del" onclick="window._mgrDeleteAdmin('${esc(a.user_id)}','${esc(a.display_name || a.email || '')}')" title="Hapus akses">🗑</button>` : ''}
           </div>
         </div>
       `;
     }).join('');
   }
 
-  /* ══════════════════════════════════════════════════
-     EDIT ADMIN
-  ══════════════════════════════════════════════════ */
+  /* ══ EDIT ADMIN ══ */
   function openEditModal(adminDataRaw) {
     let a;
-    try {
-      a = typeof adminDataRaw === 'string' ? JSON.parse(adminDataRaw) : adminDataRaw;
-    } catch (e) {
-      toast('Gagal membuka form edit.', 'error');
-      return;
-    }
-
+    try { a = typeof adminDataRaw === 'string' ? JSON.parse(adminDataRaw) : adminDataRaw; }
+    catch (e) { toast('Gagal membuka form edit.', 'error'); return; }
     document.getElementById('mgr-edit-user-id').value = a.user_id || '';
     document.getElementById('mgr-edit-display').value = a.display_name || '';
     document.getElementById('mgr-edit-role').value    = a.role || 'admin';
-
     const modal = document.getElementById('mgr-edit-modal');
     modal.style.display = 'flex';
-
-    setTimeout(() => {
-      const inp = document.getElementById('mgr-edit-display');
-      if (inp) inp.focus();
-    }, 50);
+    setTimeout(() => { const inp = document.getElementById('mgr-edit-display'); if (inp) inp.focus(); }, 50);
   }
 
   function closeEditModal() {
@@ -739,70 +618,49 @@
   async function saveEdit() {
     const sb = getSb();
     if (!sb) return;
-
     const userId      = document.getElementById('mgr-edit-user-id').value;
     const displayName = document.getElementById('mgr-edit-display').value.trim();
     const role        = document.getElementById('mgr-edit-role').value;
-
     if (!displayName) { toast('Nama tampilan tidak boleh kosong.', 'error'); return; }
     if (!userId)      { toast('User ID tidak ditemukan.', 'error'); return; }
-
     const btn = document.getElementById('mgr-edit-save-btn');
-    btn.disabled = true;
-    btn.textContent = 'Menyimpan…';
-
-    const { error } = await sb
-      .from('admin_roles')
-      .update({ display_name: displayName, role })
-      .eq('user_id', userId);
-
-    btn.disabled = false;
-    btn.textContent = 'Simpan Perubahan';
-
+    btn.disabled = true; btn.textContent = 'Menyimpan…';
+    const { error } = await sb.from('admin_roles').update({ display_name: displayName, role }).eq('user_id', userId);
+    btn.disabled = false; btn.textContent = 'Simpan Perubahan';
     if (error) { toast('Gagal simpan: ' + error.message, 'error'); return; }
-
     toast('Data admin berhasil diperbarui ✅');
     closeEditModal();
     await loadAdmins();
   }
 
-  /* ══════════════════════════════════════════════════
-     DELETE ADMIN
-  ══════════════════════════════════════════════════ */
+  /* ══ DELETE ADMIN ══ */
   function deleteAdmin(userId, displayName) {
     showMgrConfirm({
-      title:       'Cabut Akses Admin?',
-      message:     `Akses panel untuk <strong>${esc(displayName)}</strong> akan dicabut. Mereka tidak bisa login lagi ke panel.`,
+      title: 'Cabut Akses Admin?',
+      message: `Akses panel untuk <strong>${esc(displayName)}</strong> akan dicabut. Mereka tidak bisa login lagi ke panel.`,
       confirmText: '🗑️ Ya, Cabut Akses',
-      danger:      true,
-      onConfirm:   async () => {
+      danger: true,
+      onConfirm: async () => {
         const sb = getSb();
         if (!sb) { toast('Supabase belum siap.', 'error'); return; }
-
         const { error } = await sb.from('admin_roles').delete().eq('user_id', userId);
         if (error) { toast('Gagal hapus: ' + error.message, 'error'); return; }
-
         const row = document.getElementById('mgr-admin-' + userId);
         if (row) {
           row.style.transition = 'opacity .3s, transform .3s';
-          row.style.opacity    = '0';
-          row.style.transform  = 'translateX(20px)';
+          row.style.opacity = '0'; row.style.transform = 'translateX(20px)';
           setTimeout(() => row.remove(), 320);
         }
-
         allAdmins = allAdmins.filter(a => a.user_id !== userId);
         toast('Akses admin berhasil dicabut.');
       },
     });
   }
 
-  /* ══════════════════════════════════════════════════
-     CUSTOM CONFIRM DIALOG
-  ══════════════════════════════════════════════════ */
+  /* ══ CONFIRM DIALOG ══ */
   function showMgrConfirm({ title, message, confirmText, danger = false, onConfirm }) {
     const old = document.getElementById('mgr-confirm-overlay');
     if (old) old.remove();
-
     const overlay = document.createElement('div');
     overlay.id = 'mgr-confirm-overlay';
     Object.assign(overlay.style, {
@@ -811,10 +669,8 @@
       display: 'grid', placeItems: 'center', padding: '16px',
       opacity: '0', transition: 'opacity .18s',
     });
-
-    const confirmColor  = danger ? 'rgba(239,68,68,.85)' : 'var(--accent)';
-    const confirmBorder = danger ? 'rgba(239,68,68,.4)'  : 'rgba(91,127,244,.4)';
-
+    const cc = danger ? 'rgba(239,68,68,.85)' : 'var(--accent)';
+    const cb = danger ? 'rgba(239,68,68,.4)'  : 'rgba(91,127,244,.4)';
     overlay.innerHTML = `
       <div id="mgr-confirm-box"
         style="background:var(--surface1,#1a1a2e);border:1px solid rgba(255,255,255,.1);
@@ -831,11 +687,10 @@
                    color:var(--text-muted,#ccc);cursor:pointer;font-family:inherit">Batal</button>
           <button id="mgr-cc-confirm"
             style="padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;
-                   background:${confirmColor};border:1px solid ${confirmBorder};
+                   background:${cc};border:1px solid ${cb};
                    color:#fff;cursor:pointer;font-family:inherit">${confirmText || 'Ya'}</button>
         </div>
       </div>`;
-
     document.body.appendChild(overlay);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -844,37 +699,24 @@
         if (box) { box.style.opacity = '1'; box.style.transform = 'scale(1) translateY(0)'; }
       });
     });
-
     function closeConfirm() {
       const box = document.getElementById('mgr-confirm-box');
       if (box) { box.style.opacity = '0'; box.style.transform = 'scale(.94) translateY(12px)'; }
       overlay.style.opacity = '0';
       setTimeout(() => overlay.remove(), 220);
     }
-
     document.getElementById('mgr-cc-cancel').onclick  = closeConfirm;
     document.getElementById('mgr-cc-confirm').onclick = () => { closeConfirm(); onConfirm && onConfirm(); };
     overlay.addEventListener('click', e => { if (e.target === overlay) closeConfirm(); });
-
-    function onKey(e) {
-      if (e.key === 'Escape') { closeConfirm(); document.removeEventListener('keydown', onKey); }
-    }
+    function onKey(e) { if (e.key === 'Escape') { closeConfirm(); document.removeEventListener('keydown', onKey); } }
     document.addEventListener('keydown', onKey);
   }
 
-  /* ══════════════════════════════════════════════════
-     INIT
-  ══════════════════════════════════════════════════ */
+  /* ══ INIT ══ */
   document.addEventListener('DOMContentLoaded', () => {
     injectSection();
-
     const editModal = document.getElementById('mgr-edit-modal');
-    if (editModal) {
-      editModal.addEventListener('click', function (e) {
-        if (e.target === this) closeEditModal();
-      });
-    }
-
+    if (editModal) editModal.addEventListener('click', function (e) { if (e.target === this) closeEditModal(); });
     const _orig = window.showSection;
     window.showSection = function (name, el) {
       _orig && _orig(name, el);
@@ -882,7 +724,6 @@
     };
   });
 
-  /* Expose badge updater — dipanggil dari admin-auth.js setelah login */
   window.mgrUpdateBadge = async function () {
     const sb = getSb();
     if (!sb) return;
