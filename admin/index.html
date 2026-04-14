@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/admin.css">
+<link rel="stylesheet" href="css/finance.css">
 <style>
 /* ── AUTH SCREEN — Responsive Sliding ── */
 #auth-screen {
@@ -139,8 +140,6 @@
 
 <!-- ═══════════════════════ AUTH SCREEN ═══════════════════════ -->
 <div id="auth-screen">
-
-  <!-- Left brand panel -->
   <div class="auth-left">
     <div class="auth-left-noise"></div>
     <div class="auth-wordmark">
@@ -157,129 +156,68 @@
         <div class="auth-info-row">
           <div class="auth-info-row-left">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            <div>
-              <span class="auth-info-row-name">Server Status</span>
-              <span class="auth-info-row-sub">laughtale.my.id</span>
-            </div>
+            <div><span class="auth-info-row-name">Server Status</span><span class="auth-info-row-sub">laughtale.my.id</span></div>
           </div>
           <div class="status-dot-inline dot-green"></div>
         </div>
         <div class="auth-info-row">
           <div class="auth-info-row-left">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <div>
-              <span class="auth-info-row-name">Supabase Auth</span>
-              <span class="auth-info-row-sub">Row Level Security aktif</span>
-            </div>
+            <div><span class="auth-info-row-name">Supabase Auth</span><span class="auth-info-row-sub">Row Level Security aktif</span></div>
           </div>
           <div class="status-dot-inline dot-blue"></div>
         </div>
       </div>
     </div>
     <div class="auth-foot">
-      <span>2025 Laughtale SMP</span>
-      <span>Server Settings</span>
+      <span>2025 Laughtale SMP</span><span>Server Settings</span>
     </div>
   </div>
 
-  <!-- Right sliding panel -->
   <div class="auth-right">
-
-    <!-- Tab pills -->
     <div class="auth-tabs-bar">
       <button class="auth-tab-pill active" id="tab-pill-login" onclick="switchAuthTab('login')">Masuk</button>
       <button class="auth-tab-pill" id="tab-pill-register" onclick="switchAuthTab('register')">Daftar Admin</button>
     </div>
-
-    <!-- Sliding track -->
     <div class="auth-slide-track" id="auth-slide-track">
-
       <!-- Panel LOGIN -->
       <div class="auth-slide-panel" id="auth-panel-login">
         <div class="auth-form-wrap">
           <div class="auth-form-title">Selamat datang</div>
           <p class="auth-form-sub">Masuk menggunakan akun admin yang sudah terdaftar.</p>
-
           <div id="auth-error" class="alert alert-error" style="display:none">
             <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span id="auth-error-msg"></span>
           </div>
-
-          <div class="form-group">
-            <label class="form-label">Email</label>
-            <input class="form-input" id="login-email" type="email" placeholder="admin@laughtale.my.id" autocomplete="email">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Password</label>
-            <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
-          </div>
+          <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="login-email" type="email" placeholder="admin@laughtale.my.id" autocomplete="email"></div>
+          <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password"></div>
           <button class="btn-primary" onclick="doLogin()" id="login-btn">Masuk ke Panel</button>
-
-          <div class="auth-switch-link">
-            Belum punya akses? <button onclick="switchAuthTab('register')">Daftar sekarang →</button>
-          </div>
+          <div class="auth-switch-link">Belum punya akses? <button onclick="switchAuthTab('register')">Daftar sekarang →</button></div>
         </div>
       </div>
-
       <!-- Panel REGISTER -->
       <div class="auth-slide-panel" id="auth-panel-register">
         <div class="auth-form-wrap">
           <div class="auth-form-title">Ajukan Akses</div>
           <p class="auth-form-sub">Permintaanmu dikirim ke super admin untuk di-review dan disetujui.</p>
-
-          <div id="req-error" class="alert alert-error" style="display:none">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span id="req-error-msg"></span>
-          </div>
-          <div id="req-success" class="alert alert-success" style="display:none">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-            <span>Permintaan terkirim! Tunggu persetujuan super admin.</span>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Nama Tampilan</label>
-            <input class="form-input" id="req-display" type="text" placeholder="cth: Blackdamen">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Email</label>
-            <input class="form-input" id="req-email" type="email" placeholder="kamu@email.com">
-          </div>
+          <div id="req-error" class="alert alert-error" style="display:none"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span id="req-error-msg"></span></div>
+          <div id="req-success" class="alert alert-success" style="display:none"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><span>Permintaan terkirim! Tunggu persetujuan super admin.</span></div>
+          <div class="form-group"><label class="form-label">Nama Tampilan</label><input class="form-input" id="req-display" type="text" placeholder="cth: Blackdamen"></div>
+          <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="req-email" type="email" placeholder="kamu@email.com"></div>
           <div class="form-row-2">
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Password</label>
-              <input class="form-input" id="req-password" type="password" placeholder="Min. 6 karakter" autocomplete="new-password">
-            </div>
-            <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Konfirmasi</label>
-              <input class="form-input" id="req-password2" type="password" placeholder="Ulangi password" autocomplete="new-password">
-            </div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Password</label><input class="form-input" id="req-password" type="password" placeholder="Min. 6 karakter" autocomplete="new-password"></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Konfirmasi</label><input class="form-input" id="req-password2" type="password" placeholder="Ulangi password" autocomplete="new-password"></div>
           </div>
-          <div class="form-group" style="margin-top:14px">
-            <label class="form-label">Role yang Diminta</label>
-            <select class="form-input" id="req-role">
-              <option value="admin">Admin</option>
-              <option value="moderator">Moderator</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Alasan <span style="color:var(--text-faint);font-weight:400">(opsional)</span></label>
-            <textarea class="form-input" id="req-reason" rows="2" placeholder="Kenapa kamu ingin jadi admin?..." style="resize:vertical;min-height:60px;"></textarea>
-          </div>
-
+          <div class="form-group" style="margin-top:14px"><label class="form-label">Role yang Diminta</label><select class="form-input" id="req-role"><option value="admin">Admin</option><option value="moderator">Moderator</option></select></div>
+          <div class="form-group"><label class="form-label">Alasan <span style="color:var(--text-faint);font-weight:400">(opsional)</span></label><textarea class="form-input" id="req-reason" rows="2" placeholder="Kenapa kamu ingin jadi admin?..." style="resize:vertical;min-height:60px;"></textarea></div>
           <button class="btn-primary" onclick="doRequestAccess()" id="req-submit-btn">Kirim Permintaan</button>
-
-          <div class="auth-switch-link">
-            Sudah punya akun? <button onclick="switchAuthTab('login')">← Masuk di sini</button>
-          </div>
-          <p style="font-size:11.5px;color:var(--text-faint);text-align:center;margin-top:10px;line-height:1.5;">
-            Akunmu aktif setelah disetujui super admin.
-          </p>
+          <div class="auth-switch-link">Sudah punya akun? <button onclick="switchAuthTab('login')">← Masuk di sini</button></div>
+          <p style="font-size:11.5px;color:var(--text-faint);text-align:center;margin-top:10px;line-height:1.5;">Akunmu aktif setelah disetujui super admin.</p>
         </div>
       </div>
-
-    </div><!-- /auth-slide-track -->
-  </div><!-- /auth-right -->
-</div><!-- /#auth-screen -->
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════════ APP ═══════════════════════ -->
 <div id="app">
@@ -288,9 +226,7 @@
       <svg id="hamburger-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <div class="topbar-brand">
-      <div class="topbar-brand-mark">
-        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-      </div>
+      <div class="topbar-brand-mark"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
       <span class="topbar-brand-name">Laughtale SMP</span>
     </div>
     <div class="topbar-sep"></div>
@@ -327,7 +263,7 @@
       </div>
       <div class="nav-item" onclick="showSection('season', this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        Season & World
+        Season &amp; World
       </div>
       <div class="nav-group-label">Admin</div>
       <div class="nav-item" onclick="showSection('admins-wa', this)">
@@ -347,17 +283,21 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Laporan Keuangan
       </div>
+      <!-- NEW: Finance V2 -->
+      <div class="nav-item" onclick="showSection('finance-v2', this)" id="nav-finance-v2">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Manajemen Keuangan
+        <span style="font-size:9px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:20px;margin-left:4px;font-weight:700">NEU</span>
+      </div>
       <div class="nav-item" id="nav-access-requests" style="display:none" onclick="showSection('access-requests', this)">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Permintaan Akses
         <span class="nav-badge" id="access-req-badge" style="display:none">0</span>
       </div>
     </div>
 
     <div class="main-content">
+
       <!-- ── INFO SERVER ── -->
       <div class="section active" id="sec-server">
         <div class="page-header"><div class="page-title">Info Server</div><div class="page-sub">Pengaturan dasar server Laughtale SMP</div></div>
@@ -389,7 +329,7 @@
         <div class="page-header"><div class="page-title">Konfigurasi Server Status</div><div class="page-sub">Atur bagaimana data status server diambil dan ditampilkan</div></div>
         <div class="server-live"><div class="live-indicator"><div class="live-indicator-dot" id="ss-orb-dot"></div></div><div class="server-live-info"><h4 id="ss-status-text">Belum dicek</h4><p id="ss-ip-text">Tekan "Test Koneksi" untuk cek sekarang</p></div><div class="server-live-meta"><strong id="ss-players">—</strong><span id="ss-latency">— ms</span></div></div>
         <div class="card">
-          <div class="card-header"><div class="card-title">API & Polling</div><div class="card-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg></div></div>
+          <div class="card-header"><div class="card-title">API &amp; Polling</div><div class="card-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg></div></div>
           <div class="field-group">
             <div class="field"><label>API Provider</label><select id="cfg-status_api_provider" onchange="onProviderChange()"><option value="mcsrvstat">mcsrvstat.us (default)</option><option value="mcstatus">mcstatus.io</option><option value="custom">Custom URL</option></select></div>
             <div class="field"><label>Interval Auto-Refresh (detik)</label><input id="cfg-status_refresh_interval" type="number" min="30" max="600" placeholder="60"></div>
@@ -441,7 +381,7 @@
 
       <!-- ── SEASON ── -->
       <div class="section" id="sec-season">
-        <div class="page-header"><div class="page-title">Season & World</div><div class="page-sub">Informasi season dan dunia saat ini</div></div>
+        <div class="page-header"><div class="page-title">Season &amp; World</div><div class="page-sub">Informasi season dan dunia saat ini</div></div>
         <div class="card">
           <div class="card-header"><div class="card-title">Info Season</div></div>
           <div class="field-group">
@@ -493,7 +433,7 @@
         <div class="card"><div id="all-orders-table" style="overflow-x:auto;"><div class="empty-state">Klik Tampilkan untuk memuat data.</div></div></div>
       </div>
 
-      <!-- ── LAPORAN KEUANGAN ── -->
+      <!-- ── LAPORAN KEUANGAN (lama) ── -->
       <div class="section" id="sec-finance">
         <div class="page-header"><div class="page-title">Laporan Keuangan</div><div class="page-sub">Rekap pendapatan &amp; performa admin</div></div>
         <div class="card" style="padding:16px 20px;">
@@ -509,6 +449,134 @@
         <div class="card"><div class="card-header"><div class="card-title">Item Terlaris</div></div><div id="finance-items-table"><div class="empty-state">Pilih bulan dan klik Tampilkan.</div></div></div>
         <div class="card"><div class="card-header"><div class="card-title">Detail Semua Order Selesai</div></div><div id="finance-orders-table" style="overflow-x:auto;"><div class="empty-state">Pilih bulan dan klik Tampilkan.</div></div></div>
       </div>
+
+      <!-- ───────────────────────────────────
+           MANAJEMEN KEUANGAN V2 (NEW)
+         ─────────────────────────────────── -->
+      <div class="section" id="sec-finance-v2">
+        <div class="page-header">
+          <div class="page-title">Manajemen Keuangan</div>
+          <div class="page-sub">Catat & kelola semua transaksi — pemasukan, pengeluaran, donasi, dan lebih</div>
+        </div>
+
+        <!-- Period selector -->
+        <div class="fv2-period-bar">
+          <span style="font-size:12px;font-weight:600;color:var(--text-faint);margin-right:4px;">Periode:</span>
+          <button class="fv2-period-btn" onclick="fv2SetPeriod('today',this)">Hari Ini</button>
+          <button class="fv2-period-btn" onclick="fv2SetPeriod('week',this)">7 Hari</button>
+          <button class="fv2-period-btn active" onclick="fv2SetPeriod('month',this)">Bulan Ini</button>
+          <button class="fv2-period-btn" onclick="fv2SetPeriod('year',this)">Tahun Ini</button>
+          <button class="fv2-period-btn" onclick="fv2SetPeriod('all',this)">Semua</button>
+          <input type="hidden" id="fv2-period" value="month">
+        </div>
+
+        <!-- Summary cards -->
+        <div class="fv2-summary">
+          <div class="fv2-sum-card c-in">
+            <div class="fv2-sum-icon">💰</div>
+            <div class="fv2-sum-label">Total Pemasukan</div>
+            <div class="fv2-sum-val" id="fv2-sum-in">—</div>
+          </div>
+          <div class="fv2-sum-card c-out">
+            <div class="fv2-sum-icon">💸</div>
+            <div class="fv2-sum-label">Total Pengeluaran</div>
+            <div class="fv2-sum-val" id="fv2-sum-out">—</div>
+          </div>
+          <div class="fv2-sum-card c-don">
+            <div class="fv2-sum-icon">🎁</div>
+            <div class="fv2-sum-label">Total Donasi</div>
+            <div class="fv2-sum-val" id="fv2-sum-don">—</div>
+          </div>
+          <div class="fv2-sum-card c-bal">
+            <div class="fv2-sum-icon">📊</div>
+            <div class="fv2-sum-label">Saldo Bersih</div>
+            <div class="fv2-sum-val" id="fv2-sum-bal">—</div>
+          </div>
+        </div>
+
+        <!-- Quick action buttons -->
+        <div class="fv2-actions">
+          <button class="fv2-btn fv2-btn-in"  onclick="financeV2ShowForm('income')">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Pemasukan
+          </button>
+          <button class="fv2-btn fv2-btn-out" onclick="financeV2ShowForm('expense')">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Pengeluaran
+          </button>
+          <button class="fv2-btn fv2-btn-don" onclick="financeV2ShowForm('donation')">
+            🎁 Donasi
+          </button>
+          <button class="fv2-btn fv2-btn-tr"  onclick="financeV2ShowForm('transfer')">
+            🔄 Transfer
+          </button>
+          <button class="fv2-btn fv2-btn-adj" onclick="financeV2ShowForm('adjustment')">
+            ⚙️ Penyesuaian
+          </button>
+          <button class="fv2-btn fv2-btn-exp" onclick="financeV2Export()" style="margin-left:auto;">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+        </div>
+
+        <!-- Tabs: Transaksi / Cashflow -->
+        <div class="fv2-tabs">
+          <button class="fv2-tab active" onclick="fv2SwitchTab('transactions',this)">Semua Transaksi</button>
+          <button class="fv2-tab" onclick="fv2SwitchTab('cashflow',this)">Cashflow Bulanan</button>
+        </div>
+
+        <!-- Tab: Transaksi -->
+        <div class="fv2-tab-panel active" id="fv2-panel-transactions">
+          <!-- Filter bar -->
+          <div class="fv2-filter-bar">
+            <label>Tipe:</label>
+            <select id="fv2-filter-type" onchange="financeV2LoadList()">
+              <option value="">Semua</option>
+              <option value="income">💰 Pemasukan</option>
+              <option value="expense">💸 Pengeluaran</option>
+              <option value="donation">🎁 Donasi</option>
+              <option value="transfer">🔄 Transfer</option>
+              <option value="adjustment">⚙️ Penyesuaian</option>
+            </select>
+            <label>Kategori:</label>
+            <select id="fv2-filter-cat" onchange="financeV2LoadList()">
+              <option value="">Semua</option>
+              <option value="shop">Toko</option>
+              <option value="donation">Donasi</option>
+              <option value="sponsorship">Sponsorship</option>
+              <option value="server">Server</option>
+              <option value="operational">Operasional</option>
+              <option value="event">Event</option>
+              <option value="misc">Lainnya</option>
+            </select>
+            <label>Dari:</label>
+            <input type="date" id="fv2-from" onchange="financeV2LoadList()">
+            <label>Sampai:</label>
+            <input type="date" id="fv2-to" onchange="financeV2LoadList()">
+            <input id="fv2-search" placeholder="Cari catatan / referensi..." style="flex:1;min-width:140px;" oninput="financeV2LoadList()">
+            <button class="btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="financeV2LoadList()">⟳</button>
+          </div>
+          <div id="fv2-list"><div class="empty-state">Memuat data...</div></div>
+        </div>
+
+        <!-- Tab: Cashflow -->
+        <div class="fv2-tab-panel" id="fv2-panel-cashflow">
+          <div id="fv2-cashflow"><div class="empty-state">Klik tab Cashflow untuk memuat.</div></div>
+        </div>
+
+        <!-- Setup DB helper -->
+        <div style="margin-top:20px;">
+          <button class="btn-ghost" style="font-size:12px;padding:7px 14px;" onclick="financeV2SetupDB()">
+            🛠 Setup Database (pertama kali)
+          </button>
+          <div class="fv2-sql-box" id="fv2-sql-box">
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Salin SQL ini ke <strong>Supabase &rarr; SQL Editor</strong> lalu jalankan:</p>
+            <pre id="fv2-sql-code"></pre>
+            <button class="btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="financeV2CopySQL()">📋 Salin SQL</button>
+          </div>
+        </div>
+
+      </div><!-- /sec-finance-v2 -->
 
       <!-- ── PERMINTAAN AKSES ── -->
       <div class="section" id="sec-access-requests">
@@ -526,10 +594,46 @@
   </div>
 </div><!-- /app -->
 
+<!-- ═══════════════════════ FINANCE V2 MODAL ═══════════════════════ -->
+<div class="fv2-modal-overlay" id="fv2-modal" onclick="if(event.target===this)financeV2CloseModal()">
+  <div class="fv2-modal">
+    <div class="fv2-modal-header">
+      <div class="fv2-modal-title" id="fv2-modal-title">Tambah Transaksi</div>
+      <button class="fv2-modal-close" onclick="financeV2CloseModal()">×</button>
+    </div>
+    <input type="hidden" id="fv2-form-type" value="income">
+    <div class="form-group">
+      <label class="form-label">Nominal (Rp)</label>
+      <input class="form-input" id="fv2-form-amount" type="number" min="0" placeholder="50000" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Kategori</label>
+      <select class="form-input" id="fv2-form-cat"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Catatan</label>
+      <input class="form-input" id="fv2-form-note" type="text" placeholder="Deskripsi transaksi...">
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="fv2-ref-label">Referensi (opsional)</label>
+      <input class="form-input" id="fv2-form-ref" type="text" placeholder="">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tanggal</label>
+      <input class="form-input" id="fv2-form-date" type="date">
+    </div>
+    <div class="fv2-modal-footer">
+      <button class="btn-ghost" onclick="financeV2CloseModal()">Batal</button>
+      <button class="btn-primary" id="fv2-submit-btn" onclick="financeV2Submit()">Simpan Transaksi</button>
+    </div>
+  </div>
+</div>
+
 <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
 <div id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script><script src="js/admin-init.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/admin-init.js"></script>
 <script src="js/admin-auth.js" defer></script>
 <script src="js/admin-config.js" defer></script>
 <script src="js/admin-wa.js" defer></script>
@@ -538,32 +642,27 @@
 <script src="js/admin-shop.js" defer></script>
 <script src="js/admin-orders.js" defer></script>
 <script src="js/admin-users.js" defer></script>
+<script src="js/admin-finance.js" defer></script>
 
 <script>
-/* ── switchAuthTab: Sliding version ── */
+/* ── switchAuthTab ── */
 function switchAuthTab(tab) {
   var track = document.getElementById('auth-slide-track');
   var pillLogin = document.getElementById('tab-pill-login');
   var pillReg = document.getElementById('tab-pill-register');
-
   if (tab === 'register') {
     track.classList.add('show-register');
     pillLogin.classList.remove('active');
     pillReg.classList.add('active');
-    setTimeout(function() {
-      document.getElementById('auth-panel-register').scrollTop = 0;
-    }, 100);
+    setTimeout(function() { document.getElementById('auth-panel-register').scrollTop = 0; }, 100);
   } else {
     track.classList.remove('show-register');
     pillLogin.classList.add('active');
     pillReg.classList.remove('active');
-    setTimeout(function() {
-      document.getElementById('auth-panel-login').scrollTop = 0;
-    }, 100);
+    setTimeout(function() { document.getElementById('auth-panel-login').scrollTop = 0; }, 100);
   }
   ['req-error','req-success','auth-error'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.style.display = 'none';
+    var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
 }
 
@@ -572,10 +671,7 @@ function switchAuthTab(tab) {
   var track = document.getElementById('auth-slide-track');
   if (!track) return;
   var sx = 0, sy = 0;
-  track.addEventListener('touchstart', function(e) {
-    sx = e.touches[0].clientX;
-    sy = e.touches[0].clientY;
-  }, { passive: true });
+  track.addEventListener('touchstart', function(e) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
   track.addEventListener('touchend', function(e) {
     var dx = e.changedTouches[0].clientX - sx;
     var dy = e.changedTouches[0].clientY - sy;
@@ -586,7 +682,7 @@ function switchAuthTab(tab) {
   }, { passive: true });
 })();
 
-/* ── Stats permintaan akses ── */
+/* ── Access request stats ── */
 async function loadAccessRequestStats() {
   if (typeof sb === 'undefined') return;
   var statuses = ['pending', 'approved', 'rejected'];
@@ -598,7 +694,6 @@ async function loadAccessRequestStats() {
   }
 }
 
-/* ── loadAccessRequests dengan filter ── */
 window.loadAccessRequests = async function() {
   var container = document.getElementById('access-requests-list');
   if (!container) return;
@@ -638,7 +733,24 @@ window.loadAccessRequests = async function() {
   }).join('');
 };
 
-/* ── Override showSection untuk load akses requests ── */
+/* ── Finance V2 helpers ── */
+window.fv2SetPeriod = function(p, btn) {
+  document.getElementById('fv2-period').value = p;
+  document.querySelectorAll('.fv2-period-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  financeV2LoadSummary(p);
+};
+
+window.fv2SwitchTab = function(tab, btn) {
+  document.querySelectorAll('.fv2-tab').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.fv2-tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  var panel = document.getElementById('fv2-panel-' + tab);
+  if (panel) panel.classList.add('active');
+  if (tab === 'cashflow') financeV2LoadCashflow();
+};
+
+/* ── DOMContentLoaded ── */
 document.addEventListener('DOMContentLoaded', function() {
   var monthEl = document.getElementById('finance-month');
   if (monthEl) {
@@ -648,9 +760,11 @@ document.addEventListener('DOMContentLoaded', function() {
   var _origShowSection = window.showSection;
   window.showSection = function(name, el) {
     _origShowSection && _origShowSection(name, el);
-    if (name === 'orders') { ordersLoad(); ordersSubscribe(); }
-    if (name === 'all-orders') { window.allOrdersLoad(); }
+    if (name === 'orders')          { ordersLoad(); ordersSubscribe(); }
+    if (name === 'all-orders')      { window.allOrdersLoad(); }
     if (name === 'access-requests') { loadAccessRequests(); }
+    if (name === 'finance-v2')      { financeV2Init(); }
+    else                            { financeV2Destroy(); }
   };
 });
 </script>
