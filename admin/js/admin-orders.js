@@ -59,7 +59,6 @@ function showConfirm({ title, message, confirmText, onConfirm }) {
   const overlay = document.createElement('div');
   overlay.id = 'custom-confirm-overlay';
 
-  /* Semua centering pakai inline style langsung — tidak bisa di-override CSS halaman */
   Object.assign(overlay.style, {
     position:        'fixed',
     inset:           '0',
@@ -73,7 +72,7 @@ function showConfirm({ title, message, confirmText, onConfirm }) {
     zIndex:          '99999',
     background:      'rgba(0,0,0,0.65)',
     backdropFilter:  'blur(4px)',
-    display:         'grid',          /* grid + placeItems = centering paling kuat */
+    display:         'grid',
     placeItems:      'center',
     padding:         '16px',
     boxSizing:       'border-box',
@@ -100,25 +99,18 @@ function showConfirm({ title, message, confirmText, onConfirm }) {
   });
 
   box.innerHTML = `
-    <!-- Icon -->
     <div style="
       width:44px;height:44px;border-radius:12px;
       background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);
       display:flex;align-items:center;justify-content:center;
       font-size:20px;margin-bottom:16px;
     ">🗑️</div>
-
-    <!-- Title -->
     <div style="font-size:15px;font-weight:700;color:var(--text-main,#fff);margin-bottom:6px;">
       ${title || 'Hapus Pesanan?'}
     </div>
-
-    <!-- Message -->
     <div style="font-size:13px;color:var(--text-faint,#888);line-height:1.5;margin-bottom:20px;">
       ${message || 'Tindakan ini tidak bisa dibatalkan.'}
     </div>
-
-    <!-- Actions -->
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button id="cc-cancel" style="
         padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;
@@ -138,7 +130,6 @@ function showConfirm({ title, message, confirmText, onConfirm }) {
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
-  /* Animasi masuk — tunggu browser render overlay dulu */
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       overlay.style.opacity = '1';
@@ -195,9 +186,10 @@ function todayRange() {
   return { start, end };
 }
 
+/* FIX: ambil 4 karakter TERAKHIR UUID (setelah strip dash) agar cocok dengan order-feed.js */
 function shortId(uuid) {
   if (!uuid) return '—';
-  return '#' + String(uuid).replace(/-/g, '').slice(0, 4).toUpperCase();
+  return '#' + String(uuid).replace(/-/g, '').slice(-4).toUpperCase();
 }
 
 /* ─────────────────────────────────────────────────────
@@ -222,7 +214,6 @@ function getSb() {
 
 /* ─────────────────────────────────────────────────────
    BADGE ONLY — fetch count pending & update badge
-   Dipanggil saat halaman pertama load (tanpa perlu buka section orders)
 ───────────────────────────────────────────────────── */
 async function _ordersFetchBadge() {
   const sb = getSb();
@@ -236,7 +227,6 @@ async function _ordersFetchBadge() {
 
 /* ─────────────────────────────────────────────────────
    REALTIME BADGE SUBSCRIPTION
-   Hanya untuk update badge — subscribe sekali saat login
 ───────────────────────────────────────────────────── */
 let _ordersBadgeChannel = null;
 
@@ -247,17 +237,12 @@ function _ordersBadgeSubscribe() {
     .channel('orders-badge-live')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
       _ordersFetchBadge();
-      /* Kalau section orders sedang terbuka, refresh list-nya juga */
       const sec = document.getElementById('sec-orders');
       if (sec && sec.classList.contains('active')) ordersLoad();
     })
     .subscribe();
 }
 
-/**
- * ordersInitBadge() — panggil ini setelah login berhasil.
- * Langsung fetch count + subscribe realtime tanpa membuka section orders.
- */
 window.ordersInitBadge = function () {
   _ordersFetchBadge();
   _ordersBadgeSubscribe();
