@@ -197,7 +197,7 @@ function todayRange() {
 
 function shortId(uuid) {
   if (!uuid) return '—';
-  return '#' + String(uuid).replace(/-/g, '').slice(0, 8).toUpperCase();
+  return '#' + String(uuid).replace(/-/g, '').slice(0, 4).toUpperCase();
 }
 
 /* ─────────────────────────────────────────────────────
