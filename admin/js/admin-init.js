@@ -2,15 +2,16 @@
 const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq';
 
-// createClient dengan format object tunggal (menghindari deprecated warning)
+// Expose untuk temp-client di admin-users.js
+window._supabaseUrl = SUPABASE_URL;
+window._supabaseKey = SUPABASE_KEY;
+
+// createClient utama (session persistent — untuk admin yang sedang login)
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-  },
-  global: {
-    headers: {},
   },
 });
 window._adminSb = sb;
@@ -26,7 +27,6 @@ let waAddingFor = null;
 
 /**
  * escHtml — escape karakter HTML berbahaya untuk mencegah XSS.
- * Dipakai oleh admin-orders.js, admin-shop.js, dan file lainnya.
  */
 function escHtml(str) {
   if (str == null) return '';
@@ -39,9 +39,12 @@ function escHtml(str) {
 }
 window.escHtml = escHtml;
 
+// Alias esc → escHtml (dipakai admin-wa.js, admin-server-status.js, dll)
+function esc(s) { return escHtml(s); }
+window.esc = esc;
+
 /**
  * showAdminToast — toast notifikasi global admin panel.
- * Alias: toast() juga tersedia agar file lama tetap kompatibel.
  */
 function showAdminToast(msg, type) {
   type = type || 'success';
@@ -49,7 +52,16 @@ function showAdminToast(msg, type) {
   if (!container) {
     container = document.createElement('div');
     container.id = 'admin-toast-container';
-    container.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;';
+    container.style.cssText = [
+      'position:fixed',
+      'bottom:24px',
+      'right:24px',
+      'z-index:99999',
+      'display:flex',
+      'flex-direction:column',
+      'gap:8px',
+      'pointer-events:none',
+    ].join(';');
     document.body.appendChild(container);
   }
   const el = document.createElement('div');
@@ -84,27 +96,23 @@ function showAdminToast(msg, type) {
 }
 window.showAdminToast = showAdminToast;
 
-// Alias agar admin-config.js (yang pakai toast()) tetap bekerja
+// Alias toast() agar admin-config.js tetap bekerja
 function toast(msg, type) { showAdminToast(msg, type); }
 window.toast = toast;
 
 // ==================== IDLE AUTO-LOGOUT (1 jam) ====================
 (function () {
-  const IDLE_LIMIT = 60 * 60 * 1000; // 1 jam = 3.600.000 ms
-  let idleTimer = null;
+  const IDLE_LIMIT = 60 * 60 * 1000;
+  let idleTimer  = null;
   let isLoggedIn = false;
 
   function resetIdleTimer() {
     if (!isLoggedIn) return;
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(async () => {
-      // Tampilkan notifikasi sebelum logout
-      showIdleWarning();
-    }, IDLE_LIMIT);
+    idleTimer = setTimeout(showIdleWarning, IDLE_LIMIT);
   }
 
   function showIdleWarning() {
-    // Beri peringatan 30 detik sebelum logout paksa
     const overlay = document.createElement('div');
     overlay.id = 'idle-overlay';
     overlay.style.cssText = `
@@ -120,45 +128,37 @@ window.toast = toast;
                    color:#fff;margin-bottom:0.5rem;">Sesi Hampir Habis</h3>
         <p style="font-size:0.85rem;color:#888;margin-bottom:1.5rem;line-height:1.6;">
           Tidak ada aktivitas selama <strong style="color:#ef4444">1 jam</strong>.<br>
-          Anda akan otomatis keluar dalam <strong id="idle-countdown" style="color:#f4c430">30</strong> detik.
+          Anda akan otomatis keluar dalam
+          <strong id="idle-countdown" style="color:#f4c430">30</strong> detik.
         </p>
         <div style="display:flex;gap:10px;justify-content:center;">
           <button id="idle-stay-btn"
             style="padding:9px 22px;border-radius:9px;border:1px solid rgba(91,127,244,0.4);
                    background:rgba(91,127,244,0.12);color:#4f7df0;font-family:'Inter',sans-serif;
-                   font-size:13px;font-weight:600;cursor:pointer;">
-            Tetap Login
-          </button>
+                   font-size:13px;font-weight:600;cursor:pointer;">Tetap Login</button>
           <button id="idle-logout-btn"
             style="padding:9px 22px;border-radius:9px;border:none;
                    background:rgba(239,68,68,0.85);color:#fff;font-family:'Inter',sans-serif;
-                   font-size:13px;font-weight:600;cursor:pointer;">
-            Keluar Sekarang
-          </button>
+                   font-size:13px;font-weight:600;cursor:pointer;">Keluar Sekarang</button>
         </div>
-      </div>
-    `;
+      </div>`;
     document.body.appendChild(overlay);
 
     let countdown = 30;
     const countEl = document.getElementById('idle-countdown');
-    const countdownTimer = setInterval(() => {
+    const timer = setInterval(() => {
       countdown--;
       if (countEl) countEl.textContent = countdown;
-      if (countdown <= 0) {
-        clearInterval(countdownTimer);
-        forceLogout();
-      }
+      if (countdown <= 0) { clearInterval(timer); forceLogout(); }
     }, 1000);
 
     document.getElementById('idle-stay-btn').addEventListener('click', () => {
-      clearInterval(countdownTimer);
+      clearInterval(timer);
       overlay.remove();
       resetIdleTimer();
     });
-
     document.getElementById('idle-logout-btn').addEventListener('click', () => {
-      clearInterval(countdownTimer);
+      clearInterval(timer);
       forceLogout();
     });
   }
@@ -172,47 +172,39 @@ window.toast = toast;
         <p style="font-size:0.9rem;color:#888;font-family:'Inter',sans-serif;">
           Sesi telah berakhir karena tidak aktif. Mengalihkan ke halaman login...
         </p>
-      </div>
-    `;
+      </div>`;
     await sb.auth.signOut();
     setTimeout(() => location.reload(), 1500);
   }
 
-  // Event-event yang mereset timer idle
   ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'].forEach(evt => {
     document.addEventListener(evt, resetIdleTimer, { passive: true });
   });
 
-  // Expose fungsi agar bisa dipanggil saat login berhasil
-  window._idleStartTracking = function () {
-    isLoggedIn = true;
-    resetIdleTimer();
-  };
-  window._idleStopTracking = function () {
-    isLoggedIn = false;
-    clearTimeout(idleTimer);
-  };
+  window._idleStartTracking = function () { isLoggedIn = true; resetIdleTimer(); };
+  window._idleStopTracking  = function () { isLoggedIn = false; clearTimeout(idleTimer); };
 })();
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', async () => {
-  document.getElementById('login-password').addEventListener('keydown', e => {
-    if (e.key === 'Enter') doLogin();
-  });
+  const pwInput = document.getElementById('login-password');
+  if (pwInput) pwInput.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
   const { data: { session } } = await sb.auth.getSession();
   if (session) await afterLogin(session.user);
 
-  ['cfg-status_api_provider','cfg-status_refresh_interval','cfg-status_custom_url'].forEach(id => {
+  ['cfg-status_api_provider', 'cfg-status_refresh_interval', 'cfg-status_custom_url'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('input',  updateStatusPreview);
-    if (el) el.addEventListener('change', updateStatusPreview);
+    if (!el) return;
+    el.addEventListener('input',  updateStatusPreview);
+    el.addEventListener('change', updateStatusPreview);
   });
 
-  ['cfg-server_ip','cfg-server_type','cfg-server_name'].forEach(id => {
+  ['cfg-server_ip', 'cfg-server_type', 'cfg-server_name'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('input', updateServerPreview);
-    if (el) el.addEventListener('change', updateServerPreview);
+    if (!el) return;
+    el.addEventListener('input',  updateServerPreview);
+    el.addEventListener('change', updateServerPreview);
   });
 
   fetchLiveStatus();
