@@ -1,0 +1,580 @@
+/* ================================================================
+   admin-enhance.css  —  Laughtale Admin Panel Enhancement Layer
+   Drop-in AFTER admin.css in <head>. No HTML changes required
+   except for the collapsible opt-in (see admin-collapse.js).
+   ================================================================ */
+
+/* ── Font Upgrade ── */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── Enhanced Design Tokens ── */
+:root {
+  --font:  'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono:  'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Surfaces — slightly more distinct */
+  --bg:       #060a0f;
+  --surface:  #0b1018;
+  --surface2: #101820;
+  --surface3: #152030;
+  --surface4: #1a2840;
+
+  /* Borders — a touch more visible */
+  --border:  rgba(255,255,255,0.065);
+  --border2: rgba(255,255,255,0.10);
+  --border3: rgba(255,255,255,0.16);
+
+  /* Accent — unchanged */
+  --accent:       #4a8fff;
+  --accent-hover: #3a7ef0;
+  --accent-muted: rgba(74,143,255,0.09);
+  --accent-muted2:rgba(74,143,255,0.15);
+
+  /* Semantic */
+  --green:  #34d399;
+  --red:    #f87171;
+  --yellow: #fbbf24;
+
+  /* Radii */
+  --r-xs: 4px;
+  --r-sm: 7px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+
+  /* Card collapse transition */
+  --collapse-dur: 280ms;
+  --collapse-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Sidebar width — slightly wider for breathing room */
+  --sidebar-w: 222px;
+  --topbar-h:  50px;
+}
+
+/* ================================================================
+   BASE REFINEMENTS
+   ================================================================ */
+
+html, body {
+  font-family: var(--font);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbars — thin and unobtrusive */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface4) transparent;
+}
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: var(--surface4); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ================================================================
+   TOPBAR — refined
+   ================================================================ */
+
+.topbar {
+  height: var(--topbar-h);
+  border-bottom-color: var(--border);
+  gap: 10px;
+}
+
+.topbar-brand-name { font-weight: 700; letter-spacing: -0.3px; font-size: 13.5px; }
+.topbar-breadcrumb { font-size: 12px; font-weight: 400; opacity: 0.6; }
+.topbar-user-name  { font-size: 12px; font-weight: 500; }
+
+/* ================================================================
+   SIDEBAR — accordion nav groups
+   ================================================================ */
+
+.sidebar { padding: 8px 0 24px; gap: 0; }
+
+/* Nav group label — clickable, with chevron */
+.nav-group-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 15px 5px;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--t-fast);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+}
+.nav-group-label:hover { color: var(--text-muted); }
+.nav-group-label .ngl-chevron {
+  width: 12px; height: 12px;
+  transition: transform var(--collapse-dur) var(--collapse-ease);
+  opacity: 0.45;
+}
+.nav-group-label.collapsed .ngl-chevron { transform: rotate(-90deg); }
+
+/* Nav group wrapper — collapsible */
+.nav-group {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--collapse-dur) var(--collapse-ease),
+              opacity var(--collapse-dur) var(--collapse-ease);
+  opacity: 1;
+}
+.nav-group.collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+.nav-group-inner { overflow: hidden; }
+
+/* Nav items — tighter, cleaner */
+.nav-item {
+  margin: 1px 7px;
+  padding: 7px 10px;
+  border-radius: var(--r-md);
+  font-size: 12px;
+  gap: 8px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  transition: background 120ms ease, color 120ms ease;
+}
+.nav-item svg { width: 14px; height: 14px; opacity: 0.6; }
+.nav-item.active svg { opacity: 1; }
+.nav-item.active::before {
+  left: -7px; width: 3px; height: 14px; border-radius: 0 3px 3px 0;
+}
+
+/* Nav badge */
+.nav-badge {
+  font-size: 9px; font-weight: 700;
+  padding: 1px 5px; min-width: 16px; height: 16px;
+}
+
+/* ================================================================
+   PAGE HEADER
+   ================================================================ */
+
+.page-header { margin-bottom: 1.4rem; }
+.page-title { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.5px; }
+.page-sub   { font-size: 12px; margin-top: 2px; }
+
+/* ================================================================
+   COLLAPSIBLE CARDS  (core feature)
+   ================================================================ */
+
+/* Every card gets a subtle upgrade */
+.card {
+  border-radius: var(--r-lg);
+  padding: 0; /* override — use card-header + card-body */
+  border-color: var(--border);
+  overflow: hidden;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.card:hover { border-color: var(--border2); }
+
+/* Card header — always visible, clickable when collapsible */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  margin-bottom: 0; /* reset inline */
+  background: rgba(255,255,255,0.012);
+}
+.card-header:last-child { border-bottom: none; }
+
+.card-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.card-icon {
+  width: 26px; height: 26px;
+  border-radius: var(--r-sm);
+}
+.card-icon svg { width: 12px; height: 12px; }
+
+/* Collapse toggle chevron */
+.card-collapse-btn {
+  width: 24px; height: 24px;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--text-faint);
+  transition: background 150ms, border-color 150ms, color 150ms;
+  flex-shrink: 0;
+}
+.card-collapse-btn:hover { background: var(--surface2); border-color: var(--border2); color: var(--text); }
+.card-collapse-btn svg {
+  width: 11px; height: 11px;
+  transition: transform var(--collapse-dur) var(--collapse-ease);
+}
+.card.collapsed .card-collapse-btn svg { transform: rotate(-90deg); }
+.card.collapsed .card-header { border-bottom-color: transparent; }
+
+/* Collapsible card header — cursor pointer */
+.card.collapsible .card-header {
+  cursor: pointer;
+  user-select: none;
+}
+.card.collapsible .card-header:hover .card-title { color: var(--text); }
+
+/* Card body — grid trick for smooth height animation */
+.card-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--collapse-dur) var(--collapse-ease),
+              opacity var(--collapse-dur) var(--collapse-ease);
+  opacity: 1;
+}
+.card.collapsed .card-body {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+.card-body-inner {
+  overflow: hidden;
+  padding: 16px;
+}
+
+/* Divider inside cards */
+.divider { margin: 14px 0; }
+
+/* ================================================================
+   FORM FIELDS — compact, efficient
+   ================================================================ */
+
+.field-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.field-group.col-3 { grid-template-columns: 1fr 1fr 1fr; }
+.field-group.full  { grid-template-columns: 1fr; }
+.field-group.col-13 { grid-template-columns: 1fr 3fr; }
+
+.field { }
+.field label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+.field input, .field select, .field textarea {
+  padding: 7.5px 10px;
+  font-size: 13px;
+  border-radius: var(--r-md);
+  border-color: var(--border2);
+  background: var(--surface2);
+}
+.field textarea { min-height: 72px; }
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: rgba(74,143,255,0.5);
+  background: var(--surface3);
+  box-shadow: 0 0 0 3px rgba(74,143,255,0.08);
+}
+.field-hint { font-size: 10.5px; margin-top: 3px; }
+
+/* ================================================================
+   TOGGLE ROWS — compact
+   ================================================================ */
+
+.toggle-row {
+  padding: 10px 0;
+  gap: 14px;
+}
+.toggle-label strong { font-size: 12.5px; font-weight: 600; }
+.toggle-label span   { font-size: 11px; }
+.toggle {
+  width: 36px; height: 20px; border-radius: 10px;
+}
+.toggle::after { width: 14px; height: 14px; top: 2px; left: 2px; }
+.toggle.on::after { transform: translateX(16px); }
+
+/* ================================================================
+   SAVE BAR
+   ================================================================ */
+
+.save-bar {
+  padding: 12px 0 0;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.save-bar-hint { font-size: 11px; color: var(--text-faint); }
+
+/* ================================================================
+   BUTTONS — refined
+   ================================================================ */
+
+.save-btn {
+  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: var(--r-md);
+  letter-spacing: -0.15px;
+  font-weight: 600;
+}
+
+.btn-ghost {
+  font-size: 12px;
+  padding: 7px 13px;
+  border-radius: var(--r-md);
+  font-weight: 500;
+}
+
+.btn-icon {
+  width: 26px; height: 26px;
+  border-radius: var(--r-sm);
+}
+.btn-icon svg { width: 11px; height: 11px; }
+
+.btn-add {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: var(--r-sm);
+  gap: 4px;
+}
+.btn-add svg { width: 10px; height: 10px; }
+
+.btn-edit {
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: var(--r-sm);
+}
+.btn-del {
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: var(--r-sm);
+}
+
+/* ================================================================
+   SERVER LIVE CARD — compact
+   ================================================================ */
+
+.server-live {
+  padding: 11px 14px;
+  border-radius: var(--r-lg);
+  margin-bottom: 14px;
+  gap: 11px;
+}
+.server-live-info h4 { font-size: 13px; font-weight: 600; }
+.server-live-info p  { font-size: 11px; }
+.server-live-meta strong { font-size: 12.5px; }
+.server-live-meta span   { font-size: 10.5px; }
+
+/* ================================================================
+   STATUS PILLS — sharper
+   ================================================================ */
+
+.status-pill { font-size: 11px; padding: 3px 9px; }
+.pill-dot { width: 5px; height: 5px; }
+
+/* ================================================================
+   ADMIN LIST ITEMS
+   ================================================================ */
+
+.admin-item { gap: 9px; padding: 9px 0; }
+.admin-avatar { width: 32px; height: 32px; font-size: 12px; border-radius: var(--r-md); }
+.admin-info strong { font-size: 12.5px; }
+.admin-info span   { font-size: 11px; }
+.admin-badge { font-size: 9px; padding: 2px 7px; }
+
+/* ================================================================
+   ORDER CARDS — compact
+   ================================================================ */
+
+.order-card {
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border-radius: var(--r-lg);
+}
+.order-item-name { font-size: 13px; font-weight: 700; }
+.order-meta      { font-size: 11px; }
+.order-price     { font-size: 14px; }
+.order-tag       { font-size: 11px; padding: 2px 7px; }
+.order-note      { font-size: 11.5px; padding: 7px 10px; }
+.order-actions   { gap: 6px; padding-top: 8px; }
+
+.btn-done {
+  padding: 5px 13px;
+  font-size: 12px;
+  border-radius: var(--r-md);
+}
+
+/* Stats strip — compact */
+.orders-stats-strip { gap: 8px; margin-bottom: 14px; }
+.ostat-card { padding: 12px 14px; border-radius: var(--r-lg); }
+.ostat-num   { font-size: 20px; font-weight: 700; }
+.ostat-label { font-size: 10px; }
+
+/* ================================================================
+   SECTIONS / PAGE LAYOUT
+   ================================================================ */
+
+.section { max-width: 840px; }
+.main-content { padding: 1.75rem 2rem; }
+
+/* ================================================================
+   PREVIEW BOX — compact
+   ================================================================ */
+
+.preview-box { border-radius: var(--r-md); }
+.preview-row { padding: 7px 12px; font-size: 12px; }
+.preview-key { font-size: 11px; }
+.preview-val { font-size: 12px; }
+
+/* ================================================================
+   TOAST — compact
+   ================================================================ */
+
+.toast-item { padding: 8px 13px; font-size: 12.5px; border-radius: var(--r-md); }
+
+/* ================================================================
+   FINANCE V2 — compact
+   ================================================================ */
+
+.fv2-sum-card {
+  padding: 13px 14px;
+  border-radius: var(--r-lg);
+}
+.fv2-sum-icon  { font-size: 14px; }
+.fv2-sum-label { font-size: 9.5px; letter-spacing: 0.6px; }
+.fv2-sum-val   { font-size: 1.15rem; font-weight: 800; }
+
+.fv2-btn { padding: 7px 13px; font-size: 12px; border-radius: var(--r-sm); }
+
+/* ================================================================
+   SECTION HEADER + COLLAPSE TOGGLE
+   (used by page-level collapsible sections)
+   ================================================================ */
+
+.section-block {
+  margin-bottom: 12px;
+}
+
+.section-block-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  user-select: none;
+  transition: background 150ms, border-color 150ms;
+}
+.section-block-header:hover { background: var(--surface2); border-color: var(--border2); }
+.section-block.open .section-block-header {
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.section-block-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.1px;
+}
+.section-block-meta {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 400;
+}
+.section-block-chevron {
+  width: 14px; height: 14px;
+  color: var(--text-faint);
+  transition: transform var(--collapse-dur) var(--collapse-ease);
+  flex-shrink: 0;
+}
+.section-block.open .section-block-chevron { transform: rotate(90deg); }
+
+.section-block-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--collapse-dur) var(--collapse-ease),
+              opacity var(--collapse-dur) var(--collapse-ease);
+  opacity: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+}
+.section-block.open .section-block-body {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.section-block-body-inner {
+  overflow: hidden;
+  padding: 16px;
+}
+
+/* ================================================================
+   EMPTY STATES — nicer
+   ================================================================ */
+
+.empty-state {
+  padding: 2rem 1rem;
+  font-size: 12.5px;
+}
+
+/* ================================================================
+   RESPONSIVE OVERRIDES
+   ================================================================ */
+
+@media (max-width: 1024px) {
+  :root { --sidebar-w: 204px; }
+  .main-content { padding: 1.4rem 1.5rem; }
+}
+
+@media (max-width: 768px) {
+  .main-content { padding: 1rem; }
+  .field-group.col-3 { grid-template-columns: 1fr 1fr; }
+  .orders-stats-strip { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+  .field-group, .field-group.col-3 { grid-template-columns: 1fr; }
+  .main-content { padding: 0.75rem; }
+}
+
+/* ================================================================
+   UTILITY CLASSES
+   ================================================================ */
+
+/* Compact card — for stat-like cards */
+.card-sm .card-body-inner { padding: 12px 14px; }
+
+/* Card with no collapse — still gets body padding */
+.card:not(.collapsible) .card-body { grid-template-rows: 1fr; opacity: 1; }
+
+/* Highlight badge on nav */
+.nav-item .nav-new-badge {
+  font-size: 8px; font-weight: 700;
+  background: var(--accent); color: #fff;
+  padding: 1px 5px; border-radius: 20px;
+  margin-left: auto; letter-spacing: .2px;
+  flex-shrink: 0;
+}
+
+/* Inline save pulse */
+@keyframes savePulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(74,143,255,0.4); }
+  50%     { box-shadow: 0 0 0 6px rgba(74,143,255,0); }
+}
+
+/* Smooth section transition */
+@keyframes sectionIn {
+  from { opacity:0; transform:translateY(4px); }
+  to   { opacity:1; transform:translateY(0); }
+}
