@@ -1,13 +1,6 @@
 // ==================== TAB SWITCHER ====================
-function switchAuthTab(tab) {
-  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
-  const tabBtn = document.getElementById('tab-' + tab + '-btn');
-  const panel  = document.getElementById('panel-' + tab);
-  if (tabBtn) tabBtn.classList.add('active');
-  if (panel)  panel.classList.add('active');
-}
-window.switchAuthTab = switchAuthTab;
+// switchAuthTab didefinisikan di admin/index.html (inline script)
+// agar kompatibel dengan UI sliding track baru.
 
 // ==================== AUTH ====================
 async function doLogin() {
