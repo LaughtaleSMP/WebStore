@@ -8,8 +8,8 @@
    • Better error handling + loading state di setiap tombol.
    
    Tabel yang dipakai:
-   • admin_roles    → daftar user yang punya akses panel
-   • admin_requests → permintaan akses dari pendaftar baru
+   • admin_roles            → daftar user yang punya akses panel
+   • admin_pending_requests → permintaan akses dari pendaftar baru
 ════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -33,7 +33,6 @@
           persistSession:      false,
           autoRefreshToken:    false,
           detectSessionInUrl:  false,
-          // In-memory storage — tidak sentuh localStorage sama sekali
           storage: {
             getItem:    () => null,
             setItem:    () => {},
@@ -346,7 +345,7 @@
     const statuses = ['pending', 'approved', 'rejected'];
     for (const status of statuses) {
       const { count } = await sb
-        .from('admin_requests')
+        .from('admin_pending_requests')
         .select('*', { count: 'exact', head: true })
         .eq('status', status);
       const el = document.getElementById('mgr-stat-' + status);
@@ -354,7 +353,7 @@
     }
 
     const { count: pendingCount } = await sb
-      .from('admin_requests')
+      .from('admin_pending_requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
     updatePendingBadge(pendingCount || 0);
@@ -383,7 +382,7 @@
     container.innerHTML = '<div class="empty-state">Memuat…</div>';
 
     const filter = document.getElementById('mgr-req-filter')?.value || '';
-    let q = sb.from('admin_requests').select('*').order('created_at', { ascending: false });
+    let q = sb.from('admin_pending_requests').select('*').order('created_at', { ascending: false });
     if (filter) q = q.eq('status', filter);
 
     const { data, error } = await q;
@@ -412,7 +411,6 @@
           </div>
           <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">${esc(r.email)}</div>
           <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
-            <span class="mgr-role-pill mgr-role-${esc(r.role)}">${esc(r.role)}</span>
             <span class="mgr-role-pill ${statusCls[r.status]||''}">${statusLabel[r.status]||esc(r.status)}</span>
             <span style="font-size:11px;color:var(--text-faint)">
               ${new Date(r.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
@@ -454,14 +452,11 @@
 
   /* ══════════════════════════════════════════════════
      APPROVE REQUEST
-     Menggunakan temp client (non-persistent) untuk signUp
-     agar session super admin yang sedang login TIDAK terputus.
   ══════════════════════════════════════════════════ */
   async function approveRequest(reqId) {
     const sb = getSb();
     if (!sb) return;
 
-    // Disable tombol agar tidak double-click
     const approveBtn = document.getElementById('btn-approve-' + reqId);
     const rejectBtn  = document.getElementById('btn-reject-' + reqId);
     if (approveBtn) { approveBtn.disabled = true; approveBtn.textContent = '⏳ Memproses…'; }
@@ -471,9 +466,9 @@
     if (card) card.style.opacity = '0.6';
 
     try {
-      // 1. Ambil data request
+      // 1. Ambil data request dari admin_pending_requests
       const { data: r, error: fetchErr } = await sb
-        .from('admin_requests')
+        .from('admin_pending_requests')
         .select('*')
         .eq('id', reqId)
         .single();
@@ -485,7 +480,7 @@
 
       // 2. Jika belum punya user_id, buat akun Supabase Auth baru
       if (!userId) {
-        const password = r.password_temp || generateTempPw();
+        const password = generateTempPw();
 
         let sbTemp;
         try {
@@ -500,9 +495,7 @@
         });
 
         if (signUpErr) {
-          // Kalau user sudah ada (misalnya approve ulang), coba ambil user id dari admin_roles
           if (signUpErr.message?.toLowerCase().includes('already registered')) {
-            // Cek di admin_roles berdasarkan email
             const { data: existingRoleByEmail } = await sb
               .from('admin_roles')
               .select('user_id')
@@ -529,41 +522,36 @@
           }
         }
 
-        // Simpan user_id ke tabel request untuk referensi
-        await sb.from('admin_requests').update({ user_id: userId }).eq('id', reqId);
+        // Simpan user_id ke tabel request
+        await sb.from('admin_pending_requests').update({ user_id: userId }).eq('id', reqId);
       }
 
       // 3. Cek apakah sudah ada di admin_roles
       const { data: existingRole } = await sb
         .from('admin_roles')
-        .select('id')
+        .select('user_id')
         .eq('user_id', userId)
         .maybeSingle();
 
       if (existingRole) {
-        // Update role & display_name
         const { error: updateErr } = await sb
           .from('admin_roles')
-          .update({ role: r.role, display_name: r.display_name })
+          .update({ display_name: r.display_name })
           .eq('user_id', userId);
         if (updateErr) throw new Error('Gagal update role: ' + updateErr.message);
       } else {
-        // Insert baru
         const { error: roleErr } = await sb.from('admin_roles').insert({
           user_id:      userId,
-          role:         r.role,
+          role:         'admin',
           display_name: r.display_name,
-          email:        r.email,
         });
         if (roleErr) throw new Error('Gagal tambah ke admin_roles: ' + roleErr.message);
       }
 
-      // 4. Update status request → approved, hapus password_temp
-      const { error: updateReqErr } = await sb.from('admin_requests').update({
-        status:        'approved',
-        approved_by:   window.currentUser?.id || null,
-        approved_at:   new Date().toISOString(),
-        password_temp: null,          // hapus password setelah approved
+      // 4. Update status request → approved
+      const { error: updateReqErr } = await sb.from('admin_pending_requests').update({
+        status:      'approved',
+        reviewed_at: new Date().toISOString(),
       }).eq('id', reqId);
       if (updateReqErr) throw new Error('Gagal update status: ' + updateReqErr.message);
 
@@ -571,7 +559,6 @@
       await loadRequests();
 
     } catch (e) {
-      // Restore card & button
       if (card) card.style.opacity = '1';
       if (approveBtn) {
         approveBtn.disabled = false;
@@ -592,7 +579,7 @@
     if (!sb) return;
 
     const { data: r } = await sb
-      .from('admin_requests')
+      .from('admin_pending_requests')
       .select('display_name')
       .eq('id', reqId)
       .single();
@@ -606,9 +593,9 @@
         const rejectBtn = document.getElementById('btn-reject-' + reqId);
         if (rejectBtn) { rejectBtn.disabled = true; rejectBtn.textContent = '⏳…'; }
 
-        const { error } = await sb.from('admin_requests').update({
-          status:        'rejected',
-          password_temp: null,
+        const { error } = await sb.from('admin_pending_requests').update({
+          status:      'rejected',
+          reviewed_at: new Date().toISOString(),
         }).eq('id', reqId);
 
         if (error) {
@@ -682,7 +669,6 @@
         ? 'background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.25);color:#4ade80'
         : 'background:var(--accent-muted2);border-color:rgba(91,127,244,.2);color:var(--accent)';
 
-      // Serialize adminData untuk dikirim ke modal (pakai data-attribute, bukan inline JSON)
       const adminDataStr = esc(JSON.stringify({
         user_id:      a.user_id,
         id:           a.id,
@@ -726,7 +712,6 @@
   function openEditModal(adminDataRaw) {
     let a;
     try {
-      // adminDataRaw bisa berupa string JSON (dari onclick) atau object
       a = typeof adminDataRaw === 'string' ? JSON.parse(adminDataRaw) : adminDataRaw;
     } catch (e) {
       toast('Gagal membuka form edit.', 'error');
@@ -740,7 +725,6 @@
     const modal = document.getElementById('mgr-edit-modal');
     modal.style.display = 'flex';
 
-    // Focus ke field nama
     setTimeout(() => {
       const inp = document.getElementById('mgr-edit-display');
       if (inp) inp.focus();
@@ -884,7 +868,6 @@
   document.addEventListener('DOMContentLoaded', () => {
     injectSection();
 
-    // Tutup edit modal klik di luar
     const editModal = document.getElementById('mgr-edit-modal');
     if (editModal) {
       editModal.addEventListener('click', function (e) {
@@ -892,7 +875,6 @@
       });
     }
 
-    // Hook showSection agar mgrLoad() dipanggil saat section dibuka
     const _orig = window.showSection;
     window.showSection = function (name, el) {
       _orig && _orig(name, el);
@@ -905,7 +887,7 @@
     const sb = getSb();
     if (!sb) return;
     const { count } = await sb
-      .from('admin_requests')
+      .from('admin_pending_requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
     updatePendingBadge(count || 0);
