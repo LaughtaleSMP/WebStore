@@ -1,6 +1,5 @@
 // ==================== TAB SWITCHER ====================
 // switchAuthTab didefinisikan di admin/index.html (inline script)
-// agar kompatibel dengan UI sliding track baru.
 
 // ==================== AUTH ====================
 async function doLogin() {
@@ -18,19 +17,20 @@ async function doLogin() {
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
     if (error) throw error;
 
-    const { data: role } = await sb.from('admin_roles')
+    const { data: role, error: roleErr } = await sb
+      .from('admin_roles')
       .select('role,display_name')
       .eq('user_id', data.user.id)
       .single();
 
-    if (!role) {
+    if (roleErr || !role) {
       await sb.auth.signOut();
       throw new Error('Akun ini tidak terdaftar sebagai admin. Hubungi super admin.');
     }
 
     await afterLogin(data.user, role);
-  } catch(e) {
-    errMsg.textContent = e.message;
+  } catch (e) {
+    errMsg.textContent = e.message || 'Terjadi kesalahan. Coba lagi.';
     errEl.style.display = 'flex';
     btn.textContent = 'Masuk ke Panel';
     btn.disabled = false;
@@ -39,11 +39,12 @@ async function doLogin() {
 
 async function afterLogin(user, roleData = null) {
   if (!roleData) {
-    const { data } = await sb.from('admin_roles')
+    const { data, error } = await sb
+      .from('admin_roles')
       .select('role,display_name')
       .eq('user_id', user.id)
       .single();
-    if (!data) { await sb.auth.signOut(); return; }
+    if (error || !data) { await sb.auth.signOut(); return; }
     roleData = data;
   }
 
@@ -55,12 +56,9 @@ async function afterLogin(user, roleData = null) {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').classList.add('visible');
 
-  // Tampilkan menu Permintaan Akses lama hanya untuk superadmin (fallback)
+  // Sembunyikan nav lama permintaan akses — digantikan oleh admin-users.js
   const reqNavItem = document.getElementById('nav-access-requests');
-  if (reqNavItem) {
-    // Sembunyikan nav lama — digantikan oleh admin-users.js (nav-manage-admins)
-    reqNavItem.style.display = 'none';
-  }
+  if (reqNavItem) reqNavItem.style.display = 'none';
 
   // Inject nav "Manajemen Admin" untuk superadmin
   if (roleData.role === 'superadmin') {
@@ -72,28 +70,21 @@ async function afterLogin(user, roleData = null) {
   await loadAllConfig();
   await loadWAAdmins();
 
-  if (typeof window._idleStartTracking === 'function') {
-    window._idleStartTracking();
-  }
-  if (typeof window.ordersInitBadge === 'function') {
-    window.ordersInitBadge();
-  }
+  if (typeof window._idleStartTracking === 'function') window._idleStartTracking();
+  if (typeof window.ordersInitBadge    === 'function') window.ordersInitBadge();
 
-  // Load badge permintaan akses jika superadmin
+  // Badge permintaan akses untuk superadmin
   if (roleData.role === 'superadmin') {
     if (typeof window.mgrUpdateBadge === 'function') {
       window.mgrUpdateBadge();
     } else {
-      // Fallback ke fungsi lama
       loadAccessRequestBadge();
     }
   }
 }
 
 async function doLogout() {
-  if (typeof window._idleStopTracking === 'function') {
-    window._idleStopTracking();
-  }
+  if (typeof window._idleStopTracking === 'function') window._idleStopTracking();
   await sb.auth.signOut();
   location.reload();
 }
@@ -101,7 +92,7 @@ async function doLogout() {
 function goToMain() { window.location.href = '../index.html'; }
 
 // ==================== SELF REGISTER (REQUEST ACCESS) ====================
-window.doRequestAccess = async function() {
+window.doRequestAccess = async function () {
   const email   = document.getElementById('req-email').value.trim();
   const pw      = document.getElementById('req-password').value;
   const pw2     = document.getElementById('req-password2').value;
@@ -134,7 +125,8 @@ window.doRequestAccess = async function() {
 
   try {
     // Cek apakah email sudah ada di pending requests
-    const { data: existing } = await sb.from('admin_requests')
+    const { data: existing } = await sb
+      .from('admin_requests')
       .select('id,status')
       .eq('email', email)
       .maybeSingle();
@@ -151,23 +143,21 @@ window.doRequestAccess = async function() {
 
     const { error: insertErr } = await sb.from('admin_requests').insert({
       email,
-      display_name: display,
+      display_name:  display,
       role,
-      reason: reason || null,
-      status: 'pending',
+      reason:        reason || null,
+      status:        'pending',
       password_temp: pw,
     });
-
     if (insertErr) throw insertErr;
 
     sucEl.style.display = 'flex';
-    document.getElementById('req-email').value = '';
-    document.getElementById('req-password').value = '';
-    document.getElementById('req-password2').value = '';
-    document.getElementById('req-display').value = '';
-    document.getElementById('req-reason').value = '';
+    ['req-email','req-password','req-password2','req-display','req-reason'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
 
-  } catch(e) {
+  } catch (e) {
     errMsg.textContent = e.message || 'Terjadi kesalahan. Coba lagi.';
     errEl.style.display = 'flex';
   }
@@ -178,25 +168,44 @@ window.doRequestAccess = async function() {
 
 // ==================== BADGE PERMINTAAN AKSES (legacy fallback) ====================
 async function loadAccessRequestBadge() {
-  const { count } = await sb.from('admin_requests')
+  const { count } = await sb
+    .from('admin_requests')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'pending');
 
   const badge = document.getElementById('access-req-badge');
-  if (badge) {
-    if (count > 0) {
-      badge.textContent = count;
-      badge.style.display = 'inline-flex';
-    } else {
-      badge.style.display = 'none';
-    }
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
   }
 }
 window.loadAccessRequestBadge = loadAccessRequestBadge;
 
-// ==================== LOAD DAFTAR PERMINTAAN AKSES (legacy — kept for compat) ====================
-window.loadAccessRequests = async function() {
-  // Redirect ke sistem baru jika tersedia
+// ==================== APPROVE / REJECT — DELEGATE KE admin-users.js ====================
+// Semua logika approve/reject sekarang ada di admin-users.js (_mgrApprove / _mgrReject).
+// Fungsi di bawah hanya wrapper agar panggilan lama (onclick="approveRequest(...)") tetap bekerja.
+
+window.approveRequest = function (id) {
+  if (typeof window._mgrApprove === 'function') {
+    window._mgrApprove(id);
+  } else {
+    showAdminToast('Sistem manajemen belum siap. Refresh halaman.', 'error');
+  }
+};
+
+window.rejectRequest = function (id) {
+  if (typeof window._mgrReject === 'function') {
+    window._mgrReject(id);
+  } else {
+    showAdminToast('Sistem manajemen belum siap. Refresh halaman.', 'error');
+  }
+};
+
+// ==================== LOAD DAFTAR PERMINTAAN AKSES (legacy — compat) ====================
+window.loadAccessRequests = async function () {
   if (typeof window._mgrLoadRequests === 'function') {
     window._mgrLoadRequests();
     return;
@@ -206,120 +215,43 @@ window.loadAccessRequests = async function() {
   if (!container) return;
   container.innerHTML = '<div class="empty-state">Memuat data...</div>';
 
-  const { data, error } = await sb.from('admin_requests')
+  const { data, error } = await sb
+    .from('admin_requests')
     .select('*')
     .order('created_at', { ascending: false });
 
-  if (error || !data || data.length === 0) {
+  if (error || !data || !data.length) {
     container.innerHTML = '<div class="empty-state">Tidak ada permintaan akses.</div>';
     return;
   }
 
-  const statusColor = { pending: '#f4c430', approved: '#4ade80', rejected: '#f87171' };
-  const statusLabel = { pending: '⏳ Menunggu', approved: '✅ Disetujui', rejected: '❌ Ditolak' };
+  const statusColor = { pending:'#f4c430', approved:'#4ade80', rejected:'#f87171' };
+  const statusLabel = { pending:'⏳ Menunggu', approved:'✅ Disetujui', rejected:'❌ Ditolak' };
 
   container.innerHTML = data.map(r => `
-    <div class="req-card" id="req-card-${r.id}" style="
-      background:var(--surface2,#1a1a2e);border:1px solid var(--border,rgba(255,255,255,0.08));
-      border-radius:12px;padding:16px 18px;margin-bottom:12px;
-      display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:200px;">
-        <div style="font-size:14px;font-weight:700;color:var(--text-main,#e8e8f0);margin-bottom:2px;">
-          ${escHtml(r.display_name)}
-        </div>
-        <div style="font-size:12px;color:var(--text-faint,#666);margin-bottom:4px;">${escHtml(r.email)}</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <span style="font-size:11px;background:var(--surface3,#252540);padding:2px 8px;border-radius:20px;color:var(--text-sub,#a0a0b8);">
-            ${escHtml(r.role)}
+    <div class="req-card" id="req-card-${r.id}">
+      <div class="req-card-info">
+        <div class="req-card-name">${escHtml(r.display_name)}</div>
+        <div class="req-card-email">${escHtml(r.email)}</div>
+        <div class="req-card-meta">
+          <span class="req-role-badge">${escHtml(r.role)}</span>
+          <span style="font-size:11px;color:${statusColor[r.status]||'#888'}">
+            ${statusLabel[r.status]||r.status}
           </span>
-          <span style="font-size:11px;color:${statusColor[r.status] || '#888'}">
-            ${statusLabel[r.status] || r.status}
-          </span>
-          <span style="font-size:11px;color:var(--text-faint,#555);">
-            ${new Date(r.created_at).toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'})}
+          <span style="font-size:11px;color:var(--text-faint)">
+            ${new Date(r.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}
           </span>
         </div>
-        ${r.reason ? `<div style="font-size:12px;color:var(--text-sub,#a0a0b8);margin-top:6px;font-style:italic;">"${escHtml(r.reason)}"</div>` : ''}
+        ${r.reason ? `<div class="req-card-reason">"${escHtml(r.reason)}"</div>` : ''}
       </div>
       ${r.status === 'pending' ? `
-        <div style="display:flex;gap:8px;flex-shrink:0;">
-          <button onclick="approveRequest('${r.id}')"
-            style="padding:7px 16px;border-radius:8px;background:rgba(74,222,128,0.15);color:#4ade80;
-                   font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(74,222,128,0.25);">
-            ✓ Setujui
-          </button>
-          <button onclick="rejectRequest('${r.id}')"
-            style="padding:7px 16px;border-radius:8px;background:rgba(248,113,113,0.12);color:#f87171;
-                   font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(248,113,113,0.25);">
-            ✗ Tolak
-          </button>
+        <div class="req-card-actions">
+          <button class="btn-approve" onclick="approveRequest('${r.id}')">✓ Setujui</button>
+          <button class="btn-reject"  onclick="rejectRequest('${r.id}')">✗ Tolak</button>
         </div>
       ` : ''}
     </div>
   `).join('');
-};
-
-// ==================== APPROVE / REJECT (legacy — kept for compat) ====================
-window.approveRequest = async function(id) {
-  if (typeof window._mgrApprove === 'function') { window._mgrApprove(id); return; }
-
-  const { data: r, error: fetchErr } = await sb.from('admin_requests').select('*').eq('id', id).single();
-  if (fetchErr || !r) { showAdminToast('Data tidak ditemukan', 'error'); return; }
-
-  const card = document.getElementById('req-card-' + id);
-  if (card) card.style.opacity = '0.5';
-
-  try {
-    const { data: signUpData, error: signUpErr } = await sb.auth.signUp({
-      email: r.email,
-      password: r.password_temp,
-    });
-    if (signUpErr) throw signUpErr;
-
-    const userId = signUpData?.user?.id;
-    if (!userId) throw new Error('Gagal mendapatkan user ID.');
-
-    const { error: roleErr } = await sb.from('admin_roles').insert({
-      user_id: userId,
-      role: r.role,
-      display_name: r.display_name,
-    });
-    if (roleErr) throw roleErr;
-
-    await sb.from('admin_requests').update({
-      status: 'approved',
-      approved_by: currentUser?.id || null,
-      approved_at: new Date().toISOString(),
-      password_temp: null,
-    }).eq('id', id);
-
-    showAdminToast(`✅ ${r.display_name} (${r.email}) berhasil disetujui!`);
-    await window.loadAccessRequests();
-    await loadAccessRequestBadge();
-
-  } catch(e) {
-    if (card) card.style.opacity = '1';
-    showAdminToast('Gagal menyetujui: ' + (e.message || 'Error tidak diketahui'), 'error');
-  }
-};
-
-window.rejectRequest = async function(id) {
-  if (typeof window._mgrReject === 'function') { window._mgrReject(id); return; }
-
-  if (!confirm('Yakin ingin menolak permintaan ini?')) return;
-
-  const { error } = await sb.from('admin_requests').update({
-    status: 'rejected',
-    password_temp: null,
-  }).eq('id', id);
-
-  if (error) {
-    showAdminToast('Gagal menolak permintaan', 'error');
-  } else {
-    showAdminToast('Permintaan ditolak.');
-    await window.loadAccessRequests();
-    await loadAccessRequestBadge();
-  }
 };
 
 // ==================== LEGACY ====================
@@ -329,5 +261,5 @@ function toggleRegisterForm() {
   if (!form) return;
   const isOpen = form.style.display !== 'none';
   form.style.display = isOpen ? 'none' : 'block';
-  btn.textContent = isOpen ? '+ Daftarkan Admin Baru' : '− Tutup Form';
+  if (btn) btn.textContent = isOpen ? '+ Daftarkan Admin Baru' : '− Tutup Form';
 }
