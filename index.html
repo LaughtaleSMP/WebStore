@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
-<!-- BUILD v12:53 OAK-TREE -->
+<!-- BUILD v13:31 OAK-TREE REVERT -->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -20,3 +20,97 @@
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="alternate icon" href="assets/favicon.svg">
 <link rel="apple-touch-icon" href="assets/logo.jpeg">
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- FIX: shop-extra.css wajib di-load agar form, gallery, qty, tombol WA terstyle -->
+<link rel="stylesheet" href="css/shop-extra.css">
+<link rel="stylesheet" href="css/order-feed.css">
+
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/nav.css">
+<link rel="stylesheet" href="css/hero.css">
+<link rel="stylesheet" href="css/status.css">
+<link rel="stylesheet" href="css/skeleton.css">
+<link rel="stylesheet" href="css/sections.css">
+<link rel="stylesheet" href="css/responsive.css">
+<link rel="stylesheet" href="css/improvements.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Laughtale SMP",
+  "alternateName": "Laughtale Minecraft Server",
+  "description": "Server Minecraft Bedrock Indonesia Season XII. 14+ fitur eksklusif, economy system, event mingguan. Gratis, fair, tanpa pay-to-win.",
+  "url": "https://laughtale.my.id",
+  "gamePlatform": ["Minecraft Bedrock Edition", "Android", "iOS", "Windows", "Xbox"],
+  "operatingSystem": "Cross-platform",
+  "applicationCategory": "Game",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "IDR",
+    "availability": "https://schema.org/InStock",
+    "description": "Gratis bergabung"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Laughtale SMP",
+    "url": "https://laughtale.my.id"
+  }
+}
+</script>
+</head>
+<body>
+
+<!-- MAINTENANCE OVERLAY -->
+<div id="maintenance-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(7,7,14,0.97);backdrop-filter:blur(8px);flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;font-family:'Nunito',sans-serif;">
+  <div style="font-size:3rem;margin-bottom:1rem;">🔧</div>
+  <h1 style="font-family:'Press Start 2P',monospace;font-size:clamp(.7rem,2vw,1rem);color:#ef4444;letter-spacing:3px;margin-bottom:1.25rem;">MAINTENANCE</h1>
+  <p id="maint-msg" style="color:#a0a0bc;font-size:1rem;line-height:1.75;max-width:480px;margin-bottom:1rem;">Server sedang dalam pemeliharaan.</p>
+  <p id="maint-eta" style="display:none;color:#f4c430;font-size:.85rem;margin-bottom:.5rem;"></p>
+  <p id="maint-contact" style="display:none;color:#a855f7;font-size:.85rem;"></p>
+</div>
+
+<!-- MOTD BANNER -->
+<div id="motd-banner" style="display:none;align-items:center;justify-content:center;gap:.75rem;flex-wrap:wrap;padding:.55rem 1.25rem;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:700;position:relative;z-index:200;"></div>
+
+<a href="#main-content" class="skip-link">⏩ LANGSUNG KE KONTEN</a>
+
+<div id="loading-screen" role="status" aria-label="Loading Laughtale SMP">
+  <div class="loading-corner tl"></div>
+  <div class="loading-corner tr"></div>
+  <div class="loading-corner bl"></div>
+  <div class="loading-corner br"></div>
+  <div class="loading-content">
+    <div class="loading-eyebrow">
+      <div class="loading-eyebrow-line"></div>
+      <span class="loading-eyebrow-text">MINECRAFT BEDROCK</span>
+      <div class="loading-eyebrow-line right"></div>
+    </div>
+    <div class="loading-title">LAUGHTALE SMP</div>
+    <div class="loading-sub">VANILLA PLUS · SURVIVAL</div>
+    <div class="loading-bar-wrap">
+      <div class="loading-bar" id="loading-bar"></div>
+    </div>
+    <div class="loading-dots" aria-hidden="true">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+    </div>
+    <div class="loading-status" id="loading-status">MEMUAT ASET...</div>
+  </div>
+</div>
+
+<div class="pixel-lines"></div>
+<canvas id="bg-canvas"></canvas>
+
+<script src="js/main.js" defer></script>
+<script src="js/shop.js" defer></script>
+<script src="js/supabase-sync.js" defer></script>
+<script src="js/order-feed.js" defer></script>
+</body>
+</html>
