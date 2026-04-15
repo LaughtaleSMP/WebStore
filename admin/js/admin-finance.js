@@ -437,12 +437,9 @@
      3B. PLAYER ONLINE CHART
      ══════════════════════════════════════════════════════════ */
 
-  /* Load historical player snapshots dan fetch live count */
   async function _loadPlayerData() {
-    /* Fetch live player count dari MC API (non-blocking) */
     _fetchLivePlayerCount();
 
-    /* Load historical snapshots dari Supabase */
     var result = await sb
       .from('player_snapshots')
       .select('player_count, max_players, recorded_at')
@@ -450,7 +447,6 @@
       .limit(60);
 
     if (result.error) {
-      /* Tabel belum ada — tampilkan chart kosong tanpa error */
       _buildPlayerChart([]);
       return;
     }
@@ -458,7 +454,6 @@
     _buildPlayerChart(result.data || []);
   }
 
-  /* Ambil status live dari mcsrvstat API dan update stat strip */
   function _fetchLivePlayerCount() {
     var ip    = _getServerIp();
     var parts = ip.split(':');
@@ -493,7 +488,6 @@
       });
   }
 
-  /* Bangun player chart dari data historis */
   function _buildPlayerChart(rows) {
     if (typeof Chart === 'undefined') return;
 
@@ -504,7 +498,6 @@
     var labels, data, isEmpty;
 
     if (!rows || !rows.length) {
-      /* Belum ada data — tampilkan chart placeholder */
       isEmpty = true;
       labels  = ['Belum ada data'];
       data    = [0];
@@ -512,7 +505,6 @@
       isEmpty = false;
       labels  = rows.map(function (r) {
         var d = new Date(r.recorded_at);
-        /* Format: "12 Apr 14:30" */
         return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) +
                ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
       });
@@ -567,7 +559,6 @@
       },
     });
 
-    /* Overlay "belum ada data" jika kosong */
     if (isEmpty) {
       var wrap = canvas.parentElement;
       if (wrap && !wrap.querySelector('.fv2-player-empty')) {
@@ -583,13 +574,11 @@
         wrap.appendChild(msg);
       }
     } else {
-      /* Hapus overlay jika sudah ada data */
       var existing = canvas.parentElement && canvas.parentElement.querySelector('.fv2-player-empty');
       if (existing) existing.remove();
     }
   }
 
-  /* Catat snapshot pemain sekarang */
   window.financeV2RecordPlayer = async function () {
     var btn = document.querySelector('.fv2-player-record-btn');
     if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
@@ -612,12 +601,10 @@
       var playerCount = data.online ? (data.players ? (data.players.online || 0) : 0) : 0;
       var maxPlayers  = data.online ? (data.players ? (data.players.max   || 0) : 0) : 0;
 
-      /* Update live strip */
       if (dotEl) dotEl.className = data.online ? 'fv2-player-dot online' : 'fv2-player-dot offline';
       if (numEl) numEl.textContent = data.online ? (playerCount + ' / ' + maxPlayers) : 'Offline';
       if (lblEl) lblEl.textContent = 'Diperbarui baru saja';
 
-      /* Simpan ke Supabase */
       var ins = await sb.from('player_snapshots').insert([{
         player_count: playerCount,
         max_players:  maxPlayers,
@@ -628,7 +615,6 @@
         _finToast('Gagal simpan snapshot: Setup DB player terlebih dahulu.', 'error');
       } else {
         _finToast('Snapshot dicatat: ' + playerCount + ' pemain ✓', 'success');
-        /* Reload chart */
         await _loadPlayerData();
       }
     } catch (e) {
@@ -983,38 +969,130 @@
   };
 
   /* ══════════════════════════════════════════════════════════
-     10. EXPORT CSV
+     10. EXPORT CSV — PROFESSIONAL
      ══════════════════════════════════════════════════════════ */
   window.financeV2Export = async function () {
+    _finToast('Menyiapkan laporan...', 'success');
+
     var result = await sb.from('finance_transactions')
       .select('*').order('created_at', { ascending: false });
+
     if (result.error || !result.data) {
-      _finToast('Gagal export', 'error');
+      _finToast('Gagal export: ' + (result.error ? result.error.message : 'data kosong'), 'error');
       return;
     }
 
-    var headers = ['Tanggal', 'Tipe', 'Kategori', 'Nominal', 'Catatan', 'Referensi', 'Dicatat Oleh'];
-    var csvRows = result.data.map(function (r) {
-      return [
-        new Date(r.created_at).toLocaleString('id-ID'),
-        r.type,
-        r.category,
-        r.amount,
-        (r.note        || '').replace(/,/g, ';'),
-        (r.reference   || '').replace(/,/g, ';'),
-        (r.recorded_by || '')
-      ].join(',');
+    var rows = result.data;
+    var now  = new Date();
+
+    /* ── Hitung ringkasan ── */
+    var totalIn = 0, totalOut = 0, totalDon = 0;
+    rows.forEach(function (r) {
+      var a = Number(r.amount) || 0;
+      if (r.type === 'income')                             totalIn  += a;
+      if (r.type === 'donation')                           { totalIn += a; totalDon += a; }
+      if (r.type === 'expense' || r.type === 'transfer')   totalOut += a;
+    });
+    var balance = totalIn - totalOut;
+
+    /* ── Helper: escape cell ── */
+    function _cell(val) {
+      var s = (val === null || val === undefined) ? '' : String(val);
+      /* Wrap dalam quotes jika mengandung koma / quotes / newline */
+      if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }
+
+    /* ── Label tipe & kategori ── */
+    var TYPE_LABEL = {
+      income: 'Pemasukan', expense: 'Pengeluaran', donation: 'Donasi',
+      transfer: 'Transfer', adjustment: 'Penyesuaian'
+    };
+    var CAT_LABEL = {
+      shop: 'Toko', sponsorship: 'Sponsorship', event: 'Event', misc: 'Lainnya',
+      server: 'Server', operational: 'Operasional', plugin: 'Plugin/Tools',
+      content: 'Konten', bank: 'Bank', ewallet: 'E-Wallet',
+      donation: 'Donasi', correction: 'Koreksi'
+    };
+
+    /* ── Format tanggal lokal ── */
+    function _fmtDate(iso) {
+      if (!iso) return '';
+      return new Date(iso).toLocaleString('id-ID', {
+        day: '2-digit', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+    }
+
+    /* ── Format angka tanpa simbol (untuk kolom numerik) ── */
+    function _fmtNum(n) {
+      return (Number(n) || 0).toLocaleString('id-ID');
+    }
+
+    /* ══ Susun baris CSV ══ */
+    var lines = [];
+
+    /* Blok 1: Header laporan */
+    lines.push('LAPORAN KEUANGAN LAUGHTALE SMP');
+    lines.push('Diekspor pada,' + _cell(_fmtDate(now.toISOString())));
+    lines.push('Total Data,' + rows.length + ' transaksi');
+    lines.push('');
+
+    /* Blok 2: Ringkasan */
+    lines.push('RINGKASAN');
+    lines.push('Total Pemasukan (termasuk donasi),"Rp ' + _fmtNum(totalIn) + '"');
+    lines.push('Total Pengeluaran,"Rp ' + _fmtNum(totalOut) + '"');
+    lines.push('Total Donasi,"Rp ' + _fmtNum(totalDon) + '"');
+    lines.push('Saldo Bersih,"Rp ' + _fmtNum(balance) + '"');
+    lines.push('');
+
+    /* Blok 3: Header kolom */
+    lines.push([
+      'No',
+      'Tanggal & Waktu',
+      'Tipe',
+      'Kategori',
+      'Nominal (Rp)',
+      'Catatan',
+      'Referensi / Donatur',
+      'Dicatat Oleh',
+      'ID Transaksi'
+    ].map(_cell).join(','));
+
+    /* Blok 4: Data transaksi */
+    rows.forEach(function (r, i) {
+      lines.push([
+        i + 1,
+        _fmtDate(r.created_at),
+        TYPE_LABEL[r.type]  || r.type,
+        CAT_LABEL[r.category] || r.category || '',
+        (Number(r.amount) || 0).toLocaleString('id-ID'),
+        r.note        || '',
+        r.reference   || '',
+        r.recorded_by || '',
+        r.id          || ''
+      ].map(_cell).join(','));
     });
 
-    var csv  = [headers.join(',')].concat(csvRows).join('\n');
+    /* ── Download dengan BOM UTF-8 agar Excel terbaca benar ── */
+    var BOM = '\uFEFF';
+    var csv  = BOM + lines.join('\r\n');
     var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     var url  = URL.createObjectURL(blob);
     var a    = document.createElement('a');
+
+    var dateTag = now.getFullYear() +
+      '-' + String(now.getMonth() + 1).padStart(2, '0') +
+      '-' + String(now.getDate()).padStart(2, '0');
+
     a.href     = url;
-    a.download = 'keuangan-laughtale-' + _today() + '.csv';
+    a.download = 'Laporan-Keuangan-LaughtaleSMP-' + dateTag + '.csv';
     a.click();
     URL.revokeObjectURL(url);
-    _finToast('Export berhasil ✓', 'success');
+
+    _finToast('Export berhasil — ' + rows.length + ' transaksi ✓', 'success');
   };
 
   /* ══════════════════════════════════════════════════════════
