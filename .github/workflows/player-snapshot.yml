@@ -1,0 +1,52 @@
+name: Player Snapshot Auto-Update
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # tiap 5 menit, 24 jam sehari
+  workflow_dispatch:         # bisa dijalankan manual juga
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch & Insert Player Snapshot
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SERVER_HOST:  ${{ secrets.MC_SERVER_HOST }}
+          SERVER_PORT:  ${{ secrets.MC_SERVER_PORT }}
+        run: |
+          # 1. Fetch status server Minecraft Bedrock
+          RESPONSE=$(curl -s --max-time 10 \
+            "https://api.mcsrvstat.us/bedrock/3/${SERVER_HOST}:${SERVER_PORT}")
+
+          ONLINE=$(echo "$RESPONSE" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          print('true' if d.get('online') else 'false')
+          ")
+
+          PLAYER_COUNT=$(echo "$RESPONSE" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          print(d.get('players', {}).get('online', 0) if d.get('online') else 0)
+          ")
+
+          MAX_PLAYERS=$(echo "$RESPONSE" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          print(d.get('players', {}).get('max', 0) if d.get('online') else 0)
+          ")
+
+          echo "Server online: $ONLINE | Players: $PLAYER_COUNT / $MAX_PLAYERS"
+
+          # 2. Insert snapshot ke Supabase
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          curl -s -X POST "${SUPABASE_URL}/rest/v1/player_snapshots" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_KEY}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{\"player_count\": ${PLAYER_COUNT}, \"max_players\": ${MAX_PLAYERS}, \"recorded_at\": \"${NOW}\"}"
+
+          echo "Snapshot berhasil diinsert: $PLAYER_COUNT pemain @ $NOW"
