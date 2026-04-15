@@ -26,8 +26,8 @@ function showSection(name, el) {
   }
 
   // ── Finance: auto-load saat section aktif ──
-  if (name === 'finance' && typeof window.financeLoad === 'function') {
-    window.financeLoad();
+  if (name === 'finance' && typeof window.financeV2Init === 'function') {
+      window.financeV2Init();
   }
   if (name === 'finance-v2' && typeof window.financeV2Init === 'function') {
     window.financeV2Init();
