@@ -1312,10 +1312,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (name === 'finance-v2')      { financeV2Init(); }
     else                            { financeV2Destroy(); }
   };
+  window.ordersRefresh = function() {
+    if (typeof ordersLoad === 'function') ordersLoad();
+  };
 });
-window.ordersRefresh = function() {
-  ordersLoad();
-};
 </script>
 
 </body>
