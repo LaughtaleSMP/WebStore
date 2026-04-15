@@ -1209,7 +1209,15 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<script>
+  /* Simpan XLSX.utils sebelum xlsx-style menimpa XLSX */
+  window._XLSXUtils = window.XLSX ? window.XLSX.utils : null;
+</script>
 <script src="https://unpkg.com/xlsx-style@0.8.13/dist/xlsx.js"></script>
+<script>
+  /* Kembalikan utils ke XLSX setelah ditimpa */
+  if (window._XLSXUtils && window.XLSX) window.XLSX.utils = window._XLSXUtils;
+</script>
 <script src="../libs/chart.umd.js"></script>
 </body>
 </html>
