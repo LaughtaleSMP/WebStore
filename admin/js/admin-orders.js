@@ -4,7 +4,7 @@
 //
 
 /* ─────────────────────────────────────────────────────
-   TOAST helper (lokal, fallback jika showToast global belum ada)
+   TOAST helper
 ───────────────────────────────────────────────────── */
 function showToast(msg, type = 'info') {
   if (typeof window.showAdminToast === 'function') {
@@ -24,7 +24,55 @@ function escHtml(s) {
 }
 
 /* ─────────────────────────────────────────────────────
-   BADGE INIT — dipanggil saat login (Bug #3 fix)
+   AUTO-RECORD FINANCE — insert ke finance_transactions
+   Dipanggil setiap kali order status → 'selesai'
+   Cek duplikat via reference = 'order:<id>'
+───────────────────────────────────────────────────── */
+async function _recordFinanceTx(order) {
+  const sb = getSb();
+  if (!sb) return;
+  if (!order || !order.total_price || Number(order.total_price) <= 0) return;
+
+  const ref = 'order:' + order.id;
+
+  // Cek apakah sudah pernah di-record (hindari duplikat)
+  const { data: existing } = await sb
+    .from('finance_transactions')
+    .select('id')
+    .eq('reference', ref)
+    .maybeSingle();
+
+  if (existing) return; // sudah ada, skip
+
+  const adminName = order.wa_admin_name
+    || order.completed_by_name
+    || (window.currentUser ? (window.currentUser.user_metadata?.full_name || window.currentUser.email) : 'admin');
+
+  // Tentukan kategori: gem → 'gem', sisanya → 'shop'
+  const itemNameLower = (order.item_name || order.item || '').toLowerCase();
+  const category = itemNameLower.includes('gem') ? 'gem' : 'shop';
+
+  const payload = {
+    type:        'income',
+    category:    category,
+    amount:      Number(order.total_price),
+    note:        'Order: ' + (order.item_name || order.item || '?'),
+    reference:   ref,
+    recorded_by: adminName,
+    created_at:  order.completed_at || new Date().toISOString(),
+  };
+
+  const { error } = await sb.from('finance_transactions').insert([payload]);
+  if (error) {
+    console.warn('[Finance] Gagal insert transaksi otomatis:', error.message);
+    showToast('⚠️ Order selesai tapi gagal catat ke keuangan: ' + error.message, 'error');
+  } else {
+    console.log('[Finance] Transaksi otomatis dicatat:', ref);
+  }
+}
+
+/* ─────────────────────────────────────────────────────
+   BADGE INIT
 ───────────────────────────────────────────────────── */
 window.ordersInitBadge = async function () {
   const sb = getSb();
@@ -121,7 +169,7 @@ window.ordersLoad = async function () {
 };
 
 /* ─────────────────────────────────────────────────────
-   REALTIME SUBSCRIBE — auto-refresh pesanan masuk
+   REALTIME SUBSCRIBE
 ───────────────────────────────────────────────────── */
 let _ordersChannel = null;
 
@@ -151,33 +199,57 @@ window.ordersSubscribe = function () {
 };
 
 /* ─────────────────────────────────────────────────────
-   MARK DONE
+   MARK DONE — + AUTO-RECORD KE FINANCE
 ───────────────────────────────────────────────────── */
 window.orderMarkDone = async function (id) {
   const sb = getSb();
   if (!sb) return;
   const user = window.currentUser;
 
-  const { data: existingOrder } = await sb.from('orders').select('wa_admin_name').eq('id', id).single();
+  // Ambil data order lengkap (butuh total_price, item_name, dll untuk finance)
+  const { data: existingOrder, error: fetchErr } = await sb
+    .from('orders')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (fetchErr || !existingOrder) {
+    showToast('Gagal ambil data order.', 'error');
+    return;
+  }
+
+  const completedAt   = new Date().toISOString();
+  const completedBy   = existingOrder.wa_admin_name
+    || (user ? (user.user_metadata?.full_name || user.email || 'admin') : 'admin');
 
   const { error } = await sb.from('orders').update({
-    status: 'selesai',
-    completed_at: new Date().toISOString(),
+    status:               'selesai',
+    completed_at:         completedAt,
     completed_by_user_id: user ? user.id : null,
-    completed_by_name: existingOrder?.wa_admin_name
-      || (user ? (user.user_metadata?.full_name || user.email || 'admin') : 'admin'),
+    completed_by_name:    completedBy,
   }).eq('id', id);
 
   if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
 
+  // ✅ AUTO-RECORD KE FINANCE TRANSACTIONS
+  await _recordFinanceTx({ ...existingOrder, completed_at: completedAt, completed_by_name: completedBy });
+
   const card = document.getElementById(`ocard-${id}`);
   if (card) card.remove();
-  showToast('✅ Order selesai!', 'success');
+  showToast('✅ Order selesai & dicatat ke keuangan!', 'success');
   ordersLoad();
   const allSec = document.getElementById('sec-all-orders');
   if (allSec && allSec.classList.contains('active')) window.allOrdersLoad();
-  const finSec = document.getElementById('sec-finance');
-  if (finSec && finSec.classList.contains('active') && typeof window.financeLoad === 'function') window.financeLoad();
+
+  // Refresh finance jika sedang terbuka
+  const finSec = document.getElementById('sec-finance-v2');
+  if (finSec && finSec.classList.contains('active') && typeof window.financeV2Init === 'function') {
+    window.financeV2Init();
+  }
+  const finLegacy = document.getElementById('sec-finance');
+  if (finLegacy && finLegacy.classList.contains('active') && typeof window.financeLoad === 'function') {
+    window.financeLoad();
+  }
 };
 
 /* ─────────────────────────────────────────────────────
@@ -196,7 +268,7 @@ window.orderDelete = async function (id) {
 };
 
 /* ─────────────────────────────────────────────────────
-   SAVE EDIT ORDER
+   SAVE EDIT ORDER — + AUTO-RECORD KE FINANCE jika → selesai
 ───────────────────────────────────────────────────── */
 window.oeditSave = async function () {
   const sb = getSb();
@@ -212,28 +284,56 @@ window.oeditSave = async function () {
   const refund_reason = document.getElementById('oedit-refund-reason')?.value?.trim() || null;
   const user          = window.currentUser;
 
-  // FIX: hanya update item_name — kolom 'item' tidak ada di tabel orders
+  // Ambil status lama sebelum update
+  const { data: prevOrder } = await sb.from('orders').select('*').eq('id', id).single();
+  const prevStatus = prevOrder?.status || '';
+
+  const completedAt = new Date().toISOString();
+  const completedBy = prevOrder?.wa_admin_name
+    || (user ? (user.user_metadata?.full_name || user.email || 'admin') : 'admin');
+
   const updates = {
     item_name: itemName,
     username, qty, unit_price, total_price, customer_note, status
   };
   if (status === 'refund' || status === 'cancelled') updates.refund_reason = refund_reason;
   if (status === 'selesai') {
-    updates.completed_at = new Date().toISOString();
-    updates.completed_by_user_id = user ? user.id : null;
-    const { data: existingOrder } = await sb.from('orders').select('wa_admin_name').eq('id', id).single();
-    updates.completed_by_name = existingOrder?.wa_admin_name
-      || (user ? (user.user_metadata?.full_name || user.email || 'admin') : 'admin');
+    updates.completed_at          = completedAt;
+    updates.completed_by_user_id  = user ? user.id : null;
+    updates.completed_by_name     = completedBy;
   }
+
   const btn = document.getElementById('oedit-save-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
   const { error } = await sb.from('orders').update(updates).eq('id', id);
   if (btn) { btn.disabled = false; btn.textContent = 'Simpan Perubahan'; }
   if (error) { showToast('Gagal simpan: ' + error.message, 'error'); return; }
+
+  // ✅ AUTO-RECORD KE FINANCE jika status berubah ke selesai
+  if (status === 'selesai' && prevStatus !== 'selesai') {
+    await _recordFinanceTx({
+      ...prevOrder,
+      item_name:         itemName,
+      total_price:       total_price,
+      wa_admin_name:     prevOrder?.wa_admin_name,
+      completed_at:      completedAt,
+      completed_by_name: completedBy,
+    });
+  }
+
   oeditClose();
   ordersLoad();
   const allSec = document.getElementById('sec-all-orders');
   if (allSec && allSec.classList.contains('active')) window.allOrdersLoad();
+
+  // Refresh finance jika sedang terbuka
+  if (status === 'selesai' && prevStatus !== 'selesai') {
+    const finSec = document.getElementById('sec-finance-v2');
+    if (finSec && finSec.classList.contains('active') && typeof window.financeV2Init === 'function') {
+      window.financeV2Init();
+    }
+  }
+
   const label = status === 'refund' ? '💸 Refund' : status === 'cancelled' ? '❌ Cancelled' : '✅ Tersimpan';
   showToast(`Order diupdate — ${label}`, 'success');
 };
