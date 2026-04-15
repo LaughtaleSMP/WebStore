@@ -1251,7 +1251,9 @@ function switchAuthTab(tab) {
 
 /* ── Access request stats ── */
 async function loadAccessRequestStats() {
-  if (typeof sb === 'undefined') return;
+  // FIX: ambil instance sb yang valid
+  var sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
+  if (!sb) return;
   for (var i = 0, statuses = ['pending','approved','rejected']; i < statuses.length; i++) {
     var s = statuses[i];
     var res = await sb.from('admin_requests').select('*', { count:'exact', head:true }).eq('status', s);
@@ -1264,6 +1266,12 @@ window.loadAccessRequests = async function() {
   var container = document.getElementById('access-requests-list');
   if (!container) return;
   container.innerHTML = '<div class="empty-state">Memuat data...</div>';
+  // FIX: guard sb agar tidak crash jika koneksi belum siap
+  var sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
+  if (!sb) {
+    container.innerHTML = '<div class="empty-state">Koneksi belum siap, coba refresh halaman.</div>';
+    return;
+  }
   var filterEl = document.getElementById('req-filter-status');
   var filter = filterEl ? filterEl.value : '';
   var query = sb.from('admin_requests').select('*').order('created_at', { ascending: false });
@@ -1315,23 +1323,37 @@ window.fv2SwitchTab = function(tab, btn) {
   if (tab === 'cashflow') financeV2LoadCashflow();
 };
 
-/* ── DOMContentLoaded ── */
-document.addEventListener('DOMContentLoaded', function() {
+/* ── FIX: Tunggu semua defer script selesai via window.load ── */
+window.addEventListener('load', function() {
   var monthEl = document.getElementById('finance-month');
   if (monthEl) {
     var now = new Date();
     monthEl.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   }
+
+  // Override showSection SETELAH semua script defer sudah ter-load
   var _origShowSection = window.showSection;
   window.showSection = function(name, el) {
-    // Destroy finance dulu sebelum pindah ke section lain
-    if (name !== 'finance-v2' && typeof financeV2Destroy === 'function') { financeV2Destroy(); }
-    _origShowSection && _origShowSection(name, el);
-    if (name === 'orders')          { ordersLoad(); ordersSubscribe(); }
-    if (name === 'all-orders')      { window.allOrdersLoad(); }
-    if (name === 'access-requests') { loadAccessRequests(); }
-    if (name === 'finance-v2')      { financeV2Init(); }
+    // Destroy finance v2 dulu sebelum pindah ke section lain
+    if (name !== 'finance-v2' && typeof financeV2Destroy === 'function') {
+      financeV2Destroy();
+    }
+    if (typeof _origShowSection === 'function') _origShowSection(name, el);
+    if (name === 'orders') {
+      if (typeof ordersLoad === 'function') ordersLoad();
+      if (typeof ordersSubscribe === 'function') ordersSubscribe();
+    }
+    if (name === 'all-orders') {
+      if (typeof window.allOrdersLoad === 'function') window.allOrdersLoad();
+    }
+    if (name === 'access-requests') {
+      if (typeof loadAccessRequests === 'function') loadAccessRequests();
+    }
+    if (name === 'finance-v2') {
+      if (typeof financeV2Init === 'function') financeV2Init();
+    }
   };
+
   window.ordersRefresh = function() {
     if (typeof ordersLoad === 'function') ordersLoad();
   };
