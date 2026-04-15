@@ -792,11 +792,11 @@
   };
 
   /* ══════════════════════════════════════════════════════════
-     10. EXPORT EXCEL (XLSX) — SheetJS vanilla (no xlsx-style)
+     10. EXPORT EXCEL — ExcelJS (support warna + border gratis)
      ══════════════════════════════════════════════════════════ */
   window.financeV2Export = async function () {
-    if (typeof XLSX === 'undefined') {
-      _finToast('Library SheetJS belum dimuat. Tambahkan tag <script> SheetJS di index.html', 'error');
+    if (typeof ExcelJS === 'undefined') {
+      _finToast('Library ExcelJS belum dimuat. Tambahkan CDN ExcelJS di index.html', 'error');
       return;
     }
 
@@ -821,280 +821,176 @@
       return new Date(iso).toLocaleString('id-ID', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
     }
 
-    /* ── Hitung ringkasan ── */
     var totalIn = 0, totalOut = 0, totalDon = 0;
-    rows.forEach(function (r) {
+    rows.forEach(function(r) {
       var a = Number(r.amount) || 0;
-      if (r.type === 'income')                           totalIn  += a;
-      if (r.type === 'donation')                         { totalIn += a; totalDon += a; }
-      if (r.type === 'expense' || r.type === 'transfer') totalOut += a;
+      if (r.type === 'income')                              { totalIn  += a; }
+      if (r.type === 'donation')                            { totalIn  += a; totalDon += a; }
+      if (r.type === 'expense' || r.type === 'transfer')    { totalOut += a; }
     });
     var balance = totalIn - totalOut;
 
-    /* ── Helper style ── */
-    function _border(style) {
-      style = style || 'thin';
-      var s = { style: style, color: { rgb: 'B0B8C1' } };
-      return { top: s, bottom: s, left: s, right: s };
-    }
-
-    /* Styles */
-    var ST = {
-      title: {
-        font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } },
-        fill: { fgColor: { rgb: '1E3A5F' } },
-        alignment: { horizontal: 'center', vertical: 'center' }
-      },
-      subtitle: {
-        font: { sz: 10, color: { rgb: 'A0AEC0' } },
-        fill: { fgColor: { rgb: '1E3A5F' } },
-        alignment: { horizontal: 'center', vertical: 'center' }
-      },
-      sectionLabel: {
-        font: { bold: true, sz: 10, color: { rgb: '1E3A5F' } },
-        fill: { fgColor: { rgb: 'DBEAFE' } },
-        border: _border(),
-        alignment: { horizontal: 'left', vertical: 'center' }
-      },
-      summaryKey: {
-        font: { bold: true, sz: 10, color: { rgb: '374151' } },
-        fill: { fgColor: { rgb: 'F0F9FF' } },
-        border: _border(),
-        alignment: { horizontal: 'left', vertical: 'center' }
-      },
-      summaryVal: {
-        font: { sz: 10, color: { rgb: '1D4ED8' } },
-        fill: { fgColor: { rgb: 'EFF6FF' } },
-        border: _border(),
-        alignment: { horizontal: 'right', vertical: 'center' },
-        numFmt: '#,##0'
-      },
-      summaryValGreen: {
-        font: { bold: true, sz: 10, color: { rgb: '15803D' } },
-        fill: { fgColor: { rgb: 'F0FDF4' } },
-        border: _border(),
-        alignment: { horizontal: 'right', vertical: 'center' },
-        numFmt: '#,##0'
-      },
-      summaryValRed: {
-        font: { bold: true, sz: 10, color: { rgb: 'B91C1C' } },
-        fill: { fgColor: { rgb: 'FEF2F2' } },
-        border: _border(),
-        alignment: { horizontal: 'right', vertical: 'center' },
-        numFmt: '#,##0'
-      },
-      thead: {
-        font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
-        fill: { fgColor: { rgb: '1E40AF' } },
-        border: _border('medium'),
-        alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
-      },
-      theadRight: {
-        font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } },
-        fill: { fgColor: { rgb: '1E40AF' } },
-        border: _border('medium'),
-        alignment: { horizontal: 'right', vertical: 'center' }
-      },
-      rowEven: {
-        font: { sz: 10, color: { rgb: '1F2937' } },
-        fill: { fgColor: { rgb: 'F8FAFC' } },
-        border: _border(),
-        alignment: { vertical: 'center', wrapText: false }
-      },
-      rowOdd: {
-        font: { sz: 10, color: { rgb: '1F2937' } },
-        fill: { fgColor: { rgb: 'FFFFFF' } },
-        border: _border(),
-        alignment: { vertical: 'center', wrapText: false }
-      },
-      rowEvenRight: {
-        font: { sz: 10, color: { rgb: '1F2937' } },
-        fill: { fgColor: { rgb: 'F8FAFC' } },
-        border: _border(),
-        alignment: { horizontal: 'right', vertical: 'center' },
-        numFmt: '#,##0'
-      },
-      rowOddRight: {
-        font: { sz: 10, color: { rgb: '1F2937' } },
-        fill: { fgColor: { rgb: 'FFFFFF' } },
-        border: _border(),
-        alignment: { horizontal: 'right', vertical: 'center' },
-        numFmt: '#,##0'
-      },
-      rowEvenCenter: {
-        font: { sz: 10, color: { rgb: '1F2937' } },
-        fill: { fgColor: { rgb: 'F8FAFC' } },
-        border: _border(),
-        alignment: { horizontal: 'center', vertical: 'center' }
-      },
-      rowOddCenter: {
-        font: { sz: 10, color: { rgb: '1F2937' } },
-        fill: { fgColor: { rgb: 'FFFFFF' } },
-        border: _border(),
-        alignment: { horizontal: 'center', vertical: 'center' }
-      },
-      amountIn: {
-        font: { bold: true, sz: 10, color: { rgb: '15803D' } },
-        fill: { fgColor: { rgb: 'F0FDF4' } },
-        border: _border(),
-        alignment: { horizontal: 'right', vertical: 'center' },
-        numFmt: '#,##0'
-      },
-      amountOut: {
-        font: { bold: true, sz: 10, color: { rgb: 'B91C1C' } },
-        fill: { fgColor: { rgb: 'FEF2F2' } },
-        border: _border(),
-        alignment: { horizontal: 'right', vertical: 'center' },
-        numFmt: '#,##0'
-      },
-      empty: { font: { sz: 10 }, fill: { fgColor: { rgb: 'FFFFFF' } } }
-    };
-
-    /* ── Helper cell builder ── */
-    function C(v, s) { return { v: v, s: s, t: (typeof v === 'number' ? 'n' : 's') }; }
-
-    /* ── Build worksheet data (array of arrays) ── */
-    var wsData = [];
-    var merges = [];
-    var R = 0; /* row cursor (0-based) */
-
-    /* Row 0: Judul */
-    wsData.push([
-      C('LAPORAN KEUANGAN LAUGHTALE SMP', ST.title),
-      C('', ST.title), C('', ST.title), C('', ST.title),
-      C('', ST.title), C('', ST.title), C('', ST.title),
-      C('', ST.title), C('', ST.title)
-    ]);
-    merges.push({ s:{r:R,c:0}, e:{r:R,c:8} });
-    R++;
-
-    /* Row 1: Subtitle */
-    var expStr = 'Diekspor: ' + _fmtDate(now.toISOString()) + '   |   Total: ' + rows.length + ' transaksi';
-    wsData.push([
-      C(expStr, ST.subtitle),
-      C('',ST.subtitle), C('',ST.subtitle), C('',ST.subtitle),
-      C('',ST.subtitle), C('',ST.subtitle), C('',ST.subtitle),
-      C('',ST.subtitle), C('',ST.subtitle)
-    ]);
-    merges.push({ s:{r:R,c:0}, e:{r:R,c:8} });
-    R++;
-
-    /* Row 2: kosong */
-    wsData.push([ C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty) ]);
-    R++;
-
-    /* Row 3: Label RINGKASAN */
-    wsData.push([
-      C('RINGKASAN KEUANGAN', ST.sectionLabel),
-      C('',ST.sectionLabel), C('',ST.sectionLabel), C('',ST.sectionLabel),
-      C('',ST.sectionLabel), C('',ST.sectionLabel), C('',ST.sectionLabel),
-      C('',ST.sectionLabel), C('',ST.sectionLabel)
-    ]);
-    merges.push({ s:{r:R,c:0}, e:{r:R,c:8} });
-    R++;
-
-    /* Rows 4-7: Summary data */
-    var summaryItems = [
-      ['Total Pemasukan (termasuk donasi)', totalIn,   ST.summaryValGreen],
-      ['Total Pengeluaran',                 totalOut,  ST.summaryValRed],
-      ['Total Donasi',                      totalDon,  ST.summaryVal],
-      ['Saldo Bersih',                      balance,   balance >= 0 ? ST.summaryValGreen : ST.summaryValRed],
-    ];
-    summaryItems.forEach(function(item) {
-      wsData.push([
-        C(item[0], ST.summaryKey),
-        C('',ST.summaryKey), C('',ST.summaryKey),
-        C(item[1], item[2]),
-        C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty)
-      ]);
-      merges.push({ s:{r:R,c:0}, e:{r:R,c:2} });
-      R++;
+    /* ── Workbook & Sheet ── */
+    var wb = new ExcelJS.Workbook();
+    wb.creator = 'Laughtale SMP Admin Panel';
+    wb.created = now;
+    var ws = wb.addWorksheet('Laporan Keuangan', {
+      views: [{ state: 'frozen', ySplit: 10 }],
+      pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
     });
-
-    /* Row: kosong */
-    wsData.push([ C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty), C('',ST.empty) ]);
-    R++;
-
-    /* Row: Header tabel transaksi */
-    wsData.push([
-      C('No',               ST.thead),
-      C('Tanggal & Waktu',  ST.thead),
-      C('Tipe',             ST.thead),
-      C('Kategori',         ST.thead),
-      C('Nominal (Rp)',     ST.theadRight),
-      C('Catatan',          ST.thead),
-      C('Referensi / Donatur', ST.thead),
-      C('Dicatat Oleh',     ST.thead),
-      C('ID Transaksi',     ST.thead),
-    ]);
-    R++;
-
-    /* Rows: data transaksi */
-    rows.forEach(function (r, i) {
-      var isOut  = r.type === 'expense' || r.type === 'transfer';
-      var isEven = i % 2 === 0;
-      var bBase  = isEven ? ST.rowEven       : ST.rowOdd;
-      var bRight = isEven ? ST.rowEvenRight  : ST.rowOddRight;
-      var bCtr   = isEven ? ST.rowEvenCenter : ST.rowOddCenter;
-      var amtSt  = isOut  ? ST.amountOut     : ST.amountIn;
-      wsData.push([
-        C(i + 1,                                          bCtr),
-        C(_fmtDate(r.created_at),                         bBase),
-        C(TYPE_LABEL[r.type]    || r.type,                bCtr),
-        C(CAT_LABEL[r.category] || r.category || '',      bCtr),
-        C(Number(r.amount) || 0,                          amtSt),
-        C(r.note        || '',                            bBase),
-        C(r.reference   || '',                            bBase),
-        C(r.recorded_by || '',                            bCtr),
-        C(r.id          || '',                            bBase),
-      ]);
-      R++;
-    });
-
-    /* ── Build worksheet ── */
-    var ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!merges'] = merges;
 
     /* ── Column widths ── */
-    ws['!cols'] = [
-      { wch: 5  },  /* No */
-      { wch: 26 },  /* Tanggal */
-      { wch: 14 },  /* Tipe */
-      { wch: 14 },  /* Kategori */
-      { wch: 18 },  /* Nominal */
-      { wch: 32 },  /* Catatan */
-      { wch: 22 },  /* Referensi */
-      { wch: 16 },  /* Dicatat oleh */
-      { wch: 38 },  /* ID */
+    ws.columns = [
+      { width: 5  },
+      { width: 28 },
+      { width: 15 },
+      { width: 15 },
+      { width: 20 },
+      { width: 34 },
+      { width: 24 },
+      { width: 18 },
+      { width: 38 },
     ];
 
-    /* ── Row heights ── */
-    var rowHeights = [];
-    rowHeights[0] = { hpt: 28 }; /* judul */
-    rowHeights[1] = { hpt: 18 }; /* subtitle */
-    ws['!rows'] = rowHeights;
-
-    /* ── Freeze header ── */
-    ws['!freeze'] = { xSplit: 0, ySplit: R - rows.length, topLeftCell: 'A' + (R - rows.length + 1), activeCell: 'A' + (R - rows.length + 1), state: 'frozen' };
-
-    /* ── Workbook ── */
-    var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Laporan Keuangan');
-
-    /* ── Download (pakai XLSX.write bawaan SheetJS, tidak perlu xlsx-style) ── */
-    var dateTag = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
-    var wbout = XLSX.write(wb, { bookType:'xlsx', type:'binary' });
-    function s2ab(s) {
-      var buf = new ArrayBuffer(s.length);
-      var view = new Uint8Array(buf);
-      for (var i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
-      return buf;
+    /* ── Helper border ── */
+    function _border(style) {
+      style = style || 'thin';
+      var b = { style: style, color: { argb: 'FFB0B8C1' } };
+      return { top: b, bottom: b, left: b, right: b };
     }
-    var blob = new Blob([s2ab(wbout)], { type:'application/octet-stream' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+
+    /* ── ROW 1: Judul ── */
+    ws.addRow([]);
+    ws.mergeCells('A1:I1');
+    var titleCell = ws.getCell('A1');
+    titleCell.value     = 'LAPORAN KEUANGAN LAUGHTALE SMP';
+    titleCell.font      = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+    titleCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(1).height = 28;
+
+    /* ── ROW 2: Subtitle ── */
+    ws.addRow([]);
+    ws.mergeCells('A2:I2');
+    var subCell = ws.getCell('A2');
+    subCell.value     = 'Diekspor: ' + _fmtDate(now.toISOString()) + '   |   Total: ' + rows.length + ' transaksi';
+    subCell.font      = { size: 10, color: { argb: 'FFA0AEC0' } };
+    subCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+    subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(2).height = 18;
+
+    /* ── ROW 3: Kosong ── */
+    ws.addRow([]);
+
+    /* ── ROW 4: Label RINGKASAN ── */
+    ws.addRow([]);
+    ws.mergeCells('A4:I4');
+    var secCell = ws.getCell('A4');
+    secCell.value     = 'RINGKASAN KEUANGAN';
+    secCell.font      = { bold: true, size: 10, color: { argb: 'FF1E3A5F' } };
+    secCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
+    secCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    secCell.border    = _border();
+
+    /* ── ROWS 5-8: Summary ── */
+    var summaryItems = [
+      { label: 'Total Pemasukan (termasuk donasi)', val: totalIn,   color: 'FF15803D', bg: 'FFF0FDF4', bold: true },
+      { label: 'Total Pengeluaran',                 val: totalOut,  color: 'FFB91C1C', bg: 'FFFEF2F2', bold: true },
+      { label: 'Total Donasi',                      val: totalDon,  color: 'FF1D4ED8', bg: 'FFEFF6FF', bold: false },
+      { label: 'Saldo Bersih',                      val: balance,   color: balance >= 0 ? 'FF15803D' : 'FFB91C1C', bg: balance >= 0 ? 'FFF0FDF4' : 'FFFEF2F2', bold: true },
+    ];
+    summaryItems.forEach(function(item, i) {
+      ws.addRow([]);
+      var rNum = 5 + i;
+      ws.mergeCells(rNum, 1, rNum, 3);
+      var keyCell = ws.getCell(rNum, 1);
+      keyCell.value     = item.label;
+      keyCell.font      = { bold: true, size: 10, color: { argb: 'FF374151' } };
+      keyCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F9FF' } };
+      keyCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      keyCell.border    = _border();
+
+      var valCell = ws.getCell(rNum, 4);
+      valCell.value      = item.val;
+      valCell.font       = { bold: item.bold, size: 10, color: { argb: item.color } };
+      valCell.fill       = { type: 'pattern', pattern: 'solid', fgColor: { argb: item.bg } };
+      valCell.alignment  = { horizontal: 'right', vertical: 'middle' };
+      valCell.border     = _border();
+      valCell.numFmt     = '#,##0';
+    });
+
+    /* ── ROW 9: Kosong ── */
+    ws.addRow([]);
+
+    /* ── ROW 10: Header tabel ── */
+    var headerRow = ws.addRow([
+      'No', 'Tanggal & Waktu', 'Tipe', 'Kategori',
+      'Nominal (Rp)', 'Catatan', 'Referensi / Donatur',
+      'Dicatat Oleh', 'ID Transaksi'
+    ]);
+    headerRow.height = 20;
+    headerRow.eachCell(function(cell, colNum) {
+      cell.font      = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
+      cell.border    = _border('medium');
+      cell.alignment = {
+        horizontal: (colNum === 5) ? 'right' : 'center',
+        vertical: 'middle',
+        wrapText: true
+      };
+    });
+
+    /* ── ROWS: Data transaksi ── */
+    rows.forEach(function(r, i) {
+      var isOut  = r.type === 'expense' || r.type === 'transfer';
+      var isEven = i % 2 === 0;
+      var bgBase = isEven ? 'FFF8FAFC' : 'FFFFFFFF';
+
+      var dataRow = ws.addRow([
+        i + 1,
+        _fmtDate(r.created_at),
+        TYPE_LABEL[r.type]    || r.type,
+        CAT_LABEL[r.category] || r.category || '',
+        Number(r.amount) || 0,
+        r.note        || '',
+        r.reference   || '',
+        r.recorded_by || '',
+        r.id          || '',
+      ]);
+      dataRow.height = 16;
+
+      dataRow.eachCell(function(cell, colNum) {
+        cell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgBase } };
+        cell.border = _border();
+        cell.font   = { size: 10, color: { argb: 'FF1F2937' } };
+
+        if (colNum === 5) {
+          cell.font      = { bold: true, size: 10, color: { argb: isOut ? 'FFB91C1C' : 'FF15803D' } };
+          cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: isOut ? 'FFFEF2F2' : 'FFF0FDF4' } };
+          cell.numFmt    = '#,##0';
+          cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        } else if (colNum === 1) {
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        } else if (colNum === 3 || colNum === 4 || colNum === 8) {
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        } else {
+          cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        }
+      });
+    });
+
+    /* ── Download ── */
+    var dateTag = now.getFullYear() + '-' +
+      String(now.getMonth()+1).padStart(2,'0') + '-' +
+      String(now.getDate()).padStart(2,'0');
+
+    var buf  = await wb.xlsx.writeBuffer();
+    var blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var a    = document.createElement('a');
+    a.href   = URL.createObjectURL(blob);
     a.download = 'Laporan-Keuangan-LaughtaleSMP-' + dateTag + '.xlsx';
     a.click();
+    URL.revokeObjectURL(a.href);
     _finToast('Export Excel berhasil — ' + rows.length + ' transaksi ✓', 'success');
   };
 
