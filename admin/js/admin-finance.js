@@ -839,17 +839,17 @@
       pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
     });
 
-    /* ── Column widths ── */
+    /* ── Initial column widths (minimum / fallback) ── */
     ws.columns = [
-      { width: 5  },
-      { width: 28 },
-      { width: 15 },
-      { width: 15 },
-      { width: 20 },
-      { width: 34 },
-      { width: 24 },
-      { width: 18 },
-      { width: 38 },
+      { width: 5  },  // No
+      { width: 28 },  // Tanggal
+      { width: 14 },  // Tipe
+      { width: 14 },  // Kategori
+      { width: 20 },  // Nominal
+      { width: 34 },  // Catatan
+      { width: 24 },  // Referensi
+      { width: 18 },  // Dicatat Oleh
+      { width: 38 },  // ID Transaksi
     ];
 
     /* ── Helper border ── */
@@ -977,6 +977,45 @@
           cell.alignment = { horizontal: 'left', vertical: 'middle' };
         }
       });
+    });
+
+    /* ── Auto-fit column widths berdasarkan konten terpanjang ── */
+    var MIN_WIDTH = 8;
+    var MAX_WIDTH = 60;
+    var PADDING   = 4; // karakter padding kiri-kanan
+
+    ws.columns.forEach(function(col, colIdx) {
+      var maxLen = MIN_WIDTH;
+
+      // Scan semua baris di kolom ini
+      ws.eachRow(function(row) {
+        var cell = row.getCell(colIdx + 1);
+        if (!cell || cell.isMerged) return;
+
+        var val = cell.value;
+        var len = 0;
+
+        if (val === null || val === undefined) {
+          len = 0;
+        } else if (typeof val === 'number') {
+          // Format angka dengan pemisah ribuan untuk estimasi lebar
+          len = val.toLocaleString('id-ID').length + 2;
+        } else if (val instanceof Date) {
+          len = 20;
+        } else if (typeof val === 'object' && val.richText) {
+          len = val.richText.map(function(rt) { return (rt.text || '').length; }).join('').length;
+        } else {
+          len = String(val).length;
+        }
+
+        // Bold text sedikit lebih lebar
+        var isBold = cell.font && cell.font.bold;
+        if (isBold) len = Math.ceil(len * 1.1);
+
+        if (len > maxLen) maxLen = len;
+      });
+
+      col.width = Math.min(maxLen + PADDING, MAX_WIDTH);
     });
 
     /* ── Download ── */
