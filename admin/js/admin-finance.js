@@ -586,31 +586,66 @@
       return;
     }
     var totalPages = Math.ceil(_allRows.length / _pgSize);
-    var start = (_pgCurrent - 1) * _pgSize;
-    var pageRows = _allRows.slice(start, start + _pgSize);
+    var start      = (_pgCurrent - 1) * _pgSize;
+    var pageRows   = _allRows.slice(start, start + _pgSize);
+
     var typeIcon = { income:'▲', expense:'▼', donation:'♦', transfer:'⇄', adjustment:'⚙' };
     var typeLbl  = { income:'Masuk', expense:'Keluar', donation:'Donasi', transfer:'Transfer', adjustment:'Penyesuaian' };
     var typeCls  = { income:'tb-in', expense:'tb-out', donation:'tb-don', transfer:'tb-tr', adjustment:'tb-adj' };
-    var rowsHtml = pageRows.map(function (r) {
+
+    var rowsHtml = pageRows.map(function (r, idx) {
       var isOut = r.type === 'expense' || r.type === 'transfer';
       var dt    = new Date(r.created_at);
       var dtStr = dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-      var icon  = typeIcon[r.type] || '•'; var lbl = typeLbl[r.type] || r.type; var cls = typeCls[r.type] || '';
+      var icon  = typeIcon[r.type] || '•';
+      var lbl   = typeLbl[r.type] || r.type;
+      var cls   = typeCls[r.type] || '';
       var refHtml  = r.reference ? '<div class="fv2-tx-item-sub">ref: ' + _esc(r.reference) + '</div>' : '';
       var noteHtml = r.note      ? '<div class="fv2-tx-item-sub">' + _esc(r.note) + '</div>' : '';
       return '<tr>' +
-        '<td style="white-space:nowrap;font-size:11.5px;color:var(--text-faint)">' + dtStr + '</td>' +
-        '<td><div class="fv2-tx-item-name">' + _esc(r.category || '—') + '</div>' + noteHtml + refHtml + '</td>' +
+        '<td>' + (start + idx + 1) + '</td>' +
+        '<td>' + dtStr + '</td>' +
+        '<td><div class="fv2-tx-item-name">' + _esc(r.note || r.category || '—') + '</div>' + refHtml + '</td>' +
         '<td><span class="fv2-type-badge ' + cls + '">' + icon + ' ' + lbl + '</span></td>' +
         '<td><span class="fv2-cat-badge">' + _esc(r.category || '—') + '</span></td>' +
-        '<td style="text-align:right;font-weight:700;color:' + (isOut ? 'var(--red)' : 'var(--green)') + ';white-space:nowrap">' + (isOut ? '− ' : '+ ') + _fmt(r.amount) + '</td>' +
+        '<td style="color:' + (isOut ? 'var(--red)' : 'var(--green)') + '">' + (isOut ? '− ' : '+ ') + _fmt(r.amount) + '</td>' +
         '<td><button class="fv2-del-btn" onclick="financeV2Delete(\'' + r.id + '\')" title="Hapus">✕</button></td>' +
         '</tr>';
     }).join('');
-    container.innerHTML = '<div class="fv2-table-wrap"><table class="fv2-table"><thead><tr><th>Tanggal</th><th>Keterangan</th><th>Tipe</th><th>Kategori</th><th style="text-align:right">Jumlah</th><th></th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
-    var pgEl = document.getElementById('fv2-pagination'); var pgInfo = document.getElementById('fv2-pg-info');
-    var pgPrev = document.getElementById('fv2-pg-prev'); var pgNext = document.getElementById('fv2-pg-next');
-    if (pgEl) pgEl.style.display = '';
+
+    /* colgroup wajib ada agar table-layout:fixed + col width CSS bekerja */
+    var colgroup = '<colgroup>' +
+      '<col class="col-no">' +
+      '<col class="col-date">' +
+      '<col class="col-desc">' +
+      '<col class="col-type">' +
+      '<col class="col-cat">' +
+      '<col class="col-amount">' +
+      '<col class="col-action">' +
+      '</colgroup>';
+
+    container.innerHTML =
+      '<div class="fv2-table-wrap">' +
+        '<table class="fv2-table">' +
+          colgroup +
+          '<thead><tr>' +
+            '<th>#</th>' +
+            '<th>Tanggal</th>' +
+            '<th>Keterangan</th>' +
+            '<th>Tipe</th>' +
+            '<th>Kategori</th>' +
+            '<th>Jumlah</th>' +
+            '<th></th>' +
+          '</tr></thead>' +
+          '<tbody>' + rowsHtml + '</tbody>' +
+        '</table>' +
+      '</div>';
+
+    var pgEl   = document.getElementById('fv2-pagination');
+    var pgInfo = document.getElementById('fv2-pg-info');
+    var pgPrev = document.getElementById('fv2-pg-prev');
+    var pgNext = document.getElementById('fv2-pg-next');
+    if (pgEl)   pgEl.style.display = '';
     if (pgInfo) pgInfo.textContent = 'Menampilkan ' + (start + 1) + '–' + Math.min(start + _pgSize, _allRows.length) + ' dari ' + _allRows.length + ' transaksi';
     if (pgPrev) pgPrev.disabled = _pgCurrent <= 1;
     if (pgNext) pgNext.disabled = _pgCurrent >= totalPages;
@@ -718,24 +753,49 @@
       if (r.type === 'expense' || r.type === 'transfer') months[m].out += a;
     });
     var keys = Object.keys(months).sort(); var runBal = 0;
-    var rowsHtml = keys.map(function (m) {
+    var rowsHtml = keys.map(function (m, idx) {
       var row = months[m]; var flow = row.in - row.out; runBal += flow;
       var parts = m.split('-');
       var label = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
       return '<tr>' +
         '<td style="font-weight:600">' + label + '</td>' +
-        '<td style="color:var(--green);font-weight:600">' + _fmt(row.in) + '</td>' +
-        '<td style="color:#a78bfa">' + (row.don ? _fmt(row.don) : '—') + '</td>' +
-        '<td style="font-weight:600;color:#f87171">' + _fmt(row.out) + '</td>' +
-        '<td style="font-weight:700;color:' + (flow >= 0 ? 'var(--green)' : '#f87171') + '">' + (flow >= 0 ? '+' : '') + _fmt(flow) + '</td>' +
-        '<td style="font-weight:700;color:' + (runBal >= 0 ? 'var(--green)' : '#f87171') + '">' + _fmt(runBal) + '</td>' +
+        '<td style="color:var(--green);font-weight:600;text-align:right">' + _fmt(row.in) + '</td>' +
+        '<td style="color:#a78bfa;text-align:right">' + (row.don ? _fmt(row.don) : '—') + '</td>' +
+        '<td style="font-weight:600;color:#f87171;text-align:right">' + _fmt(row.out) + '</td>' +
+        '<td style="font-weight:700;color:' + (flow >= 0 ? 'var(--green)' : '#f87171') + ';text-align:right">' + (flow >= 0 ? '+' : '') + _fmt(flow) + '</td>' +
+        '<td style="font-weight:700;color:' + (runBal >= 0 ? 'var(--green)' : '#f87171') + ';text-align:right">' + _fmt(runBal) + '</td>' +
         '</tr>';
     }).join('');
-    container.innerHTML = '<div class="fv2-table-wrap"><table class="fv2-table"><thead><tr><th>Bulan</th><th>Pemasukan</th><th>Donasi</th><th>Pengeluaran</th><th>Cashflow</th><th>Saldo Berjalan</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
+
+    /* colgroup cashflow — 6 kolom */
+    var colgroup = '<colgroup>' +
+      '<col style="width:140px">' +
+      '<col style="width:130px">' +
+      '<col style="width:120px">' +
+      '<col style="width:130px">' +
+      '<col style="width:120px">' +
+      '<col>' +
+      '</colgroup>';
+
+    container.innerHTML =
+      '<div class="fv2-table-wrap">' +
+        '<table class="fv2-table" style="table-layout:fixed">' +
+          colgroup +
+          '<thead><tr>' +
+            '<th>Bulan</th>' +
+            '<th style="text-align:right">Pemasukan</th>' +
+            '<th style="text-align:right">Donasi</th>' +
+            '<th style="text-align:right">Pengeluaran</th>' +
+            '<th style="text-align:right">Cashflow</th>' +
+            '<th style="text-align:right">Saldo Berjalan</th>' +
+          '</tr></thead>' +
+          '<tbody>' + rowsHtml + '</tbody>' +
+        '</table>' +
+      '</div>';
   };
 
   /* ══════════════════════════════════════════════════════════
-     10. EXPORT CSV — PROFESSIONAL (separator titik koma untuk Excel Indonesia)
+     10. EXPORT CSV
      ══════════════════════════════════════════════════════════ */
   window.financeV2Export = async function () {
     _finToast('Menyiapkan laporan...', 'success');
@@ -750,9 +810,28 @@
 
     var rows    = result.data;
     var now     = new Date();
-    var SEP     = ';'; /* Titik koma — standar Excel Indonesia / Windows */
+    var SEP     = ';';
 
-    /* ── Hitung ringkasan ── */
+    function _cell(val) {
+      var s = (val === null || val === undefined) ? '' : String(val);
+      if (s.indexOf(SEP) !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }
+    function _row() {
+      return Array.prototype.slice.call(arguments).map(_cell).join(SEP);
+    }
+
+    var TYPE_LABEL = { income:'Pemasukan', expense:'Pengeluaran', donation:'Donasi', transfer:'Transfer', adjustment:'Penyesuaian' };
+    var CAT_LABEL  = { shop:'Toko', sponsorship:'Sponsorship', event:'Event', misc:'Lainnya', server:'Server', operational:'Operasional', plugin:'Plugin/Tools', content:'Konten', bank:'Bank', ewallet:'E-Wallet', donation:'Donasi', correction:'Koreksi' };
+
+    function _fmtDate(iso) {
+      if (!iso) return '';
+      return new Date(iso).toLocaleString('id-ID', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    }
+    function _fmtNum(n) { return String(Number(n) || 0); }
+
     var totalIn = 0, totalOut = 0, totalDon = 0;
     rows.forEach(function (r) {
       var a = Number(r.amount) || 0;
@@ -762,57 +841,19 @@
     });
     var balance = totalIn - totalOut;
 
-    /* ── Helper: escape cell (bungkus dengan quotes jika perlu) ── */
-    function _cell(val) {
-      var s = (val === null || val === undefined) ? '' : String(val);
-      if (s.indexOf(SEP) !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
-        return '"' + s.replace(/"/g, '""') + '"';
-      }
-      return s;
-    }
-
-    /* ── Helper: join satu baris ── */
-    function _row() {
-      return Array.prototype.slice.call(arguments).map(_cell).join(SEP);
-    }
-
-    /* ── Label tipe & kategori ── */
-    var TYPE_LABEL = { income:'Pemasukan', expense:'Pengeluaran', donation:'Donasi', transfer:'Transfer', adjustment:'Penyesuaian' };
-    var CAT_LABEL  = { shop:'Toko', sponsorship:'Sponsorship', event:'Event', misc:'Lainnya', server:'Server', operational:'Operasional', plugin:'Plugin/Tools', content:'Konten', bank:'Bank', ewallet:'E-Wallet', donation:'Donasi', correction:'Koreksi' };
-
-    /* ── Format tanggal lengkap ── */
-    function _fmtDate(iso) {
-      if (!iso) return '';
-      return new Date(iso).toLocaleString('id-ID', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
-    }
-
-    /* ── Format angka murni (tanpa titik ribuan agar Excel baca sebagai angka) ── */
-    function _fmtNum(n) { return String(Number(n) || 0); }
-
-    /* ══ Susun baris ══ */
     var lines = [];
-
-    /* sep= directive — Excel otomatis kenali separator */
     lines.push('sep=' + SEP);
-
-    /* Blok 1: Judul laporan */
     lines.push(_row('LAPORAN KEUANGAN LAUGHTALE SMP'));
     lines.push(_row('Diekspor pada', _fmtDate(now.toISOString())));
     lines.push(_row('Total Data', rows.length + ' transaksi'));
     lines.push('');
-
-    /* Blok 2: Ringkasan */
     lines.push(_row('RINGKASAN'));
     lines.push(_row('Total Pemasukan (termasuk donasi)', _fmtNum(totalIn)));
     lines.push(_row('Total Pengeluaran', _fmtNum(totalOut)));
     lines.push(_row('Total Donasi', _fmtNum(totalDon)));
     lines.push(_row('Saldo Bersih', _fmtNum(balance)));
     lines.push('');
-
-    /* Blok 3: Header kolom */
     lines.push(_row('No','Tanggal & Waktu','Tipe','Kategori','Nominal (Rp)','Catatan','Referensi / Donatur','Dicatat Oleh','ID Transaksi'));
-
-    /* Blok 4: Data */
     rows.forEach(function (r, i) {
       lines.push(_row(
         i + 1,
@@ -827,7 +868,6 @@
       ));
     });
 
-    /* ── Download dengan BOM UTF-8 ── */
     var csv  = '\uFEFF' + lines.join('\r\n');
     var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     var url  = URL.createObjectURL(blob);
