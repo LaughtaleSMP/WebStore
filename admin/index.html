@@ -1083,6 +1083,119 @@
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   
 <script>
+// ── Laporan Keuangan (sec-finance) ──
+async function financeLoad() {
+  const month = document.getElementById('finance-month').value;
+  if (!month) { alert('Pilih bulan dulu!'); return; }
+  const [year, mon] = month.split('-');
+  const from = `${year}-${mon}-01`;
+  const to   = new Date(year, mon, 0).toISOString().split('T')[0]; // akhir bulan
+
+  await _renderFinanceSection(from, to);
+}
+
+async function financeLoadAll() {
+  await _renderFinanceSection(null, null);
+}
+
+async function _renderFinanceSection(from, to) {
+  const adminTbl  = document.getElementById('finance-admin-table');
+  const itemsTbl  = document.getElementById('finance-items-table');
+  const ordersTbl = document.getElementById('finance-orders-table');
+
+  adminTbl.innerHTML  = '<div class="empty-state">Memuat...</div>';
+  itemsTbl.innerHTML  = '<div class="empty-state">Memuat...</div>';
+  ordersTbl.innerHTML = '<div class="empty-state">Memuat...</div>';
+
+  let q = sb.from('orders').select('*').eq('status', 'selesai');
+  if (from) q = q.gte('completed_at', from).lte('completed_at', to + 'T23:59:59');
+
+  const { data, error } = await q.order('completed_at', { ascending: false });
+  if (error || !data) {
+    adminTbl.innerHTML = '<div class="empty-state">Gagal memuat data.</div>';
+    return;
+  }
+
+  // -- Ringkasan --
+  const total = data.reduce((s, r) => s + (Number(r.total_price) || 0), 0);
+  document.getElementById('finance-total').textContent =
+    'Rp ' + total.toLocaleString('id-ID');
+  document.getElementById('finance-count').textContent = data.length + ' order';
+
+  // -- Performa per Admin --
+  const adminMap = {};
+  data.forEach(r => {
+    const name = r.wa_admin_name || r.completed_by_name || 'Unknown';
+    if (!adminMap[name]) adminMap[name] = { orders: 0, revenue: 0 };
+    adminMap[name].orders++;
+    adminMap[name].revenue += Number(r.total_price) || 0;
+  });
+  const adminEntries = Object.entries(adminMap).sort((a,b) => b[1].revenue - a[1].revenue);
+  adminTbl.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr>
+        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">#</th>
+        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ADMIN</th>
+        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ORDER</th>
+        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">PENDAPATAN</th>
+      </tr></thead>
+      <tbody>${adminEntries.map(([name, d], i) => `
+        <tr>
+          <td style="padding:10px;color:var(--text-faint)">${i+1}</td>
+          <td style="padding:10px;font-weight:600">${name}</td>
+          <td style="padding:10px">${d.orders}</td>
+          <td style="padding:10px;color:var(--success);font-weight:700">Rp ${d.revenue.toLocaleString('id-ID')}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+
+  // -- Item Terlaris --
+  const itemMap = {};
+  data.forEach(r => {
+    const name = r.item_name || r.item_id || '?';
+    if (!itemMap[name]) itemMap[name] = { qty: 0, revenue: 0 };
+    itemMap[name].qty += Number(r.quantity) || 1;
+    itemMap[name].revenue += Number(r.total_price) || 0;
+  });
+  const itemEntries = Object.entries(itemMap).sort((a,b) => b[1].qty - a[1].qty).slice(0, 10);
+  itemsTbl.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr>
+        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ITEM</th>
+        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">QTY</th>
+        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">PENDAPATAN</th>
+      </tr></thead>
+      <tbody>${itemEntries.map(([name, d]) => `
+        <tr>
+          <td style="padding:10px;font-weight:600">${name}</td>
+          <td style="padding:10px">${d.qty}</td>
+          <td style="padding:10px;color:var(--success);font-weight:700">Rp ${d.revenue.toLocaleString('id-ID')}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+
+  // -- Detail Order --
+  ordersTbl.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px;">
+      <thead><tr>
+        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">WAKTU</th>
+        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ITEM</th>
+        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">USERNAME</th>
+        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ADMIN</th>
+        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">TOTAL</th>
+      </tr></thead>
+      <tbody>${data.map(r => `
+        <tr>
+          <td style="padding:9px 10px;color:var(--text-muted)">${new Date(r.completed_at||r.created_at).toLocaleString('id-ID')}</td>
+          <td style="padding:9px 10px;font-weight:500">${r.item_name||r.item_id||'?'}</td>
+          <td style="padding:9px 10px">${r.buyer_username||r.username||'?'}</td>
+          <td style="padding:9px 10px">${r.wa_admin_name||r.completed_by_name||'?'}</td>
+          <td style="padding:9px 10px;color:var(--success);font-weight:700">Rp ${(Number(r.total_price)||0).toLocaleString('id-ID')}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
 /* ── togglePw ── */
 function togglePw(inputId, btn) {
   var inp = document.getElementById(inputId);
