@@ -111,13 +111,29 @@
 .fv2-pie-leg-label { flex: 1; color: var(--text-muted); }
 .fv2-pie-leg-pct   { color: var(--text); font-weight: 700; }
 
+/* ── Charts row B (bar + player online) ── */
+.fv2-charts-row-b {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+@media(max-width:760px) { .fv2-charts-row-b { grid-template-columns: 1fr; } }
+
+/* Inner layout of bar card */
+.fv2-bar-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+@media(max-width:560px) { .fv2-bar-inner { grid-template-columns: 1fr; } }
+
 /* ── Bar chart card (top items) ── */
 .fv2-bar-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
-  margin-bottom: 14px;
   transition: border-color 160ms;
 }
 .fv2-bar-card:hover { border-color: var(--border2); }
@@ -128,6 +144,98 @@
 .fv2-mbar-bg    { flex: 1; background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; }
 .fv2-mbar-fill  { height: 100%; border-radius: 4px; transition: width .5s ease; }
 .fv2-mbar-val   { font-size: 11.5px; font-weight: 700; min-width: 70px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Player Online Card ── */
+.fv2-player-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  transition: border-color 160ms;
+  display: flex;
+  flex-direction: column;
+}
+.fv2-player-card:hover { border-color: var(--border2); }
+
+.fv2-chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.fv2-chart-header-text { flex: 1; }
+.fv2-chart-header-text .fv2-chart-title { margin-bottom: 2px; }
+.fv2-chart-header-text .fv2-chart-sub   { margin-bottom: 0; }
+
+.fv2-player-record-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 160ms;
+  font-family: var(--font, 'Inter', sans-serif);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.fv2-player-record-btn:hover {
+  border-color: rgba(74,143,255,0.4);
+  color: var(--accent);
+  background: var(--accent-muted);
+}
+.fv2-player-record-btn:active { transform: scale(0.97); }
+.fv2-player-record-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+/* Live stat strip */
+.fv2-player-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  margin-bottom: 12px;
+}
+.fv2-player-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex-shrink: 0;
+  transition: background 300ms, box-shadow 300ms;
+}
+.fv2-player-dot.online {
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(52,211,153,0.2);
+  animation: playerDotPulse 2s ease-in-out infinite;
+}
+.fv2-player-dot.offline { background: var(--red); }
+@keyframes playerDotPulse {
+  0%,100% { box-shadow: 0 0 0 3px rgba(52,211,153,0.2); }
+  50%     { box-shadow: 0 0 0 6px rgba(52,211,153,0.04); }
+}
+
+.fv2-player-num {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.fv2-player-label {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
 
 /* ── Action buttons ── */
 .fv2-actions {
@@ -326,6 +434,7 @@
   .fv2-actions { gap: 5px; }
   .fv2-btn { padding: 7px 11px; font-size: 12px; }
   .fv2-pagination { flex-direction: column; gap: 8px; align-items: flex-start; }
+  .fv2-bar-inner { grid-template-columns: 1fr; }
 }
 @media(max-width:380px) {
   .fv2-summary { grid-template-columns: 1fr; }
