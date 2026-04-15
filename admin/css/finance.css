@@ -219,7 +219,7 @@
 .fv2-table-wrap {
   overflow-x: auto;
   border-radius: 12px;
-  isolation: isolate;  /* cegah overlap elemen luar */
+  isolation: isolate;
   border: 1px solid rgba(74,143,255,0.18);
   box-shadow:
     0 0 0 1px rgba(74,143,255,0.06),
@@ -232,13 +232,13 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12.5px;
-  table-layout: fixed; /* Wajib agar column width bekerja */
+  table-layout: fixed;
 }
 
 /* ── Column widths — sesuai konten ── */
 .fv2-table col.col-no      { width: 44px; }
 .fv2-table col.col-date    { width: 108px; }
-.fv2-table col.col-desc    { width: 160px; }  /* min lebar kolom keterangan */
+.fv2-table col.col-desc    { width: 160px; }
 .fv2-table col.col-type    { width: 112px; }
 .fv2-table col.col-cat     { width: 104px; }
 .fv2-table col.col-amount  { width: 130px; }
@@ -429,24 +429,19 @@
 /* ── Responsive ── */
 @media(max-width:640px) {
   .fv2-summary   { grid-template-columns: 1fr 1fr; }
-  /* Sembunyikan kolom Tipe & No di mobile, kolom Keterangan jadi lebih lebar */
-  .fv2-table col.col-no   { width: 0; }
-  .fv2-table col.col-type { width: 0; }
-  .fv2-table col.col-date { width: 88px; }
-  .fv2-table col.col-desc { width: 120px; }
-  .fv2-table col.col-cat  { width: 88px; }
-  .fv2-table col.col-amount { width: 90px; }
-  .fv2-table td:nth-child(1),
-  .fv2-table th:nth-child(1) { display: none; } /* No */
-  .fv2-table td:nth-child(4),
-  .fv2-table th:nth-child(4) { display: none; } /* Tipe */
   .fv2-actions   { gap: 5px; }
   .fv2-btn       { padding: 7px 11px; font-size: 12px; }
   .fv2-pagination { flex-direction: column; gap: 8px; align-items: flex-start; }
   .fv2-bar-inner { grid-template-columns: 1fr; }
-  .fv2-table     { font-size: 11.5px; }
+  /* Mobile: matikan fixed layout, biarkan scroll horizontal alami */
+  .fv2-table {
+    font-size: 11.5px;
+    table-layout: auto;
+    min-width: 500px;
+  }
+  .fv2-table col { width: auto !important; }
   .fv2-table td,
-  .fv2-table th  { padding: 8px 9px; }
+  .fv2-table th  { padding: 8px 9px; white-space: nowrap; }
   .fv2-tx-item-name,
   .fv2-tx-item-sub { max-width: 130px; }
 }
