@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   admin-finance.js  —  Advanced Finance Management
+   admin-finance.js  —  Finance Dashboard V2
    Laughtale SMP Admin Panel
    ═══════════════════════════════════════════════════════════ */
 
@@ -27,11 +27,28 @@
     return new Date().toISOString();
   }
 
+  /* ── Chart instances (destroyed on re-render) ── */
+  var _lineChart = null;
+  var _pieChart  = null;
+  var _barChart  = null;
+
+  /* ── Chart colors ── */
+  var PIE_COLORS = ['#4a8fff','#34d399','#a78bfa','#fbbf24','#f87171','#60a5fa'];
+
+  /* ── Pagination state ── */
+  var _allRows  = [];
+  var _pgSize   = 8;
+  var _pgCurrent = 1;
+
   /* ── Private State ── */
   var _finSub = null;
 
   /* ── Internal: Toast ── */
   function _finToast(msg, type) {
+    if (typeof window.showAdminToast === 'function') {
+      window.showAdminToast(msg, type || 'success');
+      return;
+    }
     var t = document.getElementById('toast');
     if (!t) return;
     t.textContent = msg;
@@ -55,13 +72,46 @@
     el.className = 'fv2-sum-val' + (cls ? ' ' + cls : '');
   }
 
+  /* ── Period → date range ── */
+  function _periodRange(period) {
+    var now = new Date();
+    var from = null;
+    var prevFrom = null;
+    var prevTo = null;
+
+    if (period === 'today') {
+      from = _today() + 'T00:00:00';
+      var y = new Date(now); y.setDate(y.getDate() - 1);
+      prevFrom = y.toISOString().split('T')[0] + 'T00:00:00';
+      prevTo   = _today() + 'T00:00:00';
+    } else if (period === 'week' || period === '7d') {
+      var d = new Date(now); d.setDate(d.getDate() - 6);
+      from = d.toISOString().split('T')[0] + 'T00:00:00';
+      var pd = new Date(d); pd.setDate(pd.getDate() - 7);
+      prevFrom = pd.toISOString().split('T')[0] + 'T00:00:00';
+      prevTo   = d.toISOString().split('T')[0] + 'T00:00:00';
+    } else if (period === 'month' || period === '30d') {
+      from = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01T00:00:00';
+      var pm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      prevFrom = pm.getFullYear() + '-' + String(pm.getMonth() + 1).padStart(2, '0') + '-01T00:00:00';
+      prevTo   = from;
+    } else if (period === 'year') {
+      from = now.getFullYear() + '-01-01T00:00:00';
+      prevFrom = (now.getFullYear() - 1) + '-01-01T00:00:00';
+      prevTo   = from;
+    }
+    return { from: from, prevFrom: prevFrom, prevTo: prevTo };
+  }
+
   /* ══════════════════════════════════════════════════════════
      1. INIT / DESTROY
      ══════════════════════════════════════════════════════════ */
   window.financeV2Init = async function () {
+    var period = (document.getElementById('fv2-period') || {}).value || 'month';
     await Promise.all([
-      window.financeV2LoadSummary(),
-      window.financeV2LoadList()
+      window.financeV2LoadSummary(period),
+      window.financeV2LoadList(),
+      _loadCharts(period),
     ]);
     _finSubscribeRealtime();
   };
@@ -71,55 +121,316 @@
       try { _finSub.unsubscribe(); } catch (e) { /* noop */ }
       _finSub = null;
     }
+    [_lineChart, _pieChart, _barChart].forEach(function (c) {
+      if (c) { try { c.destroy(); } catch (e) {} }
+    });
+    _lineChart = _pieChart = _barChart = null;
   };
 
   /* ══════════════════════════════════════════════════════════
-     2. SUMMARY CARDS
+     2. SUMMARY CARDS (with delta vs previous period)
      ══════════════════════════════════════════════════════════ */
   window.financeV2LoadSummary = async function (period) {
     period = period || (document.getElementById('fv2-period') && document.getElementById('fv2-period').value) || 'month';
-    var now = new Date();
-    var from = null;
+    var range = _periodRange(period);
 
-    if (period === 'today') {
-      from = _today() + 'T00:00:00';
-    } else if (period === 'week') {
-      var d = new Date(now);
-      d.setDate(d.getDate() - 6);
-      from = d.toISOString().split('T')[0] + 'T00:00:00';
-    } else if (period === 'month') {
-      from = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01T00:00:00';
-    } else if (period === 'year') {
-      from = now.getFullYear() + '-01-01T00:00:00';
+    /* Current period query */
+    var q = sb.from('finance_transactions').select('type,amount');
+    if (range.from) q = q.gte('created_at', range.from);
+    var result = await q;
+
+    /* Previous period query for delta */
+    var prevResult = { data: [] };
+    if (range.prevFrom) {
+      var pq = sb.from('finance_transactions').select('type,amount')
+        .gte('created_at', range.prevFrom);
+      if (range.prevTo) pq = pq.lt('created_at', range.prevTo);
+      prevResult = await pq;
     }
 
-    var q = sb.from('finance_transactions').select('type,amount');
-    if (from) q = q.gte('created_at', from);
-
-    var result = await q;
     if (result.error) {
       console.warn('[Finance] summary error:', result.error.message);
       _finShowTableError();
       return;
     }
 
-    var totalIn = 0, totalOut = 0, totalDon = 0;
-    (result.data || []).forEach(function (r) {
-      var a = Number(r.amount) || 0;
-      if (r.type === 'income')                              totalIn  += a;
-      if (r.type === 'expense' || r.type === 'transfer')    totalOut += a;
-      if (r.type === 'donation')                            { totalIn += a; totalDon += a; }
-    });
-    var balance = totalIn - totalOut;
+    function _agg(rows) {
+      var totalIn = 0, totalOut = 0, totalDon = 0;
+      (rows || []).forEach(function (r) {
+        var a = Number(r.amount) || 0;
+        if (r.type === 'income')                              totalIn  += a;
+        if (r.type === 'expense' || r.type === 'transfer')    totalOut += a;
+        if (r.type === 'donation') { totalIn += a; totalDon += a; }
+      });
+      return { in: totalIn, out: totalOut, don: totalDon, bal: totalIn - totalOut };
+    }
 
-    _setSum('fv2-sum-in',  _fmtShort(totalIn));
-    _setSum('fv2-sum-out', _fmtShort(totalOut));
-    _setSum('fv2-sum-don', _fmtShort(totalDon));
-    _setSum('fv2-sum-bal', _fmtShort(balance), balance >= 0 ? 'pos' : 'neg');
+    var cur  = _agg(result.data);
+    var prev = _agg(prevResult.data || []);
+
+    function _delta(cur, prev) {
+      if (!prev || prev === 0) return null;
+      return Math.round(((cur - prev) / prev) * 100);
+    }
+
+    function _renderDelta(id, cur, prev) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var pct = _delta(cur, prev);
+      if (pct === null) { el.innerHTML = '<span style="color:var(--text-faint)">—</span>'; return; }
+      if (pct > 0) {
+        el.innerHTML = '<span class="up">▲ ' + pct + '%</span> vs periode lalu';
+      } else if (pct < 0) {
+        el.innerHTML = '<span class="dn">▼ ' + Math.abs(pct) + '%</span> vs periode lalu';
+      } else {
+        el.innerHTML = '<span style="color:var(--text-faint)">± 0%</span> vs periode lalu';
+      }
+    }
+
+    _setSum('fv2-sum-in',  _fmtShort(cur.in));
+    _setSum('fv2-sum-out', _fmtShort(cur.out));
+    _setSum('fv2-sum-don', _fmtShort(cur.don));
+    _setSum('fv2-sum-bal', _fmtShort(cur.bal), cur.bal >= 0 ? 'pos' : 'neg');
+
+    _renderDelta('fv2-delta-in',  cur.in,  prev.in);
+    _renderDelta('fv2-delta-out', cur.out, prev.out);
+    _renderDelta('fv2-delta-don', cur.don, prev.don);
+
+    var totalTx = (result.data || []).length;
+    var balEl = document.getElementById('fv2-delta-bal');
+    if (balEl) balEl.innerHTML = 'Total transaksi: <strong>' + totalTx + '</strong>';
   };
 
   /* ══════════════════════════════════════════════════════════
-     3. TRANSACTION LIST
+     3. CHARTS
+     ══════════════════════════════════════════════════════════ */
+  async function _loadCharts(period) {
+    if (typeof Chart === 'undefined') return; /* Chart.js not loaded yet */
+
+    var range = _periodRange(period);
+    var q = sb.from('finance_transactions').select('type,amount,category,created_at');
+    if (range.from) q = q.gte('created_at', range.from);
+    q = q.order('created_at', { ascending: true });
+    var result = await q;
+    if (result.error) return;
+
+    var rows = result.data || [];
+    _buildLineChart(rows, period);
+    _buildPieChart(rows);
+    _buildBarChart(rows);
+  }
+
+  /* Line chart — income over time grouped by day/week/month */
+  function _buildLineChart(rows, period) {
+    var groupFn;
+    if (period === 'year') {
+      groupFn = function (iso) { return iso.slice(0, 7); }; /* YYYY-MM */
+    } else {
+      groupFn = function (iso) { return iso.slice(0, 10); }; /* YYYY-MM-DD */
+    }
+
+    var incMap  = {};
+    var expMap  = {};
+    rows.forEach(function (r) {
+      var key = groupFn(r.created_at);
+      if (r.type === 'income' || r.type === 'donation') {
+        incMap[key] = (incMap[key] || 0) + (Number(r.amount) || 0);
+      } else if (r.type === 'expense' || r.type === 'transfer') {
+        expMap[key] = (expMap[key] || 0) + (Number(r.amount) || 0);
+      }
+    });
+
+    var labels = Array.from(new Set(Object.keys(incMap).concat(Object.keys(expMap)))).sort();
+    if (!labels.length) {
+      /* Generate placeholder labels */
+      var now = new Date();
+      for (var i = 6; i >= 0; i--) {
+        var d = new Date(now); d.setDate(d.getDate() - i);
+        labels.push(d.toISOString().slice(0, 10));
+      }
+    }
+
+    var incData = labels.map(function (l) { return incMap[l] || 0; });
+    var expData = labels.map(function (l) { return expMap[l] || 0; });
+
+    /* Format labels for display */
+    var dispLabels = labels.map(function (l) {
+      if (l.length === 7) {
+        var parts = l.split('-');
+        var months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+        return months[parseInt(parts[1]) - 1] + ' ' + parts[0];
+      }
+      var parts = l.split('-');
+      return parts[2] + '/' + parts[1];
+    });
+
+    var canvas = document.getElementById('fv2-line-chart');
+    if (!canvas) return;
+    if (_lineChart) { _lineChart.destroy(); _lineChart = null; }
+
+    _lineChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: dispLabels,
+        datasets: [
+          {
+            label: 'Pemasukan',
+            data: incData,
+            borderColor: '#34d399',
+            backgroundColor: 'rgba(52,211,153,0.1)',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointBackgroundColor: '#34d399',
+            tension: 0.4,
+            fill: true,
+          },
+          {
+            label: 'Pengeluaran',
+            data: expData,
+            borderColor: '#f87171',
+            backgroundColor: 'rgba(248,113,113,0.06)',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointBackgroundColor: '#f87171',
+            tension: 0.4,
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                return ' ' + ctx.dataset.label + ': ' + _fmt(ctx.parsed.y);
+              },
+            },
+          },
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 } }, border: { color: 'rgba(255,255,255,0.06)' } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 }, callback: function (v) { return _fmtShort(v); } }, border: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true },
+        },
+      },
+    });
+  }
+
+  /* Pie chart — by category */
+  function _buildPieChart(rows) {
+    var catMap = {};
+    rows.forEach(function (r) {
+      if (r.type !== 'income' && r.type !== 'donation') return;
+      var cat = r.category || 'misc';
+      catMap[cat] = (catMap[cat] || 0) + (Number(r.amount) || 0);
+    });
+
+    var entries = Object.entries(catMap).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 6);
+    if (!entries.length) entries = [['(belum ada)', 1]];
+
+    var total = entries.reduce(function (s, e) { return s + e[1]; }, 0);
+    var labels = entries.map(function (e) { return e[0]; });
+    var vals   = entries.map(function (e) { return e[1]; });
+    var colors = entries.map(function (_, i) { return PIE_COLORS[i % PIE_COLORS.length]; });
+
+    var canvas = document.getElementById('fv2-pie-chart');
+    if (!canvas) return;
+    if (_pieChart) { _pieChart.destroy(); _pieChart = null; }
+
+    _pieChart = new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{ data: vals, backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '68%',
+        plugins: { legend: { display: false } },
+      },
+    });
+
+    /* Render legend */
+    var legendEl = document.getElementById('fv2-pie-legend');
+    if (legendEl) {
+      legendEl.innerHTML = entries.map(function (e, i) {
+        var pct = total > 0 ? Math.round((e[1] / total) * 100) : 0;
+        return '<div class="fv2-pie-leg-row">' +
+          '<span class="fv2-pie-leg-dot" style="background:' + colors[i] + '"></span>' +
+          '<span class="fv2-pie-leg-label">' + _esc(e[0]) + '</span>' +
+          '<span class="fv2-pie-leg-pct">' + pct + '%</span>' +
+          '</div>';
+      }).join('');
+    }
+  }
+
+  /* Bar chart — top categories by income amount */
+  function _buildBarChart(rows) {
+    var catMap = {};
+    rows.forEach(function (r) {
+      if (r.type !== 'income' && r.type !== 'donation') return;
+      var cat = r.category || 'misc';
+      catMap[cat] = (catMap[cat] || 0) + (Number(r.amount) || 0);
+    });
+
+    var entries = Object.entries(catMap).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 6);
+    if (!entries.length) entries = [['(belum ada)', 0]];
+
+    var max = entries[0][1] || 1;
+    var barColors = entries.map(function (_, i) {
+      var palette = ['rgba(74,143,255,0.75)','rgba(52,211,153,0.75)','rgba(167,139,250,0.75)','rgba(251,191,36,0.75)','rgba(248,113,113,0.75)','rgba(96,165,250,0.75)'];
+      return palette[i % palette.length];
+    });
+
+    var canvas = document.getElementById('fv2-bar-chart');
+    if (!canvas) return;
+    if (_barChart) { _barChart.destroy(); _barChart = null; }
+
+    _barChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: entries.map(function (e) { return e[0]; }),
+        datasets: [{
+          label: 'Pemasukan',
+          data: entries.map(function (e) { return e[1]; }),
+          backgroundColor: barColors,
+          borderRadius: 5,
+          borderSkipped: false,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function (ctx) { return ' ' + _fmt(ctx.parsed.y); } } },
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 } }, border: { color: 'rgba(255,255,255,0.06)' } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 }, callback: function (v) { return _fmtShort(v); } }, border: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true },
+        },
+      },
+    });
+
+    /* Render mini stat bars */
+    var barsEl = document.getElementById('fv2-mini-bars');
+    if (barsEl) {
+      barsEl.innerHTML = entries.slice(0, 5).map(function (e, i) {
+        var w = max > 0 ? Math.round((e[1] / max) * 100) : 0;
+        return '<div class="fv2-mbar-wrap">' +
+          '<span class="fv2-mbar-label">' + _esc(e[0]) + '</span>' +
+          '<div class="fv2-mbar-bg"><div class="fv2-mbar-fill" style="width:' + w + '%;background:' + barColors[i] + '"></div></div>' +
+          '<span class="fv2-mbar-val" style="color:' + barColors[i].replace('0.75','1') + '">' + _fmtShort(e[1]) + '</span>' +
+          '</div>';
+      }).join('');
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     4. TRANSACTION LIST (with pagination)
      ══════════════════════════════════════════════════════════ */
   window.financeV2LoadList = async function () {
     var container = document.getElementById('fv2-list');
@@ -135,7 +446,7 @@
     var q = sb.from('finance_transactions')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(200);
+      .limit(500);
 
     if (typeF) q = q.eq('type', typeF);
     if (catF)  q = q.eq('category', catF);
@@ -159,38 +470,52 @@
       });
     }
 
-    if (!rows.length) {
+    _allRows   = rows;
+    _pgCurrent = 1;
+    _renderPage();
+  };
+
+  function _renderPage() {
+    var container = document.getElementById('fv2-list');
+    if (!container) return;
+
+    if (!_allRows.length) {
       container.innerHTML = '<div class="empty-state">Tidak ada transaksi ditemukan.</div>';
+      var pgEl = document.getElementById('fv2-pagination');
+      if (pgEl) pgEl.style.display = 'none';
       return;
     }
 
-    var typeIcon  = { income: '💰', expense: '💸', donation: '🎁', transfer: '🔄', adjustment: '⚙️' };
-    var typeColor = { income: 'var(--green)', expense: '#f87171', donation: '#a78bfa', transfer: '#60a5fa', adjustment: '#fbbf24' };
-    var typeLbl   = { income: 'Pemasukan', expense: 'Pengeluaran', donation: 'Donasi', transfer: 'Transfer', adjustment: 'Penyesuaian' };
+    var totalPages = Math.ceil(_allRows.length / _pgSize);
+    var start = (_pgCurrent - 1) * _pgSize;
+    var pageRows = _allRows.slice(start, start + _pgSize);
 
-    var rowsHtml = rows.map(function (r) {
+    var typeIcon = { income:'▲', expense:'▼', donation:'♦', transfer:'⇄', adjustment:'⚙' };
+    var typeLbl  = { income:'Masuk', expense:'Keluar', donation:'Donasi', transfer:'Transfer', adjustment:'Penyesuaian' };
+    var typeCls  = { income:'tb-in', expense:'tb-out', donation:'tb-don', transfer:'tb-tr', adjustment:'tb-adj' };
+
+    var rowsHtml = pageRows.map(function (r) {
       var isOut  = r.type === 'expense' || r.type === 'transfer';
       var dt     = new Date(r.created_at);
-      var dtStr  = dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) +
-                   ' ' + dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-      var color  = typeColor[r.type] || '#888';
+      var dtStr  = dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+      var icon   = typeIcon[r.type] || '•';
+      var lbl    = typeLbl[r.type]  || r.type;
+      var cls    = typeCls[r.type]  || '';
       var refHtml = r.reference
-        ? '<br><span style="font-size:11px;color:var(--text-faint)">ref: ' + _esc(r.reference) + '</span>'
+        ? '<div class="fv2-tx-item-sub">ref: ' + _esc(r.reference) + '</div>'
+        : '';
+      var noteHtml = r.note
+        ? '<div class="fv2-tx-item-sub">' + _esc(r.note) + '</div>'
         : '';
       return '<tr>' +
-        '<td style="white-space:nowrap;font-size:12px;color:var(--text-faint)">' + dtStr + '</td>' +
-        '<td><span class="fv2-type-badge" style="color:' + color + ';background:' + color + '22">' +
-          (typeIcon[r.type] || '•') + ' ' + (typeLbl[r.type] || r.type) + '</span></td>' +
-        '<td><span class="fv2-cat-badge">' + _esc(r.category) + '</span></td>' +
-        '<td style="font-weight:700;color:' + (isOut ? '#f87171' : 'var(--green)') + ';white-space:nowrap">' +
-          (isOut ? '-' : '+') + ' ' + _fmt(r.amount) + '</td>' +
-        '<td style="font-size:12.5px;max-width:260px">' + _esc(r.note || '—') + refHtml + '</td>' +
-        '<td style="font-size:12px;color:var(--text-faint)">' + _esc(r.recorded_by || '—') + '</td>' +
-        '<td><button class="fv2-del-btn" onclick="financeV2Delete(\'' + r.id + '\')" title="Hapus">' +
-          '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">' +
-          '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>' +
-          '<path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>' +
-          '</svg></button></td>' +
+        '<td style="white-space:nowrap;font-size:11.5px;color:var(--text-faint)">' + dtStr + '</td>' +
+        '<td><div class="fv2-tx-item-name">' + _esc(r.category || '—') + '</div>' + noteHtml + refHtml + '</td>' +
+        '<td><span class="fv2-type-badge ' + cls + '">' + icon + ' ' + lbl + '</span></td>' +
+        '<td><span class="fv2-cat-badge">' + _esc(r.category || '—') + '</span></td>' +
+        '<td style="text-align:right;font-weight:700;color:' + (isOut ? 'var(--red)' : 'var(--green)') + ';white-space:nowrap">' +
+          (isOut ? '− ' : '+ ') + _fmt(r.amount) +
+        '</td>' +
+        '<td><button class="fv2-del-btn" onclick="financeV2Delete(\'' + r.id + '\')" title="Hapus">✕</button></td>' +
         '</tr>';
     }).join('');
 
@@ -198,16 +523,35 @@
       '<div class="fv2-table-wrap">' +
         '<table class="fv2-table">' +
           '<thead><tr>' +
-            '<th>Tanggal</th><th>Tipe</th><th>Kategori</th>' +
-            '<th>Nominal</th><th>Catatan / Referensi</th><th>Oleh</th><th></th>' +
+            '<th>Tanggal</th><th>Keterangan</th><th>Tipe</th><th>Kategori</th>' +
+            '<th style="text-align:right">Jumlah</th><th></th>' +
           '</tr></thead>' +
           '<tbody>' + rowsHtml + '</tbody>' +
         '</table>' +
       '</div>';
+
+    /* Pagination */
+    var pgEl = document.getElementById('fv2-pagination');
+    var pgInfo = document.getElementById('fv2-pg-info');
+    var pgPrev = document.getElementById('fv2-pg-prev');
+    var pgNext = document.getElementById('fv2-pg-next');
+
+    if (pgEl) pgEl.style.display = '';
+    if (pgInfo) pgInfo.textContent = 'Menampilkan ' + (start + 1) + '–' + Math.min(start + _pgSize, _allRows.length) + ' dari ' + _allRows.length + ' transaksi';
+    if (pgPrev) pgPrev.disabled = _pgCurrent <= 1;
+    if (pgNext) pgNext.disabled = _pgCurrent >= totalPages;
+  }
+
+  window.financeV2PgPrev = function () {
+    if (_pgCurrent > 1) { _pgCurrent--; _renderPage(); }
+  };
+  window.financeV2PgNext = function () {
+    var totalPages = Math.ceil(_allRows.length / _pgSize);
+    if (_pgCurrent < totalPages) { _pgCurrent++; _renderPage(); }
   };
 
   /* ══════════════════════════════════════════════════════════
-     4. SHOW FORM MODAL
+     5. SHOW FORM MODAL
      ══════════════════════════════════════════════════════════ */
   window.financeV2ShowForm = function (type) {
     var modal    = document.getElementById('fv2-modal');
@@ -264,7 +608,7 @@
   };
 
   /* ══════════════════════════════════════════════════════════
-     5. SUBMIT TRANSACTION
+     6. SUBMIT TRANSACTION
      ══════════════════════════════════════════════════════════ */
   window.financeV2Submit = async function () {
     var btn      = document.getElementById('fv2-submit-btn');
@@ -307,11 +651,17 @@
 
     _finToast('Transaksi berhasil dicatat ✓', 'success');
     window.financeV2CloseModal();
-    await Promise.all([window.financeV2LoadSummary(), window.financeV2LoadList()]);
+
+    var period = (document.getElementById('fv2-period') || {}).value || 'month';
+    await Promise.all([
+      window.financeV2LoadSummary(period),
+      window.financeV2LoadList(),
+      _loadCharts(period),
+    ]);
   };
 
   /* ══════════════════════════════════════════════════════════
-     6. DELETE
+     7. DELETE
      ══════════════════════════════════════════════════════════ */
   window.financeV2Delete = async function (id) {
     if (!confirm('Hapus transaksi ini?')) return;
@@ -321,11 +671,16 @@
       return;
     }
     _finToast('Dihapus.', 'success');
-    await Promise.all([window.financeV2LoadSummary(), window.financeV2LoadList()]);
+    var period = (document.getElementById('fv2-period') || {}).value || 'month';
+    await Promise.all([
+      window.financeV2LoadSummary(period),
+      window.financeV2LoadList(),
+      _loadCharts(period),
+    ]);
   };
 
   /* ══════════════════════════════════════════════════════════
-     7. REALTIME  — pakai object config baru (non-deprecated)
+     8. REALTIME
      ══════════════════════════════════════════════════════════ */
   function _finSubscribeRealtime() {
     if (_finSub) return;
@@ -336,13 +691,16 @@
           'postgres_changes',
           { event: '*', schema: 'public', table: 'finance_transactions' },
           function () {
-            Promise.all([window.financeV2LoadSummary(), window.financeV2LoadList()]);
+            var period = (document.getElementById('fv2-period') || {}).value || 'month';
+            Promise.all([
+              window.financeV2LoadSummary(period),
+              window.financeV2LoadList(),
+              _loadCharts(period),
+            ]);
           }
         )
         .subscribe(function (status) {
-          if (status === 'SUBSCRIBED') {
-            console.log('[Finance RT] realtime connected');
-          }
+          if (status === 'SUBSCRIBED') console.log('[Finance RT] realtime connected');
         });
     } catch (e) {
       console.warn('[Finance RT]', e);
@@ -350,7 +708,7 @@
   }
 
   /* ══════════════════════════════════════════════════════════
-     8. CASHFLOW MONTHLY REPORT
+     9. CASHFLOW MONTHLY REPORT
      ══════════════════════════════════════════════════════════ */
   window.financeV2LoadCashflow = async function () {
     var container = document.getElementById('fv2-cashflow');
@@ -390,10 +748,10 @@
       var label = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1)
         .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
       return '<tr>' +
-        '<td style="font-weight:600">'                                             + label          + '</td>' +
-        '<td style="color:var(--green);font-weight:600">'                          + _fmt(row.in)   + '</td>' +
-        '<td style="color:#a78bfa">'  + (row.don ? _fmt(row.don) : '—')           + '</td>' +
-        '<td style="color:#f87171;font-weight:600">'                               + _fmt(row.out)  + '</td>' +
+        '<td style="font-weight:600">'                                              + label         + '</td>' +
+        '<td style="color:var(--green);font-weight:600">'                           + _fmt(row.in)  + '</td>' +
+        '<td style="color:#a78bfa">'  + (row.don ? _fmt(row.don) : '—')            + '</td>' +
+        '<td style="color:#f87171;font-weight:600">'                                + _fmt(row.out) + '</td>' +
         '<td style="font-weight:700;color:' + (flow   >= 0 ? 'var(--green)' : '#f87171') + '">' +
           (flow >= 0 ? '+' : '') + _fmt(flow)   + '</td>' +
         '<td style="font-weight:700;color:' + (runBal >= 0 ? 'var(--green)' : '#f87171') + '">' +
@@ -414,7 +772,7 @@
   };
 
   /* ══════════════════════════════════════════════════════════
-     9. EXPORT CSV
+     10. EXPORT CSV
      ══════════════════════════════════════════════════════════ */
   window.financeV2Export = async function () {
     var result = await sb.from('finance_transactions')
@@ -449,7 +807,7 @@
   };
 
   /* ══════════════════════════════════════════════════════════
-     10. SETUP DB HELPER
+     11. SETUP DB HELPER
      ══════════════════════════════════════════════════════════ */
   window.financeV2SetupDB = function () {
     var sql = [
@@ -465,8 +823,6 @@
       ");",
       "CREATE INDEX IF NOT EXISTS idx_ft_created ON finance_transactions(created_at DESC);",
       "CREATE INDEX IF NOT EXISTS idx_ft_type    ON finance_transactions(type);",
-      "-- RLS (opsional)",
-      "-- ALTER TABLE finance_transactions ENABLE ROW LEVEL SECURITY;"
     ].join('\n');
 
     var box = document.getElementById('fv2-sql-box');
@@ -484,4 +840,4 @@
     });
   };
 
-})(); /* end IIFE */
+})();
