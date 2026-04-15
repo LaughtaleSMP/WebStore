@@ -27,7 +27,7 @@ function showSection(name, el) {
 
   // ── Finance: auto-load saat section aktif ──
   if (name === 'finance' && typeof window.financeV2Init === 'function') {
-      window.financeV2Init();
+      onclick="financeLoad();
   }
   if (name === 'finance-v2' && typeof window.financeV2Init === 'function') {
     window.financeV2Init();
