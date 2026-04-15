@@ -81,6 +81,15 @@ async function afterLogin(user, roleData = null) {
       loadAccessRequestBadge();
     }
   }
+
+  // ── Auto-init Finance V2 di background ──
+  // Supaya grafik player & interval auto-update langsung aktif
+  // tanpa perlu klik menu Finance V2 dulu.
+  setTimeout(function () {
+    if (typeof window.financeV2Init === 'function') {
+      window.financeV2Init();
+    }
+  }, 500);
 }
 
 async function doLogout() {
