@@ -206,11 +206,12 @@
     return;
   }
 
+  /* FIX: pass single config object — deprecated multi-param removed */
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: {
-      persistSession:    false,
-      autoRefreshToken:  false,
-      detectSessionInUrl:false,
+      persistSession:     false,
+      autoRefreshToken:   false,
+      detectSessionInUrl: false,
     },
   });
 
