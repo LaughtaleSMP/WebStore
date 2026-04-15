@@ -65,7 +65,6 @@ window.ordersLoad = async function () {
     return;
   }
 
-  // Bug #2 fix: update ostat-* elements yang benar
   const pendingEl = document.getElementById('ostat-pending');
   if (pendingEl) pendingEl.textContent = data ? data.length : 0;
 
@@ -73,7 +72,6 @@ window.ordersLoad = async function () {
     container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:10px 0;">Tidak ada pesanan masuk saat ini.</p>';
     if (badge) badge.style.display = 'none';
 
-    // Tetap update stats meski kosong
     const start = new Date(); start.setHours(0,0,0,0);
     const end   = new Date(); end.setHours(23,59,59,999);
     const { count: doneToday } = await sb.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'selesai').gte('completed_at', start.toISOString()).lt('completed_at', end.toISOString());
@@ -88,7 +86,6 @@ window.ordersLoad = async function () {
 
   if (badge) { badge.textContent = data.length; badge.style.display = 'inline-flex'; }
 
-  // Bug #4 fix: gunakan item_name || item untuk field name yang konsisten
   container.innerHTML = data.map(o => `
     <div class="order-card" id="ocard-${escHtml(o.id)}">
       <div class="order-card-head">
@@ -111,7 +108,6 @@ window.ordersLoad = async function () {
     </div>
   `).join('');
 
-  /* Bug #2 fix: update stats dengan element ID yang benar */
   const start = new Date(); start.setHours(0,0,0,0);
   const end   = new Date(); end.setHours(23,59,59,999);
   const { count: doneToday }    = await sb.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'selesai').gte('completed_at', start.toISOString()).lt('completed_at', end.toISOString());
@@ -216,10 +212,9 @@ window.oeditSave = async function () {
   const refund_reason = document.getElementById('oedit-refund-reason')?.value?.trim() || null;
   const user          = window.currentUser;
 
-  // Bug #7 fix: update kedua kolom agar kompatibel (item dan item_name)
+  // FIX: hanya update item_name — kolom 'item' tidak ada di tabel orders
   const updates = {
     item_name: itemName,
-    item: itemName,
     username, qty, unit_price, total_price, customer_note, status
   };
   if (status === 'refund' || status === 'cancelled') updates.refund_reason = refund_reason;
@@ -244,13 +239,12 @@ window.oeditSave = async function () {
 };
 
 /* ─────────────────────────────────────────────────────
-   ALL ORDERS — Bug #1 fix: all-orders-tbody → all-orders-table
+   ALL ORDERS
 ───────────────────────────────────────────────────── */
 window.allOrdersLoad = async function () {
   const sb = getSb();
   if (!sb) return;
 
-  // Bug #1 fix: gunakan 'all-orders-table' bukan 'all-orders-tbody' yang tidak ada
   const container = document.getElementById('all-orders-table');
   if (!container) return;
 
@@ -270,7 +264,6 @@ window.allOrdersLoad = async function () {
 
   let rows = data || [];
 
-  // Bug #4 fix: tambah fallback ke field 'item' jika 'item_name' kosong
   if (searchVal) rows = rows.filter(o =>
     (o.item_name || o.item || '').toLowerCase().includes(searchVal) ||
     (o.username  || '').toLowerCase().includes(searchVal) ||
@@ -337,7 +330,6 @@ window.oeditOpen = async function (id) {
   if (error || !o) { showToast('Gagal ambil data order', 'error'); return; }
 
   document.getElementById('oedit-id').value           = o.id;
-  // Bug #4 fix: fallback ke field 'item' jika 'item_name' tidak ada
   document.getElementById('oedit-item-name').value    = o.item_name || o.item || '';
   document.getElementById('oedit-username').value     = o.username   || '';
   document.getElementById('oedit-qty').value          = o.qty        || 1;
@@ -470,4 +462,3 @@ if (document.readyState === 'loading') {
 } else {
   _injectEditModal();
 }
-
