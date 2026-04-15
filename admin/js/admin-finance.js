@@ -147,11 +147,8 @@
   function _startPlayerAutoUpdate() {
     _stopPlayerAutoUpdate(); // clear dulu kalau ada yang lama
     _playerTimer = setInterval(function () {
-      // Hanya update kalau section finance-v2 sedang aktif
-      var sec = document.getElementById('sec-finance-v2');
-      if (!sec || !sec.classList.contains('active')) return;
-      _loadPlayerData();
       console.log('[Finance] Auto-update grafik pemain — ' + new Date().toLocaleTimeString('id-ID'));
+      window.financeV2RecordPlayer();
     }, PLAYER_INTERVAL_MS);
     console.log('[Finance] Auto-update grafik pemain aktif (setiap 5 menit)');
   }
