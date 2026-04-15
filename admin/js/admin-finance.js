@@ -42,7 +42,9 @@
   var _pgCurrent = 1;
 
   /* ── Private State ── */
-  var _finSub = null;
+  var _finSub       = null;
+  var _playerTimer  = null;   // ← interval auto-update grafik pemain
+  var PLAYER_INTERVAL_MS = 5 * 60 * 1000; // 5 menit
 
   /* ── Internal: Toast ── */
   function _finToast(msg, type) {
@@ -124,6 +126,7 @@
       _loadPlayerData(),
     ]);
     _finSubscribeRealtime();
+    _startPlayerAutoUpdate();
   };
 
   window.financeV2Destroy = function () {
@@ -131,11 +134,35 @@
       try { _finSub.unsubscribe(); } catch (e) { /* noop */ }
       _finSub = null;
     }
+    _stopPlayerAutoUpdate();
     [_lineChart, _pieChart, _barChart, _playerChart].forEach(function (c) {
       if (c) { try { c.destroy(); } catch (e) {} }
     });
     _lineChart = _pieChart = _barChart = _playerChart = null;
   };
+
+  /* ══════════════════════════════════════════════════════════
+     1B. PLAYER AUTO-UPDATE TIMER
+     ══════════════════════════════════════════════════════════ */
+  function _startPlayerAutoUpdate() {
+    _stopPlayerAutoUpdate(); // clear dulu kalau ada yang lama
+    _playerTimer = setInterval(function () {
+      // Hanya update kalau section finance-v2 sedang aktif
+      var sec = document.getElementById('sec-finance-v2');
+      if (!sec || !sec.classList.contains('active')) return;
+      _loadPlayerData();
+      console.log('[Finance] Auto-update grafik pemain — ' + new Date().toLocaleTimeString('id-ID'));
+    }, PLAYER_INTERVAL_MS);
+    console.log('[Finance] Auto-update grafik pemain aktif (setiap 5 menit)');
+  }
+
+  function _stopPlayerAutoUpdate() {
+    if (_playerTimer) {
+      clearInterval(_playerTimer);
+      _playerTimer = null;
+      console.log('[Finance] Auto-update grafik pemain dihentikan');
+    }
+  }
 
   /* ══════════════════════════════════════════════════════════
      2. SUMMARY CARDS (with delta vs previous period)
@@ -442,6 +469,16 @@
       .limit(60);
     if (result.error) { _buildPlayerChart([]); return; }
     _buildPlayerChart(result.data || []);
+    // Update label countdown timer
+    _updateCountdownLabel();
+  }
+
+  /* ── Countdown label di bawah grafik ── */
+  function _updateCountdownLabel() {
+    var lbl = document.getElementById('fv2-player-next-update');
+    if (!lbl) return;
+    var sisa = Math.round(PLAYER_INTERVAL_MS / 1000 / 60);
+    lbl.textContent = 'Update otomatis dalam ~' + sisa + ' menit';
   }
 
   function _fetchLivePlayerCount() {
@@ -982,23 +1019,18 @@
     /* ── Auto-fit column widths berdasarkan konten terpanjang ── */
     var MIN_WIDTH = 8;
     var MAX_WIDTH = 60;
-    var PADDING   = 4; // karakter padding kiri-kanan
+    var PADDING   = 4;
 
     ws.columns.forEach(function(col, colIdx) {
       var maxLen = MIN_WIDTH;
-
-      // Scan semua baris di kolom ini
       ws.eachRow(function(row) {
         var cell = row.getCell(colIdx + 1);
         if (!cell || cell.isMerged) return;
-
         var val = cell.value;
         var len = 0;
-
         if (val === null || val === undefined) {
           len = 0;
         } else if (typeof val === 'number') {
-          // Format angka dengan pemisah ribuan untuk estimasi lebar
           len = val.toLocaleString('id-ID').length + 2;
         } else if (val instanceof Date) {
           len = 20;
@@ -1007,14 +1039,10 @@
         } else {
           len = String(val).length;
         }
-
-        // Bold text sedikit lebih lebar
         var isBold = cell.font && cell.font.bold;
         if (isBold) len = Math.ceil(len * 1.1);
-
         if (len > maxLen) maxLen = len;
       });
-
       col.width = Math.min(maxLen + PADDING, MAX_WIDTH);
     });
 
