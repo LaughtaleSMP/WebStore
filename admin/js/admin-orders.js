@@ -90,6 +90,38 @@ window.ordersLoad = async function () {
 };
 
 /* ─────────────────────────────────────────────────────
+   REALTIME SUBSCRIBE — auto-refresh pesanan masuk
+───────────────────────────────────────────────────── */
+let _ordersChannel = null;
+
+window.ordersSubscribe = function () {
+  const sb = getSb();
+  if (!sb) return;
+
+  // Hindari duplicate channel
+  if (_ordersChannel) {
+    try { sb.removeChannel(_ordersChannel); } catch(e) {}
+    _ordersChannel = null;
+  }
+
+  _ordersChannel = sb
+    .channel('orders-realtime')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'orders',
+    }, () => {
+      ordersLoad();
+      // Refresh all-orders jika sedang aktif
+      const allSec = document.getElementById('sec-all-orders');
+      if (allSec && allSec.classList.contains('active')) {
+        if (typeof window.allOrdersLoad === 'function') window.allOrdersLoad();
+      }
+    })
+    .subscribe();
+};
+
+/* ─────────────────────────────────────────────────────
    MARK DONE
 ───────────────────────────────────────────────────── */
 window.orderMarkDone = async function (id) {
@@ -341,7 +373,7 @@ function _injectEditModal() {
         </div>
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Admin WA</label>
-          <input id="oedit-wa-admin" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;" placeholder="Nama admin" oninput="document.getElementById('oedit-wa-admin-hidden')&&(document.getElementById('oedit-wa-admin-hidden').value=this.value)">
+          <input id="oedit-wa-admin" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;" placeholder="Nama admin">
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
