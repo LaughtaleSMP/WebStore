@@ -1083,13 +1083,6 @@
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   
 <script>
-// ── Laporan Keuangan (sec-finance) ──
-async function financeLoad() {
-  const month = document.getElementById('finance-month').value;
-  if (!month) { alert('Pilih bulan dulu!'); return; }
-  const [year, mon] = month.split('-');
-  const from = `${year}-${mon}-01`;
-  const to   = new Date(year, mon, 0).toISOString().split('T')[0]; // akhir bulan
 
 async function _renderFinanceSection(from, to) {
   const adminTbl  = document.getElementById('finance-admin-table');
