@@ -392,17 +392,7 @@
         Manajemen Keuangan
         <span style="font-size:8.5px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:20px;margin-left:auto;font-weight:700;letter-spacing:.3px;flex-shrink:0;">NEW</span>
       </div>
-      <div class="nav-item" id="nav-access-requests" style="display:none" onclick="showSection('access-requests',this)">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-        Permintaan Akses
-        <span class="nav-badge" id="access-req-badge" style="display:none">0</span>
-      </div>
-    </div>
+</div>
 
     <!-- ═══════════ MAIN CONTENT ═══════════ -->
     <div class="main-content">
@@ -960,28 +950,6 @@
       </div><!-- /sec-finance-v2 -->
 
       <!-- ── PERMINTAAN AKSES ── -->
-      <div class="section" id="sec-access-requests">
-        <div class="page-header"><div class="page-title">Permintaan Akses Admin</div><div class="page-sub">Review dan setujui atau tolak pendaftaran admin baru</div></div>
-        <div class="orders-stats-strip">
-          <div class="ostat-card"><div class="ostat-num" id="req-stat-pending">—</div><div class="ostat-label">Menunggu</div></div>
-          <div class="ostat-card"><div class="ostat-num" id="req-stat-approved">—</div><div class="ostat-label">Disetujui</div></div>
-          <div class="ostat-card"><div class="ostat-num" id="req-stat-rejected">—</div><div class="ostat-label">Ditolak</div></div>
-        </div>
-        <div class="req-filter-bar">
-          <label style="font-size:11px;color:var(--text-faint);font-weight:600;">Filter</label>
-          <select id="req-filter-status" onchange="loadAccessRequests()">
-            <option value="">Semua</option>
-            <option value="pending">Menunggu</option>
-            <option value="approved">Disetujui</option>
-            <option value="rejected">Ditolak</option>
-          </select>
-          <button class="btn-ghost" style="padding:5px 11px;font-size:12px;display:inline-flex;align-items:center;gap:4px;margin-left:auto;" onclick="loadAccessRequests()">
-            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            Refresh
-          </button>
-        </div>
-        <div id="access-requests-list"><div class="empty-state">Memuat data...</div></div>
-      </div>
 
     </div><!-- /main-content -->
   </div>
@@ -1041,7 +1009,6 @@
 <script src="js/admin-shop.js" defer></script>
 <script src="js/admin-orders.js" defer></script>
 <script src="js/admin-users.js" defer></script>
-<script src="js/admin-finance.js" defer></script>
 <script src="js/admin-collapse.js" defer></script>
 
 <!-- Chart.js untuk grafik finance v2 -->
@@ -1109,68 +1076,7 @@ async function loadAccessRequestStats() {
   }
 }
 
-window.loadAccessRequests = async function() {
-  var container = document.getElementById('access-requests-list');
-  if (!container) return;
-  container.innerHTML = '<div class="empty-state">Memuat data...</div>';
-  var filterEl = document.getElementById('req-filter-status');
-  var filter = filterEl ? filterEl.value : '';
-  var query = sb.from('admin_requests').select('*').order('created_at', { ascending: false });
-  if (filter) query = query.eq('status', filter);
-  var _a = await query;
-  var data = _a.data;
-  await loadAccessRequestStats();
-  if (!data || !data.length) {
-    container.innerHTML = '<div class="empty-state">Tidak ada permintaan' + (filter ? ' dengan status ini' : '') + '.</div>';
-    return;
-  }
-  var statusColor = { pending:'var(--yellow)', approved:'var(--green)', rejected:'var(--red)' };
-  var statusLabel = { pending:'Menunggu', approved:'Disetujui', rejected:'Ditolak' };
-  function _esc(s) { var d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
-  container.innerHTML = data.map(function(r) {
-    return '<div class="req-card" id="req-card-' + r.id + '">' +
-      '<div class="req-card-info">' +
-        '<div class="req-card-name">' + _esc(r.display_name) + '</div>' +
-        '<div class="req-card-email">' + _esc(r.email) + '</div>' +
-        '<div class="req-card-meta">' +
-          '<span class="req-role-badge">' + _esc(r.role) + '</span>' +
-          '<span style="font-size:11px;color:' + (statusColor[r.status]||'#888') + '">' + (statusLabel[r.status]||r.status) + '</span>' +
-          '<span style="font-size:11px;color:var(--text-faint)">' + new Date(r.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}) + '</span>' +
-        '</div>' +
-        (r.reason ? '<div class="req-card-reason">"' + _esc(r.reason) + '"</div>' : '') +
-      '</div>' +
-      (r.status === 'pending' ?
-        '<div class="req-card-actions">' +
-          '<button class="btn-approve" onclick="approveRequest(\'' + r.id + '\')">Setujui</button>' +
-          '<button class="btn-reject"  onclick="rejectRequest(\'' + r.id + '\')">Tolak</button>' +
-        '</div>' : '') +
-    '</div>';
-  }).join('');
-};
 
-/* ── Finance V2 helpers ── */
-window.fv2SetPeriod = function(p, btn) {
-  document.getElementById('fv2-period').value = p;
-  document.querySelectorAll('.fv2-period-btn').forEach(function(b){ b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  financeV2LoadSummary(p);
-};
-window.fv2SwitchTab = function(tab, btn) {
-  document.querySelectorAll('.fv2-tab').forEach(function(b){ b.classList.remove('active'); });
-  document.querySelectorAll('.fv2-tab-panel').forEach(function(p){ p.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  var panel = document.getElementById('fv2-panel-' + tab);
-  if (panel) panel.classList.add('active');
-  if (tab === 'cashflow') financeV2LoadCashflow();
-};
-
-/* ── DOMContentLoaded ── */
-document.addEventListener('DOMContentLoaded', function() {
-  var monthEl = document.getElementById('finance-month');
-  if (monthEl) {
-    var now = new Date();
-    monthEl.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-  }
   var _origShowSection = window.showSection;
   window.showSection = function(name, el) {
     // Destroy finance dulu sebelum pindah ke section lain
@@ -1178,7 +1084,6 @@ document.addEventListener('DOMContentLoaded', function() {
     _origShowSection && _origShowSection(name, el);
     if (name === 'orders')          { ordersLoad(); ordersSubscribe(); }
     if (name === 'all-orders')      { window.allOrdersLoad(); }
-    if (name === 'access-requests') { loadAccessRequests(); }
     if (name === 'finance-v2')      { financeV2Init(); }
   };
   window.ordersRefresh = function() {
