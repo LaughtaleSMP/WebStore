@@ -1,1 +1,924 @@
-# Will be replaced inline below
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Admin Panel — Laughtale SMP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/admin.css">
+<link rel="stylesheet" href="css/finance.css">
+<link rel="stylesheet" href="css/admin-enhance.css"><!-- ← DITAMBAHKAN -->
+<style>
+/* ─── Page-specific overrides ─── */
+
+/* Auth screen topbar / panel tweaks */
+.topbar { height: 50px; padding: 0 16px; }
+
+/* Filter bars */
+.filter-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 13px; }
+.filter-bar label { font-size: 11px; color: var(--text-faint); font-weight: 600; }
+.filter-bar select, .filter-bar input {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r-md); color: var(--text);
+  padding: 6px 10px; font-size: 12.5px; outline: none; font-family: inherit;
+}
+
+/* Fv2 overrides */
+.fv2-modal .btn-ghost   { display: inline-flex; align-items: center; justify-content: center; }
+.fv2-modal .btn-primary { display: inline-flex; align-items: center; justify-content: center; }
+
+/* Orders / All orders extras */
+.order-id-badge {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  font-family: var(--mono); letter-spacing: 0.4px;
+  color: var(--accent); background: rgba(74,143,255,0.1);
+  border: 1px solid rgba(74,143,255,0.2);
+  border-radius: 5px; padding: 1px 5px; vertical-align: middle; user-select: all;
+}
+
+/* Oedit modal */
+@keyframes oeditIn {
+  from { opacity:0; transform:translateY(14px) scale(0.97); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+
+/* Finance v2 modal open state */
+.fv2-modal-overlay { display: none; }
+.fv2-modal-overlay[style*="flex"] { display: flex; }
+
+/* Req cards */
+.req-card { background: var(--surface2); }
+</style>
+</head>
+
+<body>
+
+<!-- ═══════════ AUTH SCREEN ═══════════ -->
+<div id="auth-screen">
+
+  <!-- Left: Brand panel -->
+  <div class="auth-left">
+    <div class="auth-left-glow"></div>
+    <div class="auth-left-grid"></div>
+
+    <div class="auth-brand">
+      <div class="auth-brand-mark">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <span class="auth-brand-name">Laughtale SMP</span>
+    </div>
+
+    <div class="auth-hero">
+      <div class="auth-hero-eyebrow">Admin Panel</div>
+      <div class="auth-hero-title">Server<br>Configuration</div>
+      <p class="auth-hero-desc">Kelola konfigurasi server Laughtale SMP dari satu panel terpusat yang aman.</p>
+
+      <div class="auth-status-list">
+        <div class="auth-status-item">
+          <div class="auth-status-left">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="2" y="3" width="20" height="14" rx="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            <div>
+              <span class="auth-status-label">Server Status</span>
+              <span class="auth-status-sub">laughtale.my.id</span>
+            </div>
+          </div>
+          <div class="auth-dot auth-dot-green"></div>
+        </div>
+        <div class="auth-status-item">
+          <div class="auth-status-left">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <div>
+              <span class="auth-status-label">Supabase Auth</span>
+              <span class="auth-status-sub">Row Level Security aktif</span>
+            </div>
+          </div>
+          <div class="auth-dot auth-dot-blue"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="auth-left-foot">
+      <span>2025 Laughtale SMP</span>
+      <span>v2.0</span>
+    </div>
+  </div>
+
+  <!-- Right: Form area -->
+  <div class="auth-right">
+    <div class="auth-tabs-bar">
+      <button class="auth-tab active" id="tab-pill-login" onclick="switchAuthTab('login')">Masuk</button>
+      <button class="auth-tab" id="tab-pill-register" onclick="switchAuthTab('register')">Daftar Admin</button>
+    </div>
+
+    <div class="auth-slide-track" id="auth-slide-track">
+
+      <!-- LOGIN -->
+      <div class="auth-slide-panel" id="auth-panel-login">
+        <div class="auth-form-wrap">
+          <div class="auth-form-heading">Selamat datang</div>
+          <p class="auth-form-sub">Masuk menggunakan akun admin yang sudah terdaftar.</p>
+
+          <div id="auth-error" class="alert alert-error" style="display:none">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span id="auth-error-msg"></span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <div class="input-wrap">
+              <span class="input-icon">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+              </span>
+              <input class="form-input" id="login-email" type="email" placeholder="admin@laughtale.my.id" autocomplete="email">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <rect x="3" y="11" width="18" height="11" rx="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </span>
+              <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
+              <button class="input-eye" type="button" onclick="togglePw('login-password',this)" tabindex="-1">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button class="btn-primary" onclick="doLogin()" id="login-btn">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            Masuk ke Panel
+          </button>
+          <div class="auth-switch">Belum punya akses? <button onclick="switchAuthTab('register')">Daftar sekarang</button></div>
+        </div>
+      </div>
+
+      <!-- REGISTER -->
+      <div class="auth-slide-panel" id="auth-panel-register">
+        <div class="auth-form-wrap">
+          <div class="auth-form-heading">Ajukan Akses</div>
+          <p class="auth-form-sub">Permintaanmu dikirim ke super admin untuk di-review dan disetujui.</p>
+
+          <div id="req-error" class="alert alert-error" style="display:none">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span id="req-error-msg"></span>
+          </div>
+          <div id="req-success" class="alert alert-success" style="display:none">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Permintaan terkirim! Tunggu persetujuan super admin.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nama Tampilan</label>
+            <div class="input-wrap">
+              <span class="input-icon">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </span>
+              <input class="form-input" id="req-display" type="text" placeholder="cth: Blackdamen">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <div class="input-wrap">
+              <span class="input-icon">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+              </span>
+              <input class="form-input" id="req-email" type="email" placeholder="kamu@email.com">
+            </div>
+          </div>
+          <div class="form-row-2" style="margin-bottom:13px">
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Password</label>
+              <div class="input-wrap">
+                <span class="input-icon">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <rect x="3" y="11" width="18" height="11" rx="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </span>
+                <input class="form-input" id="req-password" type="password" placeholder="Min. 6 karakter" autocomplete="new-password">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Konfirmasi</label>
+              <div class="input-wrap">
+                <span class="input-icon">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <rect x="3" y="11" width="18" height="11" rx="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </span>
+                <input class="form-input" id="req-password2" type="password" placeholder="Ulangi" autocomplete="new-password">
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role yang Diminta</label>
+            <select class="form-input" id="req-role">
+              <option value="admin">Admin</option>
+              <option value="moderator">Moderator</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Alasan <span style="color:var(--text-faint);font-weight:400;text-transform:none;letter-spacing:0">(opsional)</span></label>
+            <textarea class="form-input" id="req-reason" rows="2" placeholder="Kenapa kamu ingin jadi admin?" style="resize:vertical;min-height:58px;"></textarea>
+          </div>
+
+          <button class="btn-primary" onclick="doRequestAccess()" id="req-submit-btn">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            Kirim Permintaan
+          </button>
+          <div class="auth-switch">Sudah punya akun? <button onclick="switchAuthTab('login')">Masuk di sini</button></div>
+          <p style="font-size:11px;color:var(--text-faint);text-align:center;margin-top:10px;line-height:1.6;">Akunmu aktif setelah disetujui super admin.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div><!-- /auth-screen -->
+
+
+<!-- ═══════════ APP ═══════════ -->
+<div id="app">
+  <div class="topbar">
+    <button class="hamburger" id="hamburger-btn" aria-label="Toggle menu" onclick="toggleSidebar()">
+      <svg id="hamburger-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+    <div class="topbar-brand">
+      <div class="topbar-brand-mark">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <span class="topbar-brand-name">Laughtale SMP</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <span class="topbar-breadcrumb" id="topbar-section">Info Server</span>
+    <div class="topbar-right">
+      <span class="topbar-user-name" id="topbar-email">—</span>
+      <span class="role-badge" id="topbar-role">admin</span>
+      <button class="btn-logout" onclick="doLogout()">Keluar</button>
+    </div>
+  </div>
+
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="sidebar-back" onclick="goToMain()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Panel Utama
+      </div>
+
+      <div class="nav-group-label">Server</div>
+      <div class="nav-item active" onclick="showSection('server',this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        Info Server
+      </div>
+      <div class="nav-item" onclick="showSection('server-status',this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+          <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+          <circle cx="12" cy="20" r="1"/>
+        </svg>
+        Server Status
+      </div>
+      <div class="nav-item" onclick="showSection('maintenance',this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Maintenance
+      </div>
+      <div class="nav-item" onclick="showSection('motd',this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        MOTD / Pengumuman
+      </div>
+      <div class="nav-item" onclick="showSection('season',this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        Season &amp; World
+      </div>
+
+      <div class="nav-group-label">Admin</div>
+      <div class="nav-item" onclick="showSection('admins-wa',this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.37 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l1.27-.73a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+        </svg>
+        Admin WhatsApp
+      </div>
+      <div class="nav-item" onclick="showSection('orders',this)" id="nav-orders">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        Pesanan Masuk
+        <span class="nav-badge" id="orders-badge" style="display:none">0</span>
+      </div>
+      <div class="nav-item" onclick="showSection('all-orders',this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="8" y1="6" x2="21" y2="6"/>
+          <line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/>
+          <line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+        Semua Pesanan
+      </div>
+      <div class="nav-item" onclick="showSection('finance',this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="12" y1="1" x2="12" y2="23"/>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+        Laporan Keuangan
+      </div>
+      <div class="nav-item" onclick="showSection('finance-v2',this)" id="nav-finance-v2">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="2" y="5" width="20" height="14" rx="2"/>
+          <line x1="2" y1="10" x2="22" y2="10"/>
+        </svg>
+        Manajemen Keuangan
+        <span style="font-size:8.5px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:20px;margin-left:auto;font-weight:700;letter-spacing:.3px;flex-shrink:0;">NEW</span>
+      </div>
+      <div class="nav-item" id="nav-access-requests" style="display:none" onclick="showSection('access-requests',this)">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        Permintaan Akses
+        <span class="nav-badge" id="access-req-badge" style="display:none">0</span>
+      </div>
+    </div>
+
+    <!-- ═══════════ MAIN CONTENT ═══════════ -->
+    <div class="main-content">
+
+      <!-- ── INFO SERVER ── -->
+      <div class="section active" id="sec-server">
+        <div class="page-header">
+          <div class="page-title">Info Server</div>
+          <div class="page-sub">Pengaturan dasar server Laughtale SMP</div>
+        </div>
+        <div class="server-live" id="server-live-card">
+          <div class="live-indicator"><div class="live-indicator-dot" id="live-orb-dot"></div></div>
+          <div class="server-live-info">
+            <h4 id="live-status-text">Memuat status...</h4>
+            <p id="live-ip-text">Menghubungi API...</p>
+          </div>
+          <div class="server-live-meta">
+            <strong id="live-players">—</strong>
+            <span id="live-latency">— ms</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Konfigurasi Server</div>
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="2" y="3" width="20" height="14" rx="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>IP / Domain Server</label>
+              <input id="cfg-server_ip" placeholder="laughtale.my.id:19214">
+              <div class="field-hint">Format: domain:port atau IP:port</div>
+            </div>
+            <div class="field">
+              <label>Platform</label>
+              <select id="cfg-server_type">
+                <option value="Bedrock">Bedrock Edition</option>
+                <option value="Java">Java Edition</option>
+                <option value="Bedrock+Java">Bedrock + Java (Crossplay)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group full">
+            <div class="field">
+              <label>Nama Server</label>
+              <input id="cfg-server_name" placeholder="Laughtale SMP">
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;">Preview</div>
+          <div class="preview-box">
+            <div class="preview-row"><span class="preview-key">IP Server</span><span class="preview-val" id="pv-ip">—</span></div>
+            <div class="preview-row"><span class="preview-key">Platform</span><span class="preview-val" id="pv-type">—</span></div>
+            <div class="preview-row"><span class="preview-key">Nama</span><span class="preview-val" id="pv-name">—</span></div>
+          </div>
+        </div>
+        <div class="save-bar">
+          <span class="save-bar-hint">Perubahan tersimpan langsung ke Supabase.</span>
+          <button class="save-btn" onclick="saveSection('server')">Simpan Info Server</button>
+        </div>
+      </div>
+
+      <!-- ── SERVER STATUS ── -->
+      <div class="section" id="sec-server-status">
+        <div class="page-header"><div class="page-title">Server Status</div><div class="page-sub">Atur bagaimana data status server diambil dan ditampilkan</div></div>
+        <div class="server-live">
+          <div class="live-indicator"><div class="live-indicator-dot" id="ss-orb-dot"></div></div>
+          <div class="server-live-info"><h4 id="ss-status-text">Belum dicek</h4><p id="ss-ip-text">Tekan "Test Koneksi" untuk cek sekarang</p></div>
+          <div class="server-live-meta"><strong id="ss-players">—</strong><span id="ss-latency">— ms</span></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">API &amp; Polling</div>
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                <circle cx="12" cy="20" r="1"/>
+              </svg>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>API Provider</label>
+              <select id="cfg-status_api_provider" onchange="onProviderChange()">
+                <option value="mcsrvstat">mcsrvstat.us (default)</option>
+                <option value="mcstatus">mcstatus.io</option>
+                <option value="custom">Custom URL</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Interval Auto-Refresh (detik)</label>
+              <input id="cfg-status_refresh_interval" type="number" min="30" max="600" placeholder="60">
+            </div>
+          </div>
+          <div class="field-group full" id="ss-custom-url-wrap" style="display:none">
+            <div class="field">
+              <label>Custom API URL</label>
+              <input id="cfg-status_custom_url" placeholder="https://api.example.com/status/{host}/{port}">
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="toggle-row"><div class="toggle-label"><strong>Tampilkan Latency</strong><span>Menampilkan angka latency (ms) di kartu status</span></div><div class="toggle" id="toggle-status_show_latency" onclick="this.classList.toggle('on')"></div></div>
+          <div class="toggle-row"><div class="toggle-label"><strong>Tampilkan Daftar Pemain</strong><span>Menampilkan nama-nama pemain yang sedang online</span></div><div class="toggle" id="toggle-status_show_playerlist" onclick="this.classList.toggle('on')"></div></div>
+          <div class="toggle-row"><div class="toggle-label"><strong>Pause saat Tab Tidak Aktif</strong><span>Hentikan auto-refresh saat pengguna berpindah tab</span></div><div class="toggle on" id="toggle-status_pause_hidden" onclick="this.classList.toggle('on')"></div></div>
+          <div class="divider"></div>
+          <div class="preview-box">
+            <div class="preview-row"><span class="preview-key">URL yang dipakai</span><span class="preview-val" id="pv-api-url" style="font-size:11px;word-break:break-all;text-align:right;max-width:60%">—</span></div>
+            <div class="preview-row"><span class="preview-key">Interval Refresh</span><span class="preview-val" id="pv-refresh-interval">—</span></div>
+          </div>
+        </div>
+        <div class="save-bar">
+          <button class="btn-ghost" onclick="testStatusConnection()" style="display:inline-flex;align-items:center;gap:6px;">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Test Koneksi
+          </button>
+          <button class="save-btn" onclick="saveSection('server-status')">Simpan Konfigurasi</button>
+        </div>
+      </div>
+
+      <!-- ── MAINTENANCE ── -->
+      <div class="section" id="sec-maintenance">
+        <div class="page-header"><div class="page-title">Maintenance Mode</div><div class="page-sub">Aktifkan saat server sedang dalam perbaikan</div></div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Status Maintenance</div>
+            <span class="status-pill pill-online" id="maint-status-pill"><span class="pill-dot"></span>Normal</span>
+          </div>
+          <div class="toggle-row"><div class="toggle-label"><strong>Maintenance Mode</strong><span>Website akan menampilkan halaman maintenance ke pengunjung</span></div><div class="toggle" id="toggle-maintenance_active" onclick="this.classList.toggle('on');updateMaintPill()"></div></div>
+          <div class="divider"></div>
+          <div class="field-group full">
+            <div class="field">
+              <label>Judul Halaman Maintenance</label>
+              <input id="cfg-maintenance_title" placeholder="Server Maintenance">
+            </div>
+          </div>
+          <div class="field-group full">
+            <div class="field">
+              <label>Pesan Maintenance</label>
+              <textarea id="cfg-maintenance_message" rows="3" placeholder="Server sedang dalam perbaikan. Mohon tunggu sebentar." style="resize:vertical;min-height:70px;"></textarea>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>Estimasi Selesai</label>
+              <input id="cfg-maintenance_eta" type="datetime-local">
+              <div class="field-hint">Opsional. Tampilkan waktu perkiraan selesai.</div>
+            </div>
+            <div class="field">
+              <label>Warna Tema</label>
+              <select id="cfg-maintenance_theme">
+                <option value="dark">Dark (default)</option>
+                <option value="light">Light</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="save-bar">
+          <span class="save-bar-hint">Maintenance mode aktif = pengunjung tidak bisa akses halaman utama.</span>
+          <button class="save-btn" onclick="saveSection('maintenance')">Simpan Pengaturan</button>
+        </div>
+      </div>
+
+      <!-- ── MOTD ── -->
+      <div class="section" id="sec-motd">
+        <div class="page-header"><div class="page-title">MOTD &amp; Pengumuman</div><div class="page-sub">Pesan yang ditampilkan di halaman utama website</div></div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Pengumuman Aktif</div>
+          </div>
+          <div class="toggle-row"><div class="toggle-label"><strong>Tampilkan Pengumuman</strong><span>Aktifkan banner pengumuman di halaman utama</span></div><div class="toggle" id="toggle-motd_enabled" onclick="this.classList.toggle('on')"></div></div>
+          <div class="divider"></div>
+          <div class="field-group">
+            <div class="field">
+              <label>Tipe Pengumuman</label>
+              <select id="cfg-motd_type">
+                <option value="info">Info (Biru)</option>
+                <option value="warning">Warning (Kuning)</option>
+                <option value="success">Success (Hijau)</option>
+                <option value="error">Error (Merah)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Ikon</label>
+              <input id="cfg-motd_icon" placeholder="📢">
+            </div>
+          </div>
+          <div class="field-group full">
+            <div class="field">
+              <label>Judul Pengumuman</label>
+              <input id="cfg-motd_title" placeholder="Pengumuman Penting">
+            </div>
+          </div>
+          <div class="field-group full">
+            <div class="field">
+              <label>Isi Pengumuman</label>
+              <textarea id="cfg-motd_message" rows="3" placeholder="Isi pengumuman di sini..." style="resize:vertical;min-height:70px;"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="save-bar">
+          <button class="save-btn" onclick="saveSection('motd')">Simpan MOTD</button>
+        </div>
+      </div>
+
+      <!-- ── SEASON ── -->
+      <div class="section" id="sec-season">
+        <div class="page-header"><div class="page-title">Season &amp; World</div><div class="page-sub">Informasi season dan dunia Minecraft saat ini</div></div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Detail Season</div></div>
+          <div class="field-group">
+            <div class="field">
+              <label>Nama Season</label>
+              <input id="cfg-season_name" placeholder="Season 1">
+            </div>
+            <div class="field">
+              <label>Nomor Season</label>
+              <input id="cfg-season_number" type="number" min="1" placeholder="1">
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label>Tanggal Mulai</label>
+              <input id="cfg-season_start_date" type="date">
+            </div>
+            <div class="field">
+              <label>Status Season</label>
+              <select id="cfg-season_status">
+                <option value="active">Aktif</option>
+                <option value="ended">Berakhir</option>
+                <option value="upcoming">Segera Hadir</option>
+              </select>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="field-group">
+            <div class="field">
+              <label>Versi Minecraft</label>
+              <input id="cfg-world_mc_version" placeholder="1.21.4">
+            </div>
+            <div class="field">
+              <label>Seed World</label>
+              <input id="cfg-world_seed" placeholder="-1234567890">
+            </div>
+          </div>
+          <div class="field-group full">
+            <div class="field">
+              <label>Deskripsi Season</label>
+              <textarea id="cfg-season_description" rows="3" style="resize:vertical;min-height:70px;" placeholder="Ceritakan tentang season ini..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="save-bar">
+          <button class="save-btn" onclick="saveSection('season')">Simpan Season</button>
+        </div>
+      </div>
+
+      <!-- ── ADMINS WA ── -->
+      <div class="section" id="sec-admins-wa">
+        <div class="page-header"><div class="page-title">Admin WhatsApp</div><div class="page-sub">Nomor WhatsApp admin yang ditampilkan di toko</div></div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Daftar Admin</div>
+            <button class="btn-ghost" onclick="addAdminWaRow()" style="font-size:11px;padding:5px 10px;">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Tambah Admin
+            </button>
+          </div>
+          <div id="admins-wa-list"></div>
+        </div>
+        <div class="save-bar">
+          <span class="save-bar-hint">Pastikan nomor format internasional, misal: 6281234567890</span>
+          <button class="save-btn" onclick="saveSection('admins-wa')">Simpan Admin WA</button>
+        </div>
+      </div>
+
+      <!-- ── ORDERS ── -->
+      <div class="section" id="sec-orders">
+        <div class="page-header">
+          <div class="page-title">Pesanan Masuk</div>
+          <div class="page-sub">Pesanan baru yang menunggu konfirmasi</div>
+        </div>
+        <div id="orders-container">
+          <div class="empty-state">
+            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 10px;color:var(--text-faint)">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+            <p>Memuat pesanan...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ALL ORDERS ── -->
+      <div class="section" id="sec-all-orders">
+        <div class="page-header">
+          <div class="page-title">Semua Pesanan</div>
+          <div class="page-sub">Riwayat lengkap semua transaksi</div>
+        </div>
+        <div class="filter-bar">
+          <label>Status:</label>
+          <select id="ao-filter-status">
+            <option value="">Semua</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <label>Dari:</label>
+          <input type="date" id="ao-filter-from">
+          <label>Sampai:</label>
+          <input type="date" id="ao-filter-to">
+          <button class="btn-ghost" onclick="if(typeof window.allOrdersLoad==='function') window.allOrdersLoad()" style="font-size:11px;padding:5px 10px;">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-5.96"/></svg>
+            Refresh
+          </button>
+        </div>
+        <div id="all-orders-container">
+          <div class="empty-state">
+            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 10px;color:var(--text-faint)">
+              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+            <p>Memuat data pesanan...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── FINANCE ── -->
+      <div class="section" id="sec-finance">
+        <div class="page-header"><div class="page-title">Laporan Keuangan</div><div class="page-sub">Ringkasan pemasukan dari toko</div></div>
+        <div id="finance-container">
+          <div class="empty-state"><p>Memuat data keuangan...</p></div>
+        </div>
+      </div>
+
+      <!-- ── FINANCE V2 ── -->
+      <div class="section" id="sec-finance-v2">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Manajemen Keuangan</div>
+            <div class="page-sub">Catatan pemasukan &amp; pengeluaran manual</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="month" id="finance-month" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text);padding:6px 10px;font-size:12px;font-family:inherit;outline:none;">
+            <button class="btn-ghost" id="fv2-export-btn" style="font-size:11px;padding:5px 10px;">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export CSV
+            </button>
+          </div>
+        </div>
+        <div id="fv2-root"></div>
+      </div>
+
+      <!-- ── ACCESS REQUESTS ── -->
+      <div class="section" id="sec-access-requests">
+        <div class="page-header"><div class="page-title">Permintaan Akses</div><div class="page-sub">Review dan setujui akun admin baru</div></div>
+        <div id="access-requests-container">
+          <div class="empty-state"><p>Memuat permintaan...</p></div>
+        </div>
+      </div>
+
+    </div><!-- /main-content -->
+  </div><!-- /app-body -->
+</div><!-- /app -->
+
+<!-- ═══════════ SCRIPTS ═══════════ -->
+<script src="js/supabase-config.js" defer></script>
+<script src="js/admin-auth.js" defer></script>
+<script src="js/admin-nav.js" defer></script>
+<script src="js/admin-config.js" defer></script>
+<script src="js/admin-orders.js" defer></script>
+<script src="js/admin-finance.js" defer></script>
+<script src="js/admin-finance-v2.js" defer></script>
+<script src="js/admin-enhance.js" defer></script>
+
+<script>
+// ── Set default bulan finance-v2 ──
+document.addEventListener('DOMContentLoaded', function() {
+  var monthEl = document.getElementById('finance-month');
+  if (monthEl) {
+    var now = new Date();
+    monthEl.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  }
+});
+
+// ── FIX: Pindah ke window.load agar semua script defer sudah siap ──
+window.addEventListener('load', function() {
+  // Semua script defer sudah selesai di-load di sini — aman untuk override showSection
+  var _origShowSection = window.showSection;
+  window.showSection = function(name, el) {
+    // Destroy finance v2 dulu sebelum pindah ke section lain
+    if (name !== 'finance-v2' && typeof financeV2Destroy === 'function') {
+      financeV2Destroy();
+    }
+    if (typeof _origShowSection === 'function') _origShowSection(name, el);
+    if (name === 'orders') {
+      if (typeof ordersLoad === 'function') ordersLoad();
+      if (typeof ordersSubscribe === 'function') ordersSubscribe();
+    }
+    if (name === 'all-orders') {
+      if (typeof window.allOrdersLoad === 'function') window.allOrdersLoad();
+    }
+    if (name === 'access-requests') {
+      if (typeof loadAccessRequests === 'function') loadAccessRequests();
+    }
+    if (name === 'finance-v2') {
+      if (typeof financeV2Init === 'function') financeV2Init();
+    }
+    if (name === 'finance') {
+      if (typeof _renderFinanceSection === 'function') _renderFinanceSection();
+    }
+  };
+
+  window.ordersRefresh = function() {
+    if (typeof ordersLoad === 'function') ordersLoad();
+  };
+});
+
+// ── Access Requests loader ──
+window.loadAccessRequests = async function() {
+  var container = document.getElementById('access-requests-container');
+  if (!container) return;
+
+  // Guard: pastikan koneksi Supabase siap
+  var sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
+  if (!sb) {
+    container.innerHTML = '<div class="empty-state"><p>Koneksi Supabase belum siap. Coba lagi.</p></div>';
+    return;
+  }
+
+  container.innerHTML = '<div class="empty-state"><p>Memuat permintaan...</p></div>';
+  try {
+    var query = sb.from('admin_requests').select('*').order('created_at', { ascending: false });
+    var { data, error } = await query;
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div class="empty-state"><svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 10px;color:var(--text-faint)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><p>Belum ada permintaan akses.</p></div>';
+      return;
+    }
+    var html = data.map(function(req) {
+      var statusClass = req.status === 'pending' ? 'pill-warning' : req.status === 'approved' ? 'pill-online' : 'pill-offline';
+      var statusLabel = req.status === 'pending' ? 'Pending' : req.status === 'approved' ? 'Disetujui' : 'Ditolak';
+      return '<div class="req-card card" style="margin-bottom:10px;padding:14px 16px;">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+        '<div style="flex:1"><strong style="font-size:13px;">' + (req.display_name || req.email) + '</strong>' +
+        '<span style="font-size:11px;color:var(--text-faint);margin-left:8px;">' + req.email + '</span></div>' +
+        '<span class="status-pill ' + statusClass + '"><span class="pill-dot"></span>' + statusLabel + '</span>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Role: <strong>' + (req.role || '—') + '</strong> · ' + new Date(req.created_at).toLocaleDateString('id-ID') + '</div>' +
+        (req.reason ? '<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;padding:8px 10px;background:var(--surface3,var(--surface2));border-radius:var(--r-md);">' + req.reason + '</div>' : '') +
+        (req.status === 'pending' ? '<div style="display:flex;gap:8px;">' +
+          '<button class="save-btn" style="font-size:11px;padding:5px 14px;" onclick="approveRequest(\'' + req.id + '\',\'' + req.email + '\',\'' + (req.display_name||'') + '\',\'' + (req.role||'admin') + '\')">Setujui</button>' +
+          '<button class="btn-ghost" style="font-size:11px;padding:5px 14px;color:var(--danger,#e05);" onclick="rejectRequest(\'' + req.id + '\')">Tolak</button>' +
+          '</div>' : '') +
+        '</div>';
+    }).join('');
+    container.innerHTML = html;
+  } catch(e) {
+    container.innerHTML = '<div class="empty-state"><p>Gagal memuat: ' + e.message + '</p></div>';
+  }
+};
+
+window.loadAccessRequestStats = async function() {
+  var badge = document.getElementById('access-req-badge');
+  if (!badge) return;
+
+  // Guard: pastikan koneksi Supabase siap
+  var sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
+  if (!sb) return;
+
+  try {
+    var { count } = await sb.from('admin_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+    if (count > 0) {
+      badge.textContent = count;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch(e) { /* silent */ }
+};
+
+window.approveRequest = async function(id, email, displayName, role) {
+  var sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
+  if (!sb) return;
+  if (!confirm('Setujui permintaan dari ' + email + '?')) return;
+  try {
+    await sb.from('admin_requests').update({ status: 'approved' }).eq('id', id);
+    loadAccessRequests();
+    loadAccessRequestStats();
+  } catch(e) { alert('Gagal menyetujui: ' + e.message); }
+};
+
+window.rejectRequest = async function(id) {
+  var sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
+  if (!sb) return;
+  if (!confirm('Tolak permintaan ini?')) return;
+  try {
+    await sb.from('admin_requests').update({ status: 'rejected' }).eq('id', id);
+    loadAccessRequests();
+    loadAccessRequestStats();
+  } catch(e) { alert('Gagal menolak: ' + e.message); }
+};
+</script>
+
+</body>
+</html>
