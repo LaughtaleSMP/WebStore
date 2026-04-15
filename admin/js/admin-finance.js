@@ -1097,3 +1097,4 @@
   };
 
 })();
+window.financeLoad = window.financeV2Init;
