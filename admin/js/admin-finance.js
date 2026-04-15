@@ -28,16 +28,17 @@
   }
 
   /* ── Chart instances (destroyed on re-render) ── */
-  var _lineChart = null;
-  var _pieChart  = null;
-  var _barChart  = null;
+  var _lineChart   = null;
+  var _pieChart    = null;
+  var _barChart    = null;
+  var _playerChart = null;
 
   /* ── Chart colors ── */
   var PIE_COLORS = ['#4a8fff','#34d399','#a78bfa','#fbbf24','#f87171','#60a5fa'];
 
   /* ── Pagination state ── */
-  var _allRows  = [];
-  var _pgSize   = 8;
+  var _allRows   = [];
+  var _pgSize    = 8;
   var _pgCurrent = 1;
 
   /* ── Private State ── */
@@ -103,6 +104,14 @@
     return { from: from, prevFrom: prevFrom, prevTo: prevTo };
   }
 
+  /* ── Get server IP helper ── */
+  function _getServerIp() {
+    if (window.configData && window.configData['server_ip'] && window.configData['server_ip'].value) {
+      return window.configData['server_ip'].value;
+    }
+    return 'laughtale.my.id:19214';
+  }
+
   /* ══════════════════════════════════════════════════════════
      1. INIT / DESTROY
      ══════════════════════════════════════════════════════════ */
@@ -112,6 +121,7 @@
       window.financeV2LoadSummary(period),
       window.financeV2LoadList(),
       _loadCharts(period),
+      _loadPlayerData(),
     ]);
     _finSubscribeRealtime();
   };
@@ -121,10 +131,10 @@
       try { _finSub.unsubscribe(); } catch (e) { /* noop */ }
       _finSub = null;
     }
-    [_lineChart, _pieChart, _barChart].forEach(function (c) {
+    [_lineChart, _pieChart, _barChart, _playerChart].forEach(function (c) {
       if (c) { try { c.destroy(); } catch (e) {} }
     });
-    _lineChart = _pieChart = _barChart = null;
+    _lineChart = _pieChart = _barChart = _playerChart = null;
   };
 
   /* ══════════════════════════════════════════════════════════
@@ -134,12 +144,10 @@
     period = period || (document.getElementById('fv2-period') && document.getElementById('fv2-period').value) || 'month';
     var range = _periodRange(period);
 
-    /* Current period query */
     var q = sb.from('finance_transactions').select('type,amount');
     if (range.from) q = q.gte('created_at', range.from);
     var result = await q;
 
-    /* Previous period query for delta */
     var prevResult = { data: [] };
     if (range.prevFrom) {
       var pq = sb.from('finance_transactions').select('type,amount')
@@ -205,7 +213,7 @@
      3. CHARTS
      ══════════════════════════════════════════════════════════ */
   async function _loadCharts(period) {
-    if (typeof Chart === 'undefined') return; /* Chart.js not loaded yet */
+    if (typeof Chart === 'undefined') return;
 
     var range = _periodRange(period);
     var q = sb.from('finance_transactions').select('type,amount,category,created_at');
@@ -220,13 +228,13 @@
     _buildBarChart(rows);
   }
 
-  /* Line chart — income over time grouped by day/week/month */
+  /* Line chart — income over time */
   function _buildLineChart(rows, period) {
     var groupFn;
     if (period === 'year') {
-      groupFn = function (iso) { return iso.slice(0, 7); }; /* YYYY-MM */
+      groupFn = function (iso) { return iso.slice(0, 7); };
     } else {
-      groupFn = function (iso) { return iso.slice(0, 10); }; /* YYYY-MM-DD */
+      groupFn = function (iso) { return iso.slice(0, 10); };
     }
 
     var incMap  = {};
@@ -242,7 +250,6 @@
 
     var labels = Array.from(new Set(Object.keys(incMap).concat(Object.keys(expMap)))).sort();
     if (!labels.length) {
-      /* Generate placeholder labels */
       var now = new Date();
       for (var i = 6; i >= 0; i--) {
         var d = new Date(now); d.setDate(d.getDate() - i);
@@ -253,7 +260,6 @@
     var incData = labels.map(function (l) { return incMap[l] || 0; });
     var expData = labels.map(function (l) { return expMap[l] || 0; });
 
-    /* Format labels for display */
     var dispLabels = labels.map(function (l) {
       if (l.length === 7) {
         var parts = l.split('-');
@@ -353,7 +359,6 @@
       },
     });
 
-    /* Render legend */
     var legendEl = document.getElementById('fv2-pie-legend');
     if (legendEl) {
       legendEl.innerHTML = entries.map(function (e, i) {
@@ -367,7 +372,7 @@
     }
   }
 
-  /* Bar chart — top categories by income amount */
+  /* Bar chart — top categories */
   function _buildBarChart(rows) {
     var catMap = {};
     rows.forEach(function (r) {
@@ -415,7 +420,6 @@
       },
     });
 
-    /* Render mini stat bars */
     var barsEl = document.getElementById('fv2-mini-bars');
     if (barsEl) {
       barsEl.innerHTML = entries.slice(0, 5).map(function (e, i) {
@@ -428,6 +432,214 @@
       }).join('');
     }
   }
+
+  /* ══════════════════════════════════════════════════════════
+     3B. PLAYER ONLINE CHART
+     ══════════════════════════════════════════════════════════ */
+
+  /* Load historical player snapshots dan fetch live count */
+  async function _loadPlayerData() {
+    /* Fetch live player count dari MC API (non-blocking) */
+    _fetchLivePlayerCount();
+
+    /* Load historical snapshots dari Supabase */
+    var result = await sb
+      .from('player_snapshots')
+      .select('player_count, max_players, recorded_at')
+      .order('recorded_at', { ascending: true })
+      .limit(60);
+
+    if (result.error) {
+      /* Tabel belum ada — tampilkan chart kosong tanpa error */
+      _buildPlayerChart([]);
+      return;
+    }
+
+    _buildPlayerChart(result.data || []);
+  }
+
+  /* Ambil status live dari mcsrvstat API dan update stat strip */
+  function _fetchLivePlayerCount() {
+    var ip    = _getServerIp();
+    var parts = ip.split(':');
+    var host  = parts[0];
+    var port  = parts[1] || '19214';
+
+    var dotEl = document.getElementById('fv2-player-dot');
+    var numEl = document.getElementById('fv2-player-num');
+    var lblEl = document.getElementById('fv2-player-label');
+
+    fetch('https://api.mcsrvstat.us/bedrock/3/' + host + ':' + port, {
+      signal: AbortSignal.timeout(8000),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.online) {
+          var onl = data.players ? (data.players.online || 0) : 0;
+          var max = data.players ? (data.players.max || '?') : '?';
+          if (dotEl) dotEl.className = 'fv2-player-dot online';
+          if (numEl) numEl.textContent = onl + ' / ' + max;
+          if (lblEl) lblEl.textContent = 'Pemain online sekarang';
+        } else {
+          if (dotEl) dotEl.className = 'fv2-player-dot offline';
+          if (numEl) numEl.textContent = 'Offline';
+          if (lblEl) lblEl.textContent = 'Server tidak dapat dijangkau';
+        }
+      })
+      .catch(function () {
+        if (dotEl) dotEl.className = 'fv2-player-dot offline';
+        if (numEl) numEl.textContent = '—';
+        if (lblEl) lblEl.textContent = 'Gagal mengambil status server';
+      });
+  }
+
+  /* Bangun player chart dari data historis */
+  function _buildPlayerChart(rows) {
+    if (typeof Chart === 'undefined') return;
+
+    var canvas = document.getElementById('fv2-player-chart');
+    if (!canvas) return;
+    if (_playerChart) { _playerChart.destroy(); _playerChart = null; }
+
+    var labels, data, isEmpty;
+
+    if (!rows || !rows.length) {
+      /* Belum ada data — tampilkan chart placeholder */
+      isEmpty = true;
+      labels  = ['Belum ada data'];
+      data    = [0];
+    } else {
+      isEmpty = false;
+      labels  = rows.map(function (r) {
+        var d = new Date(r.recorded_at);
+        /* Format: "12 Apr 14:30" */
+        return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) +
+               ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      });
+      data = rows.map(function (r) { return Number(r.player_count) || 0; });
+    }
+
+    _playerChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Pemain Online',
+          data: data,
+          borderColor: '#4a8fff',
+          backgroundColor: 'rgba(74,143,255,0.1)',
+          borderWidth: 2,
+          pointRadius: isEmpty ? 0 : (rows.length > 20 ? 2 : 4),
+          pointBackgroundColor: '#4a8fff',
+          pointBorderWidth: 0,
+          tension: 0.4,
+          fill: true,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            enabled: !isEmpty,
+            callbacks: {
+              label: function (ctx) {
+                return ' ' + ctx.parsed.y + ' pemain online';
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid:   { color: 'rgba(255,255,255,0.04)' },
+            ticks:  { color: '#4a5568', font: { size: 9 }, maxTicksLimit: 8, maxRotation: 30 },
+            border: { color: 'rgba(255,255,255,0.06)' },
+          },
+          y: {
+            grid:        { color: 'rgba(255,255,255,0.04)' },
+            ticks:       { color: '#4a5568', font: { size: 10 }, stepSize: 1, precision: 0 },
+            border:      { color: 'rgba(255,255,255,0.06)' },
+            beginAtZero: true,
+            min: 0,
+          },
+        },
+      },
+    });
+
+    /* Overlay "belum ada data" jika kosong */
+    if (isEmpty) {
+      var wrap = canvas.parentElement;
+      if (wrap && !wrap.querySelector('.fv2-player-empty')) {
+        var msg = document.createElement('div');
+        msg.className = 'fv2-player-empty';
+        msg.style.cssText = [
+          'position:absolute', 'inset:0', 'display:flex',
+          'align-items:center', 'justify-content:center',
+          'font-size:12px', 'color:var(--text-faint)',
+          'pointer-events:none', 'text-align:center', 'padding:8px',
+        ].join(';');
+        msg.textContent = 'Klik "Catat" untuk merekam jumlah pemain pertama';
+        wrap.appendChild(msg);
+      }
+    } else {
+      /* Hapus overlay jika sudah ada data */
+      var existing = canvas.parentElement && canvas.parentElement.querySelector('.fv2-player-empty');
+      if (existing) existing.remove();
+    }
+  }
+
+  /* Catat snapshot pemain sekarang */
+  window.financeV2RecordPlayer = async function () {
+    var btn = document.querySelector('.fv2-player-record-btn');
+    if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+
+    var ip    = _getServerIp();
+    var parts = ip.split(':');
+    var host  = parts[0];
+    var port  = parts[1] || '19214';
+
+    var dotEl = document.getElementById('fv2-player-dot');
+    var numEl = document.getElementById('fv2-player-num');
+    var lblEl = document.getElementById('fv2-player-label');
+
+    try {
+      var r    = await fetch('https://api.mcsrvstat.us/bedrock/3/' + host + ':' + port, {
+        signal: AbortSignal.timeout(8000),
+      });
+      var data = await r.json();
+
+      var playerCount = data.online ? (data.players ? (data.players.online || 0) : 0) : 0;
+      var maxPlayers  = data.online ? (data.players ? (data.players.max   || 0) : 0) : 0;
+
+      /* Update live strip */
+      if (dotEl) dotEl.className = data.online ? 'fv2-player-dot online' : 'fv2-player-dot offline';
+      if (numEl) numEl.textContent = data.online ? (playerCount + ' / ' + maxPlayers) : 'Offline';
+      if (lblEl) lblEl.textContent = 'Diperbarui baru saja';
+
+      /* Simpan ke Supabase */
+      var ins = await sb.from('player_snapshots').insert([{
+        player_count: playerCount,
+        max_players:  maxPlayers,
+        recorded_at:  new Date().toISOString(),
+      }]);
+
+      if (ins.error) {
+        _finToast('Gagal simpan snapshot: Setup DB player terlebih dahulu.', 'error');
+      } else {
+        _finToast('Snapshot dicatat: ' + playerCount + ' pemain ✓', 'success');
+        /* Reload chart */
+        await _loadPlayerData();
+      }
+    } catch (e) {
+      if (dotEl) dotEl.className = 'fv2-player-dot offline';
+      if (numEl) numEl.textContent = '—';
+      if (lblEl) lblEl.textContent = 'Gagal terhubung ke server';
+      _finToast('Gagal ambil data server: ' + (e.message || 'timeout'), 'error');
+    }
+
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  };
 
   /* ══════════════════════════════════════════════════════════
      4. TRANSACTION LIST (with pagination)
@@ -530,13 +742,12 @@
         '</table>' +
       '</div>';
 
-    /* Pagination */
-    var pgEl = document.getElementById('fv2-pagination');
+    var pgEl   = document.getElementById('fv2-pagination');
     var pgInfo = document.getElementById('fv2-pg-info');
     var pgPrev = document.getElementById('fv2-pg-prev');
     var pgNext = document.getElementById('fv2-pg-next');
 
-    if (pgEl) pgEl.style.display = '';
+    if (pgEl)   pgEl.style.display = '';
     if (pgInfo) pgInfo.textContent = 'Menampilkan ' + (start + 1) + '–' + Math.min(start + _pgSize, _allRows.length) + ' dari ' + _allRows.length + ' transaksi';
     if (pgPrev) pgPrev.disabled = _pgCurrent <= 1;
     if (pgNext) pgNext.disabled = _pgCurrent >= totalPages;
@@ -751,7 +962,7 @@
         '<td style="font-weight:600">'                                              + label         + '</td>' +
         '<td style="color:var(--green);font-weight:600">'                           + _fmt(row.in)  + '</td>' +
         '<td style="color:#a78bfa">'  + (row.don ? _fmt(row.don) : '—')            + '</td>' +
-        '<td style="color:#f87171;font-weight:600">'                                + _fmt(row.out) + '</td>' +
+        '<td style="font-weight:600;color:#f87171">'                                + _fmt(row.out) + '</td>' +
         '<td style="font-weight:700;color:' + (flow   >= 0 ? 'var(--green)' : '#f87171') + '">' +
           (flow >= 0 ? '+' : '') + _fmt(flow)   + '</td>' +
         '<td style="font-weight:700;color:' + (runBal >= 0 ? 'var(--green)' : '#f87171') + '">' +
@@ -811,18 +1022,28 @@
      ══════════════════════════════════════════════════════════ */
   window.financeV2SetupDB = function () {
     var sql = [
-      "CREATE TABLE IF NOT EXISTS finance_transactions (",
-      "  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),",
-      "  type         text NOT NULL CHECK (type IN ('income','expense','donation','transfer','adjustment')),",
-      "  category     text NOT NULL DEFAULT 'misc',",
-      "  amount       numeric NOT NULL,",
-      "  note         text,",
-      "  reference    text,",
-      "  recorded_by  text,",
-      "  created_at   timestamptz NOT NULL DEFAULT now()",
-      ");",
-      "CREATE INDEX IF NOT EXISTS idx_ft_created ON finance_transactions(created_at DESC);",
-      "CREATE INDEX IF NOT EXISTS idx_ft_type    ON finance_transactions(type);",
+      '-- Tabel transaksi keuangan',
+      'CREATE TABLE IF NOT EXISTS finance_transactions (',
+      '  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),',
+      '  type         text NOT NULL CHECK (type IN (\'income\',\'expense\',\'donation\',\'transfer\',\'adjustment\')),',
+      '  category     text NOT NULL DEFAULT \'misc\',',
+      '  amount       numeric NOT NULL,',
+      '  note         text,',
+      '  reference    text,',
+      '  recorded_by  text,',
+      '  created_at   timestamptz NOT NULL DEFAULT now()',
+      ');',
+      'CREATE INDEX IF NOT EXISTS idx_ft_created ON finance_transactions(created_at DESC);',
+      'CREATE INDEX IF NOT EXISTS idx_ft_type    ON finance_transactions(type);',
+      '',
+      '-- Tabel snapshot pemain online',
+      'CREATE TABLE IF NOT EXISTS player_snapshots (',
+      '  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),',
+      '  player_count integer NOT NULL DEFAULT 0,',
+      '  max_players  integer NOT NULL DEFAULT 0,',
+      '  recorded_at  timestamptz NOT NULL DEFAULT now()',
+      ');',
+      'CREATE INDEX IF NOT EXISTS idx_ps_recorded ON player_snapshots(recorded_at DESC);',
     ].join('\n');
 
     var box = document.getElementById('fv2-sql-box');
