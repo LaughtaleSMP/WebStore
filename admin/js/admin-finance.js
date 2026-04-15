@@ -1086,8 +1086,19 @@
     XLSX.utils.book_append_sheet(wb, ws, 'Laporan Keuangan');
 
     /* ── Download ── */
-    var dateTag = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-    XLSX.writeFile(wb, 'Laporan-Keuangan-LaughtaleSMP-' + dateTag + '.xlsx');
+    var dateTag = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+    var wbout = XLSXStyle.write(wb, { bookType:'xlsx', type:'binary' });
+    function s2ab(s) {
+      var buf = new ArrayBuffer(s.length);
+      var view = new Uint8Array(buf);
+      for (var i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+      return buf;
+    }
+    var blob = new Blob([s2ab(wbout)], { type:'application/octet-stream' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Laporan-Keuangan-LaughtaleSMP-' + dateTag + '.xlsx';
+    a.click();
     _finToast('Export Excel berhasil — ' + rows.length + ' transaksi ✓', 'success');
   };
 
