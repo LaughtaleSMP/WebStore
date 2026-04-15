@@ -365,6 +365,8 @@ function ordersUpdateBadge(n) {
 
 /* ─────────────────────────────────────────────────────
    MARK AS DONE
+   FIX: gunakan wa_admin_name sebagai completed_by_name
+   agar data performa admin sinkron dengan kolom "Admin" di tabel pesanan
 ───────────────────────────────────────────────────── */
 window.orderMarkDone = async function (id) {
   const sb = getSb();
@@ -373,14 +375,28 @@ window.orderMarkDone = async function (id) {
   const btn = document.querySelector(`#ocard-${id} .btn-done`);
   if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
 
+  // Ambil data order terlebih dahulu untuk mendapat wa_admin_name
+  const { data: existingOrder } = await sb
+    .from('orders')
+    .select('wa_admin_name')
+    .eq('id', id)
+    .single();
+
   const user = window.currentUser;
+  const loginName = user ? (user.user_metadata?.full_name || user.email || 'admin') : 'admin';
+
+  // Prioritaskan wa_admin_name (admin WA yang terima order) untuk konsistensi performa
+  const completedByName = (existingOrder && existingOrder.wa_admin_name)
+    ? existingOrder.wa_admin_name
+    : loginName;
+
   const { error } = await sb
     .from('orders')
     .update({
-      status:              'selesai',
-      completed_at:        new Date().toISOString(),
-      completed_by_user_id: user ? user.id   : null,
-      completed_by_name:   user ? (user.user_metadata?.full_name || user.email || 'admin') : 'admin',
+      status:               'selesai',
+      completed_at:         new Date().toISOString(),
+      completed_by_user_id: user ? user.id : null,
+      completed_by_name:    completedByName,
     })
     .eq('id', id);
 
@@ -487,7 +503,7 @@ window.oeditSave = async function () {
   const reason     = document.getElementById('oedit-refund-reason').value.trim();
 
   const user = window.currentUser;
-  const adminName = user ? (user.user_metadata?.full_name || user.email || 'admin') : 'admin';
+  const loginName = user ? (user.user_metadata?.full_name || user.email || 'admin') : 'admin';
 
   const payload = {
     item_name:      itemName,
@@ -501,13 +517,24 @@ window.oeditSave = async function () {
   };
 
   if (status === 'selesai') {
+    // Ambil wa_admin_name untuk sinkronisasi performa
+    const { data: existingOrder } = await sb
+      .from('orders')
+      .select('wa_admin_name')
+      .eq('id', id)
+      .single();
+
+    const completedByName = (existingOrder && existingOrder.wa_admin_name)
+      ? existingOrder.wa_admin_name
+      : loginName;
+
     payload.completed_at         = new Date().toISOString();
-    payload.completed_by_name    = adminName;
+    payload.completed_by_name    = completedByName;
     payload.completed_by_user_id = user ? user.id : null;
   }
 
   if (status === 'refund' || status === 'cancelled') {
-    payload.refunded_by_name    = adminName;
+    payload.refunded_by_name    = loginName;
     payload.refunded_by_user_id = user ? user.id : null;
     payload.refunded_at         = new Date().toISOString();
   }
@@ -615,26 +642,22 @@ function _injectEditModal() {
     .oedit-status-label-selesai   { background:rgba(74,222,128,0.12);  color:#4ade80; }
     .oedit-status-label-refund    { background:rgba(251,146,60,0.12);  color:#fb923c; }
     .oedit-status-label-cancelled { background:rgba(248,113,113,0.12); color:#f87171; }
-    .oedit-status-opt:checked + .oedit-status-label-pending   { background:rgba(250,204,21,0.22); }
-    .oedit-status-opt:checked + .oedit-status-label-selesai   { background:rgba(74,222,128,0.22); }
-    .oedit-status-opt:checked + .oedit-status-label-refund    { background:rgba(251,146,60,0.22); }
-    .oedit-status-opt:checked + .oedit-status-label-cancelled { background:rgba(248,113,113,0.22); }
-    .oedit-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
-    .btn-edit-order {
-      background:rgba(79,125,240,0.12); border:1px solid rgba(79,125,240,0.3);
-      color:#4f7df0; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600;
-      cursor:pointer; transition:background 0.15s; font-family:inherit;
+    .oedit-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; padding-top:16px; border-top:1px solid var(--border,rgba(255,255,255,0.08)); }
+    .oedit-cancel-btn {
+      padding:8px 18px; border-radius:8px; font-size:13px; font-weight:600;
+      background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+      color:var(--text-main,#ccc); cursor:pointer; font-family:inherit;
+      transition:background 0.15s;
     }
-    .btn-edit-order:hover { background:rgba(79,125,240,0.22); }
-    .oedit-divider { border:none; border-top:1px solid var(--border,rgba(255,255,255,0.08)); margin:16px 0; }
-    .ao-status-badge {
-      display:inline-flex; align-items:center; gap:4px; padding:3px 9px;
-      border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap;
+    .oedit-cancel-btn:hover { background:rgba(255,255,255,0.12); }
+    .oedit-save-btn {
+      padding:8px 20px; border-radius:8px; font-size:13px; font-weight:600;
+      background:var(--accent,#4f7df0); border:none;
+      color:#fff; cursor:pointer; font-family:inherit;
+      transition:opacity 0.15s;
     }
-    .ao-status-pending   { background:rgba(250,204,21,0.12); color:#facc15; }
-    .ao-status-selesai   { background:rgba(74,222,128,0.12); color:#4ade80; }
-    .ao-status-refund    { background:rgba(251,146,60,0.12);  color:#fb923c; }
-    .ao-status-cancelled { background:rgba(248,113,113,0.12); color:#f87171; }
+    .oedit-save-btn:hover { opacity:0.88; }
+    .oedit-save-btn:disabled { opacity:0.5; cursor:not-allowed; }
   `;
   document.head.appendChild(style);
 
@@ -643,290 +666,67 @@ function _injectEditModal() {
   modal.innerHTML = `
     <div class="oedit-box">
       <div class="oedit-header">
-        <div class="oedit-title">
-          ✏️ Edit Pesanan
-          <span class="order-id-badge" id="oedit-order-id-label"></span>
-        </div>
+        <div class="oedit-title">✏️ Edit Pesanan <span id="oedit-order-id-label" style="font-size:11px;opacity:0.5;font-weight:500;"></span></div>
         <button class="oedit-close-btn" onclick="oeditClose()">✕</button>
       </div>
       <input type="hidden" id="oedit-id">
       <div class="oedit-field">
-        <label>Status Pesanan</label>
-        <div class="oedit-status-badges">
-          <input class="oedit-status-opt" type="radio" name="oedit-status" id="oedit-s-pending"   value="pending"   onchange="oeditStatusChange(this)">
-          <label class="oedit-status-label oedit-status-label-pending"   for="oedit-s-pending">⏳ Pending</label>
-          <input class="oedit-status-opt" type="radio" name="oedit-status" id="oedit-s-selesai"   value="selesai"   onchange="oeditStatusChange(this)">
-          <label class="oedit-status-label oedit-status-label-selesai"   for="oedit-s-selesai">✅ Selesai</label>
-          <input class="oedit-status-opt" type="radio" name="oedit-status" id="oedit-s-refund"    value="refund"    onchange="oeditStatusChange(this)">
-          <label class="oedit-status-label oedit-status-label-refund"    for="oedit-s-refund">💸 Refund</label>
-          <input class="oedit-status-opt" type="radio" name="oedit-status" id="oedit-s-cancelled" value="cancelled" onchange="oeditStatusChange(this)">
-          <label class="oedit-status-label oedit-status-label-cancelled" for="oedit-s-cancelled">❌ Cancelled</label>
-        </div>
-      </div>
-      <div class="oedit-field" id="oedit-reason-wrap" style="display:none">
-        <label>Alasan Refund / Pembatalan</label>
-        <textarea id="oedit-refund-reason" placeholder="Contoh: pembeli meminta cancel, item habis, dll..."></textarea>
-      </div>
-      <hr class="oedit-divider">
-      <div class="oedit-field">
         <label>Nama Item</label>
-        <input id="oedit-item-name" type="text" placeholder="Nama item...">
+        <input type="text" id="oedit-item-name" placeholder="Nama produk...">
+      </div>
+      <div class="oedit-field">
+        <label>Username</label>
+        <input type="text" id="oedit-username" placeholder="Username pembeli...">
       </div>
       <div class="oedit-row-2">
-        <div class="oedit-field">
-          <label>Username Pembeli</label>
-          <input id="oedit-username" type="text" placeholder="username">
-        </div>
         <div class="oedit-field">
           <label>Qty</label>
-          <input id="oedit-qty" type="number" min="1" placeholder="1">
-        </div>
-      </div>
-      <div class="oedit-row-2">
-        <div class="oedit-field">
-          <label>Harga Satuan (Rp)</label>
-          <input id="oedit-unit-price" type="number" min="0" placeholder="0">
+          <input type="number" id="oedit-qty" min="1" value="1">
         </div>
         <div class="oedit-field">
-          <label>Total Harga (Rp)</label>
-          <input id="oedit-total-price" type="number" min="0" placeholder="0">
+          <label>Harga Satuan</label>
+          <input type="number" id="oedit-unit-price" min="0" value="0">
         </div>
       </div>
       <div class="oedit-field">
-        <label>Catatan Pembeli</label>
-        <textarea id="oedit-note" placeholder="Catatan dari pembeli..."></textarea>
+        <label>Total Harga</label>
+        <input type="number" id="oedit-total-price" min="0" value="0">
+      </div>
+      <div class="oedit-field">
+        <label>Catatan</label>
+        <textarea id="oedit-note" placeholder="Catatan pembeli..."></textarea>
+      </div>
+      <div class="oedit-field">
+        <label>Status</label>
+        <div class="oedit-status-badges">
+          <input class="oedit-status-opt" type="radio" name="oedit-status" id="os-pending"   value="pending"   onchange="oeditStatusChange(this)">
+          <label class="oedit-status-label oedit-status-label-pending"   for="os-pending">⏳ Pending</label>
+          <input class="oedit-status-opt" type="radio" name="oedit-status" id="os-selesai"   value="selesai"   onchange="oeditStatusChange(this)">
+          <label class="oedit-status-label oedit-status-label-selesai"   for="os-selesai">✅ Selesai</label>
+          <input class="oedit-status-opt" type="radio" name="oedit-status" id="os-refund"    value="refund"    onchange="oeditStatusChange(this)">
+          <label class="oedit-status-label oedit-status-label-refund"    for="os-refund">💸 Refund</label>
+          <input class="oedit-status-opt" type="radio" name="oedit-status" id="os-cancelled" value="cancelled" onchange="oeditStatusChange(this)">
+          <label class="oedit-status-label oedit-status-label-cancelled" for="os-cancelled">❌ Cancelled</label>
+        </div>
+      </div>
+      <div class="oedit-field" id="oedit-reason-wrap" style="display:none;">
+        <label>Alasan Refund / Batal</label>
+        <textarea id="oedit-refund-reason" placeholder="Tulis alasan..."></textarea>
       </div>
       <div class="oedit-footer">
-        <button class="btn-ghost" onclick="oeditClose()" style="padding:8px 18px;font-size:13px;">Batal</button>
-        <button class="save-btn" id="oedit-save-btn" onclick="oeditSave()" style="padding:8px 20px;font-size:13px;">Simpan Perubahan</button>
+        <button class="oedit-cancel-btn" onclick="oeditClose()">Batal</button>
+        <button class="oedit-save-btn" id="oedit-save-btn" onclick="oeditSave()">Simpan Perubahan</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
-  modal.addEventListener('click', function (e) {
-    if (e.target === modal) oeditClose();
-  });
 }
 
 /* ─────────────────────────────────────────────────────
-   REALTIME SUBSCRIPTION (untuk section orders)
-   Fix: pass callback to .subscribe() to avoid deprecated params warning
+   INIT — inject modal on DOM ready
 ───────────────────────────────────────────────────── */
-function ordersSubscribe() {
-  const sb = getSb();
-  if (!sb || _ordersChannel) return;
-  _ordersChannel = sb
-    .channel('orders-live')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => ordersLoad())
-    .subscribe((status, err) => {
-      if (err) console.warn('[orders-live] subscribe error:', err);
-    });
-}
-
-window.ordersRefresh = function () { ordersLoad(); };
-
-/* ─────────────────────────────────────────────────────
-   SEMUA PESANAN — load & render
-───────────────────────────────────────────────────── */
-window.allOrdersLoad = async function () {
-  const sb = getSb();
-  if (!sb) return;
-
-  const container = document.getElementById('all-orders-table');
-  if (!container) return;
-  container.innerHTML = '<div class="empty-state">Memuat...</div>';
-
-  const statusFilter = document.getElementById('ao-filter-status')?.value || '';
-  const searchVal    = (document.getElementById('ao-search')?.value || '').trim().toLowerCase();
-
-  let q = sb.from('orders').select('*').order('created_at', { ascending: false });
-  if (statusFilter) q = q.eq('status', statusFilter);
-
-  const { data, error } = await q;
-  if (error) {
-    container.innerHTML = `<div class="empty-state" style="color:#ff5a5a">Gagal memuat: ${error.message}</div>`;
-    return;
-  }
-
-  let orders = data || [];
-  if (searchVal) {
-    orders = orders.filter(o =>
-      (o.username  || '').toLowerCase().includes(searchVal) ||
-      (o.item_name || '').toLowerCase().includes(searchVal) ||
-      shortId(o.id).toLowerCase().includes(searchVal)
-    );
-  }
-
-  if (!orders.length) {
-    container.innerHTML = '<div class="empty-state">Tidak ada pesanan ditemukan.</div>';
-    return;
-  }
-
-  const statusBadge = (s) => {
-    const map = {
-      pending:   ['ao-status-pending',   '⏳ Pending'],
-      selesai:   ['ao-status-selesai',   '✅ Selesai'],
-      refund:    ['ao-status-refund',    '💸 Refund'],
-      cancelled: ['ao-status-cancelled', '❌ Cancelled'],
-    };
-    const [cls, label] = map[s] || ['', s];
-    return `<span class="ao-status-badge ${cls}">${label}</span>`;
-  };
-
-  const rows = orders.map(o => `
-    <tr>
-      <td style="white-space:nowrap;font-size:11px;"><span class="order-id-badge">${shortId(o.id)}</span></td>
-      <td style="white-space:nowrap;font-size:11px;color:var(--text-faint)">${fmtDate(o.created_at)}</td>
-      <td>${o.item_emoji || '🛒'} <strong>${escHtml(o.item_name)}</strong></td>
-      <td style="text-align:center">${o.qty || 1}</td>
-      <td>${o.username ? escHtml(o.username) : '—'}</td>
-      <td>${escHtml(o.wa_admin_name || '—')}</td>
-      <td style="color:#4ade80;font-weight:600;white-space:nowrap">${fmtRp(o.total_price)}</td>
-      <td>${statusBadge(o.status)}</td>
-      <td style="white-space:nowrap">
-        <button class="btn-edit-order" style="font-size:11px;padding:4px 10px;" onclick="orderEdit('${o.id}')">✏️ Edit</button>
-        <button class="btn-ghost" style="font-size:11px;padding:4px 10px;margin-left:4px;" onclick="orderDelete('${o.id}','all-orders')">🗑</button>
-      </td>
-    </tr>
-  `).join('');
-
-  container.innerHTML = `
-    <table class="fin-table" style="min-width:760px">
-      <thead><tr><th>ID</th><th>Waktu</th><th>Item</th><th>Qty</th><th>Username</th><th>Admin</th><th>Total</th><th>Status</th><th>Aksi</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <div style="font-size:11px;color:var(--text-faint);padding:10px 4px 4px;">Total: ${orders.length} pesanan</div>
-  `;
-};
-
-/* ─────────────────────────────────────────────────────
-   LAPORAN KEUANGAN
-───────────────────────────────────────────────────── */
-window.financeLoad = async function () {
-  const monthEl = document.getElementById('finance-month');
-  const month   = monthEl ? monthEl.value : '';
-  if (!month) { showToast('Pilih bulan terlebih dahulu.', 'error'); return; }
-  const [year, mon] = month.split('-').map(Number);
-  const start = new Date(year, mon - 1, 1).toISOString();
-  const end   = new Date(year, mon, 1).toISOString();
-  await financeQuery(start, end, `Bulan ${monthEl.value}`);
-};
-
-window.financeLoadAll = async function () {
-  await financeQuery(null, null, 'Semua Waktu');
-};
-
-async function financeQuery(start, end, label) {
-  const sb = getSb();
-  if (!sb) return;
-
-  ['finance-admin-table','finance-items-table','finance-orders-table'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = '<div class="empty-state">Memuat...</div>';
-  });
-  ['fin-total-rev','fin-total-orders','fin-avg-order'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = '...';
-  });
-
-  let q = sb.from('orders').select('*').eq('status', 'selesai');
-  if (start) q = q.gte('completed_at', start);
-  if (end)   q = q.lt('completed_at', end);
-  q = q.order('completed_at', { ascending: false });
-
-  const { data, error } = await q;
-  if (error) { showToast('Gagal load laporan: ' + error.message, 'error'); return; }
-
-  const orders = data || [];
-  const totalRev    = orders.reduce((s, o) => s + (o.total_price || 0), 0);
-  const totalOrders = orders.length;
-  const avgOrder    = totalOrders ? Math.round(totalRev / totalOrders) : 0;
-
-  document.getElementById('fin-total-rev').textContent    = fmtRp(totalRev);
-  document.getElementById('fin-total-orders').textContent = totalOrders;
-  document.getElementById('fin-avg-order').textContent    = fmtRp(avgOrder);
-
-  const adminMap = {};
-  orders.forEach(o => {
-    const k = o.completed_by_name || o.wa_admin_name || 'Unknown';
-    if (!adminMap[k]) adminMap[k] = { count: 0, rev: 0 };
-    adminMap[k].count++;
-    adminMap[k].rev += o.total_price || 0;
-  });
-
-  const adminRows = Object.entries(adminMap)
-    .sort((a, b) => b[1].rev - a[1].rev)
-    .map(([name, d], i) => `<tr><td>${i+1}</td><td style="font-weight:600">${escHtml(name)}</td><td>${d.count}</td><td style="color:#4ade80;font-weight:600">${fmtRp(d.rev)}</td></tr>`)
-    .join('');
-
-  document.getElementById('finance-admin-table').innerHTML = adminRows
-    ? `<table class="fin-table"><thead><tr><th>#</th><th>Admin</th><th>Order</th><th>Pendapatan</th></tr></thead><tbody>${adminRows}</tbody></table>`
-    : '<div class="empty-state">Belum ada data.</div>';
-
-  const itemMap = {};
-  orders.forEach(o => {
-    const k = o.item_name || 'Unknown';
-    if (!itemMap[k]) itemMap[k] = { emoji: o.item_emoji || '🛒', count: 0, qty: 0, rev: 0 };
-    itemMap[k].count++;
-    itemMap[k].qty += o.qty || 1;
-    itemMap[k].rev  += o.total_price || 0;
-  });
-
-  const itemRows = Object.entries(itemMap)
-    .sort((a, b) => b[1].rev - a[1].rev)
-    .map(([name, d], i) => `<tr><td>${i+1}</td><td>${d.emoji} <strong>${escHtml(name)}</strong></td><td>${d.qty}</td><td style="color:#4ade80;font-weight:600">${fmtRp(d.rev)}</td></tr>`)
-    .join('');
-
-  document.getElementById('finance-items-table').innerHTML = itemRows
-    ? `<table class="fin-table"><thead><tr><th>#</th><th>Item</th><th>Qty Terjual</th><th>Pendapatan</th></tr></thead><tbody>${itemRows}</tbody></table>`
-    : '<div class="empty-state">Belum ada data.</div>';
-
-  const detailRows = orders.map(o => `
-    <tr>
-      <td style="white-space:nowrap;font-size:11px;"><span class="order-id-badge">${shortId(o.id)}</span></td>
-      <td style="white-space:nowrap;font-size:11px;color:var(--text-faint)">${fmtDate(o.completed_at)}</td>
-      <td>${o.item_emoji || '🛒'} ${escHtml(o.item_name)}</td>
-      <td style="text-align:center">${o.qty || 1}</td>
-      <td>${o.username ? escHtml(o.username) : '—'}</td>
-      <td>${escHtml(o.completed_by_name || o.wa_admin_name || '—')}</td>
-      <td style="color:#4ade80;font-weight:600;white-space:nowrap">${fmtRp(o.total_price)}</td>
-    </tr>`).join('');
-
-  document.getElementById('finance-orders-table').innerHTML = detailRows
-    ? `<table class="fin-table" style="min-width:640px"><thead><tr><th>ID</th><th>Waktu</th><th>Selesai</th><th>Qty</th><th>Username</th><th>Admin</th><th>Total</th></tr></thead><tbody>${detailRows}</tbody></table>`
-    : '<div class="empty-state">Tidak ada order selesai pada periode ini.</div>';
-}
-
-/* ─────────────────────────────────────────────────────
-   HTML ESCAPE
-───────────────────────────────────────────────────── */
-function escHtml(s) {
-  if (!s) return '';
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-/* ─────────────────────────────────────────────────────
-   INIT
-───────────────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _injectEditModal);
+} else {
   _injectEditModal();
-
-  const monthEl = document.getElementById('finance-month');
-  if (monthEl) {
-    const now  = new Date();
-    const yyyy = now.getFullYear();
-    const mm   = String(now.getMonth() + 1).padStart(2, '0');
-    monthEl.value = `${yyyy}-${mm}`;
-  }
-
-  const _origShowSection = window.showSection;
-  window.showSection = function (name, el) {
-    _origShowSection && _origShowSection(name, el);
-    if (name === 'orders')     { ordersLoad(); ordersSubscribe(); }
-    if (name === 'all-orders') { window.allOrdersLoad(); }
-  };
-});
+}
