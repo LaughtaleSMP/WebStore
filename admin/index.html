@@ -692,7 +692,7 @@
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            Export CSV
+            Export Excel
           </button>
         </div>
 
@@ -1074,7 +1074,12 @@
 <script src="js/admin-orders.js" defer></script>
 <script src="js/admin-users.js" defer></script>
 <script src="js/admin-finance.js" defer></script>
-<script src="js/admin-collapse.js" defer></script><!-- ← DITAMBAHKAN -->
+<script src="js/admin-collapse.js" defer></script>
+
+<!-- SheetJS: satu CDN saja, sudah support XLSX.write + bookType xlsx -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+<script src="../libs/chart.umd.js"></script>
 
 <script>
 /* ── togglePw ── */
@@ -1208,16 +1213,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-<script>
-  /* Simpan XLSX.utils sebelum xlsx-style menimpa XLSX */
-  window._XLSXUtils = window.XLSX ? window.XLSX.utils : null;
-</script>
-<script src="https://unpkg.com/xlsx-style@0.8.13/dist/xlsx.js"></script>
-<script>
-  /* Kembalikan utils ke XLSX setelah ditimpa */
-  if (window._XLSXUtils && window.XLSX) window.XLSX.utils = window._XLSXUtils;
-</script>
-<script src="../libs/chart.umd.js"></script>
 </body>
 </html>
