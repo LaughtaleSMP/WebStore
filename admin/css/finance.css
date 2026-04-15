@@ -219,6 +219,7 @@
 .fv2-table-wrap {
   overflow-x: auto;
   border-radius: 12px;
+  isolation: isolate;  /* cegah overlap elemen luar */
   border: 1px solid rgba(74,143,255,0.18);
   box-shadow:
     0 0 0 1px rgba(74,143,255,0.06),
@@ -237,7 +238,7 @@
 /* ── Column widths — sesuai konten ── */
 .fv2-table col.col-no      { width: 44px; }
 .fv2-table col.col-date    { width: 108px; }
-.fv2-table col.col-desc    { width: auto; }   /* flex — sisa space */
+.fv2-table col.col-desc    { width: 160px; }  /* min lebar kolom keterangan */
 .fv2-table col.col-type    { width: 112px; }
 .fv2-table col.col-cat     { width: 104px; }
 .fv2-table col.col-amount  { width: 130px; }
@@ -247,6 +248,7 @@
 .fv2-table thead tr {
   background: linear-gradient(135deg, rgba(74,143,255,0.10) 0%, rgba(74,143,255,0.04) 100%);
 }
+.fv2-table thead { position: relative; z-index: 2; }
 .fv2-table th {
   color: rgba(148,173,255,0.9);
   font-size: 10px;
@@ -289,296 +291,155 @@
   box-shadow: inset 3px 0 0 rgba(74,143,255,0.55);
 }
 
-/* ── Cells ── */
 .fv2-table td {
   padding: 10px 13px;
-  border-bottom: 1px solid rgba(255,255,255,0.045);
+  border-bottom: 1px solid rgba(255,255,255,0.038);
   vertical-align: middle;
-  color: var(--text);
-  transition: background 120ms ease, box-shadow 120ms ease;
-}
-.fv2-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* Kolom No — center + faint */
-.fv2-table td:first-child {
-  text-align: center;
-  color: var(--text-faint);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  padding-left: 8px;
-  padding-right: 8px;
-}
-
-/* Kolom Tanggal */
-.fv2-table td:nth-child(2) {
-  white-space: nowrap;
-  font-size: 11.5px;
-  color: var(--text-faint);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Kolom Jumlah — right-align + monospace */
-.fv2-table td.col-amount,
-.fv2-table td:nth-child(6) {
-  text-align: right;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.3px;
-  padding-right: 16px;
-  white-space: nowrap;
-}
-
-/* Kolom Aksi — center */
-.fv2-table td:last-child {
-  text-align: center;
-  padding: 6px 6px;
-}
-
-/* ── Row content ── */
-.fv2-tx-item-name {
-  font-weight: 600;
-  color: var(--text);
-  font-size: 12.5px;
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.fv2-table tbody tr:last-child td { border-bottom: none; }
+
+/* Kolom No. */
+.fv2-table td:first-child { color: var(--text-faint); font-size: 11px; }
+
+/* ── Desc cell ── */
+.fv2-tx-item-name {
+  font-size: 12.5px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 220px;
 }
 .fv2-tx-item-sub {
-  font-size: 10.5px;
-  color: var(--text-faint);
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 220px;
+  font-size: 10.5px; color: var(--text-faint);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 220px; margin-top: 2px;
 }
 
 /* ── Type badge ── */
 .fv2-type-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 9px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 6px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px;
   white-space: nowrap;
-  border: 1px solid transparent;
 }
-.fv2-type-badge.tb-in  {
-  background: rgba(52,211,153,0.12);
-  color: #34d399;
-  border-color: rgba(52,211,153,0.28);
-}
-.fv2-type-badge.tb-out {
-  background: rgba(248,113,113,0.12);
-  color: #f87171;
-  border-color: rgba(248,113,113,0.28);
-}
-.fv2-type-badge.tb-don {
-  background: rgba(167,139,250,0.12);
-  color: #a78bfa;
-  border-color: rgba(167,139,250,0.28);
-}
-.fv2-type-badge.tb-tr  {
-  background: rgba(96,165,250,0.12);
-  color: #60a5fa;
-  border-color: rgba(96,165,250,0.28);
-}
-.fv2-type-badge.tb-adj {
-  background: rgba(251,191,36,0.12);
-  color: #fbbf24;
-  border-color: rgba(251,191,36,0.28);
-}
+.fv2-type-badge.t-income     { background: rgba(52,211,153,0.12); color:#34d399; }
+.fv2-type-badge.t-expense    { background: rgba(248,113,113,0.10); color:#f87171; }
+.fv2-type-badge.t-donation   { background: rgba(167,139,250,0.10); color:#a78bfa; }
+.fv2-type-badge.t-transfer   { background: rgba(96,165,250,0.10);  color:#60a5fa; }
+.fv2-type-badge.t-adjustment { background: rgba(251,191,36,0.10);  color:#fbbf24; }
 
 /* ── Category badge ── */
 .fv2-cat-badge {
   display: inline-block;
-  padding: 2.5px 8px;
-  border-radius: 6px;
-  font-size: 10.5px;
-  font-weight: 600;
+  padding: 2.5px 7px; border-radius: 5px;
+  font-size: 10.5px; font-weight: 600;
   background: rgba(255,255,255,0.05);
-  color: var(--text-muted);
   border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-muted);
   white-space: nowrap;
-  letter-spacing: 0.2px;
 }
 
-/* ── Delete button ── */
+/* ── Delete btn ── */
 .fv2-del-btn {
-  background: none;
-  border: none;
-  color: var(--text-faint);
-  cursor: pointer;
-  padding: 5px 7px;
-  border-radius: 6px;
-  transition: color 160ms, background 160ms, transform 120ms;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--text-faint); font-size: 13px; line-height: 1;
+  padding: 4px 7px; border-radius: 6px;
+  transition: background 120ms, color 120ms;
+  font-family: inherit;
 }
-.fv2-del-btn:hover {
-  color: #f87171;
-  background: rgba(248,113,113,0.1);
-  border: 1px solid rgba(248,113,113,0.22);
-  transform: scale(1.1);
-}
+.fv2-del-btn:hover { background: rgba(248,113,113,0.14); color:#f87171; }
 
-/* ── Tabel kosong ── */
-.fv2-table-empty-row td {
-  text-align: center;
-  padding: 32px 16px;
-  color: var(--text-faint);
-  font-size: 12.5px;
+/* ── Empty / loading states ── */
+.fv2-table-empty {
+  text-align: center; padding: 40px 20px;
+  color: var(--text-faint); font-size: 13px;
 }
 
 /* ── Pagination ── */
 .fv2-pagination {
-  padding: 10px 16px;
-  border-top: 1px solid rgba(74,143,255,0.12);
-  background: linear-gradient(135deg, rgba(74,143,255,0.04) 0%, transparent 100%);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11.5px;
-  color: var(--text-faint);
-  border-radius: 0 0 12px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255,255,255,0.04);
 }
 .fv2-pg-btns { display: flex; gap: 6px; }
-.fv2-pg-btn {
+.fv2-pg-btn  {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 11px; border-radius: 8px;
   background: var(--surface2); border: 1px solid var(--border);
-  color: var(--text-muted); padding: 4px 11px; border-radius: 7px;
-  cursor: pointer; font-size: 11px; font-family: inherit;
-  transition: border-color 150ms, color 150ms, background 150ms;
+  color: var(--text-muted); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 140ms;
+  font-family: var(--font,'Inter',sans-serif);
 }
-.fv2-pg-btn:hover  { border-color: rgba(74,143,255,0.5); color: var(--accent); background: rgba(74,143,255,0.08); }
+.fv2-pg-btn:hover:not(:disabled) { border-color: rgba(74,143,255,0.4); color: var(--accent); }
 .fv2-pg-btn:disabled { opacity: .35; cursor: not-allowed; }
 
 /* ═══════════════════════════════════════════════
-   CASHFLOW TABLE
+   FORM MODAL — Tambah / Edit Transaksi
    ═══════════════════════════════════════════════ */
 
-/* Cashflow table ikut styling tabel utama */
-#fv2-cashflow .fv2-table-wrap {
-  border-color: rgba(167,139,250,0.18);
-  box-shadow:
-    0 0 0 1px rgba(167,139,250,0.06),
-    0 4px 24px rgba(0,0,0,0.35);
-}
-#fv2-cashflow .fv2-table thead tr {
-  background: linear-gradient(135deg, rgba(167,139,250,0.10) 0%, rgba(167,139,250,0.04) 100%);
-}
-#fv2-cashflow .fv2-table th {
-  color: rgba(196,181,253,0.9);
-  border-bottom-color: rgba(167,139,250,0.22);
-}
-#fv2-cashflow .fv2-table th::after {
-  background: linear-gradient(90deg, rgba(167,139,250,0.4), transparent);
-}
-#fv2-cashflow .fv2-table tbody tr:hover td {
-  background: rgba(167,139,250,0.07) !important;
-  box-shadow: inset 3px 0 0 rgba(167,139,250,0.55);
-}
-#fv2-cashflow .fv2-pagination {
-  border-top-color: rgba(167,139,250,0.12);
-  background: linear-gradient(135deg, rgba(167,139,250,0.04) 0%, transparent 100%);
-}
-
-/* ── Period selector ── */
-.fv2-period-bar {
-  display: flex; gap: 5px; flex-wrap: wrap;
-  align-items: center; margin-bottom: 15px;
-}
-.fv2-period-btn {
-  padding: 5.5px 13px; border-radius: 20px;
-  font-size: 12px; font-weight: 600; cursor: pointer;
-  border: 1px solid var(--border2); background: none;
-  color: var(--text-muted); transition: all 160ms; font-family: inherit;
-}
-.fv2-period-btn:hover  { border-color: var(--accent); color: var(--accent); }
-.fv2-period-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 10px rgba(74,143,255,0.35); }
-
-/* ── Modal ── */
 .fv2-modal-overlay {
   position: fixed; inset: 0; z-index: 1100;
-  background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
-  display: none; align-items: center; justify-content: center;
-  padding: 16px; opacity: 0; transition: opacity .22s;
+  background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
 }
-.fv2-modal-overlay.open { opacity: 1; }
 .fv2-modal {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 16px; padding: 24px; width: 100%; max-width: 460px;
-  position: relative; transform: translateY(20px) scale(.97);
-  transition: transform .26s cubic-bezier(.34,1.3,.64,1);
-  box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  width: 100%; max-width: 420px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  overflow: hidden;
 }
-.fv2-modal-overlay.open .fv2-modal { transform: none; }
 .fv2-modal-header {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
 }
-.fv2-modal-title { font-size: 1.05rem; font-weight: 700; color: var(--text); letter-spacing: -.4px; }
+.fv2-modal-title { font-size: 15px; font-weight: 700; color: var(--text); }
 .fv2-modal-close {
-  background: none; border: none; color: var(--text-faint);
-  cursor: pointer; padding: 4px; border-radius: 5px;
-  font-size: 17px; line-height: 1; transition: color 160ms;
-}
-.fv2-modal-close:hover { color: var(--text); }
-.fv2-modal .form-group { margin-bottom: 13px; }
-.fv2-modal .form-label {
-  font-size: 10.5px; font-weight: 600; color: var(--text-muted);
-  display: block; margin-bottom: 5px; letter-spacing: 0.3px; text-transform: uppercase;
-}
-.fv2-modal .form-input {
-  width: 100%; background: var(--surface2); border: 1px solid var(--border2);
-  border-radius: 9px; padding: 9.5px 12px; color: var(--text);
-  font-size: 13.5px; outline: none; transition: border-color 160ms, box-shadow 160ms;
-  font-family: inherit; -webkit-appearance: none; appearance: none;
-}
-.fv2-modal .form-input:focus {
-  border-color: rgba(74,143,255,0.5);
-  box-shadow: 0 0 0 3px rgba(74,143,255,0.1);
-}
-.fv2-modal-footer { display: flex; gap: 9px; margin-top: 18px; }
-.fv2-modal-footer .btn-ghost   { flex: 1; text-align: center; justify-content: center; }
-.fv2-modal-footer .btn-primary { flex: 2; }
-
-/* ── SQL box ── */
-.fv2-sql-box {
-  display: none; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 11px; padding: 14px 16px; margin-top: 11px;
-}
-.fv2-sql-box pre {
-  font-family: var(--mono, monospace); font-size: 11.5px;
-  color: #a78bfa; white-space: pre-wrap; margin: 0 0 11px; line-height: 1.6;
-}
-
-/* ── Tabs ── */
-.fv2-tabs {
-  display: flex; gap: 0;
-  border-bottom: 1px solid var(--border); margin-bottom: 16px;
-}
-.fv2-tab {
-  padding: 9px 17px; font-size: 12.5px; font-weight: 600;
-  color: var(--text-faint); background: none; border: none;
-  border-bottom: 2px solid transparent; cursor: pointer;
-  transition: color .18s, border-color .18s; margin-bottom: -1px;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-faint); font-size: 18px; line-height: 1;
+  padding: 4px 8px; border-radius: 6px;
+  transition: background 120ms, color 120ms;
   font-family: inherit;
 }
-.fv2-tab.active { color: var(--text); border-bottom-color: var(--accent); }
-.fv2-tab:hover:not(.active) { color: var(--text-muted); }
-.fv2-tab-panel        { display: none; }
-.fv2-tab-panel.active { display: block; }
+.fv2-modal-close:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+.fv2-modal-body  { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+.fv2-modal-footer { padding: 12px 20px 18px; display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ── Cashflow tab ── */
+#fv2-cashflow .fv2-table-wrap {
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+}
+#fv2-cashflow .fv2-table thead tr {
+  background: rgba(255,255,255,0.03);
+}
+#fv2-cashflow .fv2-table th {
+  color: var(--text-faint);
+  border-bottom-color: rgba(255,255,255,0.07);
+}
+#fv2-cashflow .fv2-table th::after {
+  background: linear-gradient(90deg, rgba(255,255,255,0.1), transparent);
+}
 
 /* ── Responsive ── */
 @media(max-width:640px) {
   .fv2-summary   { grid-template-columns: 1fr 1fr; }
+  /* Sembunyikan kolom Tipe & No di mobile, kolom Keterangan jadi lebih lebar */
+  .fv2-table col.col-no   { width: 0; }
+  .fv2-table col.col-type { width: 0; }
+  .fv2-table col.col-date { width: 88px; }
+  .fv2-table col.col-desc { width: 120px; }
+  .fv2-table col.col-cat  { width: 88px; }
+  .fv2-table col.col-amount { width: 90px; }
+  .fv2-table td:nth-child(1),
+  .fv2-table th:nth-child(1) { display: none; } /* No */
+  .fv2-table td:nth-child(4),
+  .fv2-table th:nth-child(4) { display: none; } /* Tipe */
   .fv2-actions   { gap: 5px; }
   .fv2-btn       { padding: 7px 11px; font-size: 12px; }
   .fv2-pagination { flex-direction: column; gap: 8px; align-items: flex-start; }
