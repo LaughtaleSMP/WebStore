@@ -9,14 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/admin.css">
 <link rel="stylesheet" href="css/finance.css">
-<link rel="stylesheet" href="css/admin-enhance.css"><!-- ← DITAMBAHKAN -->
+<link rel="stylesheet" href="css/admin-enhance.css">
 <style>
 /* ─── Page-specific overrides ─── */
-
-/* Auth screen topbar / panel tweaks */
 .topbar { height: 50px; padding: 0 16px; }
 
-/* Filter bars */
 .filter-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 13px; }
 .filter-bar label { font-size: 11px; color: var(--text-faint); font-weight: 600; }
 .filter-bar select, .filter-bar input {
@@ -25,34 +22,30 @@
   padding: 6px 10px; font-size: 12.5px; outline: none; font-family: inherit;
 }
 
-/* Fv2 overrides */
-.fv2-modal .btn-ghost   { display: inline-flex; align-items: center; justify-content: center; }
-.fv2-modal .btn-primary { display: inline-flex; align-items: center; justify-content: center; }
-
-/* Orders / All orders extras */
-.order-id-badge {
-  display: inline-block; font-size: 10px; font-weight: 700;
-  font-family: var(--mono); letter-spacing: 0.4px;
-  color: var(--accent); background: rgba(74,143,255,0.1);
-  border: 1px solid rgba(74,143,255,0.2);
-  border-radius: 5px; padding: 1px 5px; vertical-align: middle; user-select: all;
-}
-
-/* Oedit modal */
 @keyframes oeditIn {
   from { opacity:0; transform:translateY(14px) scale(0.97); }
   to   { opacity:1; transform:translateY(0) scale(1); }
 }
 
-/* Finance v2 modal open state */
-.fv2-modal-overlay { display: none; }
-.fv2-modal-overlay[style*="flex"] { display: flex; }
-
 /* Req cards */
 .req-card { background: var(--surface2); }
+
+/* order-time */
+.order-time { font-size: 11.5px; color: var(--text-faint); }
+.order-tags { display: flex; flex-wrap: wrap; gap: 5px; margin: 7px 0; }
+.price-tag  { color: var(--green); font-weight: 600; }
+.btn-edit-order, .btn-delete-order {
+  padding: 5px 9px; font-size: 11.5px; border-radius: var(--r-sm);
+  border: 1px solid var(--border2); background: var(--surface2);
+  color: var(--text-muted); cursor: pointer; transition: all var(--t-normal);
+}
+.btn-edit-order:hover   { border-color: rgba(74,143,255,.35); color: var(--accent); background: var(--accent-muted); }
+.btn-delete-order:hover { border-color: rgba(248,113,113,.3); color: #fca5a5; background: var(--red-muted); }
+
+/* Finance V2 modal open state */
+.fv2-modal-overlay[style*="flex"] { display: flex; }
 </style>
 </head>
-
 <body>
 
 <!-- ═══════════ AUTH SCREEN ═══════════ -->
@@ -111,15 +104,15 @@
 
     <div class="auth-left-foot">
       <span>2025 Laughtale SMP</span>
-      <span>v2.0</span>
+      <span>v2.1</span>
     </div>
   </div>
 
   <!-- Right: Form area -->
   <div class="auth-right">
     <div class="auth-tabs-bar">
-      <button class="auth-tab active" id="tab-pill-login" onclick="switchAuthTab('login')">Masuk</button>
-      <button class="auth-tab" id="tab-pill-register" onclick="switchAuthTab('register')">Daftar Admin</button>
+      <button class="auth-tab active" id="tab-pill-login"    onclick="switchAuthTab('login')">Masuk</button>
+      <button class="auth-tab"        id="tab-pill-register" onclick="switchAuthTab('register')">Daftar Admin</button>
     </div>
 
     <div class="auth-slide-track" id="auth-slide-track">
@@ -132,9 +125,7 @@
 
           <div id="auth-error" class="alert alert-error" style="display:none">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
             <span id="auth-error-msg"></span>
           </div>
@@ -156,15 +147,13 @@
             <div class="input-wrap">
               <span class="input-icon">
                 <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <rect x="3" y="11" width="18" height="11" rx="2"/>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
               </span>
               <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password">
               <button class="input-eye" type="button" onclick="togglePw('login-password',this)" tabindex="-1">
                 <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                 </svg>
               </button>
             </div>
@@ -173,8 +162,7 @@
           <button class="btn-primary" onclick="doLogin()" id="login-btn">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-              <polyline points="10 17 15 12 10 7"/>
-              <line x1="15" y1="12" x2="3" y2="12"/>
+              <polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
             </svg>
             Masuk ke Panel
           </button>
@@ -190,9 +178,7 @@
 
           <div id="req-error" class="alert alert-error" style="display:none">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
             <span id="req-error-msg"></span>
           </div>
@@ -208,8 +194,7 @@
             <div class="input-wrap">
               <span class="input-icon">
                 <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                 </svg>
               </span>
               <input class="form-input" id="req-display" type="text" placeholder="cth: Blackdamen">
@@ -233,8 +218,7 @@
               <div class="input-wrap">
                 <span class="input-icon">
                   <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <rect x="3" y="11" width="18" height="11" rx="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                   </svg>
                 </span>
                 <input class="form-input" id="req-password" type="password" placeholder="Min. 6 karakter" autocomplete="new-password">
@@ -245,8 +229,7 @@
               <div class="input-wrap">
                 <span class="input-icon">
                   <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <rect x="3" y="11" width="18" height="11" rx="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                   </svg>
                 </span>
                 <input class="form-input" id="req-password2" type="password" placeholder="Ulangi" autocomplete="new-password">
@@ -267,8 +250,7 @@
 
           <button class="btn-primary" onclick="doRequestAccess()" id="req-submit-btn">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-              <line x1="22" y1="2" x2="11" y2="13"/>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
             Kirim Permintaan
           </button>
@@ -277,8 +259,8 @@
         </div>
       </div>
 
-    </div>
-  </div>
+    </div><!-- /auth-slide-track -->
+  </div><!-- /auth-right -->
 </div><!-- /auth-screen -->
 
 
@@ -312,6 +294,7 @@
   </div>
 
   <div class="app-body">
+    <!-- ═══ SIDEBAR ═══ -->
     <div class="sidebar">
       <div class="sidebar-back" onclick="goToMain()">
         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -375,12 +358,9 @@
       </div>
       <div class="nav-item" onclick="showSection('all-orders',this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <line x1="8" y1="6" x2="21" y2="6"/>
-          <line x1="8" y1="12" x2="21" y2="12"/>
-          <line x1="8" y1="18" x2="21" y2="18"/>
-          <line x1="3" y1="6" x2="3.01" y2="6"/>
-          <line x1="3" y1="12" x2="3.01" y2="12"/>
-          <line x1="3" y1="18" x2="3.01" y2="18"/>
+          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+          <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+          <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
         </svg>
         Semua Pesanan
       </div>
@@ -393,23 +373,22 @@
       </div>
       <div class="nav-item" onclick="showSection('finance-v2',this)" id="nav-finance-v2">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <rect x="2" y="5" width="20" height="14" rx="2"/>
-          <line x1="2" y1="10" x2="22" y2="10"/>
+          <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
         </svg>
         Manajemen Keuangan
         <span style="font-size:8.5px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:20px;margin-left:auto;font-weight:700;letter-spacing:.3px;flex-shrink:0;">NEW</span>
       </div>
+      <!-- Nav items tambahan diinjeksi oleh admin-shop.js, admin-wa-template.js, admin-users.js -->
       <div class="nav-item" id="nav-access-requests" style="display:none" onclick="showSection('access-requests',this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
           <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
         </svg>
         Permintaan Akses
         <span class="nav-badge" id="access-req-badge" style="display:none">0</span>
       </div>
-    </div>
+    </div><!-- /sidebar -->
 
     <!-- ═══════════ MAIN CONTENT ═══════════ -->
     <div class="main-content">
@@ -437,8 +416,7 @@
             <div class="card-icon">
               <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <rect x="2" y="3" width="20" height="14" rx="2"/>
-                <line x1="8" y1="21" x2="16" y2="21"/>
-                <line x1="12" y1="17" x2="12" y2="21"/>
+                <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
               </svg>
             </div>
           </div>
@@ -529,7 +507,7 @@
         </div>
         <div class="save-bar">
           <button class="btn-ghost" onclick="testStatusConnection()" style="display:inline-flex;align-items:center;gap:6px;">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             Test Koneksi
           </button>
           <button class="save-btn" onclick="saveSection('server-status')">Simpan Konfigurasi</button>
@@ -631,7 +609,7 @@
       <!-- ── SEMUA PESANAN ── -->
       <div class="section" id="sec-all-orders">
         <div class="page-header"><div class="page-title">Semua Pesanan</div><div class="page-sub">Riwayat seluruh pesanan — pending, selesai, refund, cancelled</div></div>
-        <div class="card" style="padding:13px 16px;">
+        <div class="card" style="padding:13px 16px;margin-bottom:10px;">
           <div class="filter-bar">
             <label>Status</label>
             <select id="ao-filter-status">
@@ -650,7 +628,10 @@
             </button>
           </div>
         </div>
-        <div class="card"><div id="all-orders-table" style="overflow-x:auto;"><div class="empty-state">Klik Tampilkan untuk memuat data.</div></div></div>
+        <!-- Bug #1 fix: ID all-orders-table (bukan all-orders-tbody) -->
+        <div style="overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);">
+          <div id="all-orders-table"><div class="empty-state">Pilih filter dan klik Tampilkan.</div></div>
+        </div>
       </div>
 
       <!-- ── LAPORAN KEUANGAN ── -->
@@ -674,13 +655,8 @@
         <div class="card"><div class="card-header"><div class="card-title">Detail Order Selesai</div></div><div id="finance-orders-table" style="overflow-x:auto;"><div class="empty-state">Pilih bulan dan klik Tampilkan.</div></div></div>
       </div>
 
-<!-- ══════════════════════════════════════════════════
-     FINANCE V2 SECTION — paste this to replace
-     <div class="section" id="sec-finance-v2"> ... </div>
-     ══════════════════════════════════════════════════ -->
+      <!-- ── MANAJEMEN KEUANGAN (Finance V2) ── -->
       <div class="section" id="sec-finance-v2">
-
-        <!-- Page header -->
         <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <div>
             <div class="page-title">Manajemen Keuangan</div>
@@ -689,8 +665,7 @@
           <button class="fv2-btn fv2-btn-exp" onclick="financeV2Export()" style="align-self:flex-start">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
+              <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
             Export Excel
           </button>
@@ -707,108 +682,63 @@
           <input type="hidden" id="fv2-period" value="month">
         </div>
 
-        <!-- Summary strip: 4 cards -->
+        <!-- Summary strip -->
         <div class="fv2-summary">
-
-          <!-- Pemasukan -->
           <div class="fv2-sum-card c-in">
-            <div class="fv2-sum-icon">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-                <polyline points="17 6 23 6 23 12"/>
-              </svg>
-            </div>
+            <div class="fv2-sum-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
             <div class="fv2-sum-label">Total Pemasukan</div>
             <div class="fv2-sum-val pos" id="fv2-sum-in">—</div>
             <div class="fv2-sum-delta" id="fv2-delta-in"><span style="color:var(--text-faint)">Memuat…</span></div>
           </div>
-
-          <!-- Pengeluaran -->
           <div class="fv2-sum-card c-out">
-            <div class="fv2-sum-icon">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/>
-                <polyline points="17 18 23 18 23 12"/>
-              </svg>
-            </div>
+            <div class="fv2-sum-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg></div>
             <div class="fv2-sum-label">Total Pengeluaran</div>
             <div class="fv2-sum-val neg" id="fv2-sum-out">—</div>
             <div class="fv2-sum-delta" id="fv2-delta-out"><span style="color:var(--text-faint)">Memuat…</span></div>
           </div>
-
-          <!-- Donasi -->
           <div class="fv2-sum-card c-don">
-            <div class="fv2-sum-icon">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-              </svg>
-            </div>
+            <div class="fv2-sum-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
             <div class="fv2-sum-label">Total Donasi</div>
             <div class="fv2-sum-val" style="color:#a78bfa" id="fv2-sum-don">—</div>
             <div class="fv2-sum-delta" id="fv2-delta-don"><span style="color:var(--text-faint)">Memuat…</span></div>
           </div>
-
-          <!-- Saldo Bersih -->
           <div class="fv2-sum-card c-bal">
-            <div class="fv2-sum-icon">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-                <line x1="12" y1="1" x2="12" y2="23"/>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
-            </div>
+            <div class="fv2-sum-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
             <div class="fv2-sum-label">Saldo Bersih</div>
             <div class="fv2-sum-val" id="fv2-sum-bal">—</div>
             <div class="fv2-sum-delta" id="fv2-delta-bal"><span style="color:var(--text-faint)">Memuat…</span></div>
           </div>
+        </div>
 
-        </div><!-- /fv2-summary -->
-
-        <!-- Row 1: Line chart + Pie chart -->
+        <!-- Charts Row A -->
         <div class="fv2-charts-row">
-
-          <!-- Line chart -->
           <div class="fv2-chart-card">
             <div class="fv2-chart-title">Tren Keuangan</div>
             <div class="fv2-chart-sub">Pemasukan &amp; pengeluaran per hari</div>
             <div class="fv2-chart-legend">
-              <span class="fv2-leg-item">
-                <span class="fv2-leg-dot" style="background:#34d399"></span>Pemasukan
-              </span>
-              <span class="fv2-leg-item">
-                <span class="fv2-leg-dot" style="background:#f87171"></span>Pengeluaran
-              </span>
+              <span class="fv2-leg-item"><span class="fv2-leg-dot" style="background:#34d399"></span>Pemasukan</span>
+              <span class="fv2-leg-item"><span class="fv2-leg-dot" style="background:#f87171"></span>Pengeluaran</span>
             </div>
-            <div style="position:relative;width:100%;height:180px">
-              <canvas id="fv2-line-chart"></canvas>
-            </div>
+            <div style="position:relative;width:100%;height:180px"><canvas id="fv2-line-chart"></canvas></div>
           </div>
-
-          <!-- Pie chart -->
           <div class="fv2-chart-card">
             <div class="fv2-chart-title">Distribusi Pemasukan</div>
             <div class="fv2-chart-sub">Berdasarkan kategori</div>
             <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center">
-              <div style="position:relative;width:120px;height:120px">
-                <canvas id="fv2-pie-chart"></canvas>
-              </div>
+              <div style="position:relative;width:120px;height:120px"><canvas id="fv2-pie-chart"></canvas></div>
               <div id="fv2-pie-legend" class="fv2-pie-legend"></div>
             </div>
           </div>
+        </div>
 
-        </div><!-- /fv2-charts-row -->
-
-        <!-- Row 2: Bar chart + Player Online chart -->
+        <!-- Charts Row B -->
         <div class="fv2-charts-row-b">
-
-          <!-- Bar + mini bars card -->
           <div class="fv2-bar-card">
             <div class="fv2-bar-inner">
               <div>
                 <div class="fv2-chart-title">Top Kategori Pemasukan</div>
                 <div class="fv2-chart-sub" style="margin-bottom:12px">Berdasarkan jumlah nominal</div>
-                <div style="position:relative;width:100%;height:160px">
-                  <canvas id="fv2-bar-chart"></canvas>
-                </div>
+                <div style="position:relative;width:100%;height:160px"><canvas id="fv2-bar-chart"></canvas></div>
               </div>
               <div>
                 <div class="fv2-chart-title" style="margin-bottom:4px">Breakdown Kategori</div>
@@ -817,24 +747,17 @@
               </div>
             </div>
           </div>
-
-          <!-- Player online chart card -->
           <div class="fv2-player-card">
             <div class="fv2-chart-header">
               <div class="fv2-chart-header-text">
                 <div class="fv2-chart-title">Player Online</div>
                 <div class="fv2-chart-sub">Riwayat jumlah pemain di server</div>
               </div>
-              <button class="fv2-player-record-btn" onclick="financeV2RecordPlayer()" title="Catat jumlah pemain sekarang">
-                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                  <polyline points="23 4 23 10 17 10"/>
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                </svg>
+              <button class="fv2-player-record-btn" onclick="financeV2RecordPlayer()">
+                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                 Catat
               </button>
             </div>
-
-            <!-- Live stat strip -->
             <div class="fv2-player-stat" id="fv2-player-stat">
               <span class="fv2-player-dot" id="fv2-player-dot"></span>
               <div>
@@ -842,64 +765,18 @@
                 <div class="fv2-player-label" id="fv2-player-label">Memuat status server…</div>
               </div>
             </div>
-
-            <!-- Player chart canvas -->
-            <div style="position:relative;width:100%;height:130px">
-              <canvas id="fv2-player-chart"></canvas>
-            </div>
+            <div style="position:relative;width:100%;height:130px"><canvas id="fv2-player-chart"></canvas></div>
           </div>
-
-        </div><!-- /fv2-charts-row-b -->
+        </div>
 
         <!-- Action buttons -->
         <div class="fv2-actions">
-
-          <!-- Pemasukan -->
-          <button class="fv2-btn fv2-btn-in" onclick="financeV2ShowForm('income')">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Pemasukan
-          </button>
-
-          <!-- Pengeluaran -->
-          <button class="fv2-btn fv2-btn-out" onclick="financeV2ShowForm('expense')">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Pengeluaran
-          </button>
-
-          <!-- Donasi -->
-          <button class="fv2-btn fv2-btn-don" onclick="financeV2ShowForm('donation')">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-            </svg>
-            Donasi
-          </button>
-
-          <!-- Transfer -->
-          <button class="fv2-btn fv2-btn-tr" onclick="financeV2ShowForm('transfer')">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-              <polyline points="17 1 21 5 17 9"/>
-              <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-              <polyline points="7 23 3 19 7 15"/>
-              <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-            </svg>
-            Transfer
-          </button>
-
-          <!-- Penyesuaian -->
-          <button class="fv2-btn fv2-btn-adj" onclick="financeV2ShowForm('adjustment')">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
-            </svg>
-            Penyesuaian
-          </button>
-
-        </div><!-- /fv2-actions -->
+          <button class="fv2-btn fv2-btn-in"  onclick="financeV2ShowForm('income')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Pemasukan</button>
+          <button class="fv2-btn fv2-btn-out" onclick="financeV2ShowForm('expense')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>Pengeluaran</button>
+          <button class="fv2-btn fv2-btn-don" onclick="financeV2ShowForm('donation')">♦ Donasi</button>
+          <button class="fv2-btn fv2-btn-tr"  onclick="financeV2ShowForm('transfer')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Transfer</button>
+          <button class="fv2-btn fv2-btn-adj" onclick="financeV2ShowForm('adjustment')">⚙ Penyesuaian</button>
+        </div>
 
         <!-- Tabs -->
         <div class="fv2-tabs">
@@ -936,27 +813,15 @@
             <input type="date" id="fv2-to" onchange="financeV2LoadList()">
             <input id="fv2-search" placeholder="Cari catatan / referensi…" style="flex:1;min-width:120px" oninput="financeV2LoadList()">
             <button class="btn-ghost" style="padding:5px 9px;font-size:12px;display:inline-flex;align-items:center;" onclick="financeV2LoadList()">
-              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             </button>
           </div>
-
-          <div class="tx-card" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
-            <div id="fv2-list"><div class="empty-state">Memuat data...</div></div>
-            <div class="fv2-pagination" id="fv2-pagination" style="display:none">
-              <span id="fv2-pg-info" style="font-size:11.5px;color:var(--text-faint)"></span>
-              <div class="fv2-pg-btns">
-                <button class="fv2-pg-btn" id="fv2-pg-prev" onclick="financeV2PgPrev()">
-                  <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-                  Prev
-                </button>
-                <button class="fv2-pg-btn" id="fv2-pg-next" onclick="financeV2PgNext()">
-                  Next
-                  <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-              </div>
+          <div id="fv2-list"><div class="empty-state">Memuat data...</div></div>
+          <div class="fv2-pagination" id="fv2-pagination" style="display:none">
+            <span id="fv2-pg-info" style="font-size:11.5px;color:var(--text-faint)"></span>
+            <div class="fv2-pg-btns">
+              <button class="fv2-pg-btn" id="fv2-pg-prev" onclick="financeV2PgPrev()">← Prev</button>
+              <button class="fv2-pg-btn" id="fv2-pg-next" onclick="financeV2PgNext()">Next →</button>
             </div>
           </div>
         </div>
@@ -969,29 +834,20 @@
         <!-- Setup DB helper -->
         <div style="margin-top:16px">
           <button class="btn-ghost" style="font-size:12px;padding:6px 13px;display:inline-flex;align-items:center;gap:5px;" onclick="financeV2SetupDB()">
-            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <ellipse cx="12" cy="5" rx="9" ry="3"/>
-              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
-              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
-            </svg>
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
             Setup Database (pertama kali)
           </button>
-          <div class="fv2-sql-box" id="fv2-sql-box">
-            <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Salin SQL ini ke <strong>Supabase → SQL Editor</strong>:</p>
-            <pre id="fv2-sql-code"></pre>
-            <button class="btn-ghost" style="font-size:12px;padding:5px 12px;display:inline-flex;align-items:center;gap:5px;" onclick="financeV2CopySQL()">
-              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <rect x="9" y="9" width="13" height="13" rx="2"/>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-              </svg>
-              Salin SQL
-            </button>
+          <div id="fv2-sql-box" style="display:none;margin-top:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:12px;font-weight:600;color:var(--text-muted)">SQL Setup — jalankan di Supabase SQL Editor</span>
+              <button class="btn-ghost" style="font-size:11px;padding:4px 10px" onclick="financeV2CopySQL()">Copy SQL</button>
+            </div>
+            <pre id="fv2-sql-code" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:11.5px;overflow-x:auto;color:var(--text);white-space:pre-wrap;font-family:var(--mono);line-height:1.6"></pre>
           </div>
         </div>
-
       </div><!-- /sec-finance-v2 -->
 
-      <!-- ── PERMINTAAN AKSES ── -->
+      <!-- ── PERMINTAAN AKSES (legacy, hidden for superadmin use) ── -->
       <div class="section" id="sec-access-requests">
         <div class="page-header"><div class="page-title">Permintaan Akses Admin</div><div class="page-sub">Review dan setujui atau tolak pendaftaran admin baru</div></div>
         <div class="orders-stats-strip">
@@ -1016,46 +872,47 @@
       </div>
 
     </div><!-- /main-content -->
-  </div>
+  </div><!-- /app-body -->
 </div><!-- /app -->
 
 
 <!-- ── FINANCE V2 MODAL ── -->
-<div class="fv2-modal-overlay" id="fv2-modal" onclick="if(event.target===this)financeV2CloseModal()">
+<div class="fv2-modal-overlay" id="fv2-modal" style="display:none" onclick="if(event.target===this)financeV2CloseModal()">
   <div class="fv2-modal">
     <div class="fv2-modal-header">
       <div class="fv2-modal-title" id="fv2-modal-title">Tambah Transaksi</div>
       <button class="fv2-modal-close" onclick="financeV2CloseModal()">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
     </div>
-    <input type="hidden" id="fv2-form-type" value="income">
-    <div class="form-group">
-      <label class="form-label">Nominal (Rp)</label>
-      <input class="form-input" id="fv2-form-amount" type="number" min="0" placeholder="50000" inputmode="numeric">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Kategori</label>
-      <select class="form-input" id="fv2-form-cat"></select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Catatan</label>
-      <input class="form-input" id="fv2-form-note" type="text" placeholder="Deskripsi transaksi...">
-    </div>
-    <div class="form-group">
-      <label class="form-label" id="fv2-ref-label">Referensi (opsional)</label>
-      <input class="form-input" id="fv2-form-ref" type="text" placeholder="">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Tanggal</label>
-      <input class="form-input" id="fv2-form-date" type="date" style="color-scheme:dark">
+    <div class="fv2-modal-body">
+      <input type="hidden" id="fv2-form-type" value="income">
+      <div class="field" style="margin-bottom:12px">
+        <label>Nominal (Rp) <span style="color:var(--red)">*</span></label>
+        <input id="fv2-form-amount" type="number" min="0" placeholder="0" inputmode="numeric" style="width:100%;box-sizing:border-box">
+      </div>
+      <div class="field" style="margin-bottom:12px">
+        <label>Kategori</label>
+        <select id="fv2-form-cat" style="width:100%;box-sizing:border-box"></select>
+      </div>
+      <div class="field" style="margin-bottom:12px">
+        <label>Keterangan</label>
+        <input id="fv2-form-note" type="text" placeholder="Deskripsi transaksi..." style="width:100%;box-sizing:border-box">
+      </div>
+      <div class="field" style="margin-bottom:12px">
+        <label id="fv2-ref-label">Referensi (opsional)</label>
+        <input id="fv2-form-ref" type="text" placeholder="" style="width:100%;box-sizing:border-box">
+      </div>
+      <div class="field">
+        <label>Tanggal</label>
+        <input id="fv2-form-date" type="date" style="width:100%;box-sizing:border-box;color-scheme:dark">
+      </div>
     </div>
     <div class="fv2-modal-footer">
       <button class="btn-ghost" onclick="financeV2CloseModal()">Batal</button>
-      <button class="btn-primary" id="fv2-submit-btn" onclick="financeV2Submit()">Simpan Transaksi</button>
+      <button class="save-btn" id="fv2-submit-btn" onclick="financeV2Submit()">Simpan Transaksi</button>
     </div>
   </div>
 </div>
@@ -1063,12 +920,14 @@
 <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
 <div id="toast"></div>
 
+<!-- ═══ SCRIPTS ═══ -->
 <script src="../libs/supabase.js"></script>
 <script src="js/admin-init.js"></script>
 <script src="js/admin-auth.js" defer></script>
 <script src="js/admin-config.js" defer></script>
 <script src="js/admin-wa.js" defer></script>
 <script src="js/admin-nav.js" defer></script>
+<script src="js/admin-wa-template.js" defer></script><!-- Bug #5 fix: script hilang -->
 <script src="js/admin-server-status.js" defer></script>
 <script src="js/admin-shop.js" defer></script>
 <script src="js/admin-orders.js" defer></script>
@@ -1076,134 +935,18 @@
 <script src="js/admin-finance.js" defer></script>
 <script src="js/admin-collapse.js" defer></script>
 
-<!-- Chart.js untuk grafik finance v2 -->
+<!-- Deps -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-
-<!-- ExcelJS untuk export Excel -->
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-  
+
 <script>
+/* ================================================================
+   INLINE SCRIPT — index.html
+   Hanya berisi helpers yang benar-benar perlu inline.
+   Semua logic utama sudah dipindah ke file JS masing-masing.
+================================================================ */
 
-async function _renderFinanceSection(from, to) {
-  const adminTbl  = document.getElementById('finance-admin-table');
-  const itemsTbl  = document.getElementById('finance-items-table');
-  const ordersTbl = document.getElementById('finance-orders-table');
-
-  adminTbl.innerHTML  = '<div class="empty-state">Memuat...</div>';
-  itemsTbl.innerHTML  = '<div class="empty-state">Memuat...</div>';
-  ordersTbl.innerHTML = '<div class="empty-state">Memuat...</div>';
-
-  const sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
-  if (!sb) {
-    adminTbl.innerHTML = '<div class="empty-state">Koneksi belum siap, coba lagi.</div>';
-    return;
-  }
-
-  let q = sb.from('orders').select('*').eq('status', 'selesai');
-  if (from) q = q.gte('completed_at', from).lte('completed_at', to + 'T23:59:59');
-
-  const { data, error } = await q.order('completed_at', { ascending: false });
-  if (error || !data) {
-    adminTbl.innerHTML = '<div class="empty-state">Gagal memuat data: ' + (error?.message || 'unknown') + '</div>';
-    return;
-  }
-
-  // -- Ringkasan (FIX: pakai ID yang benar) --
-  const total = data.reduce((s, r) => s + (Number(r.total_price) || 0), 0);
-  const avg   = data.length ? Math.round(total / data.length) : 0;
-  document.getElementById('fin-total-rev').textContent    = 'Rp ' + total.toLocaleString('id-ID');
-  document.getElementById('fin-total-orders').textContent = data.length + ' order';
-  document.getElementById('fin-avg-order').textContent    = 'Rp ' + avg.toLocaleString('id-ID');
-
-  // -- Performa per Admin --
-  const adminMap = {};
-  data.forEach(r => {
-    const name = r.wa_admin_name || r.completed_by_name || 'Unknown';
-    if (!adminMap[name]) adminMap[name] = { orders: 0, revenue: 0 };
-    adminMap[name].orders++;
-    adminMap[name].revenue += Number(r.total_price) || 0;
-  });
-  const adminEntries = Object.entries(adminMap).sort((a,b) => b[1].revenue - a[1].revenue);
-  adminTbl.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead><tr>
-        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">#</th>
-        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ADMIN</th>
-        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ORDER</th>
-        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">PENDAPATAN</th>
-      </tr></thead>
-      <tbody>${adminEntries.map(([name, d], i) => `
-        <tr>
-          <td style="padding:10px;color:var(--text-faint)">${i+1}</td>
-          <td style="padding:10px;font-weight:600">${name}</td>
-          <td style="padding:10px">${d.orders}</td>
-          <td style="padding:10px;color:var(--success);font-weight:700">Rp ${d.revenue.toLocaleString('id-ID')}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>`;
-
-  // -- Item Terlaris (FIX: pakai kolom 'item') --
-  const itemMap = {};
-  data.forEach(r => {
-    const name = r.item || r.item_name || '?';
-    if (!itemMap[name]) itemMap[name] = { qty: 0, revenue: 0 };
-    itemMap[name].qty += Number(r.quantity) || 1;
-    itemMap[name].revenue += Number(r.total_price) || 0;
-  });
-  const itemEntries = Object.entries(itemMap).sort((a,b) => b[1].qty - a[1].qty).slice(0, 10);
-  itemsTbl.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead><tr>
-        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ITEM</th>
-        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">QTY</th>
-        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">PENDAPATAN</th>
-      </tr></thead>
-      <tbody>${itemEntries.map(([name, d]) => `
-        <tr>
-          <td style="padding:10px;font-weight:600">${name}</td>
-          <td style="padding:10px">${d.qty}</td>
-          <td style="padding:10px;color:var(--success);font-weight:700">Rp ${d.revenue.toLocaleString('id-ID')}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>`;
-
-  // -- Detail Order --
-  ordersTbl.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px;">
-      <thead><tr>
-        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">WAKTU</th>
-        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ITEM</th>
-        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">USERNAME</th>
-        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ADMIN</th>
-        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">TOTAL</th>
-      </tr></thead>
-      <tbody>${data.map(r => `
-        <tr>
-          <td style="padding:9px 10px;color:var(--text-muted)">${new Date(r.completed_at||r.created_at).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
-          <td style="padding:9px 10px;font-weight:500">${r.item||r.item_name||'?'}</td>
-          <td style="padding:9px 10px">${r.username||'?'}</td>
-          <td style="padding:9px 10px">${r.wa_admin_name||r.completed_by_name||'?'}</td>
-          <td style="padding:9px 10px;color:var(--success);font-weight:700">Rp ${(Number(r.total_price)||0).toLocaleString('id-ID')}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>`;
-}
-
-
-/* ── financeLoad / financeLoadAll ── */
-window.financeLoad = async function () {
-  var monthEl = document.getElementById("finance-month");
-  if (!monthEl || !monthEl.value) { alert("Pilih bulan terlebih dahulu."); return; }
-  var parts = monthEl.value.split("-");
-  var from = parts[0] + "-" + parts[1] + "-01";
-  var lastDay = new Date(Number(parts[0]), Number(parts[1]), 0).getDate();
-  var to = parts[0] + "-" + parts[1] + "-" + String(lastDay).padStart(2,"0");
-  await _renderFinanceSection(from, to);
-};
-window.financeLoadAll = async function () {
-  await _renderFinanceSection(null, null);
-};
-/* ── togglePw ── */
+/* ── Password toggle ── */
 function togglePw(inputId, btn) {
   var inp = document.getElementById(inputId);
   if (!inp) return;
@@ -1214,147 +957,190 @@ function togglePw(inputId, btn) {
     : '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 }
 
-/* ── switchAuthTab ── */
+/* ── Auth tab switcher ── */
 function switchAuthTab(tab) {
   var track    = document.getElementById('auth-slide-track');
   var pillLogin = document.getElementById('tab-pill-login');
   var pillReg   = document.getElementById('tab-pill-register');
+  if (!track) return;
   if (tab === 'register') {
     track.classList.add('show-register');
-    pillLogin.classList.remove('active'); pillReg.classList.add('active');
-    setTimeout(function(){ document.getElementById('auth-panel-register').scrollTop = 0; }, 100);
+    if (pillLogin) pillLogin.classList.remove('active');
+    if (pillReg)   pillReg.classList.add('active');
   } else {
     track.classList.remove('show-register');
-    pillLogin.classList.add('active'); pillReg.classList.remove('active');
-    setTimeout(function(){ document.getElementById('auth-panel-login').scrollTop = 0; }, 100);
+    if (pillLogin) pillLogin.classList.add('active');
+    if (pillReg)   pillReg.classList.remove('active');
   }
-  ['req-error','req-success','auth-error'].forEach(function(id){
-    var el = document.getElementById(id); if (el) el.style.display = 'none';
+  ['req-error','req-success','auth-error'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
   });
 }
 
-/* ── Touch swipe ── */
+/* ── Touch swipe untuk auth tabs ── */
 (function() {
   var track = document.getElementById('auth-slide-track');
   if (!track) return;
   var sx = 0, sy = 0;
-  track.addEventListener('touchstart', function(e){ sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive:true });
-  track.addEventListener('touchend', function(e){
+  track.addEventListener('touchstart', function(e) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+  track.addEventListener('touchend', function(e) {
     var dx = e.changedTouches[0].clientX - sx;
     var dy = e.changedTouches[0].clientY - sy;
     if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx) * 0.85) return;
     var isReg = track.classList.contains('show-register');
     if (dx < 0 && !isReg) switchAuthTab('register');
-    if (dx > 0 && isReg)  switchAuthTab('login');
-  }, { passive:true });
+    if (dx > 0 &&  isReg) switchAuthTab('login');
+  }, { passive: true });
 })();
 
-/* ── Access request stats ── */
-async function loadAccessRequestStats() {
-  var sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
-  if (!sb) return;
-  for (var i = 0, statuses = ['pending','approved','rejected']; i < statuses.length; i++) {
-    var s = statuses[i];
-    var res = await sb.from('admin_requests').select('*', { count:'exact', head:true }).eq('status', s);
-    var el = document.getElementById('req-stat-' + s);
-    if (el) el.textContent = res.count || 0;
-  }
-}
-
-window.loadAccessRequests = async function() {
-  var container = document.getElementById('access-requests-list');
-  if (!container) return;
-  container.innerHTML = '<div class="empty-state">Memuat data...</div>';
-  var sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
-  if (!sb) {
-    container.innerHTML = '<div class="empty-state">Koneksi belum siap, coba refresh halaman.</div>';
-    return;
-  }
-  var filterEl = document.getElementById('req-filter-status');
-  var filter = filterEl ? filterEl.value : '';
-  var query = sb.from('admin_requests').select('*').order('created_at', { ascending: false });
-  if (filter) query = query.eq('status', filter);
-  var _a = await query;
-  var data = _a.data;
-  await loadAccessRequestStats();
-  if (!data || !data.length) {
-    container.innerHTML = '<div class="empty-state">Tidak ada permintaan' + (filter ? ' dengan status ini' : '') + '.</div>';
-    return;
-  }
-  var statusColor = { pending:'var(--yellow)', approved:'var(--green)', rejected:'var(--red)' };
-  var statusLabel = { pending:'Menunggu', approved:'Disetujui', rejected:'Ditolak' };
-  function _esc(s) { var d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
-  container.innerHTML = data.map(function(r) {
-    return '<div class="req-card" id="req-card-' + r.id + '">' +
-      '<div class="req-card-info">' +
-        '<div class="req-card-name">' + _esc(r.display_name) + '</div>' +
-        '<div class="req-card-email">' + _esc(r.email) + '</div>' +
-        '<div class="req-card-meta">' +
-          '<span class="req-role-badge">' + _esc(r.role) + '</span>' +
-          '<span style="font-size:11px;color:' + (statusColor[r.status]||'#888') + '">' + (statusLabel[r.status]||r.status) + '</span>' +
-          '<span style="font-size:11px;color:var(--text-faint)">' + new Date(r.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}) + '</span>' +
-        '</div>' +
-        (r.reason ? '<div class="req-card-reason">"' + _esc(r.reason) + '"</div>' : '') +
-      '</div>' +
-      (r.status === 'pending' ?
-        '<div class="req-card-actions">' +
-          '<button class="btn-approve" onclick="approveRequest(\'' + r.id + '\')">Setujui</button>' +
-          '<button class="btn-reject"  onclick="rejectRequest(\'' + r.id + '\')">Tolak</button>' +
-        '</div>' : '') +
-    '</div>';
-  }).join('');
-};
-
-/* ── Finance V2 helpers ── */
+/* ── Finance V2 period helper ── */
 window.fv2SetPeriod = function(p, btn) {
-  document.getElementById('fv2-period').value = p;
-  document.querySelectorAll('.fv2-period-btn').forEach(function(b){ b.classList.remove('active'); });
+  var inp = document.getElementById('fv2-period');
+  if (inp) inp.value = p;
+  document.querySelectorAll('.fv2-period-btn').forEach(function(b) { b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
-  financeV2LoadSummary(p);
+  if (typeof window.financeV2Init === 'function') window.financeV2Init();
 };
+
+/* ── Finance V2 tab helper ── */
 window.fv2SwitchTab = function(tab, btn) {
-  document.querySelectorAll('.fv2-tab').forEach(function(b){ b.classList.remove('active'); });
-  document.querySelectorAll('.fv2-tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.fv2-tab').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.fv2-tab-panel').forEach(function(p) { p.classList.remove('active'); });
   if (btn) btn.classList.add('active');
   var panel = document.getElementById('fv2-panel-' + tab);
   if (panel) panel.classList.add('active');
-  if (tab === 'cashflow') financeV2LoadCashflow();
+  if (tab === 'cashflow' && typeof window.financeV2LoadCashflow === 'function') {
+    window.financeV2LoadCashflow();
+  }
 };
 
-/* ── FIXED: Split DOMContentLoaded & window.load agar script defer sudah siap ── */
+/* ── Laporan Keuangan (Finance Legacy) ── */
+async function _renderFinanceSection(from, to) {
+  var adminTbl  = document.getElementById('finance-admin-table');
+  var itemsTbl  = document.getElementById('finance-items-table');
+  var ordersTbl = document.getElementById('finance-orders-table');
+  if (!adminTbl) return;
+
+  adminTbl.innerHTML  = '<div class="empty-state">Memuat...</div>';
+  itemsTbl.innerHTML  = '<div class="empty-state">Memuat...</div>';
+  ordersTbl.innerHTML = '<div class="empty-state">Memuat...</div>';
+
+  var sb = window._adminSb || null;
+  if (!sb) { adminTbl.innerHTML = '<div class="empty-state">Koneksi belum siap.</div>'; return; }
+
+  var q = sb.from('orders').select('*').eq('status', 'selesai');
+  if (from) q = q.gte('completed_at', from).lte('completed_at', to + 'T23:59:59');
+
+  var result = await q.order('completed_at', { ascending: false });
+  if (result.error || !result.data) {
+    adminTbl.innerHTML = '<div class="empty-state">Gagal: ' + (result.error ? result.error.message : 'data kosong') + '</div>';
+    return;
+  }
+  var data = result.data;
+
+  var total = data.reduce(function(s, r) { return s + (Number(r.total_price) || 0); }, 0);
+  var avg   = data.length ? Math.round(total / data.length) : 0;
+  var rev = document.getElementById('fin-total-rev');
+  var ord = document.getElementById('fin-total-orders');
+  var avg2 = document.getElementById('fin-avg-order');
+  if (rev)  rev.textContent  = 'Rp ' + total.toLocaleString('id-ID');
+  if (ord)  ord.textContent  = data.length + ' order';
+  if (avg2) avg2.textContent = 'Rp ' + avg.toLocaleString('id-ID');
+
+  /* Performa per Admin */
+  var adminMap = {};
+  data.forEach(function(r) {
+    var name = r.wa_admin_name || r.completed_by_name || 'Unknown';
+    if (!adminMap[name]) adminMap[name] = { orders: 0, revenue: 0 };
+    adminMap[name].orders++;
+    adminMap[name].revenue += Number(r.total_price) || 0;
+  });
+  var adminEntries = Object.entries(adminMap).sort(function(a,b) { return b[1].revenue - a[1].revenue; });
+  adminTbl.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+    '<thead><tr>' +
+      '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">#</th>' +
+      '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">ADMIN</th>' +
+      '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">ORDER</th>' +
+      '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">PENDAPATAN</th>' +
+    '</tr></thead><tbody>' +
+    adminEntries.map(function(e, i) {
+      return '<tr><td style="padding:10px;color:var(--text-faint)">' + (i+1) + '</td>' +
+        '<td style="padding:10px;font-weight:600">' + e[0] + '</td>' +
+        '<td style="padding:10px">' + e[1].orders + '</td>' +
+        '<td style="padding:10px;color:var(--green);font-weight:700">Rp ' + e[1].revenue.toLocaleString('id-ID') + '</td></tr>';
+    }).join('') +
+    '</tbody></table></div>';
+
+  /* Item Terlaris — Bug #4 fix: fallback ke field 'item' */
+  var itemMap = {};
+  data.forEach(function(r) {
+    var name = r.item_name || r.item || '?';
+    if (!itemMap[name]) itemMap[name] = { qty: 0, revenue: 0 };
+    itemMap[name].qty += Number(r.quantity || r.qty) || 1;
+    itemMap[name].revenue += Number(r.total_price) || 0;
+  });
+  var itemEntries = Object.entries(itemMap).sort(function(a,b) { return b[1].qty - a[1].qty; }).slice(0, 10);
+  itemsTbl.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+    '<thead><tr>' +
+      '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">ITEM</th>' +
+      '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">QTY</th>' +
+      '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">PENDAPATAN</th>' +
+    '</tr></thead><tbody>' +
+    itemEntries.map(function(e) {
+      return '<tr><td style="padding:10px;font-weight:600">' + e[0] + '</td>' +
+        '<td style="padding:10px">' + e[1].qty + '</td>' +
+        '<td style="padding:10px;color:var(--green);font-weight:700">Rp ' + e[1].revenue.toLocaleString('id-ID') + '</td></tr>';
+    }).join('') +
+    '</tbody></table></div>';
+
+  /* Detail Order */
+  ordersTbl.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px;">' +
+    '<thead><tr>' +
+      '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">WAKTU</th>' +
+      '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">ITEM</th>' +
+      '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">USERNAME</th>' +
+      '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">ADMIN</th>' +
+      '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">TOTAL</th>' +
+    '</tr></thead><tbody>' +
+    data.map(function(r) {
+      return '<tr>' +
+        '<td style="padding:9px 10px;color:var(--text-muted)">' + new Date(r.completed_at||r.created_at).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) + '</td>' +
+        '<td style="padding:9px 10px;font-weight:500">' + (r.item_name||r.item||'?') + '</td>' +
+        '<td style="padding:9px 10px">' + (r.username||'?') + '</td>' +
+        '<td style="padding:9px 10px">' + (r.wa_admin_name||r.completed_by_name||'?') + '</td>' +
+        '<td style="padding:9px 10px;color:var(--green);font-weight:700">Rp ' + (Number(r.total_price)||0).toLocaleString('id-ID') + '</td>' +
+        '</tr>';
+    }).join('') +
+    '</tbody></table></div>';
+}
+
+window.financeLoad = async function() {
+  var monthEl = document.getElementById('finance-month');
+  if (!monthEl || !monthEl.value) { alert('Pilih bulan terlebih dahulu.'); return; }
+  var parts = monthEl.value.split('-');
+  var from = parts[0] + '-' + parts[1] + '-01';
+  var lastDay = new Date(Number(parts[0]), Number(parts[1]), 0).getDate();
+  var to = parts[0] + '-' + parts[1] + '-' + String(lastDay).padStart(2,'0');
+  await _renderFinanceSection(from, to);
+};
+
+window.financeLoadAll = async function() {
+  await _renderFinanceSection(null, null);
+};
+
+/* ── ordersRefresh ── */
+window.ordersRefresh = function() {
+  if (typeof window.ordersLoad === 'function') window.ordersLoad();
+};
+
+/* ── Set default bulan finance ── */
 document.addEventListener('DOMContentLoaded', function() {
-  // Set default bulan filter keuangan
   var monthEl = document.getElementById('finance-month');
   if (monthEl) {
     var now = new Date();
     monthEl.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   }
-});
-
-window.addEventListener('load', function() {
-  // Semua script defer sudah selesai di-load di sini — aman untuk override showSection
-  var _origShowSection = window.showSection;
-  window.showSection = function(name, el) {
-    // Destroy finance v2 dulu sebelum pindah ke section lain
-    if (name !== 'finance-v2' && typeof financeV2Destroy === 'function') {
-      financeV2Destroy();
-    }
-    if (typeof _origShowSection === 'function') _origShowSection(name, el);
-    if (name === 'orders') {
-      if (typeof ordersLoad === 'function') ordersLoad();
-      if (typeof ordersSubscribe === 'function') ordersSubscribe();
-    }
-    if (name === 'all-orders') {
-      if (typeof window.allOrdersLoad === 'function') window.allOrdersLoad();
-    }
-    if (name === 'access-requests') { loadAccessRequests(); }
-    if (name === 'finance-v2') {
-      if (typeof financeV2Init === 'function') financeV2Init();
-    }
-  };
-  window.ordersRefresh = function() {
-    if (typeof ordersLoad === 'function') ordersLoad();
-  };
 });
 </script>
 
