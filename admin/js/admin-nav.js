@@ -16,12 +16,21 @@ function showSection(name, el) {
     'orders':           'Pesanan Masuk',
     'all-orders':       'Semua Pesanan',
     'finance':          'Laporan Keuangan',
+    'finance-v2':       'Manajemen Keuangan',
     'access-requests':  'Permintaan Akses',
   };
   document.getElementById('topbar-section').textContent = labels[name] || name;
 
   if (name === 'access-requests' && typeof window.loadAccessRequests === 'function') {
     window.loadAccessRequests();
+  }
+
+  // ── Finance: auto-load saat section aktif ──
+  if (name === 'finance' && typeof window.financeLoad === 'function') {
+    window.financeLoad();
+  }
+  if (name === 'finance-v2' && typeof window.financeV2Init === 'function') {
+    window.financeV2Init();
   }
 }
 
