@@ -7,8 +7,8 @@
    TOAST helper (lokal, fallback jika showToast global belum ada)
 ───────────────────────────────────────────────────── */
 function showToast(msg, type = 'info') {
-  if (typeof window.showToast === 'function' && showToast !== arguments.callee) {
-    return window.showToast(msg, type);
+  if (typeof window.showAdminToast === 'function') {
+    return window.showAdminToast(msg, type);
   }
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
@@ -22,6 +22,26 @@ function getSb() { return window._adminSb || null; }
 function escHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+/* ─────────────────────────────────────────────────────
+   BADGE INIT — dipanggil saat login (Bug #3 fix)
+───────────────────────────────────────────────────── */
+window.ordersInitBadge = async function () {
+  const sb = getSb();
+  if (!sb) return;
+  const { count } = await sb
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending');
+  const badge = document.getElementById('orders-badge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+};
 
 /* ─────────────────────────────────────────────────────
    PESANAN MASUK
@@ -41,52 +61,67 @@ window.ordersLoad = async function () {
 
   const badge = document.getElementById('orders-badge');
   if (error) {
-    container.innerHTML = `<p style="color:var(--error)">Gagal: ${escHtml(error.message)}</p>`;
+    container.innerHTML = `<p style="color:var(--red)">Gagal: ${escHtml(error.message)}</p>`;
     return;
   }
+
+  // Bug #2 fix: update ostat-* elements yang benar
+  const pendingEl = document.getElementById('ostat-pending');
+  if (pendingEl) pendingEl.textContent = data ? data.length : 0;
 
   if (!data || data.length === 0) {
     container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:10px 0;">Tidak ada pesanan masuk saat ini.</p>';
     if (badge) badge.style.display = 'none';
+
+    // Tetap update stats meski kosong
+    const start = new Date(); start.setHours(0,0,0,0);
+    const end   = new Date(); end.setHours(23,59,59,999);
+    const { count: doneToday } = await sb.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'selesai').gte('completed_at', start.toISOString()).lt('completed_at', end.toISOString());
+    const { data: revData }    = await sb.from('orders').select('total_price').eq('status', 'selesai').gte('completed_at', start.toISOString()).lt('completed_at', end.toISOString());
+    const rev = (revData || []).reduce((s, r) => s + (r.total_price || 0), 0);
+    const doneTodayEl = document.getElementById('ostat-done-today');
+    const revTodayEl  = document.getElementById('ostat-rev-today');
+    if (doneTodayEl) doneTodayEl.textContent = doneToday || 0;
+    if (revTodayEl)  revTodayEl.textContent  = 'Rp ' + rev.toLocaleString('id-ID');
     return;
   }
 
   if (badge) { badge.textContent = data.length; badge.style.display = 'inline-flex'; }
 
+  // Bug #4 fix: gunakan item_name || item untuk field name yang konsisten
   container.innerHTML = data.map(o => `
     <div class="order-card" id="ocard-${escHtml(o.id)}">
       <div class="order-card-head">
         <span class="order-id-badge">#${escHtml(String(o.id).slice(-4).toUpperCase())}</span>
-        <span class="order-time">${escHtml(new Date(o.created_at).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}))}</span>
+        <span class="order-time" style="font-size:11.5px;color:var(--text-faint)">${escHtml(new Date(o.created_at).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}))}</span>
       </div>
-      <div class="order-item-name">${escHtml(o.item_name || '—')}</div>
-      <div class="order-tags">
-        ${o.username ? `<span class="order-tag">👤 ${escHtml(o.username)}</span>` : ''}
-        ${o.qty ? `<span class="order-tag">×${escHtml(String(o.qty))}</span>` : ''}
-        ${o.total_price ? `<span class="order-tag price-tag">Rp ${Number(o.total_price).toLocaleString('id-ID')}</span>` : ''}
-        ${o.wa_admin_name ? `<span class="order-tag">💬 Admin: ${escHtml(o.wa_admin_name)}</span>` : ''}
+      <div class="order-item-name">${escHtml(o.item_name || o.item || '—')}</div>
+      <div class="order-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin:7px 0">
+        ${o.username    ? `<span class="order-tag">👤 ${escHtml(o.username)}</span>` : ''}
+        ${o.qty         ? `<span class="order-tag">×${escHtml(String(o.qty))}</span>` : ''}
+        ${o.total_price ? `<span class="order-tag" style="color:var(--green);font-weight:600">Rp ${Number(o.total_price).toLocaleString('id-ID')}</span>` : ''}
+        ${o.wa_admin_name ? `<span class="order-tag">💬 ${escHtml(o.wa_admin_name)}</span>` : ''}
       </div>
       ${o.customer_note ? `<div class="order-note">"${escHtml(o.customer_note)}"</div>` : ''}
       <div class="order-actions">
         <button class="btn-done" onclick="orderMarkDone('${o.id}')">✅ Selesai</button>
-        <button class="btn-edit-order" onclick="oeditOpen('${escHtml(o.id)}')">✏️ Edit</button>
-        <button class="btn-delete-order" onclick="orderDelete('${escHtml(o.id)}')">🗑️</button>
+        <button class="btn-edit" onclick="oeditOpen('${escHtml(o.id)}')">✏️ Edit</button>
+        <button class="btn-del"  onclick="orderDelete('${escHtml(o.id)}')">🗑️</button>
       </div>
     </div>
   `).join('');
 
-  /* stats bar */
+  /* Bug #2 fix: update stats dengan element ID yang benar */
   const start = new Date(); start.setHours(0,0,0,0);
   const end   = new Date(); end.setHours(23,59,59,999);
-  const { count: doneToday }    = await sb.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'selesai').gte('completed_at', start).lt('completed_at', end);
-  const { data: revData }       = await sb.from('orders').select('total_price').eq('status', 'selesai').gte('completed_at', start).lt('completed_at', end);
+  const { count: doneToday }    = await sb.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'selesai').gte('completed_at', start.toISOString()).lt('completed_at', end.toISOString());
+  const { data: revData }       = await sb.from('orders').select('total_price').eq('status', 'selesai').gte('completed_at', start.toISOString()).lt('completed_at', end.toISOString());
   const rev = (revData || []).reduce((s, r) => s + (r.total_price || 0), 0);
-  const stEl = document.getElementById('orders-stats');
-  if (stEl) stEl.innerHTML = `
-    <span>📦 Pending: <strong>${data.length}</strong></span>
-    <span>✅ Selesai hari ini: <strong>${doneToday||0}</strong></span>
-    <span>💰 Pendapatan hari ini: <strong>Rp ${rev.toLocaleString('id-ID')}</strong></span>
-  `;
+
+  const doneTodayEl = document.getElementById('ostat-done-today');
+  const revTodayEl  = document.getElementById('ostat-rev-today');
+  if (doneTodayEl) doneTodayEl.textContent = doneToday || 0;
+  if (revTodayEl)  revTodayEl.textContent  = 'Rp ' + rev.toLocaleString('id-ID');
 };
 
 /* ─────────────────────────────────────────────────────
@@ -98,7 +133,6 @@ window.ordersSubscribe = function () {
   const sb = getSb();
   if (!sb) return;
 
-  // Hindari duplicate channel
   if (_ordersChannel) {
     try { sb.removeChannel(_ordersChannel); } catch(e) {}
     _ordersChannel = null;
@@ -112,7 +146,6 @@ window.ordersSubscribe = function () {
       table: 'orders',
     }, () => {
       ordersLoad();
-      // Refresh all-orders jika sedang aktif
       const allSec = document.getElementById('sec-all-orders');
       if (allSec && allSec.classList.contains('active')) {
         if (typeof window.allOrdersLoad === 'function') window.allOrdersLoad();
@@ -135,7 +168,6 @@ window.orderMarkDone = async function (id) {
     status: 'selesai',
     completed_at: new Date().toISOString(),
     completed_by_user_id: user ? user.id : null,
-    // Gunakan wa_admin_name supaya performa admin sinkron dengan kolom Admin di tabel pesanan
     completed_by_name: existingOrder?.wa_admin_name
       || (user ? (user.user_metadata?.full_name || user.email || 'admin') : 'admin'),
   }).eq('id', id);
@@ -168,13 +200,13 @@ window.orderDelete = async function (id) {
 };
 
 /* ─────────────────────────────────────────────────────
-   SAVE EDIT ORDER (dari modal oedit)
+   SAVE EDIT ORDER
 ───────────────────────────────────────────────────── */
 window.oeditSave = async function () {
   const sb = getSb();
   if (!sb) return;
   const id            = document.getElementById('oedit-id').value;
-  const item_name     = document.getElementById('oedit-item-name').value.trim();
+  const itemName      = document.getElementById('oedit-item-name').value.trim();
   const username      = document.getElementById('oedit-username').value.trim();
   const qty           = parseInt(document.getElementById('oedit-qty').value) || 1;
   const unit_price    = parseFloat(document.getElementById('oedit-unit-price').value) || 0;
@@ -183,12 +215,17 @@ window.oeditSave = async function () {
   const status        = _getOeditStatus();
   const refund_reason = document.getElementById('oedit-refund-reason')?.value?.trim() || null;
   const user          = window.currentUser;
-  const updates = { item_name, username, qty, unit_price, total_price, customer_note, status };
+
+  // Bug #7 fix: update kedua kolom agar kompatibel (item dan item_name)
+  const updates = {
+    item_name: itemName,
+    item: itemName,
+    username, qty, unit_price, total_price, customer_note, status
+  };
   if (status === 'refund' || status === 'cancelled') updates.refund_reason = refund_reason;
   if (status === 'selesai') {
     updates.completed_at = new Date().toISOString();
     updates.completed_by_user_id = user ? user.id : null;
-    // Ambil wa_admin_name dari DB supaya performa sinkron dengan kolom Admin
     const { data: existingOrder } = await sb.from('orders').select('wa_admin_name').eq('id', id).single();
     updates.completed_by_name = existingOrder?.wa_admin_name
       || (user ? (user.user_metadata?.full_name || user.email || 'admin') : 'admin');
@@ -207,79 +244,85 @@ window.oeditSave = async function () {
 };
 
 /* ─────────────────────────────────────────────────────
-   ALL ORDERS — Semua Pesanan (filter & search)
+   ALL ORDERS — Bug #1 fix: all-orders-tbody → all-orders-table
 ───────────────────────────────────────────────────── */
 window.allOrdersLoad = async function () {
   const sb = getSb();
   if (!sb) return;
-  const tbody = document.getElementById('all-orders-tbody');
-  const totalEl = document.getElementById('all-orders-total');
-  if (!tbody) return;
+
+  // Bug #1 fix: gunakan 'all-orders-table' bukan 'all-orders-tbody' yang tidak ada
+  const container = document.getElementById('all-orders-table');
+  if (!container) return;
+
+  container.innerHTML = '<div class="empty-state">Memuat...</div>';
 
   const statusFilter = document.getElementById('ao-filter-status')?.value || '';
-  const adminFilter  = document.getElementById('ao-filter-admin')?.value  || '';
   const searchVal    = (document.getElementById('ao-search')?.value || '').toLowerCase().trim();
-  const dateFrom     = document.getElementById('ao-date-from')?.value || '';
-  const dateTo       = document.getElementById('ao-date-to')?.value   || '';
-
-  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted)">Memuat...</td></tr>';
 
   let q = sb.from('orders').select('*').order('created_at', { ascending: false }).limit(300);
   if (statusFilter) q = q.eq('status', statusFilter);
 
   const { data, error } = await q;
-  if (error) { tbody.innerHTML = `<tr><td colspan="9" style="color:var(--error);padding:10px">${escHtml(error.message)}</td></tr>`; return; }
+  if (error) {
+    container.innerHTML = `<div class="empty-state" style="color:var(--red)">${escHtml(error.message)}</div>`;
+    return;
+  }
 
   let rows = data || [];
 
-  /* client-side filters */
-  if (adminFilter) rows = rows.filter(o => (o.wa_admin_name || '').toLowerCase() === adminFilter.toLowerCase());
-  if (searchVal)   rows = rows.filter(o =>
-    (o.item_name   || '').toLowerCase().includes(searchVal) ||
-    (o.username    || '').toLowerCase().includes(searchVal) ||
+  // Bug #4 fix: tambah fallback ke field 'item' jika 'item_name' kosong
+  if (searchVal) rows = rows.filter(o =>
+    (o.item_name || o.item || '').toLowerCase().includes(searchVal) ||
+    (o.username  || '').toLowerCase().includes(searchVal) ||
     (o.wa_admin_name || '').toLowerCase().includes(searchVal)
   );
-  if (dateFrom) rows = rows.filter(o => new Date(o.created_at) >= new Date(dateFrom));
-  if (dateTo)   rows = rows.filter(o => new Date(o.created_at) <= new Date(dateTo + 'T23:59:59'));
 
   const map = { pending:'⏳ Pending', selesai:'✅ Selesai', refund:'💸 Refund', cancelled:'❌ Cancelled' };
   const cls = { pending:'color:#f6ad55', selesai:'color:#4ade80', refund:'color:#fc8181', cancelled:'color:#a0aec0' };
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted)">Tidak ada data</td></tr>';
-    if (totalEl) totalEl.textContent = 'Total: 0 pesanan';
+    container.innerHTML = '<div class="empty-state">Tidak ada data ditemukan.</div>';
     return;
   }
 
-  tbody.innerHTML = rows.map(o => `
+  const rowsHtml = rows.map(o => `
     <tr>
       <td style="padding:8px 10px;"><span class="order-id-badge">#${escHtml(String(o.id).slice(-4).toUpperCase())}</span></td>
       <td style="padding:8px 10px;font-size:11.5px;color:var(--text-muted)">${escHtml(new Date(o.created_at).toLocaleString('id-ID',{dateStyle:'short',timeStyle:'short'}))}</td>
-      <td style="padding:8px 10px;font-size:12.5px;">${escHtml(o.item_name||'—')}</td>
+      <td style="padding:8px 10px;font-size:12.5px;">${escHtml(o.item_name || o.item || '—')}</td>
       <td style="padding:8px 10px;text-align:center;">${escHtml(String(o.qty||1))}</td>
       <td style="padding:8px 10px;">${escHtml(o.username||'—')}</td>
       <td style="padding:8px 10px;">${escHtml(o.wa_admin_name||'—')}</td>
       <td style="padding:8px 10px;font-weight:600;color:#4ade80;">Rp ${Number(o.total_price||0).toLocaleString('id-ID')}</td>
       <td style="padding:8px 10px;font-size:12px;${cls[o.status]||''}">${map[o.status]||escHtml(o.status||'—')}</td>
-      <td style="padding:8px 10px;">
-        <button class="btn-icon" onclick="oeditOpen('${escHtml(o.id)}')" title="Edit">✏️ Edit</button>
-        <button class="btn-icon btn-icon-danger" onclick="orderDelete('${escHtml(o.id)}')" title="Hapus">🗑️</button>
+      <td style="padding:8px 10px;white-space:nowrap">
+        <button class="btn-edit" onclick="oeditOpen('${escHtml(String(o.id))}')" title="Edit">✏️</button>
+        <button class="btn-del"  onclick="orderDelete('${escHtml(String(o.id))}')" title="Hapus">🗑️</button>
       </td>
     </tr>
   `).join('');
 
-  if (totalEl) totalEl.textContent = `Total: ${rows.length} pesanan`;
-
-  /* populate admin filter dropdown */
-  const adminSel = document.getElementById('ao-filter-admin');
-  if (adminSel && adminSel.options.length <= 1) {
-    const admins = [...new Set((data||[]).map(o => o.wa_admin_name).filter(Boolean))].sort();
-    admins.forEach(a => {
-      const opt = document.createElement('option');
-      opt.value = a; opt.textContent = a;
-      adminSel.appendChild(opt);
-    });
-  }
+  container.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:680px;">
+      <thead style="background:var(--surface2);">
+        <tr>
+          <th style="padding:9px 10px;text-align:left;font-size:10.5px;color:var(--text-faint);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.4px">ID</th>
+          <th style="padding:9px 10px;text-align:left;font-size:10.5px;color:var(--text-faint);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.4px">WAKTU</th>
+          <th style="padding:9px 10px;text-align:left;font-size:10.5px;color:var(--text-faint);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.4px">ITEM</th>
+          <th style="padding:9px 10px;text-align:center;font-size:10.5px;color:var(--text-faint);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.4px">QTY</th>
+          <th style="padding:9px 10px;text-align:left;font-size:10.5px;color:var(--text-faint);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.4px">USERNAME</th>
+          <th style="padding:9px 10px;text-align:left;font-size:10.5px;color:var(--text-faint);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.4px">ADMIN</th>
+          <th style="padding:9px 10px;text-align:left;font-size:10.5px;color:var(--text-faint);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.4px">TOTAL</th>
+          <th style="padding:9px 10px;text-align:left;font-size:10.5px;color:var(--text-faint);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.4px">STATUS</th>
+          <th style="padding:9px 10px;text-align:left;font-size:10.5px;color:var(--text-faint);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.4px">AKSI</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <div style="padding:9px 12px;font-size:11.5px;color:var(--text-faint);border-top:1px solid var(--border);">
+      Menampilkan <strong style="color:var(--text)">${rows.length}</strong> pesanan
+    </div>
+  `;
 };
 
 /* ─────────────────────────────────────────────────────
@@ -288,14 +331,14 @@ window.allOrdersLoad = async function () {
 window.oeditOpen = async function (id) {
   const sb = getSb();
   if (!sb) return;
-  const overlay = document.getElementById('oedit-overlay');
-  if (!overlay) { _injectEditModal(); }
+  if (!document.getElementById('oedit-overlay')) { _injectEditModal(); }
 
   const { data: o, error } = await sb.from('orders').select('*').eq('id', id).single();
   if (error || !o) { showToast('Gagal ambil data order', 'error'); return; }
 
   document.getElementById('oedit-id').value           = o.id;
-  document.getElementById('oedit-item-name').value    = o.item_name  || '';
+  // Bug #4 fix: fallback ke field 'item' jika 'item_name' tidak ada
+  document.getElementById('oedit-item-name').value    = o.item_name || o.item || '';
   document.getElementById('oedit-username').value     = o.username   || '';
   document.getElementById('oedit-qty').value          = o.qty        || 1;
   document.getElementById('oedit-unit-price').value   = o.unit_price || 0;
@@ -303,12 +346,10 @@ window.oeditOpen = async function (id) {
   document.getElementById('oedit-note').value         = o.customer_note || '';
   document.getElementById('oedit-wa-admin').value     = o.wa_admin_name || '';
 
-  /* set status radio */
   const radios = document.querySelectorAll('input[name="oedit-status"]');
   radios.forEach(r => { r.checked = (r.value === (o.status||'pending')); });
   _oeditUpdateStatusUI(o.status||'pending');
 
-  /* refund reason */
   const rrWrap = document.getElementById('oedit-refund-wrap');
   const rrIn   = document.getElementById('oedit-refund-reason');
   if (rrWrap) rrWrap.style.display = (o.status==='refund'||o.status==='cancelled') ? 'block' : 'none';
@@ -347,7 +388,7 @@ window.oeditRecalc = function () {
 };
 
 /* ─────────────────────────────────────────────────────
-   INJECT EDIT MODAL (kalau belum ada di DOM)
+   INJECT EDIT MODAL
 ───────────────────────────────────────────────────── */
 function _injectEditModal() {
   if (document.getElementById('oedit-overlay')) return;
@@ -364,60 +405,60 @@ function _injectEditModal() {
     <div style="display:grid;gap:12px;">
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Item</label>
-        <input id="oedit-item-name" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;" placeholder="Nama item">
+        <input id="oedit-item-name" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;" placeholder="Nama item">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Username</label>
-          <input id="oedit-username" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;" placeholder="Username">
+          <input id="oedit-username" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;" placeholder="Username">
         </div>
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Admin WA</label>
-          <input id="oedit-wa-admin" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;" placeholder="Nama admin">
+          <input id="oedit-wa-admin" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;" placeholder="Nama admin">
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Qty</label>
-          <input id="oedit-qty" type="number" min="1" oninput="oeditRecalc()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;">
+          <input id="oedit-qty" type="number" min="1" oninput="oeditRecalc()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;">
         </div>
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Harga Satuan</label>
-          <input id="oedit-unit-price" type="number" min="0" oninput="oeditRecalc()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;">
+          <input id="oedit-unit-price" type="number" min="0" oninput="oeditRecalc()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;">
         </div>
         <div>
           <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Total</label>
-          <input id="oedit-total-price" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;">
+          <input id="oedit-total-price" type="number" min="0" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;">
         </div>
       </div>
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Catatan</label>
-        <textarea id="oedit-note" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;resize:vertical;" placeholder="Catatan pembeli"></textarea>
+        <textarea id="oedit-note" rows="2" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;resize:vertical;box-sizing:border-box;" placeholder="Catatan pembeli"></textarea>
       </div>
 
       <div>
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:8px;">Status</label>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <input class="oedit-status-opt" type="radio" name="oedit-status" id="os-pending"    value="pending"    onchange="oeditStatusChange(this)">
-          <label class="oedit-status-label oedit-status-label-pending"    for="os-pending">⏳ Pending</label>
-          <input class="oedit-status-opt" type="radio" name="oedit-status" id="os-selesai"   value="selesai"   onchange="oeditStatusChange(this)">
-          <label class="oedit-status-label oedit-status-label-selesai"   for="os-selesai">✅ Selesai</label>
-          <input class="oedit-status-opt" type="radio" name="oedit-status" id="os-refund"    value="refund"    onchange="oeditStatusChange(this)">
-          <label class="oedit-status-label oedit-status-label-refund"    for="os-refund">💸 Refund</label>
-          <input class="oedit-status-opt" type="radio" name="oedit-status" id="os-cancelled" value="cancelled" onchange="oeditStatusChange(this)">
-          <label class="oedit-status-label oedit-status-label-cancelled" for="os-cancelled">❌ Cancelled</label>
+          <input class="oedit-status-opt" type="radio" name="oedit-status" id="os-pending"    value="pending"    onchange="oeditStatusChange(this)" style="display:none">
+          <label class="oedit-status-label" for="os-pending"    style="padding:6px 14px;border-radius:8px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);color:#fbbf24;font-size:12px;font-weight:600;cursor:pointer;">⏳ Pending</label>
+          <input class="oedit-status-opt" type="radio" name="oedit-status" id="os-selesai"   value="selesai"   onchange="oeditStatusChange(this)" style="display:none">
+          <label class="oedit-status-label" for="os-selesai"   style="padding:6px 14px;border-radius:8px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);color:#4ade80;font-size:12px;font-weight:600;cursor:pointer;">✅ Selesai</label>
+          <input class="oedit-status-opt" type="radio" name="oedit-status" id="os-refund"    value="refund"    onchange="oeditStatusChange(this)" style="display:none">
+          <label class="oedit-status-label" for="os-refund"    style="padding:6px 14px;border-radius:8px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.25);color:#60a5fa;font-size:12px;font-weight:600;cursor:pointer;">💸 Refund</label>
+          <input class="oedit-status-opt" type="radio" name="oedit-status" id="os-cancelled" value="cancelled" onchange="oeditStatusChange(this)" style="display:none">
+          <label class="oedit-status-label" for="os-cancelled" style="padding:6px 14px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);color:#f87171;font-size:12px;font-weight:600;cursor:pointer;">❌ Cancelled</label>
         </div>
       </div>
 
       <div id="oedit-refund-wrap" style="display:none;">
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:4px;">Alasan Refund/Cancel</label>
-        <input id="oedit-refund-reason" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;" placeholder="Alasan...">
+        <input id="oedit-refund-reason" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;" placeholder="Alasan...">
       </div>
     </div>
 
     <div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end;">
-      <button onclick="oeditClose()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text-muted);font-size:13px;cursor:pointer;">Batal</button>
-      <button id="oedit-save-btn" onclick="oeditSave()" style="background:var(--accent);border:none;border-radius:8px;padding:8px 18px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">Simpan Perubahan</button>
+      <button onclick="oeditClose()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text-muted);font-size:13px;cursor:pointer;font-family:inherit;">Batal</button>
+      <button id="oedit-save-btn" onclick="oeditSave()" style="background:var(--accent);border:none;border-radius:8px;padding:8px 18px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Simpan Perubahan</button>
     </div>
   </div>
 </div>`;
@@ -429,3 +470,4 @@ if (document.readyState === 'loading') {
 } else {
   _injectEditModal();
 }
+

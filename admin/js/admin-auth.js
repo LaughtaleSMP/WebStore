@@ -71,7 +71,16 @@ async function afterLogin(user, roleData = null) {
   await loadWAAdmins();
 
   if (typeof window._idleStartTracking === 'function') window._idleStartTracking();
-  if (typeof window.ordersInitBadge    === 'function') window.ordersInitBadge();
+
+  // Bug #3 fix: ordersInitBadge sekarang didefinisi di admin-orders.js
+  if (typeof window.ordersInitBadge === 'function') {
+    window.ordersInitBadge();
+  }
+
+  // Subscribe realtime orders
+  if (typeof window.ordersSubscribe === 'function') {
+    window.ordersSubscribe();
+  }
 
   // Badge permintaan akses untuk superadmin
   if (roleData.role === 'superadmin') {
@@ -82,14 +91,8 @@ async function afterLogin(user, roleData = null) {
     }
   }
 
-  // ── Auto-init Finance V2 di background ──
-  // Supaya grafik player & interval auto-update langsung aktif
-  // tanpa perlu klik menu Finance V2 dulu.
-  setTimeout(function () {
-    if (typeof window.financeV2Init === 'function') {
-      window.financeV2Init();
-    }
-  }, 500);
+  // Bug #6 fix: HAPUS background financeV2Init — chart canvas punya width=0 saat section hidden
+  // Finance V2 akan di-init saat user klik menu "Manajemen Keuangan"
 }
 
 async function doLogout() {
@@ -133,7 +136,6 @@ window.doRequestAccess = async function () {
   btn.textContent = 'Mengirim permintaan...';
 
   try {
-    // Cek apakah email sudah ada di pending requests
     const { data: existing } = await sb
       .from('admin_pending_requests')
       .select('id,status')
@@ -150,7 +152,6 @@ window.doRequestAccess = async function () {
       }
     }
 
-    // Daftarkan user ke Supabase Auth terlebih dahulu
     const { data: signUpData, error: signUpErr } = await sb.auth.signUp({ email, password: pw });
     if (signUpErr) throw signUpErr;
 
@@ -200,9 +201,6 @@ async function loadAccessRequestBadge() {
 window.loadAccessRequestBadge = loadAccessRequestBadge;
 
 // ==================== APPROVE / REJECT — DELEGATE KE admin-users.js ====================
-// Semua logika approve/reject sekarang ada di admin-users.js (_mgrApprove / _mgrReject).
-// Fungsi di bawah hanya wrapper agar panggilan lama (onclick="approveRequest(...)") tetap bekerja.
-
 window.approveRequest = function (id) {
   if (typeof window._mgrApprove === 'function') {
     window._mgrApprove(id);

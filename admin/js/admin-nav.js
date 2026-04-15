@@ -13,11 +13,13 @@ function showSection(name, el) {
     'admins-wa':        'Admin WhatsApp',
     'server-status':    'Server Status Config',
     'shop':             'Shop Items',
+    'wa-template':      'Format Pesan WA',
     'orders':           'Pesanan Masuk',
     'all-orders':       'Semua Pesanan',
     'finance':          'Laporan Keuangan',
     'finance-v2':       'Manajemen Keuangan',
     'access-requests':  'Permintaan Akses',
+    'manage-admins':    'Manajemen Admin',
   };
   document.getElementById('topbar-section').textContent = labels[name] || name;
 
@@ -25,21 +27,24 @@ function showSection(name, el) {
     window.loadAccessRequests();
   }
 
-  // ── Finance: auto-load saat section aktif ──
-  if (name === 'finance' && typeof window.financeV2Init === 'function') {
-    window.financeV2Init();
-  }
+  // Bug #8 fix: Hapus duplikasi definisi financeLoad di sini.
+  // admin-finance.js sudah assign: window.financeLoad = window.financeV2Init
+  // Cukup panggil langsung saat section aktif
   if (name === 'finance-v2' && typeof window.financeV2Init === 'function') {
     window.financeV2Init();
+  }
+
+  if (name === 'orders') {
+    if (typeof window.ordersLoad === 'function') window.ordersLoad();
+    if (typeof window.ordersSubscribe === 'function') window.ordersSubscribe();
+  }
+
+  if (name === 'all-orders') {
+    if (typeof window.allOrdersLoad === 'function') window.allOrdersLoad();
   }
 }
 
 window.showSection = showSection;
-
-// Alias untuk tombol onclick langsung di HTML
-window.financeLoad = function() {
-  if (typeof window.financeV2Init === 'function') window.financeV2Init();
-};
 
 // ==================== SIDEBAR TOGGLE (MOBILE) ====================
 function toggleSidebar() {
