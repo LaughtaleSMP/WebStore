@@ -27,7 +27,7 @@ function showSection(name, el) {
 
   // ── Finance: auto-load saat section aktif ──
   if (name === 'finance' && typeof window.financeV2Init === 'function') {
-      onclick="financeLoad();
+    window.financeV2Init();
   }
   if (name === 'finance-v2' && typeof window.financeV2Init === 'function') {
     window.financeV2Init();
@@ -35,6 +35,11 @@ function showSection(name, el) {
 }
 
 window.showSection = showSection;
+
+// Alias untuk tombol onclick langsung di HTML
+window.financeLoad = function() {
+  if (typeof window.financeV2Init === 'function') window.financeV2Init();
+};
 
 // ==================== SIDEBAR TOGGLE (MOBILE) ====================
 function toggleSidebar() {
@@ -59,6 +64,9 @@ function closeSidebar() {
   backdrop.classList.remove('visible');
   icon.innerHTML = '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>';
 }
+
+window.toggleSidebar = toggleSidebar;
+window.closeSidebar  = closeSidebar;
 
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.nav-item, .sidebar-back').forEach(item => {
