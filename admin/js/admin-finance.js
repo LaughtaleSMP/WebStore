@@ -792,7 +792,7 @@
   };
 
   /* ══════════════════════════════════════════════════════════
-     10. EXPORT EXCEL (XLSX) — styled with SheetJS
+     10. EXPORT EXCEL (XLSX) — SheetJS vanilla (no xlsx-style)
      ══════════════════════════════════════════════════════════ */
   window.financeV2Export = async function () {
     if (typeof XLSX === 'undefined') {
@@ -835,10 +835,6 @@
     function _border(style) {
       style = style || 'thin';
       var s = { style: style, color: { rgb: 'B0B8C1' } };
-      return { top: s, bottom: s, left: s, right: s };
-    }
-    function _borderMedium() {
-      var s = { style: 'medium', color: { rgb: '2563EB' } };
       return { top: s, bottom: s, left: s, right: s };
     }
 
@@ -1085,9 +1081,9 @@
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Laporan Keuangan');
 
-    /* ── Download ── */
+    /* ── Download (pakai XLSX.write bawaan SheetJS, tidak perlu xlsx-style) ── */
     var dateTag = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
-    var wbout = XLSXStyle.write(wb, { bookType:'xlsx', type:'binary' });
+    var wbout = XLSX.write(wb, { bookType:'xlsx', type:'binary' });
     function s2ab(s) {
       var buf = new ArrayBuffer(s.length);
       var view = new Uint8Array(buf);
