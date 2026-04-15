@@ -1091,13 +1091,6 @@ async function financeLoad() {
   const from = `${year}-${mon}-01`;
   const to   = new Date(year, mon, 0).toISOString().split('T')[0]; // akhir bulan
 
-  await _renderFinanceSection(from, to);
-}
-
-async function financeLoadAll() {
-  await _renderFinanceSection(null, null);
-}
-
 async function _renderFinanceSection(from, to) {
   const adminTbl  = document.getElementById('finance-admin-table');
   const itemsTbl  = document.getElementById('finance-items-table');
@@ -1116,11 +1109,12 @@ async function _renderFinanceSection(from, to) {
     return;
   }
 
-  // -- Ringkasan --
+  // -- Ringkasan (FIX: pakai ID yang benar) --
   const total = data.reduce((s, r) => s + (Number(r.total_price) || 0), 0);
-  document.getElementById('finance-total').textContent =
-    'Rp ' + total.toLocaleString('id-ID');
-  document.getElementById('finance-count').textContent = data.length + ' order';
+  const avg   = data.length ? Math.round(total / data.length) : 0;
+  document.getElementById('fin-total-rev').textContent    = 'Rp ' + total.toLocaleString('id-ID');
+  document.getElementById('fin-total-orders').textContent = data.length + ' order';
+  document.getElementById('fin-avg-order').textContent    = 'Rp ' + avg.toLocaleString('id-ID');
 
   // -- Performa per Admin --
   const adminMap = {};
@@ -1134,10 +1128,10 @@ async function _renderFinanceSection(from, to) {
   adminTbl.innerHTML = `
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead><tr>
-        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">#</th>
-        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ADMIN</th>
-        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ORDER</th>
-        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">PENDAPATAN</th>
+        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">#</th>
+        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ADMIN</th>
+        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ORDER</th>
+        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">PENDAPATAN</th>
       </tr></thead>
       <tbody>${adminEntries.map(([name, d], i) => `
         <tr>
@@ -1149,10 +1143,10 @@ async function _renderFinanceSection(from, to) {
       </tbody>
     </table>`;
 
-  // -- Item Terlaris --
+  // -- Item Terlaris (FIX: pakai kolom 'item') --
   const itemMap = {};
   data.forEach(r => {
-    const name = r.item_name || r.item_id || '?';
+    const name = r.item || r.item_name || '?';
     if (!itemMap[name]) itemMap[name] = { qty: 0, revenue: 0 };
     itemMap[name].qty += Number(r.quantity) || 1;
     itemMap[name].revenue += Number(r.total_price) || 0;
@@ -1161,9 +1155,9 @@ async function _renderFinanceSection(from, to) {
   itemsTbl.innerHTML = `
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead><tr>
-        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ITEM</th>
-        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">QTY</th>
-        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">PENDAPATAN</th>
+        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ITEM</th>
+        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">QTY</th>
+        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">PENDAPATAN</th>
       </tr></thead>
       <tbody>${itemEntries.map(([name, d]) => `
         <tr>
@@ -1178,23 +1172,24 @@ async function _renderFinanceSection(from, to) {
   ordersTbl.innerHTML = `
     <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px;">
       <thead><tr>
-        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">WAKTU</th>
-        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ITEM</th>
-        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">USERNAME</th>
-        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ADMIN</th>
-        <th style="text-align:left;padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">TOTAL</th>
+        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">WAKTU</th>
+        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ITEM</th>
+        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">USERNAME</th>
+        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">ADMIN</th>
+        <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border)">TOTAL</th>
       </tr></thead>
       <tbody>${data.map(r => `
         <tr>
-          <td style="padding:9px 10px;color:var(--text-muted)">${new Date(r.completed_at||r.created_at).toLocaleString('id-ID')}</td>
-          <td style="padding:9px 10px;font-weight:500">${r.item_name||r.item_id||'?'}</td>
-          <td style="padding:9px 10px">${r.buyer_username||r.username||'?'}</td>
+          <td style="padding:9px 10px;color:var(--text-muted)">${new Date(r.completed_at||r.created_at).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
+          <td style="padding:9px 10px;font-weight:500">${r.item||r.item_name||'?'}</td>
+          <td style="padding:9px 10px">${r.username||'?'}</td>
           <td style="padding:9px 10px">${r.wa_admin_name||r.completed_by_name||'?'}</td>
           <td style="padding:9px 10px;color:var(--success);font-weight:700">Rp ${(Number(r.total_price)||0).toLocaleString('id-ID')}</td>
         </tr>`).join('')}
       </tbody>
     </table>`;
 }
+
 
 /* ── togglePw ── */
 function togglePw(inputId, btn) {
