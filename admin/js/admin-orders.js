@@ -227,6 +227,7 @@ async function _ordersFetchBadge() {
 
 /* ─────────────────────────────────────────────────────
    REALTIME BADGE SUBSCRIPTION
+   Fix: pass callback object to .subscribe() to avoid deprecated params warning
 ───────────────────────────────────────────────────── */
 let _ordersBadgeChannel = null;
 
@@ -240,7 +241,9 @@ function _ordersBadgeSubscribe() {
       const sec = document.getElementById('sec-orders');
       if (sec && sec.classList.contains('active')) ordersLoad();
     })
-    .subscribe();
+    .subscribe((status, err) => {
+      if (err) console.warn('[orders-badge] subscribe error:', err);
+    });
 }
 
 window.ordersInitBadge = function () {
@@ -707,6 +710,7 @@ function _injectEditModal() {
 
 /* ─────────────────────────────────────────────────────
    REALTIME SUBSCRIPTION (untuk section orders)
+   Fix: pass callback to .subscribe() to avoid deprecated params warning
 ───────────────────────────────────────────────────── */
 function ordersSubscribe() {
   const sb = getSb();
@@ -714,7 +718,9 @@ function ordersSubscribe() {
   _ordersChannel = sb
     .channel('orders-live')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => ordersLoad())
-    .subscribe();
+    .subscribe((status, err) => {
+      if (err) console.warn('[orders-live] subscribe error:', err);
+    });
 }
 
 window.ordersRefresh = function () { ordersLoad(); };
@@ -887,7 +893,7 @@ async function financeQuery(start, end, label) {
     </tr>`).join('');
 
   document.getElementById('finance-orders-table').innerHTML = detailRows
-    ? `<table class="fin-table" style="min-width:640px"><thead><tr><th>ID</th><th>Waktu</th><th>Item</th><th>Qty</th><th>Username</th><th>Admin</th><th>Total</th></tr></thead><tbody>${detailRows}</tbody></table>`
+    ? `<table class="fin-table" style="min-width:640px"><thead><tr><th>ID</th><th>Waktu</th><th>Selesai</th><th>Qty</th><th>Username</th><th>Admin</th><th>Total</th></tr></thead><tbody>${detailRows}</tbody></table>`
     : '<div class="empty-state">Tidak ada order selesai pada periode ini.</div>';
 }
 
