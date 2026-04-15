@@ -1251,7 +1251,6 @@ function switchAuthTab(tab) {
 
 /* ── Access request stats ── */
 async function loadAccessRequestStats() {
-  // FIX: ambil instance sb yang valid
   var sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
   if (!sb) return;
   for (var i = 0, statuses = ['pending','approved','rejected']; i < statuses.length; i++) {
@@ -1266,7 +1265,6 @@ window.loadAccessRequests = async function() {
   var container = document.getElementById('access-requests-list');
   if (!container) return;
   container.innerHTML = '<div class="empty-state">Memuat data...</div>';
-  // FIX: guard sb agar tidak crash jika koneksi belum siap
   var sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
   if (!sb) {
     container.innerHTML = '<div class="empty-state">Koneksi belum siap, coba refresh halaman.</div>';
@@ -1323,15 +1321,18 @@ window.fv2SwitchTab = function(tab, btn) {
   if (tab === 'cashflow') financeV2LoadCashflow();
 };
 
-/* ── FIX: Tunggu semua defer script selesai via window.load ── */
-window.addEventListener('load', function() {
+/* ── FIXED: Split DOMContentLoaded & window.load agar script defer sudah siap ── */
+document.addEventListener('DOMContentLoaded', function() {
+  // Set default bulan filter keuangan
   var monthEl = document.getElementById('finance-month');
   if (monthEl) {
     var now = new Date();
     monthEl.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   }
+});
 
-  // Override showSection SETELAH semua script defer sudah ter-load
+window.addEventListener('load', function() {
+  // Semua script defer sudah selesai di-load di sini — aman untuk override showSection
   var _origShowSection = window.showSection;
   window.showSection = function(name, el) {
     // Destroy finance v2 dulu sebelum pindah ke section lain
@@ -1346,14 +1347,11 @@ window.addEventListener('load', function() {
     if (name === 'all-orders') {
       if (typeof window.allOrdersLoad === 'function') window.allOrdersLoad();
     }
-    if (name === 'access-requests') {
-      if (typeof loadAccessRequests === 'function') loadAccessRequests();
-    }
+    if (name === 'access-requests') { loadAccessRequests(); }
     if (name === 'finance-v2') {
       if (typeof financeV2Init === 'function') financeV2Init();
     }
   };
-
   window.ordersRefresh = function() {
     if (typeof ordersLoad === 'function') ordersLoad();
   };
