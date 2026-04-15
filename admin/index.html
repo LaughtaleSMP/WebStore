@@ -1305,12 +1305,13 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   var _origShowSection = window.showSection;
   window.showSection = function(name, el) {
+    // Destroy finance dulu sebelum pindah ke section lain
+    if (name !== 'finance-v2' && typeof financeV2Destroy === 'function') { financeV2Destroy(); }
     _origShowSection && _origShowSection(name, el);
     if (name === 'orders')          { ordersLoad(); ordersSubscribe(); }
     if (name === 'all-orders')      { window.allOrdersLoad(); }
     if (name === 'access-requests') { loadAccessRequests(); }
     if (name === 'finance-v2')      { financeV2Init(); }
-    else                            { financeV2Destroy(); }
   };
   window.ordersRefresh = function() {
     if (typeof ordersLoad === 'function') ordersLoad();
