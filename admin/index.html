@@ -9,7 +9,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/admin.css">
 <link rel="stylesheet" href="css/finance.css">
-<link rel="stylesheet" href="css/admin-enhance.css"><!-- ← DITAMBAHKAN -->
 <style>
 /* ─── Page-specific overrides ─── */
 
@@ -782,14 +781,14 @@
 </div><!-- /app -->
 
 <!-- ═══════════ SCRIPTS ═══════════ -->
-<script src="js/supabase-config.js" defer></script>
+<!-- admin-init.js menggantikan supabase-config.js (sudah include Supabase setup) -->
+<script src="js/admin-init.js" defer></script>
 <script src="js/admin-auth.js" defer></script>
 <script src="js/admin-nav.js" defer></script>
 <script src="js/admin-config.js" defer></script>
 <script src="js/admin-orders.js" defer></script>
 <script src="js/admin-finance.js" defer></script>
-<script src="js/admin-finance-v2.js" defer></script>
-<script src="js/admin-enhance.js" defer></script>
+<!-- admin-finance-v2.js & admin-enhance.js dihapus — file belum ada di repo -->
 
 <script>
 // ── Set default bulan finance-v2 ──
@@ -803,10 +802,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ── FIX: Pindah ke window.load agar semua script defer sudah siap ──
 window.addEventListener('load', function() {
-  // Semua script defer sudah selesai di-load di sini — aman untuk override showSection
   var _origShowSection = window.showSection;
   window.showSection = function(name, el) {
-    // Destroy finance v2 dulu sebelum pindah ke section lain
     if (name !== 'finance-v2' && typeof financeV2Destroy === 'function') {
       financeV2Destroy();
     }
@@ -839,7 +836,6 @@ window.loadAccessRequests = async function() {
   var container = document.getElementById('access-requests-container');
   if (!container) return;
 
-  // Guard: pastikan koneksi Supabase siap
   var sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
   if (!sb) {
     container.innerHTML = '<div class="empty-state"><p>Koneksi Supabase belum siap. Coba lagi.</p></div>';
@@ -848,8 +844,7 @@ window.loadAccessRequests = async function() {
 
   container.innerHTML = '<div class="empty-state"><p>Memuat permintaan...</p></div>';
   try {
-    var query = sb.from('admin_requests').select('*').order('created_at', { ascending: false });
-    var { data, error } = await query;
+    var { data, error } = await sb.from('admin_requests').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     if (!data || data.length === 0) {
       container.innerHTML = '<div class="empty-state"><svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 10px;color:var(--text-faint)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><p>Belum ada permintaan akses.</p></div>';
@@ -881,11 +876,8 @@ window.loadAccessRequests = async function() {
 window.loadAccessRequestStats = async function() {
   var badge = document.getElementById('access-req-badge');
   if (!badge) return;
-
-  // Guard: pastikan koneksi Supabase siap
   var sb = (typeof getSb === 'function' && getSb()) || window._adminSb || null;
   if (!sb) return;
-
   try {
     var { count } = await sb.from('admin_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending');
     if (count > 0) {
