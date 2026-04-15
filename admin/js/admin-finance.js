@@ -228,7 +228,6 @@
     _buildBarChart(rows);
   }
 
-  /* Line chart — income over time */
   function _buildLineChart(rows, period) {
     var groupFn;
     if (period === 'year') {
@@ -324,7 +323,6 @@
     });
   }
 
-  /* Pie chart — by category */
   function _buildPieChart(rows) {
     var catMap = {};
     rows.forEach(function (r) {
@@ -372,7 +370,6 @@
     }
   }
 
-  /* Bar chart — top categories */
   function _buildBarChart(rows) {
     var catMap = {};
     rows.forEach(function (r) {
@@ -436,37 +433,26 @@
   /* ══════════════════════════════════════════════════════════
      3B. PLAYER ONLINE CHART
      ══════════════════════════════════════════════════════════ */
-
   async function _loadPlayerData() {
     _fetchLivePlayerCount();
-
     var result = await sb
       .from('player_snapshots')
       .select('player_count, max_players, recorded_at')
       .order('recorded_at', { ascending: true })
       .limit(60);
-
-    if (result.error) {
-      _buildPlayerChart([]);
-      return;
-    }
-
+    if (result.error) { _buildPlayerChart([]); return; }
     _buildPlayerChart(result.data || []);
   }
 
   function _fetchLivePlayerCount() {
-    var ip    = _getServerIp();
+    var ip = _getServerIp();
     var parts = ip.split(':');
     var host  = parts[0];
     var port  = parts[1] || '19214';
-
     var dotEl = document.getElementById('fv2-player-dot');
     var numEl = document.getElementById('fv2-player-num');
     var lblEl = document.getElementById('fv2-player-label');
-
-    fetch('https://api.mcsrvstat.us/bedrock/3/' + host + ':' + port, {
-      signal: AbortSignal.timeout(8000),
-    })
+    fetch('https://api.mcsrvstat.us/bedrock/3/' + host + ':' + port, { signal: AbortSignal.timeout(8000) })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (data.online) {
@@ -490,86 +476,39 @@
 
   function _buildPlayerChart(rows) {
     if (typeof Chart === 'undefined') return;
-
     var canvas = document.getElementById('fv2-player-chart');
     if (!canvas) return;
     if (_playerChart) { _playerChart.destroy(); _playerChart = null; }
-
     var labels, data, isEmpty;
-
     if (!rows || !rows.length) {
-      isEmpty = true;
-      labels  = ['Belum ada data'];
-      data    = [0];
+      isEmpty = true; labels = ['Belum ada data']; data = [0];
     } else {
       isEmpty = false;
-      labels  = rows.map(function (r) {
+      labels = rows.map(function (r) {
         var d = new Date(r.recorded_at);
         return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) +
                ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
       });
       data = rows.map(function (r) { return Number(r.player_count) || 0; });
     }
-
     _playerChart = new Chart(canvas, {
       type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Pemain Online',
-          data: data,
-          borderColor: '#4a8fff',
-          backgroundColor: 'rgba(74,143,255,0.1)',
-          borderWidth: 2,
-          pointRadius: isEmpty ? 0 : (rows.length > 20 ? 2 : 4),
-          pointBackgroundColor: '#4a8fff',
-          pointBorderWidth: 0,
-          tension: 0.4,
-          fill: true,
-        }],
-      },
+      data: { labels: labels, datasets: [{ label: 'Pemain Online', data: data, borderColor: '#4a8fff', backgroundColor: 'rgba(74,143,255,0.1)', borderWidth: 2, pointRadius: isEmpty ? 0 : (rows.length > 20 ? 2 : 4), pointBackgroundColor: '#4a8fff', pointBorderWidth: 0, tension: 0.4, fill: true }] },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            enabled: !isEmpty,
-            callbacks: {
-              label: function (ctx) {
-                return ' ' + ctx.parsed.y + ' pemain online';
-              },
-            },
-          },
-        },
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: !isEmpty, callbacks: { label: function (ctx) { return ' ' + ctx.parsed.y + ' pemain online'; } } } },
         scales: {
-          x: {
-            grid:   { color: 'rgba(255,255,255,0.04)' },
-            ticks:  { color: '#4a5568', font: { size: 9 }, maxTicksLimit: 8, maxRotation: 30 },
-            border: { color: 'rgba(255,255,255,0.06)' },
-          },
-          y: {
-            grid:        { color: 'rgba(255,255,255,0.04)' },
-            ticks:       { color: '#4a5568', font: { size: 10 }, stepSize: 1, precision: 0 },
-            border:      { color: 'rgba(255,255,255,0.06)' },
-            beginAtZero: true,
-            min: 0,
-          },
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 9 }, maxTicksLimit: 8, maxRotation: 30 }, border: { color: 'rgba(255,255,255,0.06)' } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 }, stepSize: 1, precision: 0 }, border: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true, min: 0 },
         },
       },
     });
-
     if (isEmpty) {
       var wrap = canvas.parentElement;
       if (wrap && !wrap.querySelector('.fv2-player-empty')) {
         var msg = document.createElement('div');
         msg.className = 'fv2-player-empty';
-        msg.style.cssText = [
-          'position:absolute', 'inset:0', 'display:flex',
-          'align-items:center', 'justify-content:center',
-          'font-size:12px', 'color:var(--text-faint)',
-          'pointer-events:none', 'text-align:center', 'padding:8px',
-        ].join(';');
+        msg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text-faint);pointer-events:none;text-align:center;padding:8px';
         msg.textContent = 'Klik "Catat" untuk merekam jumlah pemain pertama';
         wrap.appendChild(msg);
       }
@@ -582,48 +521,28 @@
   window.financeV2RecordPlayer = async function () {
     var btn = document.querySelector('.fv2-player-record-btn');
     if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
-
-    var ip    = _getServerIp();
-    var parts = ip.split(':');
-    var host  = parts[0];
-    var port  = parts[1] || '19214';
-
+    var ip = _getServerIp(); var parts = ip.split(':');
+    var host = parts[0]; var port = parts[1] || '19214';
     var dotEl = document.getElementById('fv2-player-dot');
     var numEl = document.getElementById('fv2-player-num');
     var lblEl = document.getElementById('fv2-player-label');
-
     try {
-      var r    = await fetch('https://api.mcsrvstat.us/bedrock/3/' + host + ':' + port, {
-        signal: AbortSignal.timeout(8000),
-      });
+      var r = await fetch('https://api.mcsrvstat.us/bedrock/3/' + host + ':' + port, { signal: AbortSignal.timeout(8000) });
       var data = await r.json();
-
       var playerCount = data.online ? (data.players ? (data.players.online || 0) : 0) : 0;
       var maxPlayers  = data.online ? (data.players ? (data.players.max   || 0) : 0) : 0;
-
       if (dotEl) dotEl.className = data.online ? 'fv2-player-dot online' : 'fv2-player-dot offline';
       if (numEl) numEl.textContent = data.online ? (playerCount + ' / ' + maxPlayers) : 'Offline';
       if (lblEl) lblEl.textContent = 'Diperbarui baru saja';
-
-      var ins = await sb.from('player_snapshots').insert([{
-        player_count: playerCount,
-        max_players:  maxPlayers,
-        recorded_at:  new Date().toISOString(),
-      }]);
-
-      if (ins.error) {
-        _finToast('Gagal simpan snapshot: Setup DB player terlebih dahulu.', 'error');
-      } else {
-        _finToast('Snapshot dicatat: ' + playerCount + ' pemain ✓', 'success');
-        await _loadPlayerData();
-      }
+      var ins = await sb.from('player_snapshots').insert([{ player_count: playerCount, max_players: maxPlayers, recorded_at: new Date().toISOString() }]);
+      if (ins.error) { _finToast('Gagal simpan snapshot: Setup DB player terlebih dahulu.', 'error'); }
+      else { _finToast('Snapshot dicatat: ' + playerCount + ' pemain ✓', 'success'); await _loadPlayerData(); }
     } catch (e) {
       if (dotEl) dotEl.className = 'fv2-player-dot offline';
       if (numEl) numEl.textContent = '—';
       if (lblEl) lblEl.textContent = 'Gagal terhubung ke server';
       _finToast('Gagal ambil data server: ' + (e.message || 'timeout'), 'error');
     }
-
     if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
   };
 
@@ -634,168 +553,92 @@
     var container = document.getElementById('fv2-list');
     if (!container) return;
     container.innerHTML = '<div class="empty-state">Memuat...</div>';
-
     var typeF   = (document.getElementById('fv2-filter-type')  || {}).value || '';
     var catF    = (document.getElementById('fv2-filter-cat')   || {}).value || '';
     var searchF = ((document.getElementById('fv2-search')      || {}).value || '').trim();
     var fromF   = (document.getElementById('fv2-from')         || {}).value || '';
     var toF     = (document.getElementById('fv2-to')           || {}).value || '';
-
-    var q = sb.from('finance_transactions')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(500);
-
+    var q = sb.from('finance_transactions').select('*').order('created_at', { ascending: false }).limit(500);
     if (typeF) q = q.eq('type', typeF);
     if (catF)  q = q.eq('category', catF);
     if (fromF) q = q.gte('created_at', fromF + 'T00:00:00');
     if (toF)   q = q.lte('created_at', toF   + 'T23:59:59');
-
     var result = await q;
-    if (result.error) {
-      container.innerHTML = '<div class="empty-state" style="color:#f87171">' + _esc(result.error.message) + '</div>';
-      return;
-    }
-
+    if (result.error) { container.innerHTML = '<div class="empty-state" style="color:#f87171">' + _esc(result.error.message) + '</div>'; return; }
     var rows = result.data || [];
     if (searchF) {
       var kw = searchF.toLowerCase();
       rows = rows.filter(function (r) {
-        return (r.note       || '').toLowerCase().includes(kw) ||
-               (r.reference  || '').toLowerCase().includes(kw) ||
-               (r.category   || '').toLowerCase().includes(kw) ||
-               (r.recorded_by|| '').toLowerCase().includes(kw);
+        return (r.note || '').toLowerCase().includes(kw) || (r.reference || '').toLowerCase().includes(kw) ||
+               (r.category || '').toLowerCase().includes(kw) || (r.recorded_by || '').toLowerCase().includes(kw);
       });
     }
-
-    _allRows   = rows;
-    _pgCurrent = 1;
-    _renderPage();
+    _allRows = rows; _pgCurrent = 1; _renderPage();
   };
 
   function _renderPage() {
     var container = document.getElementById('fv2-list');
     if (!container) return;
-
     if (!_allRows.length) {
       container.innerHTML = '<div class="empty-state">Tidak ada transaksi ditemukan.</div>';
       var pgEl = document.getElementById('fv2-pagination');
       if (pgEl) pgEl.style.display = 'none';
       return;
     }
-
     var totalPages = Math.ceil(_allRows.length / _pgSize);
     var start = (_pgCurrent - 1) * _pgSize;
     var pageRows = _allRows.slice(start, start + _pgSize);
-
     var typeIcon = { income:'▲', expense:'▼', donation:'♦', transfer:'⇄', adjustment:'⚙' };
     var typeLbl  = { income:'Masuk', expense:'Keluar', donation:'Donasi', transfer:'Transfer', adjustment:'Penyesuaian' };
     var typeCls  = { income:'tb-in', expense:'tb-out', donation:'tb-don', transfer:'tb-tr', adjustment:'tb-adj' };
-
     var rowsHtml = pageRows.map(function (r) {
-      var isOut  = r.type === 'expense' || r.type === 'transfer';
-      var dt     = new Date(r.created_at);
-      var dtStr  = dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-      var icon   = typeIcon[r.type] || '•';
-      var lbl    = typeLbl[r.type]  || r.type;
-      var cls    = typeCls[r.type]  || '';
-      var refHtml = r.reference
-        ? '<div class="fv2-tx-item-sub">ref: ' + _esc(r.reference) + '</div>'
-        : '';
-      var noteHtml = r.note
-        ? '<div class="fv2-tx-item-sub">' + _esc(r.note) + '</div>'
-        : '';
+      var isOut = r.type === 'expense' || r.type === 'transfer';
+      var dt    = new Date(r.created_at);
+      var dtStr = dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+      var icon  = typeIcon[r.type] || '•'; var lbl = typeLbl[r.type] || r.type; var cls = typeCls[r.type] || '';
+      var refHtml  = r.reference ? '<div class="fv2-tx-item-sub">ref: ' + _esc(r.reference) + '</div>' : '';
+      var noteHtml = r.note      ? '<div class="fv2-tx-item-sub">' + _esc(r.note) + '</div>' : '';
       return '<tr>' +
         '<td style="white-space:nowrap;font-size:11.5px;color:var(--text-faint)">' + dtStr + '</td>' +
         '<td><div class="fv2-tx-item-name">' + _esc(r.category || '—') + '</div>' + noteHtml + refHtml + '</td>' +
         '<td><span class="fv2-type-badge ' + cls + '">' + icon + ' ' + lbl + '</span></td>' +
         '<td><span class="fv2-cat-badge">' + _esc(r.category || '—') + '</span></td>' +
-        '<td style="text-align:right;font-weight:700;color:' + (isOut ? 'var(--red)' : 'var(--green)') + ';white-space:nowrap">' +
-          (isOut ? '− ' : '+ ') + _fmt(r.amount) +
-        '</td>' +
+        '<td style="text-align:right;font-weight:700;color:' + (isOut ? 'var(--red)' : 'var(--green)') + ';white-space:nowrap">' + (isOut ? '− ' : '+ ') + _fmt(r.amount) + '</td>' +
         '<td><button class="fv2-del-btn" onclick="financeV2Delete(\'' + r.id + '\')" title="Hapus">✕</button></td>' +
         '</tr>';
     }).join('');
-
-    container.innerHTML =
-      '<div class="fv2-table-wrap">' +
-        '<table class="fv2-table">' +
-          '<thead><tr>' +
-            '<th>Tanggal</th><th>Keterangan</th><th>Tipe</th><th>Kategori</th>' +
-            '<th style="text-align:right">Jumlah</th><th></th>' +
-          '</tr></thead>' +
-          '<tbody>' + rowsHtml + '</tbody>' +
-        '</table>' +
-      '</div>';
-
-    var pgEl   = document.getElementById('fv2-pagination');
-    var pgInfo = document.getElementById('fv2-pg-info');
-    var pgPrev = document.getElementById('fv2-pg-prev');
-    var pgNext = document.getElementById('fv2-pg-next');
-
-    if (pgEl)   pgEl.style.display = '';
+    container.innerHTML = '<div class="fv2-table-wrap"><table class="fv2-table"><thead><tr><th>Tanggal</th><th>Keterangan</th><th>Tipe</th><th>Kategori</th><th style="text-align:right">Jumlah</th><th></th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
+    var pgEl = document.getElementById('fv2-pagination'); var pgInfo = document.getElementById('fv2-pg-info');
+    var pgPrev = document.getElementById('fv2-pg-prev'); var pgNext = document.getElementById('fv2-pg-next');
+    if (pgEl) pgEl.style.display = '';
     if (pgInfo) pgInfo.textContent = 'Menampilkan ' + (start + 1) + '–' + Math.min(start + _pgSize, _allRows.length) + ' dari ' + _allRows.length + ' transaksi';
     if (pgPrev) pgPrev.disabled = _pgCurrent <= 1;
     if (pgNext) pgNext.disabled = _pgCurrent >= totalPages;
   }
 
-  window.financeV2PgPrev = function () {
-    if (_pgCurrent > 1) { _pgCurrent--; _renderPage(); }
-  };
-  window.financeV2PgNext = function () {
-    var totalPages = Math.ceil(_allRows.length / _pgSize);
-    if (_pgCurrent < totalPages) { _pgCurrent++; _renderPage(); }
-  };
+  window.financeV2PgPrev = function () { if (_pgCurrent > 1) { _pgCurrent--; _renderPage(); } };
+  window.financeV2PgNext = function () { var tp = Math.ceil(_allRows.length / _pgSize); if (_pgCurrent < tp) { _pgCurrent++; _renderPage(); } };
 
   /* ══════════════════════════════════════════════════════════
      5. SHOW FORM MODAL
      ══════════════════════════════════════════════════════════ */
   window.financeV2ShowForm = function (type) {
-    var modal    = document.getElementById('fv2-modal');
-    var titleEl  = document.getElementById('fv2-modal-title');
-    var typeInput= document.getElementById('fv2-form-type');
-    var catSel   = document.getElementById('fv2-form-cat');
-
-    var titles = {
-      income: 'Tambah Pemasukan', expense: 'Tambah Pengeluaran',
-      donation: 'Catat Donasi', transfer: 'Catat Transfer', adjustment: 'Penyesuaian Saldo'
-    };
-    var catOptions = {
-      income:     ['shop', 'sponsorship', 'event', 'misc'],
-      expense:    ['server', 'operational', 'plugin', 'content', 'misc'],
-      donation:   ['donation'],
-      transfer:   ['bank', 'ewallet', 'misc'],
-      adjustment: ['correction', 'misc']
-    };
-    var catLabels = {
-      shop: 'Toko', sponsorship: 'Sponsorship', event: 'Event', misc: 'Lainnya',
-      server: 'Server', operational: 'Operasional', plugin: 'Plugin/Tools',
-      content: 'Konten', bank: 'Bank', ewallet: 'E-Wallet',
-      donation: 'Donasi', correction: 'Koreksi'
-    };
-
-    titleEl.textContent  = titles[type] || 'Tambah Transaksi';
-    typeInput.value      = type;
-    catSel.innerHTML     = (catOptions[type] || ['misc']).map(function (c) {
-      return '<option value="' + c + '">' + (catLabels[c] || c) + '</option>';
-    }).join('');
-
-    ['fv2-form-amount', 'fv2-form-note', 'fv2-form-ref', 'fv2-form-date'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) el.value = (id === 'fv2-form-date') ? _today() : '';
-    });
-
+    var modal = document.getElementById('fv2-modal');
+    var titleEl = document.getElementById('fv2-modal-title');
+    var typeInput = document.getElementById('fv2-form-type');
+    var catSel = document.getElementById('fv2-form-cat');
+    var titles = { income:'Tambah Pemasukan', expense:'Tambah Pengeluaran', donation:'Catat Donasi', transfer:'Catat Transfer', adjustment:'Penyesuaian Saldo' };
+    var catOptions = { income:['shop','sponsorship','event','misc'], expense:['server','operational','plugin','content','misc'], donation:['donation'], transfer:['bank','ewallet','misc'], adjustment:['correction','misc'] };
+    var catLabels = { shop:'Toko', sponsorship:'Sponsorship', event:'Event', misc:'Lainnya', server:'Server', operational:'Operasional', plugin:'Plugin/Tools', content:'Konten', bank:'Bank', ewallet:'E-Wallet', donation:'Donasi', correction:'Koreksi' };
+    titleEl.textContent = titles[type] || 'Tambah Transaksi';
+    typeInput.value = type;
+    catSel.innerHTML = (catOptions[type] || ['misc']).map(function (c) { return '<option value="' + c + '">' + (catLabels[c] || c) + '</option>'; }).join('');
+    ['fv2-form-amount','fv2-form-note','fv2-form-ref','fv2-form-date'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = (id === 'fv2-form-date') ? _today() : ''; });
     var refLabel = document.getElementById('fv2-ref-label');
-    if (refLabel) {
-      refLabel.textContent = type === 'donation' ? 'Nama Donatur'
-        : type === 'income' ? 'ID Order (opsional)'
-        : 'Referensi (opsional)';
-    }
-
+    if (refLabel) refLabel.textContent = type === 'donation' ? 'Nama Donatur' : type === 'income' ? 'ID Order (opsional)' : 'Referensi (opsional)';
     modal.style.display = 'flex';
     setTimeout(function () { modal.classList.add('open'); }, 10);
-    var amtEl = document.getElementById('fv2-form-amount');
-    if (amtEl) amtEl.focus();
+    var amtEl = document.getElementById('fv2-form-amount'); if (amtEl) amtEl.focus();
   };
 
   window.financeV2CloseModal = function () {
@@ -808,53 +651,24 @@
      6. SUBMIT TRANSACTION
      ══════════════════════════════════════════════════════════ */
   window.financeV2Submit = async function () {
-    var btn      = document.getElementById('fv2-submit-btn');
-    var type     = document.getElementById('fv2-form-type').value;
-    var cat      = document.getElementById('fv2-form-cat').value;
-    var amount   = parseFloat(document.getElementById('fv2-form-amount').value);
-    var note     = document.getElementById('fv2-form-note').value.trim();
-    var ref      = document.getElementById('fv2-form-ref').value.trim();
-    var dateVal  = document.getElementById('fv2-form-date').value;
-
-    if (!amount || amount <= 0) {
-      _finToast('Nominal harus diisi dan lebih dari 0', 'error');
-      return;
-    }
-
+    var btn = document.getElementById('fv2-submit-btn');
+    var type = document.getElementById('fv2-form-type').value;
+    var cat  = document.getElementById('fv2-form-cat').value;
+    var amount  = parseFloat(document.getElementById('fv2-form-amount').value);
+    var note    = document.getElementById('fv2-form-note').value.trim();
+    var ref     = document.getElementById('fv2-form-ref').value.trim();
+    var dateVal = document.getElementById('fv2-form-date').value;
+    if (!amount || amount <= 0) { _finToast('Nominal harus diisi dan lebih dari 0', 'error'); return; }
     var adminName = (document.getElementById('topbar-email') || {}).textContent || 'admin';
-    btn.disabled  = true;
-    btn.textContent = 'Menyimpan...';
-
-    var payload = {
-      type:        type,
-      category:    cat,
-      amount:      amount,
-      note:        note || null,
-      reference:   ref  || null,
-      recorded_by: adminName,
-      created_at:  dateVal
-        ? dateVal + 'T' + new Date().toTimeString().slice(0, 8)
-        : _nowTs()
-    };
-
+    btn.disabled = true; btn.textContent = 'Menyimpan...';
+    var payload = { type: type, category: cat, amount: amount, note: note || null, reference: ref || null, recorded_by: adminName, created_at: dateVal ? dateVal + 'T' + new Date().toTimeString().slice(0, 8) : _nowTs() };
     var result = await sb.from('finance_transactions').insert([payload]);
-    btn.disabled    = false;
-    btn.textContent = 'Simpan Transaksi';
-
-    if (result.error) {
-      _finToast('Gagal: ' + result.error.message, 'error');
-      return;
-    }
-
+    btn.disabled = false; btn.textContent = 'Simpan Transaksi';
+    if (result.error) { _finToast('Gagal: ' + result.error.message, 'error'); return; }
     _finToast('Transaksi berhasil dicatat ✓', 'success');
     window.financeV2CloseModal();
-
     var period = (document.getElementById('fv2-period') || {}).value || 'month';
-    await Promise.all([
-      window.financeV2LoadSummary(period),
-      window.financeV2LoadList(),
-      _loadCharts(period),
-    ]);
+    await Promise.all([window.financeV2LoadSummary(period), window.financeV2LoadList(), _loadCharts(period)]);
   };
 
   /* ══════════════════════════════════════════════════════════
@@ -863,17 +677,10 @@
   window.financeV2Delete = async function (id) {
     if (!confirm('Hapus transaksi ini?')) return;
     var result = await sb.from('finance_transactions').delete().eq('id', id);
-    if (result.error) {
-      _finToast('Gagal hapus: ' + result.error.message, 'error');
-      return;
-    }
+    if (result.error) { _finToast('Gagal hapus: ' + result.error.message, 'error'); return; }
     _finToast('Dihapus.', 'success');
     var period = (document.getElementById('fv2-period') || {}).value || 'month';
-    await Promise.all([
-      window.financeV2LoadSummary(period),
-      window.financeV2LoadList(),
-      _loadCharts(period),
-    ]);
+    await Promise.all([window.financeV2LoadSummary(period), window.financeV2LoadList(), _loadCharts(period)]);
   };
 
   /* ══════════════════════════════════════════════════════════
@@ -882,26 +689,13 @@
   function _finSubscribeRealtime() {
     if (_finSub) return;
     try {
-      _finSub = sb
-        .channel('finance-rt-v2')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'finance_transactions' },
-          function () {
-            var period = (document.getElementById('fv2-period') || {}).value || 'month';
-            Promise.all([
-              window.financeV2LoadSummary(period),
-              window.financeV2LoadList(),
-              _loadCharts(period),
-            ]);
-          }
-        )
-        .subscribe(function (status) {
-          if (status === 'SUBSCRIBED') console.log('[Finance RT] realtime connected');
-        });
-    } catch (e) {
-      console.warn('[Finance RT]', e);
-    }
+      _finSub = sb.channel('finance-rt-v2')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_transactions' }, function () {
+          var period = (document.getElementById('fv2-period') || {}).value || 'month';
+          Promise.all([window.financeV2LoadSummary(period), window.financeV2LoadList(), _loadCharts(period)]);
+        })
+        .subscribe(function (status) { if (status === 'SUBSCRIBED') console.log('[Finance RT] realtime connected'); });
+    } catch (e) { console.warn('[Finance RT]', e); }
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -911,65 +705,37 @@
     var container = document.getElementById('fv2-cashflow');
     if (!container) return;
     container.innerHTML = '<div class="empty-state">Memuat...</div>';
-
-    var result = await sb.from('finance_transactions')
-      .select('type,amount,created_at')
-      .order('created_at', { ascending: true });
-
-    if (result.error) {
-      container.innerHTML = '<div class="empty-state" style="color:#f87171">' + _esc(result.error.message) + '</div>';
-      return;
-    }
-    if (!result.data || !result.data.length) {
-      container.innerHTML = '<div class="empty-state">Belum ada data.</div>';
-      return;
-    }
-
+    var result = await sb.from('finance_transactions').select('type,amount,created_at').order('created_at', { ascending: true });
+    if (result.error) { container.innerHTML = '<div class="empty-state" style="color:#f87171">' + _esc(result.error.message) + '</div>'; return; }
+    if (!result.data || !result.data.length) { container.innerHTML = '<div class="empty-state">Belum ada data.</div>'; return; }
     var months = {};
     result.data.forEach(function (r) {
       var m = r.created_at.slice(0, 7);
       if (!months[m]) months[m] = { in: 0, out: 0, don: 0 };
       var a = Number(r.amount) || 0;
-      if (r.type === 'income')                            months[m].in  += a;
-      if (r.type === 'donation')                          { months[m].in += a; months[m].don += a; }
-      if (r.type === 'expense' || r.type === 'transfer')  months[m].out += a;
+      if (r.type === 'income')   months[m].in  += a;
+      if (r.type === 'donation') { months[m].in += a; months[m].don += a; }
+      if (r.type === 'expense' || r.type === 'transfer') months[m].out += a;
     });
-
-    var keys   = Object.keys(months).sort();
-    var runBal = 0;
+    var keys = Object.keys(months).sort(); var runBal = 0;
     var rowsHtml = keys.map(function (m) {
-      var row  = months[m];
-      var flow = row.in - row.out;
-      runBal  += flow;
+      var row = months[m]; var flow = row.in - row.out; runBal += flow;
       var parts = m.split('-');
-      var label = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1)
-        .toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+      var label = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
       return '<tr>' +
-        '<td style="font-weight:600">'                                              + label         + '</td>' +
-        '<td style="color:var(--green);font-weight:600">'                           + _fmt(row.in)  + '</td>' +
-        '<td style="color:#a78bfa">'  + (row.don ? _fmt(row.don) : '—')            + '</td>' +
-        '<td style="font-weight:600;color:#f87171">'                                + _fmt(row.out) + '</td>' +
-        '<td style="font-weight:700;color:' + (flow   >= 0 ? 'var(--green)' : '#f87171') + '">' +
-          (flow >= 0 ? '+' : '') + _fmt(flow)   + '</td>' +
-        '<td style="font-weight:700;color:' + (runBal >= 0 ? 'var(--green)' : '#f87171') + '">' +
-          _fmt(runBal) + '</td>' +
+        '<td style="font-weight:600">' + label + '</td>' +
+        '<td style="color:var(--green);font-weight:600">' + _fmt(row.in) + '</td>' +
+        '<td style="color:#a78bfa">' + (row.don ? _fmt(row.don) : '—') + '</td>' +
+        '<td style="font-weight:600;color:#f87171">' + _fmt(row.out) + '</td>' +
+        '<td style="font-weight:700;color:' + (flow >= 0 ? 'var(--green)' : '#f87171') + '">' + (flow >= 0 ? '+' : '') + _fmt(flow) + '</td>' +
+        '<td style="font-weight:700;color:' + (runBal >= 0 ? 'var(--green)' : '#f87171') + '">' + _fmt(runBal) + '</td>' +
         '</tr>';
     }).join('');
-
-    container.innerHTML =
-      '<div class="fv2-table-wrap">' +
-        '<table class="fv2-table">' +
-          '<thead><tr>' +
-            '<th>Bulan</th><th>Pemasukan</th><th>Donasi</th>' +
-            '<th>Pengeluaran</th><th>Cashflow</th><th>Saldo Berjalan</th>' +
-          '</tr></thead>' +
-          '<tbody>' + rowsHtml + '</tbody>' +
-        '</table>' +
-      '</div>';
+    container.innerHTML = '<div class="fv2-table-wrap"><table class="fv2-table"><thead><tr><th>Bulan</th><th>Pemasukan</th><th>Donasi</th><th>Pengeluaran</th><th>Cashflow</th><th>Saldo Berjalan</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
   };
 
   /* ══════════════════════════════════════════════════════════
-     10. EXPORT CSV — PROFESSIONAL
+     10. EXPORT CSV — PROFESSIONAL (separator titik koma untuk Excel Indonesia)
      ══════════════════════════════════════════════════════════ */
   window.financeV2Export = async function () {
     _finToast('Menyiapkan laporan...', 'success');
@@ -982,116 +748,95 @@
       return;
     }
 
-    var rows = result.data;
-    var now  = new Date();
+    var rows    = result.data;
+    var now     = new Date();
+    var SEP     = ';'; /* Titik koma — standar Excel Indonesia / Windows */
 
     /* ── Hitung ringkasan ── */
     var totalIn = 0, totalOut = 0, totalDon = 0;
     rows.forEach(function (r) {
       var a = Number(r.amount) || 0;
-      if (r.type === 'income')                             totalIn  += a;
-      if (r.type === 'donation')                           { totalIn += a; totalDon += a; }
-      if (r.type === 'expense' || r.type === 'transfer')   totalOut += a;
+      if (r.type === 'income')                            totalIn  += a;
+      if (r.type === 'donation')                          { totalIn += a; totalDon += a; }
+      if (r.type === 'expense' || r.type === 'transfer')  totalOut += a;
     });
     var balance = totalIn - totalOut;
 
-    /* ── Helper: escape cell ── */
+    /* ── Helper: escape cell (bungkus dengan quotes jika perlu) ── */
     function _cell(val) {
       var s = (val === null || val === undefined) ? '' : String(val);
-      /* Wrap dalam quotes jika mengandung koma / quotes / newline */
-      if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+      if (s.indexOf(SEP) !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
         return '"' + s.replace(/"/g, '""') + '"';
       }
       return s;
     }
 
-    /* ── Label tipe & kategori ── */
-    var TYPE_LABEL = {
-      income: 'Pemasukan', expense: 'Pengeluaran', donation: 'Donasi',
-      transfer: 'Transfer', adjustment: 'Penyesuaian'
-    };
-    var CAT_LABEL = {
-      shop: 'Toko', sponsorship: 'Sponsorship', event: 'Event', misc: 'Lainnya',
-      server: 'Server', operational: 'Operasional', plugin: 'Plugin/Tools',
-      content: 'Konten', bank: 'Bank', ewallet: 'E-Wallet',
-      donation: 'Donasi', correction: 'Koreksi'
-    };
+    /* ── Helper: join satu baris ── */
+    function _row() {
+      return Array.prototype.slice.call(arguments).map(_cell).join(SEP);
+    }
 
-    /* ── Format tanggal lokal ── */
+    /* ── Label tipe & kategori ── */
+    var TYPE_LABEL = { income:'Pemasukan', expense:'Pengeluaran', donation:'Donasi', transfer:'Transfer', adjustment:'Penyesuaian' };
+    var CAT_LABEL  = { shop:'Toko', sponsorship:'Sponsorship', event:'Event', misc:'Lainnya', server:'Server', operational:'Operasional', plugin:'Plugin/Tools', content:'Konten', bank:'Bank', ewallet:'E-Wallet', donation:'Donasi', correction:'Koreksi' };
+
+    /* ── Format tanggal lengkap ── */
     function _fmtDate(iso) {
       if (!iso) return '';
-      return new Date(iso).toLocaleString('id-ID', {
-        day: '2-digit', month: 'long', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', second: '2-digit'
-      });
+      return new Date(iso).toLocaleString('id-ID', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
     }
 
-    /* ── Format angka tanpa simbol (untuk kolom numerik) ── */
-    function _fmtNum(n) {
-      return (Number(n) || 0).toLocaleString('id-ID');
-    }
+    /* ── Format angka murni (tanpa titik ribuan agar Excel baca sebagai angka) ── */
+    function _fmtNum(n) { return String(Number(n) || 0); }
 
-    /* ══ Susun baris CSV ══ */
+    /* ══ Susun baris ══ */
     var lines = [];
 
-    /* Blok 1: Header laporan */
-    lines.push('LAPORAN KEUANGAN LAUGHTALE SMP');
-    lines.push('Diekspor pada,' + _cell(_fmtDate(now.toISOString())));
-    lines.push('Total Data,' + rows.length + ' transaksi');
+    /* sep= directive — Excel otomatis kenali separator */
+    lines.push('sep=' + SEP);
+
+    /* Blok 1: Judul laporan */
+    lines.push(_row('LAPORAN KEUANGAN LAUGHTALE SMP'));
+    lines.push(_row('Diekspor pada', _fmtDate(now.toISOString())));
+    lines.push(_row('Total Data', rows.length + ' transaksi'));
     lines.push('');
 
     /* Blok 2: Ringkasan */
-    lines.push('RINGKASAN');
-    lines.push('Total Pemasukan (termasuk donasi),"Rp ' + _fmtNum(totalIn) + '"');
-    lines.push('Total Pengeluaran,"Rp ' + _fmtNum(totalOut) + '"');
-    lines.push('Total Donasi,"Rp ' + _fmtNum(totalDon) + '"');
-    lines.push('Saldo Bersih,"Rp ' + _fmtNum(balance) + '"');
+    lines.push(_row('RINGKASAN'));
+    lines.push(_row('Total Pemasukan (termasuk donasi)', _fmtNum(totalIn)));
+    lines.push(_row('Total Pengeluaran', _fmtNum(totalOut)));
+    lines.push(_row('Total Donasi', _fmtNum(totalDon)));
+    lines.push(_row('Saldo Bersih', _fmtNum(balance)));
     lines.push('');
 
     /* Blok 3: Header kolom */
-    lines.push([
-      'No',
-      'Tanggal & Waktu',
-      'Tipe',
-      'Kategori',
-      'Nominal (Rp)',
-      'Catatan',
-      'Referensi / Donatur',
-      'Dicatat Oleh',
-      'ID Transaksi'
-    ].map(_cell).join(','));
+    lines.push(_row('No','Tanggal & Waktu','Tipe','Kategori','Nominal (Rp)','Catatan','Referensi / Donatur','Dicatat Oleh','ID Transaksi'));
 
-    /* Blok 4: Data transaksi */
+    /* Blok 4: Data */
     rows.forEach(function (r, i) {
-      lines.push([
+      lines.push(_row(
         i + 1,
         _fmtDate(r.created_at),
-        TYPE_LABEL[r.type]  || r.type,
-        CAT_LABEL[r.category] || r.category || '',
-        (Number(r.amount) || 0).toLocaleString('id-ID'),
+        TYPE_LABEL[r.type]     || r.type,
+        CAT_LABEL[r.category]  || r.category || '',
+        _fmtNum(r.amount),
         r.note        || '',
         r.reference   || '',
         r.recorded_by || '',
         r.id          || ''
-      ].map(_cell).join(','));
+      ));
     });
 
-    /* ── Download dengan BOM UTF-8 agar Excel terbaca benar ── */
-    var BOM = '\uFEFF';
-    var csv  = BOM + lines.join('\r\n');
+    /* ── Download dengan BOM UTF-8 ── */
+    var csv  = '\uFEFF' + lines.join('\r\n');
     var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     var url  = URL.createObjectURL(blob);
     var a    = document.createElement('a');
-
-    var dateTag = now.getFullYear() +
-      '-' + String(now.getMonth() + 1).padStart(2, '0') +
-      '-' + String(now.getDate()).padStart(2, '0');
-
-    a.href     = url;
+    var dateTag = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    a.href = url;
     a.download = 'Laporan-Keuangan-LaughtaleSMP-' + dateTag + '.csv';
     a.click();
     URL.revokeObjectURL(url);
-
     _finToast('Export berhasil — ' + rows.length + ' transaksi ✓', 'success');
   };
 
@@ -1123,20 +868,14 @@
       ');',
       'CREATE INDEX IF NOT EXISTS idx_ps_recorded ON player_snapshots(recorded_at DESC);',
     ].join('\n');
-
     var box = document.getElementById('fv2-sql-box');
-    if (box) {
-      box.style.display = 'block';
-      document.getElementById('fv2-sql-code').textContent = sql;
-    }
+    if (box) { box.style.display = 'block'; document.getElementById('fv2-sql-code').textContent = sql; }
   };
 
   window.financeV2CopySQL = function () {
     var code = (document.getElementById('fv2-sql-code') || {}).textContent;
     if (!code) return;
-    navigator.clipboard.writeText(code).then(function () {
-      _finToast('SQL disalin ✓', 'success');
-    });
+    navigator.clipboard.writeText(code).then(function () { _finToast('SQL disalin ✓', 'success'); });
   };
 
 })();
