@@ -7,93 +7,6 @@ let _lastServerData = null;
 let _lastFetchTime  = null;
 let _lastRefreshTime = 0;
 
-// ── Player Chart History ──────────────────────────────
-const _playerHistory = { labels: [], data: [] };
-const _MAX_HISTORY   = 12; // simpan max 12 titik data
-let   _playerChart   = null;
-
-function initPlayerChart() {
-  const canvas = document.getElementById('player-chart');
-  if (!canvas || !window.Chart) return;
-  if (_playerChart) return; // sudah diinit
-
-  _playerChart = new Chart(canvas.getContext('2d'), {
-    type: 'line',
-    data: {
-      labels: _playerHistory.labels,
-      datasets: [{
-        label: 'Player Online',
-        data: _playerHistory.data,
-        borderColor: '#a855f7',
-        borderWidth: 2,
-        pointBackgroundColor: '#a855f7',
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        tension: 0.4,
-        fill: true,
-        backgroundColor: function(ctx) {
-          const canvas = ctx.chart.canvas;
-          const gradient = canvas.getContext('2d').createLinearGradient(0, 0, 0, 100);
-          gradient.addColorStop(0, 'rgba(168,85,247,0.25)');
-          gradient.addColorStop(1, 'rgba(168,85,247,0.02)');
-          return gradient;
-        }
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 600, easing: 'easeInOutQuart' },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: 'rgba(13,17,23,0.9)',
-          borderColor: 'rgba(168,85,247,0.4)',
-          borderWidth: 1,
-          titleColor: '#a855f7',
-          bodyColor: '#e2e8f0',
-          callbacks: {
-            label: ctx => ` ${ctx.parsed.y} pemain online`
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: { color: 'rgba(255,255,255,0.05)' },
-          ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 9 } }
-        },
-        y: {
-          beginAtZero: true,
-          grid: { color: 'rgba(255,255,255,0.05)' },
-          ticks: {
-            color: 'rgba(255,255,255,0.4)',
-            font: { size: 9 },
-            stepSize: 1,
-            precision: 0
-          }
-        }
-      }
-    }
-  });
-}
-
-function updatePlayerChart(count) {
-  const time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-  _playerHistory.labels.push(time);
-  _playerHistory.data.push(count);
-  if (_playerHistory.labels.length > _MAX_HISTORY) {
-    _playerHistory.labels.shift();
-    _playerHistory.data.shift();
-  }
-  if (!_playerChart) initPlayerChart();
-  if (_playerChart) _playerChart.update();
-
-  // Tampilkan wrap chart
-  const wrap = document.getElementById('player-chart-wrap');
-  if (wrap) wrap.style.display = 'block';
-}
-// ─────────────────────────────────────────────────────
-
 /* Ambil IP terbaru — prioritas: supabase-sync > SERVER_CONFIG > hardcode */
 function getServerHost() {
   const ip = window._serverIP
@@ -137,6 +50,7 @@ async function fetchServerStatus() {
 
   if (btn) { btn.textContent = '↻ MEMUAT...'; btn.disabled = true; }
 
+  // Baca IP secara dinamis saat fetch — bukan saat script load
   const SERVER_HOST = getServerHost();
   const SERVER_PORT = getServerPort();
 
@@ -163,6 +77,7 @@ async function fetchServerStatus() {
     _lastFetchTime  = new Date();
 
     if (data.online) {
+      // ── ONLINE ─────────────────────────────────────────
       setOrbState(dot, label, 'is-online', 'ONLINE', 'var(--green)');
       document.querySelectorAll('.skel-val').forEach(el => el.classList.add('loaded'));
 
@@ -180,9 +95,6 @@ async function fetchServerStatus() {
       if (versionEl) versionEl.textContent = version;
       if (addrEl)    addrEl.textContent    = `${SERVER_HOST}:${SERVER_PORT}`;
 
-      // Update grafik player
-      updatePlayerChart(onlinePlayers);
-
       // Player list
       const listWrap = document.getElementById('player-list-wrap');
       const listEl   = document.getElementById('player-list');
@@ -196,6 +108,7 @@ async function fetchServerStatus() {
       }
 
     } else {
+      // ── OFFLINE ────────────────────────────────────────
       setOrbState(dot, label, 'is-offline', 'OFFLINE', 'var(--redstone)');
       document.querySelectorAll('.skel-val').forEach(el => el.classList.add('loaded'));
 
@@ -207,11 +120,9 @@ async function fetchServerStatus() {
 
       const listWrap = document.getElementById('player-list-wrap');
       if (listWrap) listWrap.style.display = 'none';
-
-      // Tetap catat 0 ke grafik saat offline
-      updatePlayerChart(0);
     }
 
+    // Update timestamp
     const timeStr = new Date().toLocaleTimeString('id-ID');
     const uptime  = document.getElementById('uptime-display');
     const lastUpd = document.getElementById('last-updated-text');
