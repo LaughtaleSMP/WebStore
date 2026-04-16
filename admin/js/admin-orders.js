@@ -20,6 +20,10 @@
 // FIX v2.3:
 //  - orderDelete: hapus kolom 'item' dari .select('item_name,item,username')
 //    → .select('item_name,username') — kolom 'item' tidak exist di tabel orders.
+//
+// FIX v2.4:
+//  - allOrdersExport headers: ganti key 'item' → 'item_name' agar konsisten.
+//  - allOrdersLoad: perbaiki typo extra quote pada onclick orderDelete('')' → orderDelete('')
 
 /* ─────────────────────────────────────────────────────
    HELPERS
@@ -636,7 +640,7 @@ window.allOrdersLoad = async function () {
         <div style="display:flex;gap:5px">
           <button onclick="orderEdit('${escHtml(o.id)}')" style="padding:3px 8px;font-size:11px;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--text)">✏️</button>
           ${_canDelete()
-            ? `<button onclick="orderDelete('${escHtml(String(o.id))}'')" style="padding:3px 8px;font-size:11px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);border-radius:5px;cursor:pointer;color:#f87171">🗑️</button>`
+            ? `<button onclick="orderDelete('${escHtml(String(o.id))}')" style="padding:3px 8px;font-size:11px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);border-radius:5px;cursor:pointer;color:#f87171">🗑️</button>`
             : ''}
         </div>
       </td>
@@ -671,9 +675,10 @@ window.allOrdersExport = async function () {
 
   const STATUS_MAP = { pending:'Pending', selesai:'Selesai', refund:'Refund', cancelled:'Cancelled' };
 
+  // FIX v2.4: ganti key 'item' → 'item_name' agar konsisten dengan kolom DB
   const headers = [
     { header: 'ID',           key: 'id',           width: 10 },
-    { header: 'Item',         key: 'item',         width: 26 },
+    { header: 'Item',         key: 'item_name',    width: 26 },
     { header: 'Username',     key: 'username',     width: 18 },
     { header: 'Qty',          key: 'qty',          width: 6  },
     { header: 'Harga Satuan', key: 'unit_price',   width: 16 },
