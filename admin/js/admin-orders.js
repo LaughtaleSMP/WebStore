@@ -8,6 +8,11 @@
 //  5. Export Excel "Semua Pesanan" sesuai filter aktif
 //  6. Activity log otomatis di setiap aksi penting
 //
+// FIX v2.1:
+//  - Hapus kolom 'item' dari semua query .select() — kolom tidak exist di tabel
+//    sehingga menyebabkan 400 Bad Request. Fallback o.item_name || o.item
+//    di JavaScript tetap aman karena hanya baca dari objek, bukan query DB.
+//
 
 /* ─────────────────────────────────────────────────────
    HELPERS
@@ -97,7 +102,7 @@ function _flashTabTitle(msg) {
 function _showOrderNotification(order) {
   _playNotifSound();
 
-  const itemName = order.item_name || order.item || '?';
+  const itemName = order.item_name || '?';
   const username = order.username  || '?';
 
   if (_notifPermission === 'granted') {
@@ -185,12 +190,12 @@ async function _recordFinanceTx(order) {
     .maybeSingle();
   if (existing) return;
 
-  const category = (order.item_name || order.item || '').toLowerCase().includes('gem') ? 'gem' : 'shop';
+  const category = (order.item_name || '').toLowerCase().includes('gem') ? 'gem' : 'shop';
   await sb.from('finance_transactions').insert([{
     type:        'income',
     category,
     amount:      Number(order.total_price),
-    note:        'Order: ' + (order.item_name || order.item || '?'),
+    note:        'Order: ' + (order.item_name || '?'),
     reference:   ref,
     recorded_by: order.completed_by_name || _getAdminName(),
     created_at:  order.completed_at || new Date().toISOString(),
@@ -271,7 +276,7 @@ window.ordersLoad = async function () {
           <span class="order-time">${escHtml(new Date(o.created_at).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}))}</span>
         </div>
       </div>
-      <div class="order-item-name">${escHtml(o.item_name || o.item || '—')}</div>
+      <div class="order-item-name">${escHtml(o.item_name || '—')}</div>
       <div class="order-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin:7px 0">
         ${o.username    ? `<span class="order-tag">👤 ${escHtml(o.username)}</span>`  : ''}
         ${o.qty         ? `<span class="order-tag">×${escHtml(String(o.qty))}</span>` : ''}
@@ -388,7 +393,7 @@ window.orderMarkDone = async function (id) {
   /* Finance + Activity Log */
   await _recordFinanceTx({ ...o, completed_at: completedAt, completed_by_name: completedBy });
   window.logAdminActivity?.('order_done', 'order', id, {
-    item: o.item_name || o.item || '?',
+    item: o.item_name || '?',
     user: o.username  || '?',
     harga: 'Rp ' + Number(o.total_price || 0).toLocaleString('id-ID'),
   });
@@ -413,9 +418,9 @@ window.orderDelete = async function (id) {
   const sb = getSb();
   if (!sb) return;
 
-  /* Ambil nama item untuk konfirmasi */
-  const { data: o } = await sb.from('orders').select('item_name,item,username').eq('id', id).maybeSingle();
-  const itemLabel   = escHtml(o?.item_name || o?.item || 'order ini');
+  /* FIX: hapus 'item' dari select — kolom tidak exist di tabel orders */
+  const { data: o } = await sb.from('orders').select('item_name,username').eq('id', id).maybeSingle();
+  const itemLabel   = escHtml(o?.item_name || 'order ini');
   const userLabel   = escHtml(o?.username  || '');
 
   _confirm({
@@ -428,7 +433,7 @@ window.orderDelete = async function (id) {
     if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
 
     window.logAdminActivity?.('order_delete', 'order', id, {
-      item: o?.item_name || o?.item || '?',
+      item: o?.item_name || '?',
       user: o?.username  || '?',
     });
 
@@ -529,7 +534,7 @@ window.allOrdersLoad = async function () {
 
   let rows = data || [];
   if (searchVal) rows = rows.filter(o =>
-    (o.item_name || o.item || '').toLowerCase().includes(searchVal) ||
+    (o.item_name || '').toLowerCase().includes(searchVal) ||
     (o.username  || '').toLowerCase().includes(searchVal) ||
     (o.wa_admin_name || '').toLowerCase().includes(searchVal)
   );
@@ -547,7 +552,7 @@ window.allOrdersLoad = async function () {
     <tr>
       <td style="padding:8px 10px"><span class="order-id-badge">#${escHtml(String(o.id).slice(-4).toUpperCase())}</span></td>
       <td style="padding:8px 10px;font-size:11.5px;color:var(--text-muted)">${escHtml(new Date(o.created_at).toLocaleString('id-ID',{dateStyle:'short',timeStyle:'short'}))}</td>
-      <td style="padding:8px 10px;font-size:12.5px">${escHtml(o.item_name || o.item || '—')}</td>
+      <td style="padding:8px 10px;font-size:12.5px">${escHtml(o.item_name || '—')}</td>
       <td style="padding:8px 10px;text-align:center">${escHtml(String(o.qty || 1))}</td>
       <td style="padding:8px 10px">${escHtml(o.username || '—')}</td>
       <td style="padding:8px 10px">${escHtml(o.wa_admin_name || '—')}</td>
@@ -616,7 +621,7 @@ window.allOrdersExport = async function () {
 
   let rows = data;
   if (searchVal) rows = rows.filter(o =>
-    (o.item_name || o.item || '').toLowerCase().includes(searchVal) ||
+    (o.item_name || '').toLowerCase().includes(searchVal) ||
     (o.username  || '').toLowerCase().includes(searchVal) ||
     (o.wa_admin_name || '').toLowerCase().includes(searchVal)
   );
@@ -672,7 +677,7 @@ window.allOrdersExport = async function () {
       no:          i + 1,
       id:          '#' + String(o.id).slice(-4).toUpperCase(),
       created_at:  fmtDate(o.created_at),
-      item:        o.item_name || o.item || '—',
+      item:        o.item_name || '—',
       qty:         o.qty || 1,
       username:    o.username || '—',
       wa_admin:    o.wa_admin_name || '—',
@@ -747,7 +752,7 @@ window.oeditOpen = async function (id) {
   if (error || !o) { showToast('Gagal ambil data order', 'error'); return; }
 
   document.getElementById('oedit-id').value          = o.id;
-  document.getElementById('oedit-item-name').value   = o.item_name || o.item || '';
+  document.getElementById('oedit-item-name').value   = o.item_name || '';
   document.getElementById('oedit-username').value    = o.username   || '';
   document.getElementById('oedit-qty').value         = o.qty        || 1;
   document.getElementById('oedit-unit-price').value  = o.unit_price || 0;
