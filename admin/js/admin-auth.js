@@ -64,7 +64,12 @@ async function afterLogin(user, roleData = null) {
   if (roleData.role === 'superadmin') {
     if (typeof window.usersInjectNav === 'function') {
       window.usersInjectNav();
-    }
+  /* Log aktivitas login */
+  if (typeof window.logAdminActivity === 'function') {
+    window.logAdminActivity('login', 'session', user.id, {
+      email: user.email,
+      role:  roleData?.role || '?',
+    });
   }
 
   await loadAllConfig();
