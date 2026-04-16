@@ -219,10 +219,10 @@
       }
     }
 
-    _setSum('fv2-sum-in',  _fmtShort(cur.in));
-    _setSum('fv2-sum-out', _fmtShort(cur.out));
-    _setSum('fv2-sum-don', _fmtShort(cur.don));
-    _setSum('fv2-sum-bal', _fmtShort(cur.bal), cur.bal >= 0 ? 'pos' : 'neg');
+    _setSum('fv2-sum-in',  _fmt(cur.in));
+    _setSum('fv2-sum-out', _fmt(cur.out));
+    _setSum('fv2-sum-don', _fmt(cur.don));
+    _setSum('fv2-sum-bal', _fmt(cur.bal), cur.bal >= 0 ? 'pos' : 'neg');
 
     _renderDelta('fv2-delta-in',  cur.in,  prev.in);
     _renderDelta('fv2-delta-out', cur.out, prev.out);
