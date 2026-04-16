@@ -44,6 +44,16 @@ function _getDisplayName() {
     || null;
 }
 
+/* Ambil email admin yang sedang login */
+function _getAdminEmail() {
+  return window.currentUser?.email || null;
+}
+
+/* Ambil nomor WA admin yang sedang login dari admin_roles */
+function _getAdminPhone() {
+  return window.currentRole?.phone || null;
+}
+
 /* Custom confirm dialog — gunakan showMgrConfirm jika tersedia */
 function _confirm({ title, message, confirmText, danger = false }, onConfirm) {
   if (typeof window.showMgrConfirm === 'function') {
@@ -105,7 +115,7 @@ function _flashTabTitle(msg) {
 function _showOrderNotification(order) {
   _playNotifSound();
 
-  const itemName = order.item_name || order.item || '?';
+  const itemName = order.item_name || '?';
   const username = order.username  || '?';
 
   if (_notifPermission === 'granted') {
@@ -193,12 +203,12 @@ async function _recordFinanceTx(order) {
     .maybeSingle();
   if (existing) return;
 
-  const category = (order.item_name || order.item || '').toLowerCase().includes('gem') ? 'gem' : 'shop';
+  const category = (order.item_name || '').toLowerCase().includes('gem') ? 'gem' : 'shop';
   await sb.from('finance_transactions').insert([{
     type:        'income',
     category,
     amount:      Number(order.total_price),
-    note:        'Order: ' + (order.item_name || order.item || '?'),
+    note:        'Order: ' + (order.item_name || '?'),
     reference:   ref,
     recorded_by: order.completed_by_name || _getAdminName(),
     created_at:  order.completed_at || new Date().toISOString(),
@@ -279,7 +289,7 @@ window.ordersLoad = async function () {
           <span class="order-time">${escHtml(new Date(o.created_at).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}))}</span>
         </div>
       </div>
-      <div class="order-item-name">${escHtml(o.item_name || o.item || '—')}</div>
+      <div class="order-item-name">${escHtml(o.item_name || '—')}</div>
       <div class="order-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin:7px 0">
         ${o.username    ? `<span class="order-tag">👤 ${escHtml(o.username)}</span>`  : ''}
         ${o.qty         ? `<span class="order-tag">×${escHtml(String(o.qty))}</span>` : ''}
@@ -384,6 +394,8 @@ window.orderMarkDone = async function (id) {
   const completedBy   = o.wa_admin_name || _getAdminName();
   const user          = window.currentUser;
   const displayName   = _getDisplayName();
+  const adminEmail    = _getAdminEmail();
+  const adminPhone    = _getAdminPhone();
 
   const { error } = await sb.from('orders').update({
     status:                      'selesai',
@@ -391,6 +403,8 @@ window.orderMarkDone = async function (id) {
     completed_by_user_id:        user?.id    || null,
     completed_by_name:           completedBy,
     completed_by_display_name:   displayName,
+    completed_by_email:          adminEmail,
+    wa_admin_number:             adminPhone || o.wa_admin_number || null,
   }).eq('id', id);
 
   if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
@@ -398,9 +412,11 @@ window.orderMarkDone = async function (id) {
   /* Finance + Activity Log */
   await _recordFinanceTx({ ...o, completed_at: completedAt, completed_by_name: completedBy });
   window.logAdminActivity?.('order_done', 'order', id, {
-    item: o.item_name || o.item || '?',
-    user: o.username  || '?',
-    harga: 'Rp ' + Number(o.total_price || 0).toLocaleString('id-ID'),
+    item:          o.item_name || '?',
+    user:          o.username  || '?',
+    harga:         'Rp ' + Number(o.total_price || 0).toLocaleString('id-ID'),
+    admin_email:   adminEmail  || '?',
+    admin_wa:      adminPhone  || o.wa_admin_number || '?',
   });
 
   const card = document.getElementById(`ocard-${id}`);
@@ -424,8 +440,8 @@ window.orderDelete = async function (id) {
   if (!sb) return;
 
   /* Ambil nama item untuk konfirmasi */
-  const { data: o } = await sb.from('orders').select('item_name,item,username').eq('id', id).maybeSingle();
-  const itemLabel   = escHtml(o?.item_name || o?.item || 'order ini');
+  const { data: o } = await sb.from('orders').select('item_name,username').eq('id', id).maybeSingle();
+  const itemLabel   = escHtml(o?.item_name || 'order ini');
   const userLabel   = escHtml(o?.username  || '');
 
   _confirm({
@@ -438,7 +454,7 @@ window.orderDelete = async function (id) {
     if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
 
     window.logAdminActivity?.('order_delete', 'order', id, {
-      item: o?.item_name || o?.item || '?',
+      item: o?.item_name || '?',
       user: o?.username  || '?',
     });
 
@@ -477,6 +493,8 @@ window.oeditSave = async function () {
 
   const completedAt = new Date().toISOString();
   const completedBy = prevOrder?.wa_admin_name || _getAdminName();
+  const adminEmail  = _getAdminEmail();
+  const adminPhone  = _getAdminPhone();
 
   const updates = { item_name: itemName, username, qty, unit_price, total_price, customer_note, status };
   if (status === 'refund' || status === 'cancelled') updates.refund_reason = refund_reason;
@@ -485,6 +503,8 @@ window.oeditSave = async function () {
     updates.completed_by_user_id         = user?.id || null;
     updates.completed_by_name            = completedBy;
     updates.completed_by_display_name    = _getDisplayName();
+    updates.completed_by_email           = adminEmail;
+    updates.wa_admin_number              = adminPhone || prevOrder?.wa_admin_number || null;
   }
 
   const btn = document.getElementById('oedit-save-btn');
@@ -501,9 +521,11 @@ window.oeditSave = async function () {
   }
 
   window.logAdminActivity?.('order_edit', 'order', id, {
-    item:    itemName,
-    status:  `${prevStatus} → ${status}`,
-    harga:   'Rp ' + total_price.toLocaleString('id-ID'),
+    item:        itemName,
+    status:      `${prevStatus} → ${status}`,
+    harga:       'Rp ' + total_price.toLocaleString('id-ID'),
+    admin_email: adminEmail || '?',
+    admin_wa:    adminPhone || prevOrder?.wa_admin_number || '?',
   });
 
   oeditClose();
@@ -540,7 +562,7 @@ window.allOrdersLoad = async function () {
 
   let rows = data || [];
   if (searchVal) rows = rows.filter(o =>
-    (o.item_name || o.item || '').toLowerCase().includes(searchVal) ||
+    (o.item_name || '').toLowerCase().includes(searchVal) ||
     (o.username  || '').toLowerCase().includes(searchVal) ||
     (o.wa_admin_name || '').toLowerCase().includes(searchVal)
   );
@@ -558,10 +580,12 @@ window.allOrdersLoad = async function () {
     <tr>
       <td style="padding:8px 10px"><span class="order-id-badge">#${escHtml(String(o.id).slice(-4).toUpperCase())}</span></td>
       <td style="padding:8px 10px;font-size:11.5px;color:var(--text-muted)">${escHtml(new Date(o.created_at).toLocaleString('id-ID',{dateStyle:'short',timeStyle:'short'}))}</td>
-      <td style="padding:8px 10px;font-size:12.5px">${escHtml(o.item_name || o.item || '—')}</td>
+      <td style="padding:8px 10px;font-size:12.5px">${escHtml(o.item_name || '—')}</td>
       <td style="padding:8px 10px;text-align:center">${escHtml(String(o.qty || 1))}</td>
       <td style="padding:8px 10px">${escHtml(o.username || '—')}</td>
       <td style="padding:8px 10px">${escHtml(o.wa_admin_name || '—')}</td>
+      <td style="padding:8px 10px;font-size:11.5px;color:var(--text-muted)">${escHtml(o.completed_by_email || '—')}</td>
+      <td style="padding:8px 10px;font-size:11.5px;color:var(--text-muted)">${escHtml(o.wa_admin_number || '—')}</td>
       <td style="padding:8px 10px;font-weight:600;color:#4ade80">Rp ${Number(o.total_price || 0).toLocaleString('id-ID')}</td>
       <td style="padding:8px 10px;font-size:12px;${STATUS_CLS[o.status] || ''}">${STATUS_MAP[o.status] || escHtml(o.status || '—')}</td>
       <td style="padding:8px 10px;white-space:nowrap">
@@ -588,10 +612,10 @@ window.allOrdersLoad = async function () {
       </button>
     </div>
     <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:680px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:780px;">
         <thead style="background:var(--surface2)">
           <tr>
-            ${['ID','WAKTU','ITEM','QTY','USERNAME','ADMIN WA','TOTAL','STATUS','AKSI'].map(h =>
+            ${['ID','WAKTU','ITEM','QTY','USERNAME','ADMIN WA','EMAIL ADMIN','NO WA ADMIN','TOTAL','STATUS','AKSI'].map(h =>
               `<th style="padding:9px 10px;text-align:left;font-size:10.5px;color:var(--text-faint);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.4px">${h}</th>`
             ).join('')}
           </tr>
@@ -627,7 +651,7 @@ window.allOrdersExport = async function () {
 
   let rows = data;
   if (searchVal) rows = rows.filter(o =>
-    (o.item_name || o.item || '').toLowerCase().includes(searchVal) ||
+    (o.item_name || '').toLowerCase().includes(searchVal) ||
     (o.username  || '').toLowerCase().includes(searchVal) ||
     (o.wa_admin_name || '').toLowerCase().includes(searchVal)
   );
@@ -643,18 +667,20 @@ window.allOrdersExport = async function () {
   });
 
   ws.columns = [
-    { header: 'No',           key: 'no',          width: 5  },
-    { header: 'ID Order',     key: 'id',           width: 14 },
-    { header: 'Waktu',        key: 'created_at',   width: 20 },
-    { header: 'Item',         key: 'item',         width: 26 },
-    { header: 'Qty',          key: 'qty',          width: 6  },
-    { header: 'Username',     key: 'username',     width: 18 },
-    { header: 'Admin WA',     key: 'wa_admin',     width: 18 },
-    { header: 'Harga Satuan', key: 'unit_price',   width: 16 },
-    { header: 'Total (Rp)',   key: 'total_price',  width: 16 },
-    { header: 'Status',       key: 'status',       width: 12 },
-    { header: 'Catatan',      key: 'note',         width: 28 },
-    { header: 'Selesai Pada', key: 'completed_at', width: 20 },
+    { header: 'No',             key: 'no',                 width: 5  },
+    { header: 'ID Order',       key: 'id',                 width: 14 },
+    { header: 'Waktu',          key: 'created_at',         width: 20 },
+    { header: 'Item',           key: 'item',               width: 26 },
+    { header: 'Qty',            key: 'qty',                width: 6  },
+    { header: 'Username',       key: 'username',           width: 18 },
+    { header: 'Admin WA',       key: 'wa_admin',           width: 18 },
+    { header: 'Email Admin',    key: 'completed_by_email', width: 26 },
+    { header: 'No WA Admin',    key: 'wa_admin_number',    width: 18 },
+    { header: 'Harga Satuan',   key: 'unit_price',         width: 16 },
+    { header: 'Total (Rp)',     key: 'total_price',        width: 16 },
+    { header: 'Status',         key: 'status',             width: 12 },
+    { header: 'Catatan',        key: 'note',               width: 28 },
+    { header: 'Selesai Pada',   key: 'completed_at',       width: 20 },
   ];
 
   /* Style header */
@@ -680,18 +706,20 @@ window.allOrdersExport = async function () {
 
   rows.forEach((o, i) => {
     const row = ws.addRow({
-      no:          i + 1,
-      id:          '#' + String(o.id).slice(-4).toUpperCase(),
-      created_at:  fmtDate(o.created_at),
-      item:        o.item_name || o.item || '—',
-      qty:         o.qty || 1,
-      username:    o.username || '—',
-      wa_admin:    o.wa_admin_name || '—',
-      unit_price:  Number(o.unit_price || 0),
-      total_price: Number(o.total_price || 0),
-      status:      STATUS_LABEL[o.status] || o.status || '—',
-      note:        o.customer_note || '',
-      completed_at: fmtDate(o.completed_at),
+      no:                  i + 1,
+      id:                  '#' + String(o.id).slice(-4).toUpperCase(),
+      created_at:          fmtDate(o.created_at),
+      item:                o.item_name || '—',
+      qty:                 o.qty || 1,
+      username:            o.username || '—',
+      wa_admin:            o.wa_admin_name || '—',
+      completed_by_email:  o.completed_by_email || '—',
+      wa_admin_number:     o.wa_admin_number || '—',
+      unit_price:          Number(o.unit_price || 0),
+      total_price:         Number(o.total_price || 0),
+      status:              STATUS_LABEL[o.status] || o.status || '—',
+      note:                o.customer_note || '',
+      completed_at:        fmtDate(o.completed_at),
     });
 
     row.height = 16;
@@ -704,15 +732,15 @@ window.allOrdersExport = async function () {
       cell.border = { bottom: { style: 'hair', color: { argb: 'FFE5E7EB' } } };
       cell.alignment = { vertical: 'middle' };
 
-      if (colNum === 10 && sc.fg) { /* Status column */
+      if (colNum === 12 && sc.fg) { /* Status column */
         cell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: sc.fg } };
         cell.font   = { bold: true, size: 10, color: { argb: sc.font } };
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
       }
-      if (colNum === 8 || colNum === 9) {
+      if (colNum === 10 || colNum === 11) {
         cell.numFmt    = '#,##0';
         cell.alignment = { horizontal: 'right', vertical: 'middle' };
-        if (colNum === 9) cell.font = { bold: true, size: 10, color: { argb: 'FF065F46' } };
+        if (colNum === 11) cell.font = { bold: true, size: 10, color: { argb: 'FF065F46' } };
       }
     });
   });
@@ -722,6 +750,7 @@ window.allOrdersExport = async function () {
   const totalRow = ws.addRow({
     no: '', id: '', created_at: '', item: 'TOTAL',
     qty: rows.length + ' order', username: '', wa_admin: '',
+    completed_by_email: '', wa_admin_number: '',
     unit_price: '', total_price: totalRev, status: '', note: '', completed_at: '',
   });
   totalRow.height = 18;
@@ -729,7 +758,7 @@ window.allOrdersExport = async function () {
     cell.font   = { bold: true, size: 10, color: { argb: 'FF1F2937' } };
     cell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
     cell.border = { top: { style: 'medium', color: { argb: 'FF4A8FFF' } } };
-    if (colNum === 9) {
+    if (colNum === 11) {
       cell.numFmt    = '#,##0';
       cell.alignment = { horizontal: 'right', vertical: 'middle' };
     }
@@ -758,7 +787,7 @@ window.oeditOpen = async function (id) {
   if (error || !o) { showToast('Gagal ambil data order', 'error'); return; }
 
   document.getElementById('oedit-id').value          = o.id;
-  document.getElementById('oedit-item-name').value   = o.item_name || o.item || '';
+  document.getElementById('oedit-item-name').value   = o.item_name || '';
   document.getElementById('oedit-username').value    = o.username   || '';
   document.getElementById('oedit-qty').value         = o.qty        || 1;
   document.getElementById('oedit-unit-price').value  = o.unit_price || 0;
