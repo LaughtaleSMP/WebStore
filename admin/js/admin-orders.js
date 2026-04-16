@@ -409,7 +409,8 @@ window.orderMarkDone = async function (id) {
   if (fetchErr || !o) { showToast('Gagal ambil data order.', 'error'); return; }
 
   const completedAt   = new Date().toISOString();
-  const completedBy   = o.wa_admin_name || _getAdminName();
+  // FIX: prioritaskan nama admin yang sedang login, bukan wa_admin_name dari order
+  const completedBy   = _getDisplayName() || _getAdminName() || o.wa_admin_name || 'admin';
   const user          = window.currentUser;
   const displayName   = _getDisplayName();
   const adminEmail    = _getAdminEmail();
@@ -510,7 +511,8 @@ window.oeditSave = async function () {
   const prevStatus = prevOrder?.status || '';
 
   const completedAt = new Date().toISOString();
-  const completedBy = prevOrder?.wa_admin_name || _getAdminName();
+  // FIX: prioritaskan nama admin yang sedang login, bukan wa_admin_name dari order
+  const completedBy = _getDisplayName() || _getAdminName() || prevOrder?.wa_admin_name || 'admin';
   const adminEmail  = _getAdminEmail();
   const adminPhone  = _getAdminPhone();
 
