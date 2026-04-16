@@ -341,7 +341,7 @@
         },
         scales: {
           x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 } }, border: { color: 'rgba(255,255,255,0.06)' } },
-          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 }, callback: function (v) { return _fmtShort(v); } }, border: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 }, callback: function (v) { return _fmt(v); } }, border: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true },
         },
       },
     });
@@ -436,7 +436,7 @@
         },
         scales: {
           x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 } }, border: { color: 'rgba(255,255,255,0.06)' } },
-          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 }, callback: function (v) { return _fmtShort(v); } }, border: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 }, callback: function (v) { return _fmt(v); } }, border: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true },
         },
       },
     });
@@ -448,7 +448,7 @@
         return '<div class="fv2-mbar-wrap">' +
           '<span class="fv2-mbar-label">' + _esc(e[0]) + '</span>' +
           '<div class="fv2-mbar-bg"><div class="fv2-mbar-fill" style="width:' + w + '%;background:' + barColors[i] + '"></div></div>' +
-          '<span class="fv2-mbar-val" style="color:' + barColors[i].replace('0.75','1') + '">' + _fmtShort(e[1]) + '</span>' +
+          '<span class="fv2-mbar-val" style="color:' + barColors[i].replace('0.75','1') + '">' + _fmt(e[1]) + '</span>' +
           '</div>';
       }).join('');
     }
