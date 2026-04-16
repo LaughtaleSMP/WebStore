@@ -19,7 +19,7 @@ async function doLogin() {
 
     const { data: role, error: roleErr } = await sb
       .from('admin_roles')
-      .select('role,display_name')
+      .select('role,display_name,phone')
       .eq('user_id', data.user.id)
       .single();
 
@@ -41,7 +41,7 @@ async function afterLogin(user, roleData = null) {
   if (!roleData) {
     const { data, error } = await sb
       .from('admin_roles')
-      .select('role,display_name')
+      .select('role,display_name,phone')
       .eq('user_id', user.id)
       .single();
     if (error || !data) { await sb.auth.signOut(); return; }
