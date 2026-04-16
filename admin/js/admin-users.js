@@ -1,15 +1,9 @@
 /* ════════════════════════════════════════════════════════════════
    admin-users.js — Manajemen Admin (Super Admin Only)
    
-   FIX UTAMA vs versi lama:
-   • signUp() dilakukan via sbTemp (non-persistent client) sehingga
-     session super admin yang sedang login TIDAK ter-replace / logout.
-   • Semua approve/reject dipusatkan di sini; admin-auth.js cukup delegate.
-   • Better error handling + loading state di setiap tombol.
-   
-   Tabel yang dipakai:
-   • admin_roles            → daftar user yang punya akses panel
-   • admin_pending_requests → permintaan akses dari pendaftar baru
+   PERUBAHAN v2:
+   • showMgrConfirm di-expose ke window agar bisa dipakai file lain
+   • Tambahan logAdminActivity di approve / reject / delete
 ════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -160,9 +154,7 @@
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
             <div style="font-size:15px;font-weight:700;color:var(--text)">✏️ Edit Admin</div>
             <button onclick="window._mgrCloseEdit()"
-              style="background:none;border:none;color:var(--text-faint);cursor:pointer;
-                     font-size:18px;padding:4px 8px;border-radius:6px;transition:color .15s"
-              onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-faint)'">✕</button>
+              style="background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:18px;padding:4px 8px;border-radius:6px;">✕</button>
           </div>
           <input type="hidden" id="mgr-edit-user-id">
           <div class="oedit-field">
@@ -181,7 +173,7 @@
             </select>
           </div>
           <div style="font-size:11.5px;color:var(--text-faint);margin-top:8px;line-height:1.5">
-            ⚠️ Mengubah role berlaku saat admin tersebut login berikutnya.
+            ⚠️ Role Moderator hanya bisa melihat dan edit order — tidak bisa menghapus.
           </div>
           <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
             <button class="btn-ghost" onclick="window._mgrCloseEdit()"
@@ -246,6 +238,15 @@
         border:1px solid rgba(248,113,113,.25);transition:background .15s;font-family:inherit;
       }
       .mgr-btn-del-req:hover { background:rgba(248,113,113,.22); }
+      .oedit-field label {
+        display:block;font-size:11px;font-weight:600;color:var(--text-muted);
+        text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;
+      }
+      .oedit-field input {
+        width:100%;box-sizing:border-box;background:var(--surface2);
+        border:1px solid var(--border);border-radius:8px;color:var(--text);
+        font-size:13px;padding:8px 12px;outline:none;font-family:inherit;
+      }
       @media(max-width:600px){
         .mgr-req-card,.mgr-admin-row { flex-direction:column; align-items:flex-start; }
       }
@@ -267,6 +268,9 @@
     window._mgrCloseEdit     = closeEditModal;
     window._mgrSaveEdit      = saveEdit;
     window._mgrDeleteAdmin   = deleteAdmin;
+
+    /* ★ Expose showMgrConfirm globally untuk dipakai modul lain ★ */
+    window.showMgrConfirm = showMgrConfirm;
   }
 
   /* ══ TABS ══ */
@@ -352,9 +356,7 @@
     const statusCls   = { pending:'mgr-status-pending', approved:'mgr-status-approved', rejected:'mgr-status-rejected' };
 
     container.innerHTML = data.map(r => {
-      /* tombol aksi sesuai status */
       let actionBtns = '';
-
       if (r.status === 'pending') {
         actionBtns = `
           <button id="btn-approve-${r.id}" onclick="window._mgrApprove('${r.id}')"
@@ -374,15 +376,11 @@
           <button id="btn-approve-${r.id}" onclick="window._mgrApprove('${r.id}')"
             style="padding:6px 14px;border-radius:8px;background:rgba(91,127,244,.1);
                    color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;
-                   border:1px solid rgba(91,127,244,.25);transition:background .15s;font-family:inherit"
-            onmouseover="this.style.background='rgba(91,127,244,.2)'"
-            onmouseout="this.style.background='rgba(91,127,244,.1)'">↩ Setujui Ulang</button>
-          <button class="mgr-btn-del-req" onclick="window._mgrDeleteRequest('${r.id}','${esc(r.display_name||r.email||'')}')"
-            title="Hapus permintaan ini">🗑 Hapus</button>`;
+                   border:1px solid rgba(91,127,244,.25);font-family:inherit">↩ Setujui Ulang</button>
+          <button class="mgr-btn-del-req" onclick="window._mgrDeleteRequest('${r.id}','${esc(r.display_name||r.email||'')}')">🗑 Hapus</button>`;
       } else if (r.status === 'approved') {
         actionBtns = `
-          <button class="mgr-btn-del-req" onclick="window._mgrDeleteRequest('${r.id}','${esc(r.display_name||r.email||'')}')"
-            title="Hapus riwayat permintaan ini">🗑 Hapus</button>`;
+          <button class="mgr-btn-del-req" onclick="window._mgrDeleteRequest('${r.id}','${esc(r.display_name||r.email||'')}')">🗑 Hapus</button>`;
       }
 
       return `
@@ -401,15 +399,12 @@
                 ${new Date(r.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
               </span>
             </div>
-            ${r.reason ? `<div style="font-size:12px;color:var(--text-muted);margin-top:6px;
-                font-style:italic;border-left:3px solid var(--border2);padding-left:8px">
-                "${esc(r.reason)}"</div>` : ''}
+            ${r.reason ? `<div style="font-size:12px;color:var(--text-muted);margin-top:6px;font-style:italic;border-left:3px solid var(--border2);padding-left:8px">"${esc(r.reason)}"</div>` : ''}
           </div>
           <div style="display:flex;gap:8px;flex-shrink:0;align-items:center;flex-wrap:wrap">
             ${actionBtns}
           </div>
-        </div>
-      `;
+        </div>`;
     }).join('');
   }
 
@@ -448,7 +443,7 @@
           } else { throw signUpErr; }
         } else {
           userId = signUpData?.user?.id;
-          if (!userId) throw new Error('Gagal mendapat user ID setelah signUp. Pastikan Email Confirmations DINONAKTIFKAN.');
+          if (!userId) throw new Error('Gagal mendapat user ID setelah signUp.');
         }
         await sb.from('admin_pending_requests').update({ user_id: userId }).eq('id', reqId);
       }
@@ -467,13 +462,18 @@
       }).eq('id', reqId);
       if (ure) throw new Error('Gagal update status: ' + ure.message);
 
+      /* ★ Activity Log ★ */
+      window.logAdminActivity?.('admin_approve', 'user', userId, {
+        email:    r.email,
+        nama:     r.display_name || '?',
+      });
+
       toast(`✅ ${r.display_name} (${r.email}) berhasil disetujui!`);
       await loadRequests();
     } catch (e) {
       if (card) card.style.opacity = '1';
       if (approveBtn) { approveBtn.disabled = false; approveBtn.textContent = '✓ Setujui'; }
       if (rejectBtn)  rejectBtn.disabled = false;
-      console.error('[mgrApprove]', e);
       toast('Gagal menyetujui: ' + (e.message || 'Error tidak diketahui'), 'error');
     }
   }
@@ -482,13 +482,13 @@
   async function rejectRequest(reqId) {
     const sb = getSb();
     if (!sb) return;
-    const { data: r } = await sb.from('admin_pending_requests').select('display_name').eq('id', reqId).single();
+    const { data: r } = await sb.from('admin_pending_requests').select('display_name,email').eq('id', reqId).single();
     showMgrConfirm({
-      title: 'Tolak Permintaan?',
-      message: `Permintaan akses dari <strong>${esc(r?.display_name || '?')}</strong> akan ditolak.`,
+      title:       'Tolak Permintaan?',
+      message:     `Permintaan akses dari <strong>${esc(r?.display_name || '?')}</strong> akan ditolak.`,
       confirmText: '✗ Ya, Tolak',
-      danger: true,
-      onConfirm: async () => {
+      danger:      true,
+      onConfirm:   async () => {
         const rejectBtn = document.getElementById('btn-reject-' + reqId);
         if (rejectBtn) { rejectBtn.disabled = true; rejectBtn.textContent = '⏳…'; }
         const { error } = await sb.from('admin_pending_requests').update({
@@ -499,20 +499,25 @@
           if (rejectBtn) { rejectBtn.disabled = false; rejectBtn.textContent = '✗ Tolak'; }
           return;
         }
+        /* ★ Activity Log ★ */
+        window.logAdminActivity?.('admin_reject', 'request', reqId, {
+          email: r?.email || '?',
+          nama:  r?.display_name || '?',
+        });
         toast('Permintaan ditolak.');
         await loadRequests();
       },
     });
   }
 
-  /* ══ DELETE REQUEST (hapus baris dari tabel) ══ */
+  /* ══ DELETE REQUEST ══ */
   async function deleteRequest(reqId, displayName) {
     showMgrConfirm({
-      title: 'Hapus Permintaan?',
-      message: `Riwayat permintaan dari <strong>${esc(displayName)}</strong> akan dihapus permanen dari daftar.`,
+      title:       'Hapus Permintaan?',
+      message:     `Riwayat permintaan dari <strong>${esc(displayName)}</strong> akan dihapus permanen dari daftar.`,
       confirmText: '🗑 Ya, Hapus',
-      danger: true,
-      onConfirm: async () => {
+      danger:      true,
+      onConfirm:   async () => {
         const sb = getSb();
         if (!sb) { toast('Supabase belum siap.', 'error'); return; }
         const { error } = await sb.from('admin_pending_requests').delete().eq('id', reqId);
@@ -565,6 +570,7 @@
     if (!list.length) { container.innerHTML = '<div class="empty-state">Tidak ada admin ditemukan.</div>'; return; }
     const roleOrder = { superadmin: 0, admin: 1, moderator: 2 };
     const sorted = [...list].sort((a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9));
+
     container.innerHTML = sorted.map(a => {
       const isMe = a.user_id === me;
       const initials = (a.display_name || a.email || '?')[0].toUpperCase();
@@ -573,7 +579,15 @@
         : a.role === 'moderator'
         ? 'background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.25);color:#4ade80'
         : 'background:var(--accent-muted2);border-color:rgba(91,127,244,.2);color:var(--accent)';
-      const adminDataStr = esc(JSON.stringify({ user_id: a.user_id, id: a.id, display_name: a.display_name, role: a.role, email: a.email }));
+
+      const adminDataStr = esc(JSON.stringify({
+        user_id: a.user_id, id: a.id, display_name: a.display_name, role: a.role, email: a.email
+      }));
+
+      const roleBadgeHint = a.role === 'moderator'
+        ? `<span style="font-size:10px;color:var(--text-faint);margin-left:4px">(hanya lihat & edit order)</span>`
+        : '';
+
       return `
         <div class="mgr-admin-row" id="mgr-admin-${a.user_id}">
           <div class="mgr-admin-avatar" style="${avatarColor}">${initials}</div>
@@ -583,7 +597,10 @@
               ${isMe ? '<span style="font-size:10px;color:var(--text-faint);font-weight:400;margin-left:5px">(kamu)</span>' : ''}
             </div>
             <div style="font-size:12px;color:var(--text-faint);margin-bottom:5px">${esc(a.email || '—')}</div>
-            <span class="mgr-role-pill mgr-role-${esc(a.role)}">${esc(a.role)}</span>
+            <div style="display:flex;align-items:center">
+              <span class="mgr-role-pill mgr-role-${esc(a.role)}">${esc(a.role)}</span>
+              ${roleBadgeHint}
+            </div>
           </div>
           <div style="font-size:11px;color:var(--text-faint);text-align:right;min-width:80px">
             ${a.created_at ? new Date(a.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}) : '—'}
@@ -592,8 +609,7 @@
             <button class="btn-edit" onclick="window._mgrEditOpen('${adminDataStr}')" title="Edit admin">✏️ Edit</button>
             ${!isMe ? `<button class="btn-del" onclick="window._mgrDeleteAdmin('${esc(a.user_id)}','${esc(a.display_name || a.email || '')}')" title="Hapus akses">🗑</button>` : ''}
           </div>
-        </div>
-      `;
+        </div>`;
     }).join('');
   }
 
@@ -636,15 +652,19 @@
   /* ══ DELETE ADMIN ══ */
   function deleteAdmin(userId, displayName) {
     showMgrConfirm({
-      title: 'Cabut Akses Admin?',
-      message: `Akses panel untuk <strong>${esc(displayName)}</strong> akan dicabut. Mereka tidak bisa login lagi ke panel.`,
+      title:       'Cabut Akses Admin?',
+      message:     `Akses panel untuk <strong>${esc(displayName)}</strong> akan dicabut. Mereka tidak bisa login lagi ke panel.`,
       confirmText: '🗑️ Ya, Cabut Akses',
-      danger: true,
-      onConfirm: async () => {
+      danger:      true,
+      onConfirm:   async () => {
         const sb = getSb();
         if (!sb) { toast('Supabase belum siap.', 'error'); return; }
         const { error } = await sb.from('admin_roles').delete().eq('user_id', userId);
         if (error) { toast('Gagal hapus: ' + error.message, 'error'); return; }
+
+        /* ★ Activity Log ★ */
+        window.logAdminActivity?.('admin_delete', 'user', userId, { nama: displayName });
+
         const row = document.getElementById('mgr-admin-' + userId);
         if (row) {
           row.style.transition = 'opacity .3s, transform .3s';
