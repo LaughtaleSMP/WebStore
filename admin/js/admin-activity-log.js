@@ -27,6 +27,13 @@
   /* ══════════════════════════════════════════════════════════
      GLOBAL: log satu aksi ke tabel
      Dipanggil dari admin-orders.js, admin-shop.js, dll.
+
+     Prioritas nama admin:
+       1. details._adminName  (dikirim langsung dari caller — paling akurat)
+       2. window.currentRole?.display_name
+       3. user?.user_metadata?.full_name
+       4. prefix email
+       5. 'Admin' (last resort)
   ══════════════════════════════════════════════════════════ */
   window.logAdminActivity = async function (action, targetType, targetId, details) {
     const sb = getSb();
@@ -34,12 +41,21 @@
     const user     = window.currentUser;
     const roleData = window.currentRole;
 
-    // Ambil nama dari display_name (admin_roles), lalu fallback ke
-    // full_name metadata, lalu prefix email, terakhir 'Admin'
-    const adminName = roleData?.display_name
+    // Prioritas 1: _adminName yang dikirim langsung dari caller
+    const adminName = (details && details._adminName)
+                   || roleData?.display_name
                    || user?.user_metadata?.full_name
                    || (user?.email ? user.email.split('@')[0] : null)
                    || 'Admin';
+
+    // Bersihkan _adminName dari details sebelum disimpan ke DB
+    let cleanDetails = details ? { ...details } : null;
+    if (cleanDetails && cleanDetails._adminName) {
+      delete cleanDetails._adminName;
+    }
+    if (cleanDetails && Object.keys(cleanDetails).length === 0) {
+      cleanDetails = null;
+    }
 
     const adminId = user?.id || null;
 
@@ -50,7 +66,7 @@
         action:        action,
         target_type:   targetType   || null,
         target_id:     targetId != null ? String(targetId) : null,
-        details:       details       || null,
+        details:       cleanDetails || null,
       }]);
     } catch (e) {
       console.warn('[ActivityLog] Gagal mencatat log:', e.message);
@@ -112,8 +128,8 @@
           <div class="page-sub">Rekam jejak semua aksi yang dilakukan di admin panel — untuk keperluan audit</div>
         </div>
         <div style="display:flex;gap:8px">
-          <button class="btn-ghost" style="font-size:12px;padding:6px 13px" onclick="window._alLoad()">⟳ Refresh</button>
-          <button class="btn-ghost" style="font-size:12px;padding:6px 13px;color:#f87171;border-color:rgba(248,113,113,.3)" onclick="window._alClear()">🗑 Hapus Log Lama</button>
+          <button class="btn-ghost" style="font-size:12px;padding:6px 13px" onclick="window._alLoad()">&#8635; Refresh</button>
+          <button class="btn-ghost" style="font-size:12px;padding:6px 13px;color:#f87171;border-color:rgba(248,113,113,.3)" onclick="window._alClear()">&#128465; Hapus Log Lama</button>
         </div>
       </div>
 
