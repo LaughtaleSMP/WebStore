@@ -5,6 +5,7 @@ function showSection(name, el) {
   const sec = document.getElementById('sec-' + name);
   if (sec) sec.classList.add('active');
   if (el)  el.classList.add('active');
+
   const labels = {
     'server':           'Info Server',
     'maintenance':      'Maintenance',
@@ -20,6 +21,7 @@ function showSection(name, el) {
     'finance-v2':       'Manajemen Keuangan',
     'access-requests':  'Permintaan Akses',
     'manage-admins':    'Manajemen Admin',
+    'activity-log':     'Log Aktivitas',
   };
   document.getElementById('topbar-section').textContent = labels[name] || name;
 
@@ -27,14 +29,15 @@ function showSection(name, el) {
     window.loadAccessRequests();
   }
 
-  // Bug #8 fix: Hapus duplikasi definisi financeLoad di sini.
-  // admin-finance.js sudah assign: window.financeLoad = window.financeV2Init
-  // Cukup panggil langsung saat section aktif
   if (name === 'finance-v2' && typeof window.financeV2Init === 'function') {
     window.financeV2Init();
   }
 
   if (name === 'orders') {
+    /* Inisialisasi notifikasi saat pertama kali buka halaman orders */
+    if (typeof window._ordersInitNotifBar === 'function') {
+      window._ordersInitNotifBar();
+    }
     if (typeof window.ordersLoad === 'function') window.ordersLoad();
     if (typeof window.ordersSubscribe === 'function') window.ordersSubscribe();
   }
@@ -42,9 +45,36 @@ function showSection(name, el) {
   if (name === 'all-orders') {
     if (typeof window.allOrdersLoad === 'function') window.allOrdersLoad();
   }
+
+  if (name === 'activity-log' && typeof window._alLoad === 'function') {
+    window._alLoad();
+  }
 }
 
 window.showSection = showSection;
+
+/* ─────────────────────────────────────────────────────
+   Inject tombol notifikasi di section orders (sekali)
+───────────────────────────────────────────────────── */
+window._ordersInitNotifBar = function () {
+  if (document.getElementById('orders-notif-btn')) return; // sudah ada
+
+  const liveBar = document.querySelector('#sec-orders > div[style*="display:flex"]');
+  if (!liveBar) return;
+
+  const btn = document.createElement('button');
+  btn.id        = 'orders-notif-btn';
+  btn.className = 'btn-ghost';
+  btn.style.cssText = 'font-size:11.5px;padding:5px 10px;display:inline-flex;align-items:center;gap:4px;margin-left:4px';
+  btn.textContent = '🔔 Aktifkan Notifikasi';
+  btn.onclick     = () => {
+    if (typeof window._ordersRequestNotif === 'function') window._ordersRequestNotif();
+  };
+  liveBar.appendChild(btn);
+
+  /* Perbarui teks tombol sesuai status notifikasi saat ini */
+  if (typeof window._updateNotifBtn === 'function') window._updateNotifBtn();
+};
 
 // ==================== SIDEBAR TOGGLE (MOBILE) ====================
 function toggleSidebar() {

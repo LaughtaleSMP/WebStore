@@ -466,11 +466,9 @@
       .limit(60);
     if (result.error) { _buildPlayerChart([]); return; }
     _buildPlayerChart(result.data || []);
-    // Update label countdown timer
     _updateCountdownLabel();
   }
 
-  /* ── Countdown label di bawah grafik ── */
   function _updateCountdownLabel() {
     var lbl = document.getElementById('fv2-player-next-update');
     if (!lbl) return;
@@ -826,7 +824,7 @@
   };
 
   /* ══════════════════════════════════════════════════════════
-     10. EXPORT EXCEL — ExcelJS (support warna + border gratis)
+     10. EXPORT EXCEL
      ══════════════════════════════════════════════════════════ */
   window.financeV2Export = async function () {
     if (typeof ExcelJS === 'undefined') {
@@ -864,7 +862,6 @@
     });
     var balance = totalIn - totalOut;
 
-    /* ── Workbook & Sheet ── */
     var wb = new ExcelJS.Workbook();
     wb.creator = 'Laughtale SMP Admin Panel';
     wb.created = now;
@@ -873,27 +870,17 @@
       pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
     });
 
-    /* ── Initial column widths (minimum / fallback) ── */
     ws.columns = [
-      { width: 5  },  // No
-      { width: 28 },  // Tanggal
-      { width: 14 },  // Tipe
-      { width: 14 },  // Kategori
-      { width: 20 },  // Nominal
-      { width: 34 },  // Catatan
-      { width: 24 },  // Referensi
-      { width: 18 },  // Dicatat Oleh
-      { width: 38 },  // ID Transaksi
+      { width: 5  }, { width: 28 }, { width: 14 }, { width: 14 },
+      { width: 20 }, { width: 34 }, { width: 24 }, { width: 18 }, { width: 38 },
     ];
 
-    /* ── Helper border ── */
     function _border(style) {
       style = style || 'thin';
       var b = { style: style, color: { argb: 'FFB0B8C1' } };
       return { top: b, bottom: b, left: b, right: b };
     }
 
-    /* ── ROW 1: Judul ── */
     ws.addRow([]);
     ws.mergeCells('A1:I1');
     var titleCell = ws.getCell('A1');
@@ -903,7 +890,6 @@
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
     ws.getRow(1).height = 28;
 
-    /* ── ROW 2: Subtitle ── */
     ws.addRow([]);
     ws.mergeCells('A2:I2');
     var subCell = ws.getCell('A2');
@@ -913,10 +899,7 @@
     subCell.alignment = { horizontal: 'center', vertical: 'middle' };
     ws.getRow(2).height = 18;
 
-    /* ── ROW 3: Kosong ── */
     ws.addRow([]);
-
-    /* ── ROW 4: Label RINGKASAN ── */
     ws.addRow([]);
     ws.mergeCells('A4:I4');
     var secCell = ws.getCell('A4');
@@ -926,7 +909,6 @@
     secCell.alignment = { horizontal: 'left', vertical: 'middle' };
     secCell.border    = _border();
 
-    /* ── ROWS 5-8: Summary ── */
     var summaryItems = [
       { label: 'Total Pemasukan (termasuk donasi)', val: totalIn,   color: 'FF15803D', bg: 'FFF0FDF4', bold: true },
       { label: 'Total Pengeluaran',                 val: totalOut,  color: 'FFB91C1C', bg: 'FFFEF2F2', bold: true },
@@ -943,7 +925,6 @@
       keyCell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F9FF' } };
       keyCell.alignment = { horizontal: 'left', vertical: 'middle' };
       keyCell.border    = _border();
-
       var valCell = ws.getCell(rNum, 4);
       valCell.value      = item.val;
       valCell.font       = { bold: item.bold, size: 10, color: { argb: item.color } };
@@ -953,10 +934,8 @@
       valCell.numFmt     = '#,##0';
     });
 
-    /* ── ROW 9: Kosong ── */
     ws.addRow([]);
 
-    /* ── ROW 10: Header tabel ── */
     var headerRow = ws.addRow([
       'No', 'Tanggal & Waktu', 'Tipe', 'Kategori',
       'Nominal (Rp)', 'Catatan', 'Referensi / Donatur',
@@ -967,37 +946,25 @@
       cell.font      = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
       cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
       cell.border    = _border('medium');
-      cell.alignment = {
-        horizontal: (colNum === 5) ? 'right' : 'center',
-        vertical: 'middle',
-        wrapText: true
-      };
+      cell.alignment = { horizontal: (colNum === 5) ? 'right' : 'center', vertical: 'middle', wrapText: true };
     });
 
-    /* ── ROWS: Data transaksi ── */
     rows.forEach(function(r, i) {
       var isOut  = r.type === 'expense' || r.type === 'transfer';
       var isEven = i % 2 === 0;
       var bgBase = isEven ? 'FFF8FAFC' : 'FFFFFFFF';
-
       var dataRow = ws.addRow([
-        i + 1,
-        _fmtDate(r.created_at),
-        TYPE_LABEL[r.type]    || r.type,
+        i + 1, _fmtDate(r.created_at),
+        TYPE_LABEL[r.type] || r.type,
         CAT_LABEL[r.category] || r.category || '',
         Number(r.amount) || 0,
-        r.note        || '',
-        r.reference   || '',
-        r.recorded_by || '',
-        r.id          || '',
+        r.note || '', r.reference || '', r.recorded_by || '', r.id || '',
       ]);
       dataRow.height = 16;
-
       dataRow.eachCell(function(cell, colNum) {
         cell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgBase } };
         cell.border = _border();
         cell.font   = { size: 10, color: { argb: 'FF1F2937' } };
-
         if (colNum === 5) {
           cell.font      = { bold: true, size: 10, color: { argb: isOut ? 'FFB91C1C' : 'FF15803D' } };
           cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: isOut ? 'FFFEF2F2' : 'FFF0FDF4' } };
@@ -1013,11 +980,7 @@
       });
     });
 
-    /* ── Auto-fit column widths berdasarkan konten terpanjang ── */
-    var MIN_WIDTH = 8;
-    var MAX_WIDTH = 60;
-    var PADDING   = 4;
-
+    var MIN_WIDTH = 8, MAX_WIDTH = 60, PADDING = 4;
     ws.columns.forEach(function(col, colIdx) {
       var maxLen = MIN_WIDTH;
       ws.eachRow(function(row) {
@@ -1025,17 +988,11 @@
         if (!cell || cell.isMerged) return;
         var val = cell.value;
         var len = 0;
-        if (val === null || val === undefined) {
-          len = 0;
-        } else if (typeof val === 'number') {
-          len = val.toLocaleString('id-ID').length + 2;
-        } else if (val instanceof Date) {
-          len = 20;
-        } else if (typeof val === 'object' && val.richText) {
-          len = val.richText.map(function(rt) { return (rt.text || '').length; }).join('').length;
-        } else {
-          len = String(val).length;
-        }
+        if (val === null || val === undefined) { len = 0; }
+        else if (typeof val === 'number') { len = val.toLocaleString('id-ID').length + 2; }
+        else if (val instanceof Date) { len = 20; }
+        else if (typeof val === 'object' && val.richText) { len = val.richText.map(function(rt) { return (rt.text || '').length; }).join('').length; }
+        else { len = String(val).length; }
         var isBold = cell.font && cell.font.bold;
         if (isBold) len = Math.ceil(len * 1.1);
         if (len > maxLen) maxLen = len;
@@ -1043,7 +1000,6 @@
       col.width = Math.min(maxLen + PADDING, MAX_WIDTH);
     });
 
-    /* ── Download ── */
     var dateTag = now.getFullYear() + '-' +
       String(now.getMonth()+1).padStart(2,'0') + '-' +
       String(now.getDate()).padStart(2,'0');
@@ -1096,5 +1052,8 @@
     navigator.clipboard.writeText(code).then(function () { _finToast('SQL disalin ✓', 'success'); });
   };
 
+  // ─── REMOVED: window.financeLoad = window.financeV2Init ───
+  // Baris ini dihapus karena menimpa fungsi financeLoad() legacy
+  // yang sudah didefinisikan di index.html inline script.
+
 })();
-window.financeLoad = window.financeV2Init;
