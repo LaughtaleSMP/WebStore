@@ -31,12 +31,17 @@
   window.logAdminActivity = async function (action, targetType, targetId, details) {
     const sb = getSb();
     if (!sb) return;
-    const user      = window.currentUser;
-    const roleData  = window.currentRole;
-    const adminName = (roleData && roleData.display_name) ||
-                      (user && (user.user_metadata?.full_name || user.email)) ||
-                      'unknown';
-    const adminId   = (user && user.id) || null;
+    const user     = window.currentUser;
+    const roleData = window.currentRole;
+
+    // Ambil nama dari display_name (admin_roles), lalu fallback ke
+    // full_name metadata, lalu prefix email, terakhir 'Admin'
+    const adminName = roleData?.display_name
+                   || user?.user_metadata?.full_name
+                   || (user?.email ? user.email.split('@')[0] : null)
+                   || 'Admin';
+
+    const adminId = user?.id || null;
 
     try {
       await sb.from('admin_activity_log').insert([{
@@ -250,7 +255,7 @@
 
     /* Stats */
     const today = new Date().toISOString().slice(0, 10);
-    const todayCount  = rows.filter(r => r.created_at?.slice(0, 10) === today).length;
+    const todayCount   = rows.filter(r => r.created_at?.slice(0, 10) === today).length;
     const uniqueAdmins = new Set(rows.map(r => r.admin_user_id)).size;
     const totalEl  = document.getElementById('al-stat-total');
     const todayEl  = document.getElementById('al-stat-today');
@@ -283,7 +288,6 @@
         ${rows.map(r => {
           const initials = (r.admin_name || '?')[0].toUpperCase();
           const label    = ACTION_LABEL[r.action] || r.action;
-          const badgeCls = `al-badge-${r.action}` in {} ? `al-badge-${r.action}` : 'al-badge-default';
           const dt = new Date(r.created_at).toLocaleString('id-ID', {
             day: '2-digit', month: 'short', year: 'numeric',
             hour: '2-digit', minute: '2-digit',
