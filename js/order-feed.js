@@ -19,11 +19,10 @@
     return `${Math.floor(diff/86400)}h`;
   }
 
+  // Nominal lengkap tanpa singkatan, format: Rp1.500.000
   function fmtPrice(num) {
     if (!num && num !== 0) return '-';
-    if (num >= 1000000) return 'Rp' + (num/1000000).toFixed(num%1000000===0?0:1) + 'jt';
-    if (num >= 1000)    return 'Rp' + (num/1000).toFixed(num%1000===0?0:1) + 'rb';
-    return 'Rp' + num;
+    return 'Rp' + Number(num).toLocaleString('id-ID');
   }
 
   function maskUser(name) {
@@ -75,7 +74,7 @@
         <td><div class="of-skel-line" style="width:32px"></div></td>
         <td><div class="of-skel-line" style="width:60px"></div></td>
         <td><div class="of-skel-line" style="width:100px"></div></td>
-        <td><div class="of-skel-line" style="width:48px"></div></td>
+        <td><div class="of-skel-line" style="width:80px"></div></td>
         <td><div class="of-skel-line" style="width:44px"></div></td>
         <td><div class="of-skel-line" style="width:24px"></div></td>
       `;
