@@ -49,9 +49,27 @@ function _getAdminEmail() {
   return window.currentUser?.email || null;
 }
 
-/* Ambil nomor WA admin yang sedang login dari admin_roles */
+/* Ambil nomor WA admin yang sedang login.
+   Prioritas:
+   1. window.currentRole.phone  (jika kolom phone di admin_roles terisi)
+   2. Cocokkan display_name admin dengan waAdmins.main[i].name dari site_config
+   3. Fallback: nomor pertama di waAdmins.main */
 function _getAdminPhone() {
-  return window.currentRole?.phone || null;
+  // Prioritas 1: dari admin_roles.phone
+  if (window.currentRole?.phone) return window.currentRole.phone;
+
+  // Prioritas 2 & 3: dari waAdmins.main (sudah di-load saat login)
+  const list = window.waAdmins?.main;
+  if (!list || !list.length) return null;
+
+  const displayName = (_getDisplayName() || '').toLowerCase().trim();
+  if (displayName) {
+    const match = list.find(a => (a.name || '').toLowerCase().trim() === displayName);
+    if (match?.number) return match.number;
+  }
+
+  // Fallback: nomor pertama
+  return list[0]?.number || null;
 }
 
 /* Custom confirm dialog — gunakan showMgrConfirm jika tersedia */
@@ -589,9 +607,9 @@ window.allOrdersLoad = async function () {
       <td style="padding:8px 10px;font-weight:600;color:#4ade80">Rp ${Number(o.total_price || 0).toLocaleString('id-ID')}</td>
       <td style="padding:8px 10px;font-size:12px;${STATUS_CLS[o.status] || ''}">${STATUS_MAP[o.status] || escHtml(o.status || '—')}</td>
       <td style="padding:8px 10px;white-space:nowrap">
-        <button class="btn-edit" onclick="oeditOpen('${escHtml(String(o.id))}')" title="Edit">✏️</button>
+        <button class="btn-edit" onclick="oeditOpen('${escHtml(String(o.id))}')">✏️</button>
         ${canDel
-          ? `<button class="btn-del" onclick="orderDelete('${escHtml(String(o.id))}')" title="Hapus">🗑️</button>`
+          ? `<button class="btn-del" onclick="orderDelete('${escHtml(String(o.id))}')">🗑️</button>`
           : `<button class="btn-del" disabled title="Moderator tidak bisa hapus" style="opacity:.3;cursor:not-allowed">🗑️</button>`
         }
       </td>
