@@ -93,8 +93,13 @@ async function afterLogin(user, roleData = null) {
       window.mgrUpdateBadge();
     } else {
       loadAccessRequestBadge();
+  /* Log aktivitas login */
+    if (typeof window.logAdminActivity === 'function') {
+      window.logAdminActivity('login', 'session', user.id, {
+        email: user.email,
+        role:  roleData?.role || '?',
+      });
     }
-  }
 
   // Bug #6 fix: HAPUS background financeV2Init — chart canvas punya width=0 saat section hidden
   // Finance V2 akan di-init saat user klik menu "Manajemen Keuangan"
