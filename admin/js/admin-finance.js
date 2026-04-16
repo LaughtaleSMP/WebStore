@@ -9,12 +9,9 @@
   function _fmt(n) {
     return 'Rp ' + (Number(n) || 0).toLocaleString('id-ID');
   }
-  function _fmtShort(n) {
-    n = Number(n) || 0;
-    if (n >= 1000000) return 'Rp ' + (n / 1000000).toFixed(1).replace('.0', '') + 'jt';
-    if (n >= 1000)    return 'Rp ' + (n / 1000).toFixed(1).replace('.0', '') + 'rb';
-    return 'Rp ' + n.toLocaleString('id-ID');
-  }
+   function _fmtShort(n) {
+     return 'Rp ' + (Number(n) || 0).toLocaleString('id-ID');
+   }
   function _esc(s) {
     var d = document.createElement('div');
     d.textContent = s || '';
