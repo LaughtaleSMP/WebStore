@@ -16,6 +16,10 @@
 // FIX v2.2:
 //  - Sinkronisasi hapus order: saat order dihapus, finance_transactions
 //    dengan reference 'order:{id}' juga otomatis dihapus.
+//
+// FIX v2.3:
+//  - orderDelete: hapus kolom 'item' dari .select('item_name,item,username')
+//    → .select('item_name,username') — kolom 'item' tidak exist di tabel orders.
 
 /* ─────────────────────────────────────────────────────
    HELPERS
@@ -392,6 +396,7 @@ window.orderDelete = async function (id) {
   /* Cek apakah order ini sudah tercatat di finance_transactions */
   const ref = 'order:' + id;
   const [{ data: o }, { data: finTx }] = await Promise.all([
+    // FIX v2.3: hapus kolom 'item' — tidak exist di tabel orders
     sb.from('orders').select('item_name,username').eq('id', id).maybeSingle(),
     sb.from('finance_transactions').select('id,amount').eq('reference', ref).maybeSingle(),
   ]);
@@ -631,7 +636,7 @@ window.allOrdersLoad = async function () {
         <div style="display:flex;gap:5px">
           <button onclick="orderEdit('${escHtml(o.id)}')" style="padding:3px 8px;font-size:11px;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--text)">✏️</button>
           ${_canDelete()
-            ? `<button onclick="orderDelete('${escHtml(String(o.id))}')" style="padding:3px 8px;font-size:11px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);border-radius:5px;cursor:pointer;color:#f87171">🗑️</button>`
+            ? `<button onclick="orderDelete('${escHtml(String(o.id))}'')" style="padding:3px 8px;font-size:11px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);border-radius:5px;cursor:pointer;color:#f87171">🗑️</button>`
             : ''}
         </div>
       </td>
