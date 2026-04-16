@@ -67,11 +67,12 @@ async function afterLogin(user, roleData = null) {
     }
   }
 
-  // Log aktivitas login
+  // Log aktivitas login — kirim display_name langsung agar tidak fallback ke 'Admin'
   if (typeof window.logAdminActivity === 'function') {
     window.logAdminActivity('login', 'session', user.id, {
-      email: user.email,
-      role:  roleData?.role || '?',
+      email:        user.email,
+      role:         roleData?.role || '?',
+      _adminName:   roleData?.display_name || user.email.split('@')[0],
     });
   }
 
@@ -109,7 +110,8 @@ async function doLogout() {
   // Log aktivitas logout
   if (typeof window.logAdminActivity === 'function' && window.currentUser) {
     window.logAdminActivity('logout', 'session', window.currentUser.id, {
-      email: window.currentUser.email,
+      email:      window.currentUser.email,
+      _adminName: window.currentRole?.display_name || window.currentUser.email.split('@')[0],
     });
   }
 
