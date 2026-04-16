@@ -15,7 +15,7 @@ async function doLogin() {
     if (error) throw error;
 
     const { data: role } = await sb.from('admin_roles')
-      .select('role,display_name')
+      .select('role,display_name,phone')
       .eq('user_id', data.user.id)
       .single();
 
@@ -36,15 +36,16 @@ async function doLogin() {
 async function afterLogin(user, roleData = null) {
   if (!roleData) {
     const { data } = await sb.from('admin_roles')
-      .select('role,display_name')
+      .select('role,display_name,phone')
       .eq('user_id', user.id)
       .single();
     if (!data) { await sb.auth.signOut(); return; }
     roleData = data;
   }
 
-  currentUser = user;
-  currentRole = roleData;
+  // Expose ke window agar bisa diakses file JS lain (admin-orders.js, dll)
+  window.currentUser = user;
+  window.currentRole = roleData;
 
   document.getElementById('topbar-email').textContent = roleData.display_name || user.email;
   document.getElementById('topbar-role').textContent  = roleData.role;

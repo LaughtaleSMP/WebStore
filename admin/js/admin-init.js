@@ -14,8 +14,9 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 window._adminSb = sb;
 
 // ==================== STATE ====================
-let currentUser = null;
-let currentRole = null;
+// Expose ke window agar bisa diakses oleh file JS lain (admin-orders.js, dll)
+window.currentUser = null;
+window.currentRole = null;
 let configData  = {};
 let waAdmins    = { main: [], gem: [] };
 let waAddingFor = null;
