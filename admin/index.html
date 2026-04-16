@@ -628,7 +628,6 @@
             </button>
           </div>
         </div>
-        <!-- Bug #1 fix: ID all-orders-table (bukan all-orders-tbody) -->
         <div style="overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);">
           <div id="all-orders-table"><div class="empty-state">Pilih filter dan klik Tampilkan.</div></div>
         </div>
@@ -927,12 +926,16 @@
 <script src="js/admin-config.js" defer></script>
 <script src="js/admin-wa.js" defer></script>
 <script src="js/admin-nav.js" defer></script>
-<script src="js/admin-wa-template.js" defer></script><!-- Bug #5 fix: script hilang -->
+<script src="js/admin-wa-template.js" defer></script>
 <script src="js/admin-server-status.js" defer></script>
 <script src="js/admin-shop.js" defer></script>
 <script src="js/admin-orders.js" defer></script>
 <script src="js/admin-users.js" defer></script>
 <script src="js/admin-finance.js" defer></script>
+<!-- FIX: script yang sebelumnya hilang -->
+<script src="js/admin-finance-v2.js" defer></script>
+<script src="js/admin-enhance.js" defer></script>
+<!-- /FIX -->
 <script src="js/admin-collapse.js" defer></script>
 <script src="js/admin-activity-log.js" defer></script>
 
@@ -1073,7 +1076,7 @@ async function _renderFinanceSection(from, to) {
     }).join('') +
     '</tbody></table></div>';
 
-  /* Item Terlaris — Bug #4 fix: fallback ke field 'item' */
+  /* Item Terlaris */
   var itemMap = {};
   data.forEach(function(r) {
     var name = r.item_name || r.item || '?';
@@ -1118,7 +1121,16 @@ async function _renderFinanceSection(from, to) {
 
 window.financeLoad = async function() {
   var monthEl = document.getElementById('finance-month');
-  if (!monthEl || !monthEl.value) { alert('Pilih bulan terlebih dahulu.'); return; }
+  if (!monthEl || !monthEl.value) {
+    /* FIX: ganti alert() dengan showAdminToast() */
+    if (typeof window.showAdminToast === 'function') {
+      window.showAdminToast('Pilih bulan terlebih dahulu.', 'error');
+    } else {
+      var t = document.getElementById('toast');
+      if (t) { t.textContent = 'Pilih bulan terlebih dahulu.'; t.className = 'toast-error show'; setTimeout(function(){ t.className=''; }, 3000); }
+    }
+    return;
+  }
   var parts = monthEl.value.split('-');
   var from = parts[0] + '-' + parts[1] + '-01';
   var lastDay = new Date(Number(parts[0]), Number(parts[1]), 0).getDate();
