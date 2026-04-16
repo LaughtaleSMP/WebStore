@@ -67,20 +67,12 @@ async function afterLogin(user, roleData = null) {
     }
   }
 
-  // Log aktivitas login
-  if (typeof window.logAdminActivity === 'function') {
-    window.logAdminActivity('login', 'session', user.id, {
-      email: user.email,
-      role:  roleData?.role || '?',
-    });
-  }
-
   await loadAllConfig();
   await loadWAAdmins();
 
   if (typeof window._idleStartTracking === 'function') window._idleStartTracking();
 
-  // Bug #3 fix: ordersInitBadge didefinisi di admin-orders.js
+  // Bug #3 fix: ordersInitBadge sekarang didefinisi di admin-orders.js
   if (typeof window.ordersInitBadge === 'function') {
     window.ordersInitBadge();
   }
@@ -105,14 +97,6 @@ async function afterLogin(user, roleData = null) {
 
 async function doLogout() {
   if (typeof window._idleStopTracking === 'function') window._idleStopTracking();
-
-  // Log aktivitas logout
-  if (typeof window.logAdminActivity === 'function' && window.currentUser) {
-    window.logAdminActivity('logout', 'session', window.currentUser.id, {
-      email: window.currentUser.email,
-    });
-  }
-
   await sb.auth.signOut();
   location.reload();
 }
