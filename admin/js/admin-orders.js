@@ -36,6 +36,14 @@ function _getAdminName() {
   return (r && r.display_name) || (u && (u.user_metadata?.full_name || u.email)) || 'admin';
 }
 
+function _getDisplayName() {
+  const r = window.currentRole;
+  const u = window.currentUser;
+  return (r && r.display_name)
+    || (u && (u.user_metadata?.display_name || u.user_metadata?.full_name || u.email))
+    || null;
+}
+
 /* Custom confirm dialog — gunakan showMgrConfirm jika tersedia */
 function _confirm({ title, message, confirmText, danger = false }, onConfirm) {
   if (typeof window.showMgrConfirm === 'function') {
@@ -372,15 +380,17 @@ window.orderMarkDone = async function (id) {
   const { data: o, error: fetchErr } = await sb.from('orders').select('*').eq('id', id).single();
   if (fetchErr || !o) { showToast('Gagal ambil data order.', 'error'); return; }
 
-  const completedAt  = new Date().toISOString();
-  const completedBy  = o.wa_admin_name || _getAdminName();
-  const user         = window.currentUser;
+  const completedAt   = new Date().toISOString();
+  const completedBy   = o.wa_admin_name || _getAdminName();
+  const user          = window.currentUser;
+  const displayName   = _getDisplayName();
 
   const { error } = await sb.from('orders').update({
-    status:               'selesai',
-    completed_at:         completedAt,
-    completed_by_user_id: user?.id    || null,
-    completed_by_name:    completedBy,
+    status:                      'selesai',
+    completed_at:                completedAt,
+    completed_by_user_id:        user?.id    || null,
+    completed_by_name:           completedBy,
+    completed_by_display_name:   displayName,
   }).eq('id', id);
 
   if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
@@ -471,9 +481,10 @@ window.oeditSave = async function () {
   const updates = { item_name: itemName, username, qty, unit_price, total_price, customer_note, status };
   if (status === 'refund' || status === 'cancelled') updates.refund_reason = refund_reason;
   if (status === 'selesai') {
-    updates.completed_at          = completedAt;
-    updates.completed_by_user_id  = user?.id || null;
-    updates.completed_by_name     = completedBy;
+    updates.completed_at                 = completedAt;
+    updates.completed_by_user_id         = user?.id || null;
+    updates.completed_by_name            = completedBy;
+    updates.completed_by_display_name    = _getDisplayName();
   }
 
   const btn = document.getElementById('oedit-save-btn');
