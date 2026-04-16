@@ -64,7 +64,10 @@ async function afterLogin(user, roleData = null) {
   if (roleData.role === 'superadmin') {
     if (typeof window.usersInjectNav === 'function') {
       window.usersInjectNav();
-  /* Log aktivitas login */
+    }
+  }
+
+  // Log aktivitas login
   if (typeof window.logAdminActivity === 'function') {
     window.logAdminActivity('login', 'session', user.id, {
       email: user.email,
@@ -77,7 +80,7 @@ async function afterLogin(user, roleData = null) {
 
   if (typeof window._idleStartTracking === 'function') window._idleStartTracking();
 
-  // Bug #3 fix: ordersInitBadge sekarang didefinisi di admin-orders.js
+  // Bug #3 fix: ordersInitBadge didefinisi di admin-orders.js
   if (typeof window.ordersInitBadge === 'function') {
     window.ordersInitBadge();
   }
@@ -93,13 +96,8 @@ async function afterLogin(user, roleData = null) {
       window.mgrUpdateBadge();
     } else {
       loadAccessRequestBadge();
-  /* Log aktivitas login */
-    if (typeof window.logAdminActivity === 'function') {
-      window.logAdminActivity('login', 'session', user.id, {
-        email: user.email,
-        role:  roleData?.role || '?',
-      });
     }
+  }
 
   // Bug #6 fix: HAPUS background financeV2Init — chart canvas punya width=0 saat section hidden
   // Finance V2 akan di-init saat user klik menu "Manajemen Keuangan"
@@ -107,6 +105,14 @@ async function afterLogin(user, roleData = null) {
 
 async function doLogout() {
   if (typeof window._idleStopTracking === 'function') window._idleStopTracking();
+
+  // Log aktivitas logout
+  if (typeof window.logAdminActivity === 'function' && window.currentUser) {
+    window.logAdminActivity('logout', 'session', window.currentUser.id, {
+      email: window.currentUser.email,
+    });
+  }
+
   await sb.auth.signOut();
   location.reload();
 }
