@@ -1,6 +1,10 @@
 /* ══════════════════════════════════════════════════════════════
    supabase-sync.js — Sinkronisasi otomatis dari Admin Panel
    Fetch site_config dari Supabase, lalu terapkan ke website
+
+   FIX: Singleton GoTrueClient — hanya 1 instance di seluruh
+   halaman via window._sbClient. shop-supabase.js sudah
+   dikosongkan; semua fetch shop dilakukan di sini.
    ══════════════════════════════════════════════════════════════ */
 
 (async function () {
@@ -206,14 +210,17 @@
     return;
   }
 
-  /* FIX: pass single config object — deprecated multi-param removed */
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: {
-      persistSession:     false,
-      autoRefreshToken:   false,
-      detectSessionInUrl: false,
-    },
-  });
+  /* ── SINGLETON: reuse client yang sudah ada, jangan buat baru ── */
+  if (!window._sbClient) {
+    window._sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: {
+        persistSession:     false,
+        autoRefreshToken:   false,
+        detectSessionInUrl: false,
+      },
+    });
+  }
+  const sb = window._sbClient;
 
   try {
     const { data, error } = await sb.from('site_config').select('*');
@@ -255,6 +262,7 @@
     } catch (e) { /* fallback ke shop-config.js */ }
 
     // ── 6. Shop Items — baca dari shop_items, sync ke SHOP_CONFIG lalu re-render ──
+    //    (shop-supabase.js sudah dikosongkan, fetch dilakukan di sini saja)
     try {
       const { data: itemRows, error: itemErr } = await sb
         .from('shop_items')
@@ -308,10 +316,12 @@
         }
         window._shopItemsFromSupabase = mapped;
 
-        if (!window.supabaseWA && (shopMeta.admins?.length || shopMeta.gemAdmins?.length)) {
-          window.supabaseWA  = { main: shopMeta.admins || [], gem: shopMeta.gemAdmins || [] };
-          window._supabaseWA = { main: shopMeta.admins || [], gem: shopMeta.gemAdmins || [] };
-        }
+        /* Simpan WA admins agar shop.js bisa pakai */
+        window._supabaseWA = {
+          main: shopMeta.admins    || window._supabaseWA?.main || [],
+          gem:  shopMeta.gemAdmins || window._supabaseWA?.gem  || [],
+        };
+        window.supabaseWA = window._supabaseWA;
 
         /* Re-render grid pakai shopBuildCard (shop.js) agar animasi SVG tetap ada */
         reRenderShopCards(mapped, categories);
@@ -325,8 +335,9 @@
           if (subEl) subEl.textContent = shopMeta.subtitle;
         }
 
-        /* Dispatch event agar shop.js tahu data sudah sinkron dari DB */
+        /* Dispatch kedua events agar shop.js & kode lain tetap kompatibel */
         document.dispatchEvent(new CustomEvent('shopItemsReady', { detail: { items: mapped } }));
+        document.dispatchEvent(new CustomEvent('shopDataReady'));
 
         console.log('[supabase-sync] Shop items berhasil disync dari shop_items (' + mapped.length + ' item).');
       } else {
