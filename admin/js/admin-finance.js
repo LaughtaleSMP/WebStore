@@ -42,8 +42,11 @@
   var _pgCurrent = 1;
 
   /* ── Private State ── */
-  var _finSub       = null;
-  var _playerTimer  = null;   // ← interval auto-update grafik pemain
+  var _finSub            = null;
+  var _playerTimer       = null;
+  var _countdownTimer    = null;
+  var _nextUpdateTime    = null;
+  var _lastPlayerData    = [];
   var PLAYER_INTERVAL_MS = 5 * 60 * 1000; // 5 menit
 
   /* ── Internal: Toast ── */
@@ -142,14 +145,25 @@
   };
 
   /* ══════════════════════════════════════════════════════════
-     1B. PLAYER AUTO-UPDATE TIMER
+     1B. PLAYER AUTO-UPDATE TIMER — dengan real countdown
      ══════════════════════════════════════════════════════════ */
   function _startPlayerAutoUpdate() {
-    _stopPlayerAutoUpdate(); // clear dulu kalau ada yang lama
+    _stopPlayerAutoUpdate();
+    _nextUpdateTime = Date.now() + PLAYER_INTERVAL_MS;
+
+    // Auto-record setiap 5 menit
     _playerTimer = setInterval(function () {
       console.log('[Finance] Auto-update grafik pemain — ' + new Date().toLocaleTimeString('id-ID'));
       window.financeV2RecordPlayer();
+      _nextUpdateTime = Date.now() + PLAYER_INTERVAL_MS;
     }, PLAYER_INTERVAL_MS);
+
+    // Countdown setiap detik
+    _countdownTimer = setInterval(function () {
+      _updateCountdownLabel();
+    }, 1000);
+
+    _updateCountdownLabel();
     console.log('[Finance] Auto-update grafik pemain aktif (setiap 5 menit)');
   }
 
@@ -157,8 +171,28 @@
     if (_playerTimer) {
       clearInterval(_playerTimer);
       _playerTimer = null;
-      console.log('[Finance] Auto-update grafik pemain dihentikan');
     }
+    if (_countdownTimer) {
+      clearInterval(_countdownTimer);
+      _countdownTimer = null;
+    }
+    console.log('[Finance] Auto-update grafik pemain dihentikan');
+  }
+
+  /* ── Countdown label MM:SS ── */
+  function _updateCountdownLabel() {
+    var lbl = document.getElementById('fv2-player-next-update');
+    if (!lbl || !_nextUpdateTime) return;
+    var remaining = Math.max(0, Math.ceil((_nextUpdateTime - Date.now()) / 1000));
+    var mins = Math.floor(remaining / 60);
+    var secs = remaining % 60;
+    var timeStr = mins + ':' + String(secs).padStart(2, '0');
+    lbl.innerHTML =
+      '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="opacity:.5;flex-shrink:0">' +
+        '<circle cx="12" cy="12" r="10"/>' +
+        '<polyline points="12 6 12 12 16 14"/>' +
+      '</svg>' +
+      ' Auto-catat dalam <strong style="color:var(--accent);font-variant-numeric:tabular-nums">' + timeStr + '</strong>';
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -455,7 +489,7 @@
   }
 
   /* ══════════════════════════════════════════════════════════
-     3B. PLAYER ONLINE CHART
+     3B. PLAYER ONLINE CHART — IMPROVED
      ══════════════════════════════════════════════════════════ */
   async function _loadPlayerData() {
     _fetchLivePlayerCount();
@@ -465,117 +499,582 @@
       .order('recorded_at', { ascending: true })
       .limit(60);
     if (result.error) { _buildPlayerChart([]); return; }
-    _buildPlayerChart(result.data || []);
+    _lastPlayerData = result.data || [];
+    _buildPlayerChart(_lastPlayerData);
     _updateCountdownLabel();
   }
 
-  function _updateCountdownLabel() {
-    var lbl = document.getElementById('fv2-player-next-update');
-    if (!lbl) return;
-    var sisa = Math.round(PLAYER_INTERVAL_MS / 1000 / 60);
-    lbl.textContent = 'Update otomatis dalam ~' + sisa + ' menit';
-  }
-
+  /* ── Live player count fetch ── */
   function _fetchLivePlayerCount() {
     var ip = _getServerIp();
     var parts = ip.split(':');
     var host  = parts[0];
     var port  = parts[1] || '19214';
-    var dotEl = document.getElementById('fv2-player-dot');
-    var numEl = document.getElementById('fv2-player-num');
-    var lblEl = document.getElementById('fv2-player-label');
+    var dotEl  = document.getElementById('fv2-player-dot');
+    var numEl  = document.getElementById('fv2-player-num');
+    var lblEl  = document.getElementById('fv2-player-label');
+    var maxEl  = document.getElementById('fv2-player-max-info');
+
     fetch('https://api.mcsrvstat.us/bedrock/3/' + host + ':' + port, { signal: AbortSignal.timeout(8000) })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (data.online) {
           var onl = data.players ? (data.players.online || 0) : 0;
           var max = data.players ? (data.players.max || '?') : '?';
-          if (dotEl) dotEl.className = 'fv2-player-dot online';
-          if (numEl) numEl.textContent = onl + ' / ' + max;
-          if (lblEl) lblEl.textContent = 'Pemain online sekarang';
+          if (dotEl) { dotEl.className = 'fv2-player-dot online'; }
+          if (numEl) { numEl.textContent = onl; }
+          if (lblEl) { lblEl.textContent = 'pemain online sekarang'; }
+          if (maxEl) { maxEl.textContent = '/ ' + max + ' maks'; }
         } else {
-          if (dotEl) dotEl.className = 'fv2-player-dot offline';
-          if (numEl) numEl.textContent = 'Offline';
-          if (lblEl) lblEl.textContent = 'Server tidak dapat dijangkau';
+          if (dotEl) { dotEl.className = 'fv2-player-dot offline'; }
+          if (numEl) { numEl.textContent = '0'; }
+          if (lblEl) { lblEl.textContent = 'Server offline'; }
+          if (maxEl) { maxEl.textContent = ''; }
         }
       })
       .catch(function () {
-        if (dotEl) dotEl.className = 'fv2-player-dot offline';
-        if (numEl) numEl.textContent = '—';
-        if (lblEl) lblEl.textContent = 'Gagal mengambil status server';
+        if (dotEl) { dotEl.className = 'fv2-player-dot offline'; }
+        if (numEl) { numEl.textContent = '—'; }
+        if (lblEl) { lblEl.textContent = 'Gagal mengambil status'; }
+        if (maxEl) { maxEl.textContent = ''; }
       });
   }
 
+  /* ── Inject CSS untuk player section (sekali saja) ── */
+  function _injectPlayerStyles() {
+    if (document.getElementById('fv2-player-enhanced-styles')) return;
+    var s = document.createElement('style');
+    s.id = 'fv2-player-enhanced-styles';
+    s.textContent = [
+      /* Mini stats strip */
+      '.fv2-player-mini-stats {',
+        'display:grid;',
+        'grid-template-columns:repeat(4,1fr);',
+        'gap:8px;',
+        'margin-bottom:12px;',
+      '}',
+      '@media(max-width:560px){',
+        '.fv2-player-mini-stats{grid-template-columns:repeat(2,1fr);}',
+      '}',
+      '.fv2-pmini-card {',
+        'background:rgba(255,255,255,0.03);',
+        'border:1px solid rgba(255,255,255,0.06);',
+        'border-radius:8px;',
+        'padding:8px 10px;',
+        'text-align:center;',
+        'transition:border-color 160ms;',
+      '}',
+      '.fv2-pmini-card:hover{border-color:rgba(74,143,255,0.2);}',
+      '.fv2-pmini-val {',
+        'font-size:1.1rem;',
+        'font-weight:800;',
+        'color:var(--text-main);',
+        'letter-spacing:-0.5px;',
+        'line-height:1.1;',
+        'font-variant-numeric:tabular-nums;',
+      '}',
+      '.fv2-pmini-label {',
+        'font-size:9.5px;',
+        'font-weight:700;',
+        'text-transform:uppercase;',
+        'letter-spacing:0.6px;',
+        'color:var(--text-faint);',
+        'margin-top:3px;',
+      '}',
+
+      /* Stat header row */
+      '.fv2-player-stat-row {',
+        'display:flex;',
+        'align-items:center;',
+        'gap:10px;',
+        'padding:10px 12px;',
+        'background:rgba(74,143,255,0.05);',
+        'border:1px solid rgba(74,143,255,0.12);',
+        'border-radius:9px;',
+        'margin-bottom:12px;',
+      '}',
+      '.fv2-player-stat-main {',
+        'display:flex;',
+        'align-items:baseline;',
+        'gap:6px;',
+        'flex:1;',
+      '}',
+      '.fv2-player-big-num {',
+        'font-size:1.6rem;',
+        'font-weight:800;',
+        'color:var(--text-main);',
+        'line-height:1;',
+        'letter-spacing:-1px;',
+        'font-variant-numeric:tabular-nums;',
+        'transition:color 300ms;',
+      '}',
+      '.fv2-player-big-num.online-color{color:#4a8fff;}',
+      '.fv2-player-big-num.offline-color{color:var(--text-faint);}',
+      '.fv2-player-stat-info {}',
+      '.fv2-player-stat-label {',
+        'font-size:11px;',
+        'color:var(--text-muted);',
+        'line-height:1.3;',
+      '}',
+      '.fv2-player-max-info {',
+        'font-size:10.5px;',
+        'color:var(--text-faint);',
+        'font-variant-numeric:tabular-nums;',
+      '}',
+
+      /* Dot animations */
+      '.fv2-player-dot {',
+        'width:10px;',
+        'height:10px;',
+        'border-radius:50%;',
+        'background:var(--text-faint);',
+        'flex-shrink:0;',
+        'transition:background 300ms,box-shadow 300ms;',
+        'position:relative;',
+      '}',
+      '.fv2-player-dot.online {',
+        'background:#4a8fff;',
+        'box-shadow:0 0 0 3px rgba(74,143,255,0.2);',
+        'animation:playerDotPulseBlue 2s ease-in-out infinite;',
+      '}',
+      '.fv2-player-dot.offline {',
+        'background:#f87171;',
+        'box-shadow:0 0 0 3px rgba(248,113,113,0.15);',
+      '}',
+      '@keyframes playerDotPulseBlue {',
+        '0%,100%{box-shadow:0 0 0 3px rgba(74,143,255,0.2);}',
+        '50%{box-shadow:0 0 0 7px rgba(74,143,255,0.04);}',
+      '}',
+
+      /* Next update label */
+      '#fv2-player-next-update {',
+        'display:flex;',
+        'align-items:center;',
+        'gap:5px;',
+        'font-size:10.5px;',
+        'color:var(--text-faint);',
+        'margin-top:8px;',
+        'font-variant-numeric:tabular-nums;',
+      '}',
+
+      /* Last recorded */
+      '.fv2-player-last-rec {',
+        'font-size:10.5px;',
+        'color:var(--text-faint);',
+        'margin-top:4px;',
+      '}',
+
+      /* Chart container */
+      '.fv2-player-chart-wrap {',
+        'position:relative;',
+        'width:100%;',
+        'height:140px;',
+        'border-radius:8px;',
+        'overflow:hidden;',
+      '}',
+
+      /* Empty chart overlay */
+      '.fv2-player-empty {',
+        'position:absolute;inset:0;',
+        'display:flex;align-items:center;justify-content:center;',
+        'flex-direction:column;gap:6px;',
+        'font-size:12px;color:var(--text-faint);',
+        'pointer-events:none;text-align:center;padding:8px;',
+        'background:rgba(11,16,24,0.7);',
+        'border-radius:8px;',
+      '}',
+      '.fv2-player-empty-icon{font-size:22px;opacity:.35;}',
+    ].join('');
+    document.head.appendChild(s);
+  }
+
+  /* ── Inject improved player card HTML ── */
+  function _ensurePlayerCardStructure() {
+    _injectPlayerStyles();
+
+    var card = document.querySelector('.fv2-player-card');
+    if (!card || card.dataset.enhanced) return;
+    card.dataset.enhanced = '1';
+
+    // Rebuild inner HTML dengan struktur baru
+    var chartHeader = card.querySelector('.fv2-chart-header');
+    var oldStat     = document.getElementById('fv2-player-stat');
+    var oldCanvas   = document.getElementById('fv2-player-chart');
+    var oldLabel    = document.getElementById('fv2-player-next-update');
+
+    // Simpan referensi canvas lama
+    var canvasParent = oldCanvas ? oldCanvas.parentElement : null;
+
+    // Inject stat row baru (gantikan yang lama)
+    if (oldStat) {
+      oldStat.outerHTML =
+        '<div class="fv2-player-stat-row" id="fv2-player-stat">' +
+          '<div class="fv2-player-dot" id="fv2-player-dot"></div>' +
+          '<div class="fv2-player-stat-main">' +
+            '<div class="fv2-player-big-num" id="fv2-player-num">—</div>' +
+          '</div>' +
+          '<div class="fv2-player-stat-info">' +
+            '<div class="fv2-player-stat-label" id="fv2-player-label">Memuat status server…</div>' +
+            '<div class="fv2-player-max-info" id="fv2-player-max-info"></div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    // Inject mini stats sebelum chart
+    if (canvasParent && !document.getElementById('fv2-player-mini-stats-wrap')) {
+      var miniWrap = document.createElement('div');
+      miniWrap.id = 'fv2-player-mini-stats-wrap';
+      miniWrap.className = 'fv2-player-mini-stats';
+      miniWrap.innerHTML =
+        '<div class="fv2-pmini-card">' +
+          '<div class="fv2-pmini-val" id="fv2-pmini-current">—</div>' +
+          '<div class="fv2-pmini-label">Sekarang</div>' +
+        '</div>' +
+        '<div class="fv2-pmini-card">' +
+          '<div class="fv2-pmini-val" id="fv2-pmini-peak" style="color:#fbbf24">—</div>' +
+          '<div class="fv2-pmini-label">Tertinggi</div>' +
+        '</div>' +
+        '<div class="fv2-pmini-card">' +
+          '<div class="fv2-pmini-val" id="fv2-pmini-avg" style="color:#a78bfa">—</div>' +
+          '<div class="fv2-pmini-label">Rata-rata</div>' +
+        '</div>' +
+        '<div class="fv2-pmini-card">' +
+          '<div class="fv2-pmini-val" id="fv2-pmini-count" style="color:#34d399">—</div>' +
+          '<div class="fv2-pmini-label">Rekaman</div>' +
+        '</div>';
+      canvasParent.parentNode.insertBefore(miniWrap, canvasParent);
+
+      // Wrap canvas dalam container baru
+      var chartWrap = document.createElement('div');
+      chartWrap.className = 'fv2-player-chart-wrap';
+      canvasParent.parentNode.insertBefore(chartWrap, canvasParent);
+      chartWrap.appendChild(canvasParent);
+
+      // Pastikan canvas ukurannya benar
+      if (oldCanvas) {
+        canvasParent.style.cssText = 'position:relative;width:100%;height:140px';
+      }
+    }
+
+    // Inject/update last-recorded info
+    if (oldLabel) {
+      // Akan diupdate oleh _updateCountdownLabel
+    }
+  }
+
+  /* ── Render mini stats ── */
+  function _renderPlayerMiniStats(rows) {
+    if (!rows || !rows.length) {
+      ['fv2-pmini-current','fv2-pmini-peak','fv2-pmini-avg','fv2-pmini-count'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = '0';
+      });
+      return;
+    }
+
+    var counts   = rows.map(function(r) { return Number(r.player_count) || 0; });
+    var peak     = Math.max.apply(null, counts);
+    var avg      = Math.round(counts.reduce(function(a, b) { return a + b; }, 0) / counts.length);
+    var latest   = counts[counts.length - 1];
+    var total    = rows.length;
+
+    var curEl    = document.getElementById('fv2-pmini-current');
+    var peakEl   = document.getElementById('fv2-pmini-peak');
+    var avgEl    = document.getElementById('fv2-pmini-avg');
+    var countEl  = document.getElementById('fv2-pmini-count');
+
+    if (curEl)   curEl.textContent   = latest;
+    if (peakEl)  peakEl.textContent  = peak;
+    if (avgEl)   avgEl.textContent   = avg;
+    if (countEl) countEl.textContent = total;
+
+    // Update big num juga
+    var bigNum = document.getElementById('fv2-player-num');
+    if (bigNum) {
+      bigNum.textContent = latest;
+      bigNum.className = 'fv2-player-big-num online-color';
+    }
+  }
+
+  /* ── Build player chart — IMPROVED ── */
   function _buildPlayerChart(rows) {
+    _ensurePlayerCardStructure();
+
     if (typeof Chart === 'undefined') return;
-    var canvas = document.getElementById('fv2-player-chart');
-    if (!canvas) return;
+    var canvasEl = document.getElementById('fv2-player-chart');
+    if (!canvasEl) return;
     if (_playerChart) { _playerChart.destroy(); _playerChart = null; }
+
+    // Render mini stats
+    _renderPlayerMiniStats(rows);
+
     var labels, data, isEmpty;
     if (!rows || !rows.length) {
-      isEmpty = true; labels = ['Belum ada data']; data = [0];
+      isEmpty = true;
+      labels  = ['', '', '', '', '', '', ''];
+      data    = [0, 0, 0, 0, 0, 0, 0];
     } else {
       isEmpty = false;
-      labels = rows.map(function (r) {
+      labels  = rows.map(function (r) {
         var d = new Date(r.recorded_at);
         return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) +
                ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
       });
       data = rows.map(function (r) { return Number(r.player_count) || 0; });
     }
-    _playerChart = new Chart(canvas, {
+
+    var ctx     = canvasEl.getContext('2d');
+    var maxVal  = data.length ? Math.max.apply(null, data) : 10;
+    var yMax    = Math.max(maxVal + Math.ceil(maxVal * 0.25), 5);
+
+    // Gradient fill
+    var gradient = ctx.createLinearGradient(0, 0, 0, 140);
+    gradient.addColorStop(0, 'rgba(74,143,255,0.35)');
+    gradient.addColorStop(0.6, 'rgba(74,143,255,0.08)');
+    gradient.addColorStop(1, 'rgba(74,143,255,0.0)');
+
+    // Gradient for "peak" area - highlight highest points
+    var peakGradient = ctx.createLinearGradient(0, 0, 0, 140);
+    peakGradient.addColorStop(0, 'rgba(251,191,36,0.3)');
+    peakGradient.addColorStop(1, 'rgba(251,191,36,0.0)');
+
+    _playerChart = new Chart(canvasEl, {
       type: 'line',
-      data: { labels: labels, datasets: [{ label: 'Pemain Online', data: data, borderColor: '#4a8fff', backgroundColor: 'rgba(74,143,255,0.1)', borderWidth: 2, pointRadius: isEmpty ? 0 : (rows.length > 20 ? 2 : 4), pointBackgroundColor: '#4a8fff', pointBorderWidth: 0, tension: 0.4, fill: true }] },
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Pemain Online',
+            data: data,
+            borderColor: '#4a8fff',
+            backgroundColor: gradient,
+            borderWidth: isEmpty ? 1 : 2,
+            pointRadius: isEmpty ? 0 : (rows.length > 30 ? 2 : (rows.length > 15 ? 3 : 4)),
+            pointHoverRadius: isEmpty ? 0 : 6,
+            pointBackgroundColor: '#4a8fff',
+            pointBorderColor: 'rgba(11,16,24,0.8)',
+            pointBorderWidth: 2,
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: '#4a8fff',
+            pointHoverBorderWidth: 2,
+            tension: 0.45,
+            fill: true,
+            spanGaps: true,
+          },
+        ],
+      },
       options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: !isEmpty, callbacks: { label: function (ctx) { return ' ' + ctx.parsed.y + ' pemain online'; } } } },
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          intersect: false,
+          mode: 'index',
+        },
+        animation: {
+          duration: isEmpty ? 0 : 600,
+          easing: 'easeInOutQuart',
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            enabled: !isEmpty,
+            backgroundColor: 'rgba(12,16,23,0.95)',
+            borderColor: 'rgba(74,143,255,0.3)',
+            borderWidth: 1,
+            titleColor: '#94adff',
+            bodyColor: '#dde3ec',
+            padding: 10,
+            cornerRadius: 8,
+            titleFont: { size: 10, weight: '600' },
+            bodyFont: { size: 12, weight: '700' },
+            callbacks: {
+              title: function (items) {
+                return items[0] ? items[0].label : '';
+              },
+              label: function (ctx) {
+                var v = ctx.parsed.y;
+                return '  ' + v + ' pemain online';
+              },
+              afterLabel: function (ctx) {
+                if (!_lastPlayerData.length) return '';
+                var r = _lastPlayerData[ctx.dataIndex];
+                if (r && r.max_players) return '  Kapasitas: ' + r.max_players;
+                return '';
+              },
+            },
+          },
+        },
         scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 9 }, maxTicksLimit: 8, maxRotation: 30 }, border: { color: 'rgba(255,255,255,0.06)' } },
-          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4a5568', font: { size: 10 }, stepSize: 1, precision: 0 }, border: { color: 'rgba(255,255,255,0.06)' }, beginAtZero: true, min: 0 },
+          x: {
+            grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false },
+            ticks: {
+              color: '#2e3848',
+              font: { size: 9 },
+              maxTicksLimit: rows && rows.length > 20 ? 6 : 8,
+              maxRotation: 30,
+              display: !isEmpty,
+            },
+            border: { color: 'rgba(255,255,255,0.04)' },
+          },
+          y: {
+            grid: {
+              color: function(ctx) {
+                return ctx.tick.value === 0
+                  ? 'rgba(255,255,255,0.06)'
+                  : 'rgba(255,255,255,0.03)';
+              },
+              drawBorder: false,
+            },
+            ticks: {
+              color: '#2e3848',
+              font: { size: 9 },
+              stepSize: 1,
+              precision: 0,
+              display: !isEmpty,
+              callback: function(v) { return v % 1 === 0 ? v : ''; },
+            },
+            border: { color: 'rgba(255,255,255,0.04)' },
+            beginAtZero: true,
+            min: 0,
+            max: isEmpty ? 10 : yMax,
+            suggestedMax: yMax,
+          },
         },
       },
     });
+
+    // Empty state overlay
+    var chartWrap = canvasEl.parentElement;
+    var existingEmpty = chartWrap && chartWrap.querySelector('.fv2-player-empty');
     if (isEmpty) {
-      var wrap = canvas.parentElement;
-      if (wrap && !wrap.querySelector('.fv2-player-empty')) {
+      if (chartWrap && !existingEmpty) {
         var msg = document.createElement('div');
         msg.className = 'fv2-player-empty';
-        msg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text-faint);pointer-events:none;text-align:center;padding:8px';
-        msg.textContent = 'Klik "Catat" untuk merekam jumlah pemain pertama';
-        wrap.appendChild(msg);
+        msg.innerHTML =
+          '<div class="fv2-player-empty-icon">📊</div>' +
+          '<div>Belum ada data rekaman</div>' +
+          '<div style="font-size:10.5px;opacity:.7">Klik <strong>Catat</strong> untuk merekam snapshot pertama</div>';
+        chartWrap.appendChild(msg);
       }
     } else {
-      var existing = canvas.parentElement && canvas.parentElement.querySelector('.fv2-player-empty');
-      if (existing) existing.remove();
+      if (existingEmpty) existingEmpty.remove();
     }
+
+    // Update last recorded time
+    _updateLastRecordedLabel(rows);
   }
 
+  /* ── Last recorded timestamp ── */
+  function _updateLastRecordedLabel(rows) {
+    var lbl = document.getElementById('fv2-player-last-rec');
+    if (!lbl) {
+      // Inject setelah countdown label
+      var nextLbl = document.getElementById('fv2-player-next-update');
+      if (nextLbl && nextLbl.parentNode) {
+        var el = document.createElement('div');
+        el.id = 'fv2-player-last-rec';
+        el.className = 'fv2-player-last-rec';
+        nextLbl.parentNode.insertBefore(el, nextLbl.nextSibling);
+        lbl = el;
+      }
+    }
+    if (!lbl) return;
+    if (!rows || !rows.length) {
+      lbl.textContent = '';
+      return;
+    }
+    var last = rows[rows.length - 1];
+    var dt   = new Date(last.recorded_at);
+    lbl.innerHTML =
+      '<svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="opacity:.4;flex-shrink:0;display:inline-block;vertical-align:middle;margin-right:3px">' +
+        '<polyline points="20 6 9 17 4 12"/>' +
+      '</svg>' +
+      'Terakhir dicatat: ' + dt.toLocaleString('id-ID', {
+        day: '2-digit', month: 'short',
+        hour: '2-digit', minute: '2-digit',
+      });
+  }
+
+  /* ── Record player snapshot ── */
   window.financeV2RecordPlayer = async function () {
     var btn = document.querySelector('.fv2-player-record-btn');
-    if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
-    var ip = _getServerIp(); var parts = ip.split(':');
-    var host = parts[0]; var port = parts[1] || '19214';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML =
+        '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="animation:spin .8s linear infinite">' +
+          '<path d="M21 12a9 9 0 1 1-2.12-5.86"/>' +
+        '</svg> Mencatat…';
+      // inject spin keyframe jika belum ada
+      if (!document.getElementById('fv2-spin-kf')) {
+        var ks = document.createElement('style');
+        ks.id = 'fv2-spin-kf';
+        ks.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+        document.head.appendChild(ks);
+      }
+    }
+
+    var ip    = _getServerIp();
+    var parts = ip.split(':');
+    var host  = parts[0];
+    var port  = parts[1] || '19214';
     var dotEl = document.getElementById('fv2-player-dot');
     var numEl = document.getElementById('fv2-player-num');
     var lblEl = document.getElementById('fv2-player-label');
+    var maxEl = document.getElementById('fv2-player-max-info');
+
     try {
-      var r = await fetch('https://api.mcsrvstat.us/bedrock/3/' + host + ':' + port, { signal: AbortSignal.timeout(8000) });
+      var r    = await fetch('https://api.mcsrvstat.us/bedrock/3/' + host + ':' + port, { signal: AbortSignal.timeout(8000) });
       var data = await r.json();
       var playerCount = data.online ? (data.players ? (data.players.online || 0) : 0) : 0;
       var maxPlayers  = data.online ? (data.players ? (data.players.max   || 0) : 0) : 0;
-      if (dotEl) dotEl.className = data.online ? 'fv2-player-dot online' : 'fv2-player-dot offline';
-      if (numEl) numEl.textContent = data.online ? (playerCount + ' / ' + maxPlayers) : 'Offline';
-      if (lblEl) lblEl.textContent = 'Diperbarui baru saja';
-      var ins = await sb.from('player_snapshots').insert([{ player_count: playerCount, max_players: maxPlayers, recorded_at: new Date().toISOString() }]);
-      if (ins.error) { _finToast('Gagal simpan snapshot: Setup DB player terlebih dahulu.', 'error'); }
-      else { _finToast('Snapshot dicatat: ' + playerCount + ' pemain ✓', 'success'); await _loadPlayerData(); }
+
+      if (dotEl) { dotEl.className = data.online ? 'fv2-player-dot online' : 'fv2-player-dot offline'; }
+      if (numEl) {
+        numEl.textContent = playerCount;
+        numEl.className = 'fv2-player-big-num ' + (data.online ? 'online-color' : 'offline-color');
+      }
+      if (lblEl) { lblEl.textContent = data.online ? 'pemain online sekarang' : 'Server offline'; }
+      if (maxEl) { maxEl.textContent = data.online && maxPlayers ? '/ ' + maxPlayers + ' maks' : ''; }
+
+      var ins = await sb.from('player_snapshots').insert([{
+        player_count: playerCount,
+        max_players:  maxPlayers,
+        recorded_at:  new Date().toISOString(),
+      }]);
+
+      if (ins.error) {
+        _finToast('Gagal simpan snapshot — jalankan Setup DB terlebih dahulu.', 'error');
+      } else {
+        _finToast('✅ Snapshot: ' + playerCount + ' pemain online', 'success');
+        // Reload data & rebuild chart
+        var result = await sb
+          .from('player_snapshots')
+          .select('player_count, max_players, recorded_at')
+          .order('recorded_at', { ascending: true })
+          .limit(60);
+        if (!result.error) {
+          _lastPlayerData = result.data || [];
+          _buildPlayerChart(_lastPlayerData);
+          // Update mini current stat
+          var curEl = document.getElementById('fv2-pmini-current');
+          if (curEl) curEl.textContent = playerCount;
+        }
+      }
     } catch (e) {
-      if (dotEl) dotEl.className = 'fv2-player-dot offline';
-      if (numEl) numEl.textContent = '—';
-      if (lblEl) lblEl.textContent = 'Gagal terhubung ke server';
-      _finToast('Gagal ambil data server: ' + (e.message || 'timeout'), 'error');
+      if (dotEl) { dotEl.className = 'fv2-player-dot offline'; }
+      if (numEl) { numEl.textContent = '—'; numEl.className = 'fv2-player-big-num offline-color'; }
+      if (lblEl) { lblEl.textContent = 'Gagal terhubung ke server'; }
+      _finToast('Gagal: ' + (e.message || 'timeout'), 'error');
     }
-    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML =
+        '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">' +
+          '<polyline points="23 4 23 10 17 10"/>' +
+          '<path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>' +
+        '</svg> Catat';
+    }
   };
 
   /* ══════════════════════════════════════════════════════════
@@ -783,7 +1282,7 @@
       if (r.type === 'expense' || r.type === 'transfer') months[m].out += a;
     });
     var keys = Object.keys(months).sort(); var runBal = 0;
-    var rowsHtml = keys.map(function (m, idx) {
+    var rowsHtml = keys.map(function (m) {
       var row = months[m]; var flow = row.in - row.out; runBal += flow;
       var parts = m.split('-');
       var label = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
@@ -1051,9 +1550,5 @@
     if (!code) return;
     navigator.clipboard.writeText(code).then(function () { _finToast('SQL disalin ✓', 'success'); });
   };
-
-  // ─── REMOVED: window.financeLoad = window.financeV2Init ───
-  // Baris ini dihapus karena menimpa fungsi financeLoad() legacy
-  // yang sudah didefinisikan di index.html inline script.
 
 })();
