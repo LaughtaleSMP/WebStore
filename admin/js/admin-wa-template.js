@@ -10,6 +10,7 @@
   const DEFAULT_TEMPLATE =
     'Halo Admin Laughtale Store!\n\n' +
     'Saya ingin memesan:\n' +
+    'No. Order: {order_id}\n' +
     'Item    : {item}\n' +
     'Jumlah  : {qty}x\n' +
     'Harga   : Rp {harga}\n' +
@@ -165,6 +166,7 @@
   }
 
   const PLACEHOLDERS = [
+    { key: '{order_id}',  label: 'ID Pesanan (otomatis)' },
     { key: '{item}',      label: 'Nama item' },
     { key: '{qty}',       label: 'Jumlah' },
     { key: '{harga}',     label: 'Harga total (Rp)' },
@@ -174,12 +176,13 @@
   ];
 
   const PREVIEW_SAMPLE = {
-    '{item}':     'Name Style (Chat)',
-    '{qty}':      '2',
-    '{harga}':    '30.000',
-    '{username}': 'SteveCraft123',
-    '{catatan}':  'Warna merah & putih',
-    '{kategori}': 'Custom Nametag',
+    '{order_id}':  'ORD-A1B2C3',
+    '{item}':      'Name Style (Chat)',
+    '{qty}':       '2',
+    '{harga}':     '30.000',
+    '{username}':  'SteveCraft123',
+    '{catatan}':   'Warna merah & putih',
+    '{kategori}':  'Custom Nametag',
   };
 
   function buildChips() {
