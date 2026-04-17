@@ -1,13 +1,6 @@
 /* ================================================================
    admin-activity-log.js — Log Aktivitas Admin
    Laughtale SMP Admin Panel
-
-   Tabel: admin_activity_log
-     id, admin_user_id, admin_name, action, target_type,
-     target_id, details (jsonb), created_at
-
-   Global yang di-expose:
-     window.logAdminActivity(action, targetType, targetId, details)
 ================================================================ */
 (function () {
   'use strict';
@@ -26,14 +19,11 @@
 
   /* ══════════════════════════════════════════════════════════
      HELPER: resolve nama + id admin yang sedang login
-     — coba window.currentUser/currentRole dulu
-     — kalau null (timing issue), ambil ulang dari sb.auth.getUser()
   ══════════════════════════════════════════════════════════ */
   async function _resolveAdmin() {
     let user     = window.currentUser  || null;
     let roleData = window.currentRole  || null;
 
-    // Kalau currentUser belum ada, ambil dari Supabase auth langsung
     if (!user) {
       const sb = getSb();
       if (sb) {
@@ -44,12 +34,6 @@
       }
     }
 
-    // Prioritas nama:
-    //   1. currentRole.display_name
-    //   2. user_metadata.display_name
-    //   3. user_metadata.full_name
-    //   4. prefix email (sebelum @)
-    //   5. email penuh
     const name =
       roleData?.display_name                          ||
       user?.user_metadata?.display_name              ||
@@ -63,27 +47,14 @@
 
   /* ══════════════════════════════════════════════════════════
      GLOBAL: log satu aksi ke tabel
-     Dipanggil dari admin-orders.js, admin-shop.js, dll.
-
-     Prioritas nama admin:
-       1. details._adminName  (dikirim langsung dari caller — paling akurat)
-       2. window.currentRole?.display_name
-       3. user_metadata.display_name / full_name
-       4. prefix email
-       5. email penuh
-       (tidak ada lagi fallback string 'Admin' / 'admin')
   ══════════════════════════════════════════════════════════ */
   window.logAdminActivity = async function (action, targetType, targetId, details) {
     const sb = getSb();
     if (!sb) return;
 
-    // Resolve siapa yang login
     const { user, name: resolvedName } = await _resolveAdmin();
-
-    // Prioritas 1: _adminName yang dikirim dari caller
     const adminName = (details && details._adminName) || resolvedName || '(unknown)';
 
-    // Bersihkan _adminName dari details sebelum disimpan ke DB
     let cleanDetails = details ? { ...details } : null;
     if (cleanDetails && cleanDetails._adminName) delete cleanDetails._adminName;
     if (cleanDetails && Object.keys(cleanDetails).length === 0) cleanDetails = null;
@@ -133,7 +104,6 @@
       loadActivityLog();
     };
 
-    /* Sisipkan setelah nav-finance-v2 jika ada */
     const anchor = document.getElementById('nav-finance-v2');
     if (anchor && anchor.parentNode) {
       anchor.parentNode.insertBefore(item, anchor.nextSibling);
@@ -158,9 +128,29 @@
           <div class="page-title">Log Aktivitas Admin</div>
           <div class="page-sub">Rekam jejak semua aksi yang dilakukan di admin panel — untuk keperluan audit</div>
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button class="btn-ghost" style="font-size:12px;padding:6px 13px" onclick="window._alLoad()">&#8635; Refresh</button>
-          <button class="btn-ghost" style="font-size:12px;padding:6px 13px;color:#f87171;border-color:rgba(248,113,113,.3)" onclick="window._alClear()">&#128465; Hapus Log Lama</button>
+          <!-- Dropdown hapus log -->
+          <div style="position:relative" id="al-clear-wrap">
+            <button class="btn-ghost" id="al-clear-btn"
+              style="font-size:12px;padding:6px 13px;color:#f87171;border-color:rgba(248,113,113,.3);display:inline-flex;align-items:center;gap:5px"
+              onclick="window._alToggleClearMenu()">
+              &#128465; Hapus Log
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div id="al-clear-menu" style="
+              display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:999;
+              background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+              box-shadow:0 8px 24px rgba(0,0,0,.35);min-width:200px;overflow:hidden;">
+              <div style="padding:7px 12px;font-size:10.5px;font-weight:700;color:var(--text-faint);letter-spacing:.4px;border-bottom:1px solid var(--border)">PILIH RENTANG HAPUS</div>
+              <button class="al-clear-opt" onclick="window._alClear(7)">Log lebih dari 7 hari</button>
+              <button class="al-clear-opt" onclick="window._alClear(14)">Log lebih dari 14 hari</button>
+              <button class="al-clear-opt" onclick="window._alClear(30)">Log lebih dari 30 hari</button>
+              <button class="al-clear-opt" onclick="window._alClear(90)">Log lebih dari 90 hari</button>
+              <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+              <button class="al-clear-opt al-clear-all" onclick="window._alClear(0)">&#9888;&#65039; Hapus SEMUA log</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -212,7 +202,24 @@
     injectStyles();
     main.appendChild(sec);
     registerGlobals();
+
+    /* Tutup dropdown saat klik di luar */
+    document.addEventListener('click', (e) => {
+      const wrap = document.getElementById('al-clear-wrap');
+      if (wrap && !wrap.contains(e.target)) _closeClearMenu();
+    });
   }
+
+  function _closeClearMenu() {
+    const menu = document.getElementById('al-clear-menu');
+    if (menu) menu.style.display = 'none';
+  }
+
+  window._alToggleClearMenu = function () {
+    const menu = document.getElementById('al-clear-menu');
+    if (!menu) return;
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  };
 
   function injectStyles() {
     if (document.getElementById('al-styles')) return;
@@ -254,6 +261,15 @@
       .al-badge-config_save   { background:rgba(251,191,36,.1);  color:#fbbf24; border:1px solid rgba(251,191,36,.2); }
       .al-badge-login         { background:rgba(167,139,250,.1); color:#a78bfa; border:1px solid rgba(167,139,250,.2); }
       .al-badge-default       { background:var(--surface3); color:var(--text-muted); border:1px solid var(--border); }
+      .al-clear-opt {
+        display:block; width:100%; text-align:left;
+        padding:9px 14px; font-size:12.5px; color:var(--text);
+        background:none; border:none; cursor:pointer;
+        transition:background 120ms;
+      }
+      .al-clear-opt:hover { background:var(--surface-offset, rgba(255,255,255,.05)); }
+      .al-clear-all { color:#f87171 !important; font-weight:600; }
+      .al-clear-all:hover { background:rgba(248,113,113,.08) !important; }
     `;
     document.head.appendChild(s);
   }
@@ -277,7 +293,6 @@
     const fromF   = document.getElementById('al-filter-from')?.value   || '';
     const toF     = document.getElementById('al-filter-to')?.value     || '';
 
-    /* Query */
     let q = sb.from('admin_activity_log')
       .select('*')
       .order('created_at', { ascending: false })
@@ -300,7 +315,6 @@
     let rows = data || [];
     if (adminF) rows = rows.filter(r => (r.admin_name || '').toLowerCase().includes(adminF));
 
-    /* Stats */
     const today = new Date().toISOString().slice(0, 10);
     const todayCount   = rows.filter(r => r.created_at?.slice(0, 10) === today).length;
     const uniqueAdmins = new Set(rows.map(r => r.admin_user_id)).size;
@@ -376,38 +390,55 @@
   }
 
   /* ══════════════════════════════════════════════════════════
-     HAPUS LOG > 30 HARI
+     HAPUS LOG
+     days = 0  => hapus SEMUA
+     days = N  => hapus yang lebih tua dari N hari
   ══════════════════════════════════════════════════════════ */
-  async function clearOldLogs() {
+  async function clearLogs(days) {
+    _closeClearMenu();
+
+    const isAll = days === 0;
+    const label = isAll ? 'SEMUA log aktivitas' : `log aktivitas lebih dari <strong>${days} hari</strong>`;
+    const confirmText = isAll ? '🗑 Ya, Hapus SEMUA Log' : `🗑 Ya, Hapus Log > ${days} Hari`;
+
     const doDelete = async () => {
       const sb = getSb();
       if (!sb) return;
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 30);
-      const { error } = await sb
-        .from('admin_activity_log')
-        .delete()
-        .lt('created_at', cutoff.toISOString());
+
+      let q = sb.from('admin_activity_log').delete();
+      if (!isAll) {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        q = q.lt('created_at', cutoff.toISOString());
+      } else {
+        // Hapus semua: filter neq id null (trik agar RLS tidak blok)
+        q = q.neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+
+      const { error } = await q;
       if (error) { toast('Gagal hapus log: ' + error.message, 'error'); return; }
-      toast('Log lebih dari 30 hari berhasil dihapus ✅');
+      toast(isAll ? 'Semua log aktivitas berhasil dihapus ✅' : `Log > ${days} hari berhasil dihapus ✅`);
       loadActivityLog();
     };
 
     if (typeof window.showMgrConfirm === 'function') {
       window.showMgrConfirm({
-        title:       'Hapus Log Lama?',
-        message:     'Log aktivitas lebih dari <strong>30 hari</strong> akan dihapus permanen dari database.',
-        confirmText: '🗑 Ya, Hapus Log Lama',
+        title:       isAll ? '⚠️ Hapus Semua Log?' : 'Hapus Log Lama?',
+        message:     `${label} akan dihapus permanen dari database. Tindakan ini tidak bisa dibatalkan.`,
+        confirmText,
         danger:      true,
         onConfirm:   doDelete,
       });
     } else {
-      if (confirm('Hapus log aktivitas lebih dari 30 hari?')) await doDelete();
+      const plain = isAll
+        ? 'Hapus SEMUA log aktivitas? Tidak bisa dibatalkan.'
+        : `Hapus log aktivitas lebih dari ${days} hari?`;
+      if (confirm(plain)) await doDelete();
     }
   }
 
   function registerGlobals() {
     window._alLoad  = loadActivityLog;
-    window._alClear = clearOldLogs;
+    window._alClear = clearLogs;
   }
 })();
