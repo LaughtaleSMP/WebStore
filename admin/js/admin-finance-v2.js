@@ -1,1 +1,3 @@
-FILE:/tmp/admin-finance-v2-new.js
+/* ════════════════════════════════════════════════════════════════
+   admin-finance-v2.js test
+*/

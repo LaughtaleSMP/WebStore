@@ -1,1 +1,4 @@
-FILE:/tmp/admin-finance-new.js
+/* ═══════════════════════════════════════════════════════════
+   admin-finance.js  —  Finance Dashboard V2
+   Laughtale SMP Admin Panel
+═══════════════════════════════════════════════════════════ */
