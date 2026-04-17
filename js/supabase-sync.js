@@ -222,6 +222,10 @@
   }
   const sb = window._sbClient;
 
+  /* ── Expose aliases agar semua file bisa menemukan client ── */
+  window._sb             = sb;
+  window._supabaseClient = sb;
+
   try {
     const { data, error } = await sb.from('site_config').select('*');
     if (error || !data) {

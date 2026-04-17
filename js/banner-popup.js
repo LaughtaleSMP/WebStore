@@ -15,7 +15,7 @@
   function waitForSb(callback, tries) {
     tries = tries || 0;
     if (tries > 40) return; /* max 4 detik */
-    const sb = window._sb || window.sb || window._supabaseClient;
+    const sb = window._sbClient || window._sb || window.sb || window._supabaseClient;
     if (sb) { callback(sb); return; }
     setTimeout(() => waitForSb(callback, tries + 1), 100);
   }
