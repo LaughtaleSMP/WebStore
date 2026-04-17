@@ -25,37 +25,68 @@
   }
 
   /* ══════════════════════════════════════════════════════════
+     HELPER: resolve nama + id admin yang sedang login
+     — coba window.currentUser/currentRole dulu
+     — kalau null (timing issue), ambil ulang dari sb.auth.getUser()
+  ══════════════════════════════════════════════════════════ */
+  async function _resolveAdmin() {
+    let user     = window.currentUser  || null;
+    let roleData = window.currentRole  || null;
+
+    // Kalau currentUser belum ada, ambil dari Supabase auth langsung
+    if (!user) {
+      const sb = getSb();
+      if (sb) {
+        try {
+          const { data } = await sb.auth.getUser();
+          user = data?.user || null;
+        } catch (e) { /* noop */ }
+      }
+    }
+
+    // Prioritas nama:
+    //   1. currentRole.display_name
+    //   2. user_metadata.display_name
+    //   3. user_metadata.full_name
+    //   4. prefix email (sebelum @)
+    //   5. email penuh
+    const name =
+      roleData?.display_name                          ||
+      user?.user_metadata?.display_name              ||
+      user?.user_metadata?.full_name                 ||
+      (user?.email ? user.email.split('@')[0] : null) ||
+      user?.email                                    ||
+      null;
+
+    return { user, name };
+  }
+
+  /* ══════════════════════════════════════════════════════════
      GLOBAL: log satu aksi ke tabel
      Dipanggil dari admin-orders.js, admin-shop.js, dll.
 
      Prioritas nama admin:
        1. details._adminName  (dikirim langsung dari caller — paling akurat)
        2. window.currentRole?.display_name
-       3. user?.user_metadata?.full_name
+       3. user_metadata.display_name / full_name
        4. prefix email
-       5. 'Admin' (last resort)
+       5. email penuh
+       (tidak ada lagi fallback string 'Admin' / 'admin')
   ══════════════════════════════════════════════════════════ */
   window.logAdminActivity = async function (action, targetType, targetId, details) {
     const sb = getSb();
     if (!sb) return;
-    const user     = window.currentUser;
-    const roleData = window.currentRole;
 
-    // Prioritas 1: _adminName yang dikirim langsung dari caller
-    const adminName = (details && details._adminName)
-                   || roleData?.display_name
-                   || user?.user_metadata?.full_name
-                   || (user?.email ? user.email.split('@')[0] : null)
-                   || 'Admin';
+    // Resolve siapa yang login
+    const { user, name: resolvedName } = await _resolveAdmin();
+
+    // Prioritas 1: _adminName yang dikirim dari caller
+    const adminName = (details && details._adminName) || resolvedName || '(unknown)';
 
     // Bersihkan _adminName dari details sebelum disimpan ke DB
     let cleanDetails = details ? { ...details } : null;
-    if (cleanDetails && cleanDetails._adminName) {
-      delete cleanDetails._adminName;
-    }
-    if (cleanDetails && Object.keys(cleanDetails).length === 0) {
-      cleanDetails = null;
-    }
+    if (cleanDetails && cleanDetails._adminName) delete cleanDetails._adminName;
+    if (cleanDetails && Object.keys(cleanDetails).length === 0) cleanDetails = null;
 
     const adminId = user?.id || null;
 
