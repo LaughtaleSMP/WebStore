@@ -327,9 +327,7 @@
 
 /* ════════════════════════════════════════════════════════════════
    Player Online Card — FIXED VERSION
-   - Update mini stats (Tertinggi, Rata-rata, Rekaman, Sekarang)
-   - Fix dot CSS classes (.online / .offline)
-   - Single source of truth: no conflict with admin-finance.js
+   FIX: Tertinggi, Rata-rata, Rekaman, Terakhir dicatat
 ════════════════════════════════════════════════════════════════ */
 (function initFv2Player() {
   'use strict';
@@ -343,24 +341,31 @@
     return window._adminSb || null;
   }
 
-  /* ── Helpers update mini stats ── */
+  /* ── FIX: Update mini stats — sertakan live value dalam kalkulasi peak ── */
   function _updateMiniStats(live, snapshots) {
     /* Sekarang */
     var curEl = document.getElementById('fv2-pmini-current');
     if (curEl) curEl.textContent = (live !== null && live !== undefined) ? String(live) : '—';
 
+    var liveNum = (live !== null && live !== undefined) ? Number(live) : null;
+
     if (!snapshots || !snapshots.length) {
-      ['fv2-pmini-peak', 'fv2-pmini-avg', 'fv2-pmini-count'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) el.textContent = '0';
-      });
+      var peakEl0  = document.getElementById('fv2-pmini-peak');
+      var avgEl0   = document.getElementById('fv2-pmini-avg');
+      var countEl0 = document.getElementById('fv2-pmini-count');
+      if (peakEl0)  peakEl0.textContent  = liveNum !== null ? String(liveNum) : '0';
+      if (avgEl0)   avgEl0.textContent   = liveNum !== null ? String(liveNum) : '0';
+      if (countEl0) countEl0.textContent = '0';
       return;
     }
 
-    var counts  = snapshots.map(function (s) { return Number(s.player_count) || 0; });
-    var peak    = Math.max.apply(null, counts);
-    var avg     = Math.round(counts.reduce(function (a, b) { return a + b; }, 0) / counts.length);
-    var total   = snapshots.length;
+    var counts = snapshots.map(function (s) { return Number(s.player_count) || 0; });
+
+    /* FIX: Sertakan live value saat menghitung peak */
+    var allForPeak = liveNum !== null ? counts.concat([liveNum]) : counts;
+    var peak  = Math.max.apply(null, allForPeak);
+    var avg   = Math.round(counts.reduce(function (a, b) { return a + b; }, 0) / counts.length);
+    var total = snapshots.length;
 
     var peakEl  = document.getElementById('fv2-pmini-peak');
     var avgEl   = document.getElementById('fv2-pmini-avg');
@@ -385,7 +390,7 @@
       .catch(function () { return null; });
   }
 
-  /* ── Fetch 60 snapshot terakhir ── */
+  /* ── Fetch 60 snapshot terakhir (6 jam) ── */
   function loadPlayerSnapshots() {
     var sb = getSb();
     if (!sb) return Promise.resolve([]);
@@ -527,7 +532,6 @@
       }
     }
 
-    /* FIX: gunakan class .online / .offline sesuai CSS di admin-finance.js */
     if (dotEl) {
       dotEl.classList.remove('online', 'offline');
       if (live !== null && live > 0) {
@@ -536,6 +540,28 @@
         dotEl.classList.add('offline');
       }
     }
+  }
+
+  /* ── FIX: Update label "Terakhir dicatat" dengan format lebih bersih ── */
+  function _updateLastRecordedLabel(snapshots) {
+    var nextEl = document.getElementById('fv2-player-next-update');
+    if (!nextEl) return;
+
+    if (!snapshots || !snapshots.length) return;
+
+    var last = snapshots[snapshots.length - 1];
+    var dt   = new Date(last.recorded_at);
+    var dtStr = dt.toLocaleString('id-ID', {
+      day: '2-digit', month: 'short',
+      hour: '2-digit', minute: '2-digit',
+    }).replace(/\./g, ':');
+
+    nextEl.innerHTML =
+      '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="opacity:.5;flex-shrink:0">' +
+        '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' +
+      '</svg>' +
+      ' Auto-catat dalam <strong id="fv2-next-countdown" style="color:var(--accent);font-variant-numeric:tabular-nums">—</strong>' +
+      ' &nbsp;·&nbsp; Dicatat: <span style="color:var(--text-muted)">' + dtStr + '</span>';
   }
 
   /* ── Refresh seluruh kartu player ── */
@@ -551,7 +577,7 @@
         /* Update status + dot */
         _updateStatusDisplay(live);
 
-        /* Update mini stats — FIX UTAMA */
+        /* FIX: Update mini stats dengan live value disertakan */
         _updateMiniStats(live, snapshots);
 
         /* Render chart */
@@ -559,12 +585,8 @@
           renderChart(snapshots);
         }
 
-        /* Next update label */
-        var nextEl = document.getElementById('fv2-player-next-update');
-        if (nextEl) {
-          nextEl.textContent = 'Update berikutnya: ' +
-            new Date(Date.now() + 5 * 60 * 1000).toLocaleTimeString('id-ID');
-        }
+        /* Update label "Terakhir dicatat" */
+        _updateLastRecordedLabel(snapshots);
       })
       .catch(function (e) {
         console.warn('[fv2-player] refreshPlayerCard error:', e);
@@ -575,7 +597,7 @@
   /* ── Expose refresh ── */
   window._fv2PlayerRefresh = refreshPlayerCard;
 
-  /* ── Tombol Catat — override dari admin-finance.js ── */
+  /* ── Tombol Catat ── */
   window.financeV2RecordPlayer = function () {
     var btn = document.querySelector('.fv2-player-record-btn');
 
@@ -598,7 +620,6 @@
         '</svg> Mencatat…';
     }
 
-    /* Inject keyframe sekali */
     if (!document.getElementById('fv2-spin-kf')) {
       var ks = document.createElement('style');
       ks.id = 'fv2-spin-kf';
@@ -635,7 +656,6 @@
           setTimeout(resetBtn, 2500);
         }
 
-        /* Refresh full card setelah catat */
         setTimeout(function () { refreshPlayerCard(); }, 300);
       })
       .catch(function (e) {
@@ -646,7 +666,7 @@
       });
   };
 
-  /* ── Auto-init: tunggu canvas tersedia ── */
+  /* ── Auto-init ── */
   function tryAutoInit() {
     if (document.getElementById('fv2-player-chart')) {
       refreshPlayerCard();
