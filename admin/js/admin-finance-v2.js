@@ -323,8 +323,9 @@
 /* ── Player Online: load chart + tombol Catat ── */
 (function initFv2Player() {
   const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
-  /* Server IP hardcoded — tabel config tidak tersedia di Supabase */
-  const SERVER_IP = 'laughtale.my.id:19214';
+  /* Bedrock Edition — gunakan endpoint /bedrock/3/ bukan /3/ */
+  const SERVER_HOST = 'laughtale.my.id';
+  const SERVER_PORT = '19214';
   let playerChart = null;
   let refreshPromise = null;
 
@@ -334,14 +335,14 @@
 
   async function fetchLivePlayers() {
     try {
-      const ip = (window.SERVER_IP || window.serverIp || SERVER_IP).trim();
-      const parts = ip.split(':');
-      const host = parts[0];
-      const port = parts[1] || 19132;
-      const apiRes = await fetch(`https://api.mcsrvstat.us/3/${host}:${port}`);
+      const host = window.SERVER_HOST || SERVER_HOST;
+      const port = window.SERVER_PORT || SERVER_PORT;
+      /* Bedrock Edition wajib pakai /bedrock/3/ */
+      const apiRes = await fetch(`https://api.mcsrvstat.us/bedrock/3/${host}:${port}`);
       if (!apiRes.ok) return null;
       const data = await apiRes.json();
-      return data && data.online ? (data.players && typeof data.players.online === 'number' ? data.players.online : 0) : 0;
+      if (!data || !data.online) return 0;
+      return typeof data.players?.online === 'number' ? data.players.online : 0;
     } catch (_) {
       return null;
     }
@@ -351,9 +352,10 @@
     const key = getKey();
     try {
       const since = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/player_snapshots?select=player_count,recorded_at&recorded_at=gte.${encodeURIComponent(since)}&order=recorded_at.asc&limit=60`, {
-        headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
-      });
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/player_snapshots?select=player_count,recorded_at&recorded_at=gte.${encodeURIComponent(since)}&order=recorded_at.asc&limit=60`,
+        { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
+      );
       if (!res.ok) return [];
       return await res.json();
     } catch (_) {
@@ -363,16 +365,12 @@
 
   function destroyPlayerChart() {
     const canvas = document.getElementById('fv2-player-chart');
-    try {
-      if (playerChart && typeof playerChart.destroy === 'function') {
-        playerChart.destroy();
-      }
-    } catch (_) {}
+    try { if (playerChart) playerChart.destroy(); } catch (_) {}
     playerChart = null;
     try {
-      if (window.Chart && typeof window.Chart.getChart === 'function' && canvas) {
-        const existing = window.Chart.getChart(canvas);
-        if (existing) existing.destroy();
+      if (window.Chart?.getChart && canvas) {
+        const ex = window.Chart.getChart(canvas);
+        if (ex) ex.destroy();
       }
     } catch (_) {}
   }
@@ -380,45 +378,24 @@
   function renderPlayerChart(snapshots) {
     const canvas = document.getElementById('fv2-player-chart');
     if (!canvas || !window.Chart) return;
-
     destroyPlayerChart();
-
     const ctx = canvas.getContext('2d');
-    const labels = snapshots.map(function (d) {
-      const dt = new Date(d.recorded_at);
-      return dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    });
-    const values = snapshots.map(function (d) { return d.player_count; });
-
+    const labels = snapshots.map(d => new Date(d.recorded_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
+    const values = snapshots.map(d => d.player_count);
     playerChart = new window.Chart(ctx, {
       type: 'line',
       data: {
-        labels: labels,
-        datasets: [{
-          data: values,
-          borderColor: '#4a8fff',
-          backgroundColor: 'rgba(74,143,255,0.12)',
-          borderWidth: 1.5,
-          pointRadius: 0,
-          fill: true,
-          tension: 0.4
-        }]
+        labels,
+        datasets: [{ data: values, borderColor: '#4a8fff', backgroundColor: 'rgba(74,143,255,0.12)', borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.4 }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: {
-            callbacks: {
-              title: function (items) {
-                return new Date(snapshots[items[0].dataIndex].recorded_at).toLocaleString('id-ID');
-              },
-              label: function (item) {
-                return ' ' + item.raw + ' pemain';
-              }
-            }
-          }
+          tooltip: { callbacks: {
+            title: items => new Date(snapshots[items[0].dataIndex].recorded_at).toLocaleString('id-ID'),
+            label: item => ` ${item.raw} pemain`
+          }}
         },
         scales: {
           x: { ticks: { maxTicksLimit: 6, font: { size: 10 }, color: '#666' }, grid: { color: 'rgba(255,255,255,0.04)' } },
@@ -430,84 +407,56 @@
 
   async function refreshPlayerCard() {
     if (refreshPromise) return refreshPromise;
-
-    refreshPromise = (async function () {
-      const numEl = document.getElementById('fv2-player-num');
+    refreshPromise = (async () => {
+      const numEl   = document.getElementById('fv2-player-num');
       const labelEl = document.getElementById('fv2-player-label');
-      const dotEl = document.getElementById('fv2-player-dot');
-      const nextEl = document.getElementById('fv2-player-next-update');
+      const dotEl   = document.getElementById('fv2-player-dot');
+      const nextEl  = document.getElementById('fv2-player-next-update');
 
-      const results = await Promise.all([fetchLivePlayers(), loadPlayerSnapshots()]);
-      const live = results[0];
-      const snapshots = results[1];
+      const [live, snapshots] = await Promise.all([fetchLivePlayers(), loadPlayerSnapshots()]);
 
-      if (numEl) numEl.textContent = live !== null ? live : '—';
-      if (labelEl) {
-        labelEl.textContent = live !== null ? (live > 0 ? 'pemain online sekarang' : 'server kosong') : 'gagal memuat';
-      }
+      if (numEl)   numEl.textContent   = live !== null ? live : '—';
+      if (labelEl) labelEl.textContent = live === null ? 'gagal memuat' : live > 0 ? 'pemain online sekarang' : 'server kosong';
       if (dotEl) {
-        dotEl.classList.toggle('pg-dot-online', live > 0);
+        dotEl.classList.toggle('pg-dot-online',  live > 0);
         dotEl.classList.toggle('pg-dot-offline', live === 0 || live === null);
       }
-
       renderPlayerChart(Array.isArray(snapshots) ? snapshots : []);
-
-      if (nextEl) {
-        const next = new Date(Date.now() + 5 * 60 * 1000);
-        nextEl.textContent = 'Update berikutnya: ' + next.toLocaleTimeString('id-ID');
-      }
+      if (nextEl) nextEl.textContent = 'Update berikutnya: ' + new Date(Date.now() + 5 * 60 * 1000).toLocaleTimeString('id-ID');
     })();
-
-    try {
-      await refreshPromise;
-    } finally {
-      refreshPromise = null;
-    }
+    try { await refreshPromise; } finally { refreshPromise = null; }
   }
 
   window.financeV2RecordPlayer = async function () {
     const btn = document.querySelector('.fv2-player-record-btn');
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'Mencatat...';
-    }
+    const resetBtn = () => {
+      if (!btn) return;
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Catat';
+    };
+    if (btn) { btn.disabled = true; btn.textContent = 'Mencatat...'; }
 
     try {
       const live = await fetchLivePlayers();
-      if (live === null) throw new Error('Gagal ambil data server');
+      if (live === null) throw new Error('Gagal ambil data server Bedrock');
 
       const key = getKey();
       const res = await fetch(`${SUPABASE_URL}/rest/v1/player_snapshots`, {
         method: 'POST',
-        headers: {
-          'apikey': key,
-          'Authorization': `Bearer ${key}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
-        },
+        headers: { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({ player_count: live })
       });
+      if (!res.ok) throw new Error(`Supabase HTTP ${res.status}`);
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await refreshPlayerCard();
-
       if (btn) {
-        btn.textContent = '✓ Tercatat';
-        setTimeout(function () {
-          btn.disabled = false;
-          btn.innerHTML = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Catat';
-        }, 2000);
+        btn.textContent = `✓ Tercatat (${live} pemain)`;
+        setTimeout(resetBtn, 2500);
       }
     } catch (e) {
-      if (typeof window.showAdminToast === 'function') {
-        window.showAdminToast('Gagal catat: ' + e.message, 'error');
-      } else {
-        alert('Gagal catat: ' + e.message);
-      }
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Catat';
-      }
+      if (typeof window.showAdminToast === 'function') window.showAdminToast('Gagal catat: ' + e.message, 'error');
+      else alert('Gagal catat: ' + e.message);
+      resetBtn();
     }
   };
 
