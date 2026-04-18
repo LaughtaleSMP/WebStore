@@ -64,9 +64,12 @@
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
+    // FIX: Tampilkan tanggal + waktu agar label tidak membingungkan saat lintas hari
     const labels = data.map(d => {
       const dt = new Date(d.recorded_at);
-      return dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const tgl = dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+      const jam = dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      return `${tgl} ${jam}`;
     });
     const values = data.map(d => d.player_count);
 
@@ -279,7 +282,9 @@
     loadData(range);
   };
 
+  // FIX: Destroy chartInstance sebelum refresh agar label & data selalu diperbarui
   window.pgRefreshNow = function () {
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
     loadData(currentRange);
     startCountdown();
   };
