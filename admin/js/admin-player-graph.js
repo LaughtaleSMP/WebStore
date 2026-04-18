@@ -272,9 +272,17 @@
   /* ── Init saat section dibuka ── */
   window.initPlayerGraph = function () {
     if (!document.getElementById('pg-chart-canvas')) return;
-    if (chartInstance) return;
+   
+    // Jika chart sudah ada, refresh data saja (jangan skip!)
+    if (chartInstance) {
+      loadData(currentRange);
+      startCountdown();
+      return;
+    }
+   
+    // Pertama kali dibuka — buat chart + mulai auto refresh
     loadData(currentRange);
     startAutoRefresh();
-  };
+ };
 
 })();
