@@ -20,17 +20,11 @@
   let needsRefresh   = false;
 
   /* ── Helpers ── */
-  function getAnonKey() {
-    if (window.SUPABASE_ANON_KEY) return window.SUPABASE_ANON_KEY;
-    if (window._supabaseClient?._headers?.apikey) return window._supabaseClient._headers.apikey;
-    const scripts = document.querySelectorAll('script[src]');
-    return null;
-  }
-
   function getSupabaseKey() {
-    // Ambil dari window yang di-set supabase-config.js
-    return window.SUPABASE_ANON_KEY
-      || (window.supabase && window.supabase.supabaseKey)
+    // Prioritas: window._supabaseKey (diset supabase-config.js)
+    return window._supabaseKey
+      || window.SUPABASE_KEY
+      || window.SUPABASE_ANON_KEY
       || '';
   }
 
@@ -40,7 +34,6 @@
     const hours = map[range] || 6;
     const since = new Date(now.getTime() - hours * 3600 * 1000).toISOString();
 
-    // Tentukan limit & interval grouping
     const limit = range === '7d' ? 336 : 500;
 
     const key = getSupabaseKey();
@@ -64,7 +57,6 @@
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // FIX: Tampilkan tanggal + waktu agar label tidak membingungkan saat lintas hari
     const labels = data.map(d => {
       const dt = new Date(d.recorded_at);
       const tgl = dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
@@ -73,10 +65,8 @@
     });
     const values = data.map(d => d.player_count);
 
-    // Warna dari CSS variable (fallback ke teal)
-    const style = getComputedStyle(document.documentElement);
+    const style  = getComputedStyle(document.documentElement);
     const accent = style.getPropertyValue('--accent').trim() || '#4a8fff';
-    const green  = style.getPropertyValue('--green').trim()  || '#4ade80';
 
     if (chartInstance) {
       chartInstance.data.labels = labels;
@@ -93,14 +83,7 @@
           label: 'Player Online',
           data: values,
           borderColor: accent,
-          backgroundColor: (ctx2) => {
-            const g = ctx2.chart.ctx.createLinearGradient(0, 0, 0, ctx2.chart.height);
-            g.addColorStop(0, accent.replace(')', ', 0.25)').replace('rgb', 'rgba').replace('#', '').length > 7
-              ? accent + '40'
-              : accent + '40');
-            g.addColorStop(1, 'transparent');
-            return g;
-          },
+          backgroundColor: accent + '28',
           borderWidth: 2,
           pointRadius: data.length > 60 ? 0 : 3,
           pointHoverRadius: 5,
@@ -172,7 +155,6 @@
     setText('pg-stat-avg',   avg);
     setText('pg-stat-total', data.length);
 
-    // Status dot
     const dot = document.getElementById('pg-status-dot');
     if (dot) {
       dot.classList.toggle('pg-dot-online',  now > 0);
@@ -240,14 +222,13 @@
     if (!el) return;
     const m = Math.floor(secondsLeft / 60);
     const s = secondsLeft % 60;
-    el.textContent = `Refresh dalam ${m}:${String(s).padStart(2,'0')}`);
+    el.textContent = `Refresh dalam ${m}:${String(s).padStart(2,'0')}`;
 
-    // SVG ring progress
     const ring = document.getElementById('pg-countdown-ring');
     if (ring) {
       const total = REFRESH_MS / 1000;
       const pct   = secondsLeft / total;
-      const circ  = 2 * Math.PI * 10; // r=10
+      const circ  = 2 * Math.PI * 10;
       ring.style.strokeDashoffset = circ * (1 - pct);
     }
   }
@@ -282,7 +263,6 @@
     loadData(range);
   };
 
-  // FIX: Destroy chartInstance sebelum refresh agar label & data selalu diperbarui
   window.pgRefreshNow = function () {
     if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
     loadData(currentRange);
@@ -292,7 +272,7 @@
   /* ── Init saat section dibuka ── */
   window.initPlayerGraph = function () {
     if (!document.getElementById('pg-chart-canvas')) return;
-    if (chartInstance) return; // sudah diinit
+    if (chartInstance) return;
     loadData(currentRange);
     startAutoRefresh();
   };
