@@ -386,25 +386,26 @@
     }, 200);
   });
 })();
-   
+
 /* ── Player Online: load chart + tombol Catat ── */
 (function initFv2Player() {
   const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
   let playerChart = null;
 
+  /* FIX: pakai window._supabaseKey yang didefinisikan di supabase-config.js */
   function getKey() {
-    return window.SUPABASE_ANON_KEY || '';
+    return window._supabaseKey || window.SUPABASE_KEY || '';
   }
 
   async function fetchLivePlayers() {
     try {
-      // Ambil config IP dari Supabase
       const key = getKey();
-      const cfgRes = await fetch(`${SUPABASE_URL}/rest/v1/config?select=value&key=eq.server_ip&limit=1`, {
-        headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
-      });
+      const cfgRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/config?select=value&key=eq.server_ip&limit=1`,
+        { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
+      );
       const cfgData = await cfgRes.json();
-      const ip = cfgData[0]?.value || 'laughtale.my.id:19214';
+      const ip = (cfgData[0]?.value) || 'laughtale.my.id:19214';
       const [host, port] = ip.split(':');
 
       const apiRes = await fetch(`https://api.mcsrvstat.us/3/${host}:${port || 19132}`);
@@ -451,7 +452,8 @@
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false },
+        plugins: {
+          legend: { display: false },
           tooltip: { callbacks: {
             title: (i) => new Date(snapshots[i[0].dataIndex].recorded_at).toLocaleString('id-ID'),
             label: (i) => ` ${i.raw} pemain`
@@ -475,7 +477,7 @@
 
     if (numEl)   numEl.textContent   = live !== null ? live : '—';
     if (labelEl) labelEl.textContent = live !== null
-      ? (live > 0 ? `pemain online sekarang` : 'server kosong')
+      ? (live > 0 ? 'pemain online sekarang' : 'server kosong')
       : 'gagal memuat';
     if (dotEl) {
       dotEl.classList.toggle('pg-dot-online',  live > 0);
@@ -490,7 +492,7 @@
     }
   }
 
-  // Tombol Catat: insert snapshot sekarang ke Supabase
+  /* Tombol Catat: insert snapshot ke Supabase */
   window.financeV2RecordPlayer = async function () {
     const btn = document.querySelector('.fv2-player-record-btn');
     if (btn) { btn.disabled = true; btn.textContent = 'Mencatat...'; }
@@ -510,21 +512,42 @@
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      await refreshPlayerCard(); // langsung refresh grafik
-      if (btn) { btn.textContent = '✓ Tercatat'; setTimeout(() => { btn.disabled = false; btn.innerHTML = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Catat'; }, 2000); }
+      await refreshPlayerCard();
+      if (btn) {
+        btn.textContent = '✓ Tercatat';
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.innerHTML = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Catat';
+        }, 2000);
+      }
     } catch (e) {
-      alert('Gagal catat: ' + e.message);
-      if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Catat'; }
+      if (typeof window.showAdminToast === 'function') {
+        window.showAdminToast('Gagal catat: ' + e.message, 'error');
+      } else {
+        alert('Gagal catat: ' + e.message);
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Catat';
+      }
     }
   };
 
-  // Auto init saat section finance-v2 dibuka
-  const _orig = window.showSection;
-  window.showSection = function (id, el) {
-    if (_orig) _orig(id, el);
-    if (id === 'finance-v2') setTimeout(refreshPlayerCard, 100);
-  };
-  // Auto-refresh tiap 5 menit
+  /* Hook showSection — refresh card saat section finance-v2 dibuka */
+  document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () {
+      const _orig = window.showSection;
+      if (_orig && !_orig._fv2PlayerHooked) {
+        window.showSection = function (id, el) {
+          _orig(id, el);
+          if (id === 'finance-v2') setTimeout(refreshPlayerCard, 150);
+        };
+        window.showSection._fv2PlayerHooked = true;
+      }
+    }, 300);
+  });
+
+  /* Auto-refresh tiap 5 menit */
   setInterval(() => {
     if (document.getElementById('fv2-player-chart')) refreshPlayerCard();
   }, 5 * 60 * 1000);
