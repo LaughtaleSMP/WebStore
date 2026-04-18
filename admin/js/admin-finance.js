@@ -329,7 +329,8 @@
 
     var canvas = document.getElementById('fv2-line-chart');
     if (!canvas) return;
-    if (_lineChart) { _lineChart.destroy(); _lineChart = null; }
+    if (_lineChart) { try { _lineChart.destroy(); } catch(e){} _lineChart = null; }
+    try { var ex = Chart.getChart(canvas); if (ex) ex.destroy(); } catch(e) {}
 
     _lineChart = new Chart(canvas, {
       type: 'line',
@@ -399,7 +400,8 @@
 
     var canvas = document.getElementById('fv2-pie-chart');
     if (!canvas) return;
-    if (_pieChart) { _pieChart.destroy(); _pieChart = null; }
+    if (_pieChart) { try { _pieChart.destroy(); } catch(e){} _pieChart = null; }
+    try { var ex = Chart.getChart(canvas); if (ex) ex.destroy(); } catch(e) {}
 
     _pieChart = new Chart(canvas, {
       type: 'doughnut',
@@ -447,7 +449,8 @@
 
     var canvas = document.getElementById('fv2-bar-chart');
     if (!canvas) return;
-    if (_barChart) { _barChart.destroy(); _barChart = null; }
+    if (_barChart) { try { _barChart.destroy(); } catch(e){} _barChart = null; }
+    try { var ex = Chart.getChart(canvas); if (ex) ex.destroy(); } catch(e) {}
 
     _barChart = new Chart(canvas, {
       type: 'bar',
@@ -504,9 +507,7 @@
     _updateCountdownLabel();
   }
 
-  /* ── Live player count fetch ──
-     FIX: setelah dapat data live, update juga angka "SEKARANG" di mini stats
-  */
+  /* ── Live player count fetch ── */
   function _fetchLivePlayerCount() {
     var ip = _getServerIp();
     var parts = ip.split(':');
@@ -527,7 +528,6 @@
           if (numEl) { numEl.textContent = onl; numEl.className = 'fv2-player-big-num online-color'; }
           if (lblEl) { lblEl.textContent = 'pemain online sekarang'; }
           if (maxEl) { maxEl.textContent = '/ ' + max + ' maks'; }
-          /* ★ FIX: sinkronkan mini stat "SEKARANG" dengan data live ★ */
           var curEl = document.getElementById('fv2-pmini-current');
           if (curEl) curEl.textContent = onl;
         } else {
@@ -535,7 +535,6 @@
           if (numEl) { numEl.textContent = '0'; numEl.className = 'fv2-player-big-num offline-color'; }
           if (lblEl) { lblEl.textContent = 'Server offline'; }
           if (maxEl) { maxEl.textContent = ''; }
-          /* ★ FIX: set 0 saat offline ★ */
           var curEl = document.getElementById('fv2-pmini-current');
           if (curEl) curEl.textContent = '0';
         }
@@ -554,7 +553,6 @@
     var s = document.createElement('style');
     s.id = 'fv2-player-enhanced-styles';
     s.textContent = [
-      /* Mini stats strip */
       '.fv2-player-mini-stats {',
         'display:grid;',
         'grid-template-columns:repeat(4,1fr);',
@@ -589,8 +587,6 @@
         'color:var(--text-faint);',
         'margin-top:3px;',
       '}',
-
-      /* Stat header row */
       '.fv2-player-stat-row {',
         'display:flex;',
         'align-items:center;',
@@ -629,8 +625,6 @@
         'color:var(--text-faint);',
         'font-variant-numeric:tabular-nums;',
       '}',
-
-      /* Dot animations */
       '.fv2-player-dot {',
         'width:10px;',
         'height:10px;',
@@ -653,8 +647,6 @@
         '0%,100%{box-shadow:0 0 0 3px rgba(74,143,255,0.2);}',
         '50%{box-shadow:0 0 0 7px rgba(74,143,255,0.04);}',
       '}',
-
-      /* Next update label */
       '#fv2-player-next-update {',
         'display:flex;',
         'align-items:center;',
@@ -664,15 +656,11 @@
         'margin-top:8px;',
         'font-variant-numeric:tabular-nums;',
       '}',
-
-      /* Last recorded */
       '.fv2-player-last-rec {',
         'font-size:10.5px;',
         'color:var(--text-faint);',
         'margin-top:4px;',
       '}',
-
-      /* Chart container */
       '.fv2-player-chart-wrap {',
         'position:relative;',
         'width:100%;',
@@ -680,8 +668,6 @@
         'border-radius:8px;',
         'overflow:hidden;',
       '}',
-
-      /* Empty chart overlay */
       '.fv2-player-empty {',
         'position:absolute;inset:0;',
         'display:flex;align-items:center;justify-content:center;',
@@ -704,16 +690,10 @@
     if (!card || card.dataset.enhanced) return;
     card.dataset.enhanced = '1';
 
-    // Rebuild inner HTML dengan struktur baru
-    var chartHeader = card.querySelector('.fv2-chart-header');
-    var oldStat     = document.getElementById('fv2-player-stat');
-    var oldCanvas   = document.getElementById('fv2-player-chart');
-    var oldLabel    = document.getElementById('fv2-player-next-update');
-
-    // Simpan referensi canvas lama
+    var oldStat   = document.getElementById('fv2-player-stat');
+    var oldCanvas = document.getElementById('fv2-player-chart');
     var canvasParent = oldCanvas ? oldCanvas.parentElement : null;
 
-    // Inject stat row baru (gantikan yang lama)
     if (oldStat) {
       oldStat.outerHTML =
         '<div class="fv2-player-stat-row" id="fv2-player-stat">' +
@@ -728,7 +708,6 @@
         '</div>';
     }
 
-    // Inject mini stats sebelum chart
     if (canvasParent && !document.getElementById('fv2-player-mini-stats-wrap')) {
       var miniWrap = document.createElement('div');
       miniWrap.id = 'fv2-player-mini-stats-wrap';
@@ -752,58 +731,60 @@
         '</div>';
       canvasParent.parentNode.insertBefore(miniWrap, canvasParent);
 
-      // Wrap canvas dalam container baru
       var chartWrap = document.createElement('div');
       chartWrap.className = 'fv2-player-chart-wrap';
       canvasParent.parentNode.insertBefore(chartWrap, canvasParent);
       chartWrap.appendChild(canvasParent);
 
-      // Pastikan canvas ukurannya benar
       if (oldCanvas) {
         canvasParent.style.cssText = 'position:relative;width:100%;height:140px';
       }
     }
   }
 
-  /* ── Render mini stats ──
-     FIX: "SEKARANG" tidak lagi diisi dari sini, diisi oleh _fetchLivePlayerCount
-     agar selalu sinkron dengan data live API.
-  */
+  /* ── Render mini stats ── */
   function _renderPlayerMiniStats(rows) {
     if (!rows || !rows.length) {
       ['fv2-pmini-peak','fv2-pmini-avg','fv2-pmini-count'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.textContent = '0';
       });
-      // "SEKARANG" dibiarkan — akan diisi oleh _fetchLivePlayerCount
       return;
     }
 
-    var counts   = rows.map(function(r) { return Number(r.player_count) || 0; });
-    var peak     = Math.max.apply(null, counts);
-    var avg      = Math.round(counts.reduce(function(a, b) { return a + b; }, 0) / counts.length);
-    var total    = rows.length;
+    var counts  = rows.map(function(r) { return Number(r.player_count) || 0; });
+    var peak    = Math.max.apply(null, counts);
+    var avg     = Math.round(counts.reduce(function(a, b) { return a + b; }, 0) / counts.length);
+    var total   = rows.length;
 
-    // Jangan sentuh fv2-pmini-current di sini — diisi oleh _fetchLivePlayerCount
-    var peakEl   = document.getElementById('fv2-pmini-peak');
-    var avgEl    = document.getElementById('fv2-pmini-avg');
-    var countEl  = document.getElementById('fv2-pmini-count');
+    var peakEl  = document.getElementById('fv2-pmini-peak');
+    var avgEl   = document.getElementById('fv2-pmini-avg');
+    var countEl = document.getElementById('fv2-pmini-count');
 
     if (peakEl)  peakEl.textContent  = peak;
     if (avgEl)   avgEl.textContent   = avg;
     if (countEl) countEl.textContent = total;
   }
 
-  /* ── Build player chart — IMPROVED ── */
+  /* ── Build player chart — FIXED: destroy any orphaned chart first ── */
   function _buildPlayerChart(rows) {
     _ensurePlayerCardStructure();
 
     if (typeof Chart === 'undefined') return;
     var canvasEl = document.getElementById('fv2-player-chart');
     if (!canvasEl) return;
-    if (_playerChart) { _playerChart.destroy(); _playerChart = null; }
 
-    // Render mini stats (peak, avg, rekaman)
+    // Destroy the tracked instance
+    if (_playerChart) { try { _playerChart.destroy(); } catch (e) {} _playerChart = null; }
+
+    // ★ FIX: Destroy ANY orphaned Chart.js instance on this canvas
+    // (e.g. one created by the auto-init block in admin-finance-v2.js)
+    try {
+      var orphan = Chart.getChart(canvasEl);
+      if (orphan) orphan.destroy();
+    } catch (e) {}
+
+    // Render mini stats
     _renderPlayerMiniStats(rows);
 
     var labels, data, isEmpty;
@@ -825,7 +806,6 @@
     var maxVal  = data.length ? Math.max.apply(null, data) : 10;
     var yMax    = Math.max(maxVal + Math.ceil(maxVal * 0.25), 5);
 
-    // Gradient fill
     var gradient = ctx.createLinearGradient(0, 0, 0, 140);
     gradient.addColorStop(0, 'rgba(74,143,255,0.35)');
     gradient.addColorStop(0.6, 'rgba(74,143,255,0.08)');
@@ -953,7 +933,6 @@
       if (existingEmpty) existingEmpty.remove();
     }
 
-    // Update last recorded time
     _updateLastRecordedLabel(rows);
   }
 
@@ -961,7 +940,6 @@
   function _updateLastRecordedLabel(rows) {
     var lbl = document.getElementById('fv2-player-last-rec');
     if (!lbl) {
-      // Inject setelah countdown label
       var nextLbl = document.getElementById('fv2-player-next-update');
       if (nextLbl && nextLbl.parentNode) {
         var el = document.createElement('div');
@@ -997,7 +975,6 @@
         '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="animation:spin .8s linear infinite">' +
           '<path d="M21 12a9 9 0 1 1-2.12-5.86"/>' +
         '</svg> Mencatat…';
-      // inject spin keyframe jika belum ada
       if (!document.getElementById('fv2-spin-kf')) {
         var ks = document.createElement('style');
         ks.id = 'fv2-spin-kf';
@@ -1039,7 +1016,6 @@
         _finToast('Gagal simpan snapshot — jalankan Setup DB terlebih dahulu.', 'error');
       } else {
         _finToast('✅ Snapshot: ' + playerCount + ' pemain online', 'success');
-        // Reload data & rebuild chart
         var result = await sb
           .from('player_snapshots')
           .select('player_count, max_players, recorded_at')
@@ -1048,7 +1024,6 @@
         if (!result.error) {
           _lastPlayerData = result.data || [];
           _buildPlayerChart(_lastPlayerData);
-          /* ★ FIX: update "SEKARANG" dengan nilai yang baru dicatat ★ */
           var curEl = document.getElementById('fv2-pmini-current');
           if (curEl) curEl.textContent = playerCount;
         }
