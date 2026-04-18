@@ -327,15 +327,14 @@
 
 /* ── Player Online: load chart + tombol Catat ── */
 (function initFv2Player() {
-  var SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
-  var SERVER_HOST  = 'laughtale.my.id';
-  var SERVER_PORT  = '19214';
-  var playerChart  = null;
-  var _running     = false;
+  var SERVER_HOST = 'laughtale.my.id';
+  var SERVER_PORT = '19214';
+  var playerChart = null;
+  var _running    = false;
 
-  /* Ambil anon key — coba semua kemungkinan variabel */
-  function getKey() {
-    return window._supabaseKey || window.SUPABASE_KEY || window.SUPABASE_ANON_KEY || '';
+  /* Ambil Supabase client yang sudah dibuat di supabase-config.js */
+  function getSb() {
+    return window._adminSb || null;
   }
 
   /* Fetch jumlah pemain live dari mcsrvstat (Bedrock) */
@@ -349,18 +348,21 @@
       .catch(function () { return null; });
   }
 
-  /* Fetch 60 snapshot terakhir dari Supabase */
+  /* Fetch 60 snapshot terakhir menggunakan Supabase JS client */
   function loadPlayerSnapshots() {
-    var key   = getKey();
+    var sb = getSb();
+    if (!sb) return Promise.resolve([]);
     var since = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
-    var url   = SUPABASE_URL + '/rest/v1/player_snapshots'
-      + '?select=player_count,recorded_at'
-      + '&recorded_at=gte.' + encodeURIComponent(since)
-      + '&order=recorded_at.asc&limit=60';
-    return fetch(url, {
-      headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
-    })
-      .then(function (r) { return r.ok ? r.json() : []; })
+    return sb
+      .from('player_snapshots')
+      .select('player_count, recorded_at')
+      .gte('recorded_at', since)
+      .order('recorded_at', { ascending: true })
+      .limit(60)
+      .then(function (res) {
+        if (res.error) { console.warn('[fv2-player] loadSnapshots:', res.error.message); return []; }
+        return res.data || [];
+      })
       .catch(function () { return []; });
   }
 
@@ -461,7 +463,7 @@
   /* Expose refresh agar bisa dipanggil dari luar */
   window._fv2PlayerRefresh = refreshPlayerCard;
 
-  /* Tombol Catat — insert snapshot ke Supabase lalu refresh */
+  /* Tombol Catat — insert snapshot via Supabase client lalu refresh */
   window.financeV2RecordPlayer = function () {
     var btn = document.querySelector('.fv2-player-record-btn');
     function resetBtn() {
@@ -475,23 +477,23 @@
     }
     if (btn) { btn.disabled = true; btn.textContent = 'Mencatat...'; }
 
+    var sb = getSb();
+    if (!sb) {
+      if (typeof window.showAdminToast === 'function') window.showAdminToast('Supabase client belum siap', 'error');
+      resetBtn();
+      return;
+    }
+
     fetchLivePlayers()
       .then(function (live) {
         if (live === null) throw new Error('Gagal ambil data server Bedrock');
-        var key = getKey();
-        return fetch(SUPABASE_URL + '/rest/v1/player_snapshots', {
-          method: 'POST',
-          headers: {
-            'apikey': key,
-            'Authorization': 'Bearer ' + key,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify({ player_count: live })
-        }).then(function (r) {
-          if (!r.ok) throw new Error('Supabase HTTP ' + r.status);
-          return live;
-        });
+        return sb
+          .from('player_snapshots')
+          .insert({ player_count: live })
+          .then(function (res) {
+            if (res.error) throw new Error(res.error.message);
+            return live;
+          });
       })
       .then(function (live) {
         refreshPlayerCard();
@@ -517,7 +519,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    /* Coba langsung, lalu retry kalau section belum di-inject */
     if (!tryAutoInit()) {
       var attempts = 0;
       var iv = setInterval(function () {
