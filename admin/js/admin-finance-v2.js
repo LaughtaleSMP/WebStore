@@ -323,6 +323,8 @@
 /* ── Player Online: load chart + tombol Catat ── */
 (function initFv2Player() {
   const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
+  /* Server IP hardcoded — tabel config tidak tersedia di Supabase */
+  const SERVER_IP = 'laughtale.my.id:19214';
   let playerChart = null;
   let refreshPromise = null;
 
@@ -330,24 +332,9 @@
     return window._supabaseKey || window.SUPABASE_KEY || '';
   }
 
-  async function resolveServerIp() {
-    const key = getKey();
-    const fallbackIp = (window.SERVER_IP || window.serverIp || 'laughtale.my.id:19214').trim();
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/config?select=value&key=eq.server_ip&limit=1`, {
-        headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
-      });
-      if (!res.ok) return fallbackIp;
-      const data = await res.json();
-      return (data && data[0] && data[0].value ? String(data[0].value) : fallbackIp).trim();
-    } catch (_) {
-      return fallbackIp;
-    }
-  }
-
   async function fetchLivePlayers() {
     try {
-      const ip = await resolveServerIp();
+      const ip = (window.SERVER_IP || window.serverIp || SERVER_IP).trim();
       const parts = ip.split(':');
       const host = parts[0];
       const port = parts[1] || 19132;
