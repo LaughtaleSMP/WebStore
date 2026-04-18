@@ -116,8 +116,6 @@
 
     /* ════ TAB: Transaksi ════ */
     '<div class="fv2-tab-panel active" id="fv2-panel-transactions">',
-
-      /* Action buttons */
       '<div class="fv2-actions" style="margin-top:14px">',
         '<button class="fv2-btn fv2-btn-in"',
           ' onclick="if(typeof window.financeV2ShowForm===\'function\')window.financeV2ShowForm(\'income\')">',
@@ -146,11 +144,9 @@
           '</svg>Export Excel</button>',
       '</div>',
 
-      /* Filter bar */
       '<div class="fv2-filter-bar">',
         '<label>Tipe:</label>',
-        '<select id="fv2-filter-type"',
-          ' onchange="if(typeof window.financeV2LoadList===\'function\')window.financeV2LoadList()">',
+        '<select id="fv2-filter-type" onchange="if(typeof window.financeV2LoadList===\'function\')window.financeV2LoadList()">',
           '<option value="">Semua Tipe</option>',
           '<option value="income">Pemasukan</option>',
           '<option value="expense">Pengeluaran</option>',
@@ -159,8 +155,7 @@
           '<option value="adjustment">Penyesuaian</option>',
         '</select>',
         '<label>Kategori:</label>',
-        '<select id="fv2-filter-cat"',
-          ' onchange="if(typeof window.financeV2LoadList===\'function\')window.financeV2LoadList()">',
+        '<select id="fv2-filter-cat" onchange="if(typeof window.financeV2LoadList===\'function\')window.financeV2LoadList()">',
           '<option value="">Semua Kategori</option>',
           '<option value="shop">Toko</option>',
           '<option value="sponsorship">Sponsorship</option>',
@@ -172,135 +167,89 @@
           '<option value="donation">Donasi</option>',
           '<option value="misc">Lainnya</option>',
         '</select>',
-        '<input id="fv2-search" placeholder="🔍 Cari keterangan..."',
-          ' oninput="if(typeof window.financeV2LoadList===\'function\')window.financeV2LoadList()"',
-          ' style="min-width:150px">',
+        '<input id="fv2-search" placeholder="🔍 Cari keterangan..." oninput="if(typeof window.financeV2LoadList===\'function\')window.financeV2LoadList()" style="min-width:150px">',
         '<label>Dari:</label>',
-        '<input type="date" id="fv2-from"',
-          ' onchange="if(typeof window.financeV2LoadList===\'function\')window.financeV2LoadList()">',
+        '<input type="date" id="fv2-from" onchange="if(typeof window.financeV2LoadList===\'function\')window.financeV2LoadList()">',
         '<label>Sampai:</label>',
-        '<input type="date" id="fv2-to"',
-          ' onchange="if(typeof window.financeV2LoadList===\'function\')window.financeV2LoadList()">',
-        '<button class="btn-ghost" style="font-size:11px;padding:5px 10px"',
-          ' onclick="if(typeof window.financeV2LoadList===\'function\')window.financeV2LoadList()">',
+        '<input type="date" id="fv2-to" onchange="if(typeof window.financeV2LoadList===\'function\')window.financeV2LoadList()">',
+        '<button class="btn-ghost" style="font-size:11px;padding:5px 10px" onclick="if(typeof window.financeV2LoadList===\'function\')window.financeV2LoadList()">',
           '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">',
             '<polyline points="23 4 23 10 17 10"/>',
             '<path d="M20.49 15a9 9 0 1 1-.08-5.96"/>',
           '</svg> Refresh</button>',
       '</div>',
 
-      /* List container */
       '<div id="fv2-list"><div class="empty-state">Pilih periode dan klik Refresh.</div></div>',
 
-      /* Pagination */
       '<div class="fv2-pagination" id="fv2-pagination" style="display:none">',
         '<span style="font-size:12px;color:var(--text-faint)" id="fv2-pg-info"></span>',
         '<div class="fv2-pg-btns">',
-          '<button class="fv2-pg-btn" id="fv2-pg-prev"',
-            ' onclick="if(typeof window.financeV2PgPrev===\'function\')window.financeV2PgPrev()">',
-            '← Prev</button>',
-          '<button class="fv2-pg-btn" id="fv2-pg-next"',
-            ' onclick="if(typeof window.financeV2PgNext===\'function\')window.financeV2PgNext()">',
-            'Next →</button>',
+          '<button class="fv2-pg-btn" id="fv2-pg-prev" onclick="if(typeof window.financeV2PgPrev===\'function\')window.financeV2PgPrev()">← Prev</button>',
+          '<button class="fv2-pg-btn" id="fv2-pg-next" onclick="if(typeof window.financeV2PgNext===\'function\')window.financeV2PgNext()">Next →</button>',
         '</div>',
-      '</div>',
-
-    '</div>', /* /panel-transactions */
-
-    /* ════ TAB: Cashflow ════ */
-    '<div class="fv2-tab-panel" id="fv2-panel-cashflow">',
-      '<div style="margin-top:14px" id="fv2-cashflow">',
-        '<div class="empty-state">Memuat cashflow bulanan...</div>',
       '</div>',
     '</div>',
 
-    /* ════ TAB: Setup DB ════ */
+    '<div class="fv2-tab-panel" id="fv2-panel-cashflow">',
+      '<div style="margin-top:14px" id="fv2-cashflow"><div class="empty-state">Memuat cashflow bulanan...</div></div>',
+    '</div>',
+
     '<div class="fv2-tab-panel" id="fv2-panel-setup">',
       '<div class="card" style="margin-top:14px">',
         '<div class="card-header"><div class="card-title">Setup Tabel Database</div></div>',
         '<div style="padding:16px">',
           '<p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.65">',
-            'Jika tabel <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11.5px">finance_transactions</code> atau ',
-            '<code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11.5px">player_snapshots</code> ',
-            'belum ada, jalankan SQL berikut di Supabase SQL Editor.',
+            'Jika tabel <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11.5px">finance_transactions</code> atau <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11.5px">player_snapshots</code> belum ada, jalankan SQL berikut di Supabase SQL Editor.',
           '</p>',
-          '<button class="save-btn"',
-            ' onclick="if(typeof window.financeV2SetupDB===\'function\')window.financeV2SetupDB()">',
-            'Lihat SQL Setup</button>',
+          '<button class="save-btn" onclick="if(typeof window.financeV2SetupDB===\'function\')window.financeV2SetupDB()">Lihat SQL Setup</button>',
           '<div id="fv2-sql-box" style="display:none;margin-top:16px">',
             '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">',
               '<span style="font-size:12px;font-weight:600;color:var(--text-muted)">SQL Setup</span>',
-              '<button class="btn-ghost" style="font-size:11px;padding:4px 10px"',
-                ' onclick="if(typeof window.financeV2CopySQL===\'function\')window.financeV2CopySQL()">',
-                'Copy SQL</button>',
+              '<button class="btn-ghost" style="font-size:11px;padding:4px 10px" onclick="if(typeof window.financeV2CopySQL===\'function\')window.financeV2CopySQL()">Copy SQL</button>',
             '</div>',
-            '<pre id="fv2-sql-code"',
-              ' style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;',
-              'padding:14px;font-size:11.5px;overflow-x:auto;color:var(--text);',
-              'white-space:pre-wrap;font-family:var(--mono);line-height:1.6"></pre>',
+            '<pre id="fv2-sql-code" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:11.5px;overflow-x:auto;color:var(--text);white-space:pre-wrap;font-family:var(--mono);line-height:1.6"></pre>',
           '</div>',
         '</div>',
       '</div>',
-    '</div>', /* /panel-setup */
+    '</div>',
 
-    /* ════ Modal Tambah Transaksi ════ */
-    '<div class="fv2-modal-overlay" id="fv2-modal" style="display:none"',
-      ' onclick="if(event.target===this&&typeof window.financeV2CloseModal===\'function\')window.financeV2CloseModal()">',
+    '<div class="fv2-modal-overlay" id="fv2-modal" style="display:none" onclick="if(event.target===this&&typeof window.financeV2CloseModal===\'function\')window.financeV2CloseModal()">',
       '<div class="fv2-modal">',
         '<div class="fv2-modal-header">',
           '<span class="fv2-modal-title" id="fv2-modal-title">Tambah Transaksi</span>',
-          '<button class="fv2-modal-close"',
-            ' onclick="if(typeof window.financeV2CloseModal===\'function\')window.financeV2CloseModal()">×</button>',
+          '<button class="fv2-modal-close" onclick="if(typeof window.financeV2CloseModal===\'function\')window.financeV2CloseModal()">×</button>',
         '</div>',
         '<div class="fv2-modal-body">',
           '<input type="hidden" id="fv2-form-type">',
           '<div class="field" style="margin-bottom:12px">',
             '<label>Nominal (Rp) <span style="color:var(--red)">*</span></label>',
-            '<input id="fv2-form-amount" type="number" min="0" placeholder="0"',
-              ' style="width:100%;background:var(--surface2);border:1px solid var(--border2);',
-              'border-radius:8px;padding:8px 11px;color:var(--text);font-size:13px;outline:none">',
+            '<input id="fv2-form-amount" type="number" min="0" placeholder="0" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 11px;color:var(--text);font-size:13px;outline:none">',
           '</div>',
           '<div class="field" style="margin-bottom:12px">',
             '<label>Kategori</label>',
-            '<select id="fv2-form-cat"',
-              ' style="width:100%;background:var(--surface2);border:1px solid var(--border2);',
-              'border-radius:8px;padding:8px 11px;color:var(--text);font-size:13px;',
-              'outline:none;font-family:inherit"></select>',
+            '<select id="fv2-form-cat" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 11px;color:var(--text);font-size:13px;outline:none;font-family:inherit"></select>',
           '</div>',
           '<div class="field" style="margin-bottom:12px">',
             '<label>Keterangan</label>',
-            '<input id="fv2-form-note" placeholder="Catatan singkat transaksi..."',
-              ' style="width:100%;background:var(--surface2);border:1px solid var(--border2);',
-              'border-radius:8px;padding:8px 11px;color:var(--text);font-size:13px;outline:none">',
+            '<input id="fv2-form-note" placeholder="Catatan singkat transaksi..." style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 11px;color:var(--text);font-size:13px;outline:none">',
           '</div>',
           '<div class="field" style="margin-bottom:12px">',
             '<label id="fv2-ref-label">Referensi (opsional)</label>',
-            '<input id="fv2-form-ref" placeholder="ID Order / nama donatur..."',
-              ' style="width:100%;background:var(--surface2);border:1px solid var(--border2);',
-              'border-radius:8px;padding:8px 11px;color:var(--text);font-size:13px;outline:none">',
+            '<input id="fv2-form-ref" placeholder="ID Order / nama donatur..." style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 11px;color:var(--text);font-size:13px;outline:none">',
           '</div>',
           '<div class="field">',
             '<label>Tanggal Transaksi</label>',
-            '<input id="fv2-form-date" type="date"',
-              ' style="width:100%;background:var(--surface2);border:1px solid var(--border2);',
-              'border-radius:8px;padding:8px 11px;color:var(--text);font-size:13px;',
-              'outline:none;color-scheme:dark">',
+            '<input id="fv2-form-date" type="date" style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 11px;color:var(--text);font-size:13px;outline:none;color-scheme:dark">',
           '</div>',
         '</div>',
         '<div class="fv2-modal-footer">',
-          '<button class="btn-ghost"',
-            ' onclick="if(typeof window.financeV2CloseModal===\'function\')window.financeV2CloseModal()">',
-            'Batal</button>',
-          '<button class="save-btn" id="fv2-submit-btn"',
-            ' onclick="if(typeof window.financeV2Submit===\'function\')window.financeV2Submit()">',
-            'Simpan Transaksi</button>',
+          '<button class="btn-ghost" onclick="if(typeof window.financeV2CloseModal===\'function\')window.financeV2CloseModal()">Batal</button>',
+          '<button class="save-btn" id="fv2-submit-btn" onclick="if(typeof window.financeV2Submit===\'function\')window.financeV2Submit()">Simpan Transaksi</button>',
         '</div>',
       '</div>',
-    '</div>', /* /modal */
-
+    '</div>',
   ].join('');
 
-  /* ── Tab switcher ── */
   window._fv2Tab = function (tab, btn) {
     var root = document.getElementById('fv2-root');
     if (!root) return;
@@ -314,7 +263,6 @@
     }
   };
 
-  /* ── Inject HTML ke #fv2-root ── */
   function injectRoot() {
     var root = document.getElementById('fv2-root');
     if (!root || root.dataset.fv2Injected) return;
@@ -323,24 +271,16 @@
     bindListeners();
   }
 
-  /* ── Bind event listeners setelah HTML diinjeksi ── */
   function bindListeners() {
-    /* Period select — reload summary + charts */
     var periodEl = document.getElementById('fv2-period');
     if (periodEl) {
       periodEl.addEventListener('change', function () {
         var period = this.value;
-        if (typeof window.financeV2LoadSummary === 'function') {
-          window.financeV2LoadSummary(period);
-        }
-        // Re-run full init to reload charts too
-        if (typeof window.financeV2Init === 'function') {
-          window.financeV2Init();
-        }
+        if (typeof window.financeV2LoadSummary === 'function') window.financeV2LoadSummary(period);
+        if (typeof window.financeV2Init === 'function') window.financeV2Init();
       });
     }
 
-    /* Export btn di page header (sudah ada di index.html) */
     var exportBtn = document.getElementById('fv2-export-btn');
     if (exportBtn && !exportBtn.dataset.fv2Bound) {
       exportBtn.dataset.fv2Bound = '1';
@@ -349,7 +289,6 @@
       });
     }
 
-    /* finance-month (header input) — sync ke fv2-period jika berubah */
     var monthEl = document.getElementById('finance-month');
     if (monthEl && !monthEl.dataset.fv2Bound) {
       monthEl.dataset.fv2Bound = '1';
@@ -359,27 +298,21 @@
     }
   }
 
-  /* ── Init pada DOMContentLoaded ── */
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', injectRoot);
   } else {
     injectRoot();
   }
 
-  /* ── Expose untuk pemanggilan ulang (misal setelah section re-render) ── */
   window._fv2Inject = injectRoot;
 
-  /* ── Hook showSection agar root selalu terisi sebelum financeV2Init ── */
   document.addEventListener('DOMContentLoaded', function () {
-    // Tunggu semua script defer selesai
     setTimeout(function () {
       var origShow = window.showSection;
       if (origShow && !origShow._fv2Hooked) {
         window.showSection = function (name, el) {
           origShow(name, el);
-          if (name === 'finance-v2') {
-            injectRoot();
-          }
+          if (name === 'finance-v2') injectRoot();
         };
         window.showSection._fv2Hooked = true;
       }
@@ -391,55 +324,89 @@
 (function initFv2Player() {
   const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
   let playerChart = null;
+  let refreshPromise = null;
 
-  /* FIX: pakai window._supabaseKey yang didefinisikan di supabase-config.js */
   function getKey() {
     return window._supabaseKey || window.SUPABASE_KEY || '';
   }
 
+  async function resolveServerIp() {
+    const key = getKey();
+    const fallbackIp = (window.SERVER_IP || window.serverIp || 'laughtale.my.id:19214').trim();
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/config?select=value&key=eq.server_ip&limit=1`, {
+        headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+      });
+      if (!res.ok) return fallbackIp;
+      const data = await res.json();
+      return (data && data[0] && data[0].value ? String(data[0].value) : fallbackIp).trim();
+    } catch (_) {
+      return fallbackIp;
+    }
+  }
+
   async function fetchLivePlayers() {
     try {
-      const key = getKey();
-      const cfgRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/config?select=value&key=eq.server_ip&limit=1`,
-        { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
-      );
-      const cfgData = await cfgRes.json();
-      const ip = (cfgData[0]?.value) || 'laughtale.my.id:19214';
-      const [host, port] = ip.split(':');
-
-      const apiRes = await fetch(`https://api.mcsrvstat.us/3/${host}:${port || 19132}`);
+      const ip = await resolveServerIp();
+      const parts = ip.split(':');
+      const host = parts[0];
+      const port = parts[1] || 19132;
+      const apiRes = await fetch(`https://api.mcsrvstat.us/3/${host}:${port}`);
+      if (!apiRes.ok) return null;
       const data = await apiRes.json();
-      return data.online ? (data.players?.online ?? 0) : 0;
-    } catch { return null; }
+      return data && data.online ? (data.players && typeof data.players.online === 'number' ? data.players.online : 0) : 0;
+    } catch (_) {
+      return null;
+    }
   }
 
   async function loadPlayerSnapshots() {
     const key = getKey();
-    const since = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/player_snapshots?select=player_count,recorded_at&recorded_at=gte.${encodeURIComponent(since)}&order=recorded_at.asc&limit=60`,
-      { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
-    );
-    return res.ok ? res.json() : [];
+    try {
+      const since = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/player_snapshots?select=player_count,recorded_at&recorded_at=gte.${encodeURIComponent(since)}&order=recorded_at.asc&limit=60`, {
+        headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+      });
+      if (!res.ok) return [];
+      return await res.json();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function destroyPlayerChart() {
+    const canvas = document.getElementById('fv2-player-chart');
+    try {
+      if (playerChart && typeof playerChart.destroy === 'function') {
+        playerChart.destroy();
+      }
+    } catch (_) {}
+    playerChart = null;
+    try {
+      if (window.Chart && typeof window.Chart.getChart === 'function' && canvas) {
+        const existing = window.Chart.getChart(canvas);
+        if (existing) existing.destroy();
+      }
+    } catch (_) {}
   }
 
   function renderPlayerChart(snapshots) {
     const canvas = document.getElementById('fv2-player-chart');
-    if (!canvas) return;
+    if (!canvas || !window.Chart) return;
+
+    destroyPlayerChart();
+
     const ctx = canvas.getContext('2d');
-    const labels = snapshots.map(d => {
+    const labels = snapshots.map(function (d) {
       const dt = new Date(d.recorded_at);
       return dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     });
-    const values = snapshots.map(d => d.player_count);
+    const values = snapshots.map(function (d) { return d.player_count; });
 
-    if (playerChart) { playerChart.destroy(); playerChart = null; }
-
-    playerChart = new Chart(ctx, {
+    playerChart = new window.Chart(ctx, {
       type: 'line',
       data: {
-        labels,
+        labels: labels,
         datasets: [{
           data: values,
           borderColor: '#4a8fff',
@@ -451,13 +418,20 @@
         }]
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: {
-            title: (i) => new Date(snapshots[i[0].dataIndex].recorded_at).toLocaleString('id-ID'),
-            label: (i) => ` ${i.raw} pemain`
-          }}
+          tooltip: {
+            callbacks: {
+              title: function (items) {
+                return new Date(snapshots[items[0].dataIndex].recorded_at).toLocaleString('id-ID');
+              },
+              label: function (item) {
+                return ' ' + item.raw + ' pemain';
+              }
+            }
+          }
         },
         scales: {
           x: { ticks: { maxTicksLimit: 6, font: { size: 10 }, color: '#666' }, grid: { color: 'rgba(255,255,255,0.04)' } },
@@ -468,34 +442,48 @@
   }
 
   async function refreshPlayerCard() {
-    const numEl   = document.getElementById('fv2-player-num');
-    const labelEl = document.getElementById('fv2-player-label');
-    const dotEl   = document.getElementById('fv2-player-dot');
-    const nextEl  = document.getElementById('fv2-player-next-update');
+    if (refreshPromise) return refreshPromise;
 
-    const [live, snapshots] = await Promise.all([fetchLivePlayers(), loadPlayerSnapshots()]);
+    refreshPromise = (async function () {
+      const numEl = document.getElementById('fv2-player-num');
+      const labelEl = document.getElementById('fv2-player-label');
+      const dotEl = document.getElementById('fv2-player-dot');
+      const nextEl = document.getElementById('fv2-player-next-update');
 
-    if (numEl)   numEl.textContent   = live !== null ? live : '—';
-    if (labelEl) labelEl.textContent = live !== null
-      ? (live > 0 ? 'pemain online sekarang' : 'server kosong')
-      : 'gagal memuat';
-    if (dotEl) {
-      dotEl.classList.toggle('pg-dot-online',  live > 0);
-      dotEl.classList.toggle('pg-dot-offline', live === 0 || live === null);
-    }
+      const results = await Promise.all([fetchLivePlayers(), loadPlayerSnapshots()]);
+      const live = results[0];
+      const snapshots = results[1];
 
-    if (snapshots.length) renderPlayerChart(snapshots);
+      if (numEl) numEl.textContent = live !== null ? live : '—';
+      if (labelEl) {
+        labelEl.textContent = live !== null ? (live > 0 ? 'pemain online sekarang' : 'server kosong') : 'gagal memuat';
+      }
+      if (dotEl) {
+        dotEl.classList.toggle('pg-dot-online', live > 0);
+        dotEl.classList.toggle('pg-dot-offline', live === 0 || live === null);
+      }
 
-    if (nextEl) {
-      const next = new Date(Date.now() + 5 * 60 * 1000);
-      nextEl.textContent = `Update berikutnya: ${next.toLocaleTimeString('id-ID')}`;
+      renderPlayerChart(Array.isArray(snapshots) ? snapshots : []);
+
+      if (nextEl) {
+        const next = new Date(Date.now() + 5 * 60 * 1000);
+        nextEl.textContent = 'Update berikutnya: ' + next.toLocaleTimeString('id-ID');
+      }
+    })();
+
+    try {
+      await refreshPromise;
+    } finally {
+      refreshPromise = null;
     }
   }
 
-  /* Tombol Catat: insert snapshot ke Supabase */
   window.financeV2RecordPlayer = async function () {
     const btn = document.querySelector('.fv2-player-record-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Mencatat...'; }
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Mencatat...';
+    }
 
     try {
       const live = await fetchLivePlayers();
@@ -505,17 +493,20 @@
       const res = await fetch(`${SUPABASE_URL}/rest/v1/player_snapshots`, {
         method: 'POST',
         headers: {
-          'apikey': key, 'Authorization': `Bearer ${key}`,
-          'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+          'apikey': key,
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
         },
         body: JSON.stringify({ player_count: live })
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await refreshPlayerCard();
+
       if (btn) {
         btn.textContent = '✓ Tercatat';
-        setTimeout(() => {
+        setTimeout(function () {
           btn.disabled = false;
           btn.innerHTML = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Catat';
         }, 2000);
@@ -533,22 +524,20 @@
     }
   };
 
-  /* Hook showSection — refresh card saat section finance-v2 dibuka */
   document.addEventListener('DOMContentLoaded', function () {
     setTimeout(function () {
-      const _orig = window.showSection;
-      if (_orig && !_orig._fv2PlayerHooked) {
+      const orig = window.showSection;
+      if (orig && !window.__fv2PlayerShowSectionHooked) {
         window.showSection = function (id, el) {
-          _orig(id, el);
+          orig(id, el);
           if (id === 'finance-v2') setTimeout(refreshPlayerCard, 150);
         };
-        window.showSection._fv2PlayerHooked = true;
+        window.__fv2PlayerShowSectionHooked = true;
       }
     }, 300);
   });
 
-  /* Auto-refresh tiap 5 menit */
-  setInterval(() => {
+  setInterval(function () {
     if (document.getElementById('fv2-player-chart')) refreshPlayerCard();
   }, 5 * 60 * 1000);
 })();
