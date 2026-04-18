@@ -385,6 +385,7 @@
       }
     }, 200);
   });
+})();
    
 /* ── Player Online: load chart + tombol Catat ── */
 (function initFv2Player() {
