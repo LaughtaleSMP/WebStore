@@ -10,6 +10,7 @@
   /* ── Konstanta ── */
   const REFRESH_MS   = 5 * 60 * 1000; // 5 menit
   const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
+  const TZ           = 'Asia/Jakarta'; // WIB UTC+7
 
   let chartInstance  = null;
   let refreshTimer   = null;
@@ -21,11 +22,22 @@
 
   /* ── Helpers ── */
   function getSupabaseKey() {
-    // Prioritas: window._supabaseKey (diset supabase-config.js)
     return window._supabaseKey
       || window.SUPABASE_KEY
       || window.SUPABASE_ANON_KEY
       || '';
+  }
+
+  function fmtDate(dt) {
+    return dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', timeZone: TZ });
+  }
+
+  function fmtTime(dt) {
+    return dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+  }
+
+  function fmtFull(dt) {
+    return dt.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short', timeZone: TZ });
   }
 
   async function fetchSnapshots(range) {
@@ -59,9 +71,7 @@
 
     const labels = data.map(d => {
       const dt = new Date(d.recorded_at);
-      const tgl = dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
-      const jam = dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-      return `${tgl} ${jam}`;
+      return `${fmtDate(dt)} ${fmtTime(dt)}`;
     });
     const values = data.map(d => d.player_count);
 
@@ -107,7 +117,7 @@
               title: (items) => {
                 const idx = items[0].dataIndex;
                 const dt  = new Date(data[idx].recorded_at);
-                return dt.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+                return fmtFull(dt); // ← WIB
               },
               label: (item) => ` ${item.raw} pemain online`
             }
@@ -195,7 +205,7 @@
       }
       renderChart(data);
       updateStats(data);
-      setText('pg-last-update', new Date().toLocaleTimeString('id-ID'));
+      setText('pg-last-update', new Date().toLocaleTimeString('id-ID', { timeZone: TZ }));
     } catch (e) {
       setError('Gagal memuat data: ' + e.message);
       console.error('[PlayerGraph]', e);
@@ -272,17 +282,17 @@
   /* ── Init saat section dibuka ── */
   window.initPlayerGraph = function () {
     if (!document.getElementById('pg-chart-canvas')) return;
-   
+
     // Jika chart sudah ada, refresh data saja (jangan skip!)
     if (chartInstance) {
       loadData(currentRange);
       startCountdown();
       return;
     }
-   
+
     // Pertama kali dibuka — buat chart + mulai auto refresh
     loadData(currentRange);
     startAutoRefresh();
- };
+  };
 
 })();
