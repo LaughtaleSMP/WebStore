@@ -312,7 +312,12 @@
       if (origShow && !origShow._fv2Hooked) {
         window.showSection = function (name, el) {
           origShow(name, el);
-          if (name === 'finance-v2') injectRoot();
+          if (name === 'finance-v2') {
+            injectRoot();
+            setTimeout(function () {
+              if (typeof window._fv2PlayerRefresh === 'function') window._fv2PlayerRefresh();
+            }, 200);
+          }
         };
         window.showSection._fv2Hooked = true;
       }
@@ -322,80 +327,93 @@
 
 /* ── Player Online: load chart + tombol Catat ── */
 (function initFv2Player() {
-  const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
-  /* Bedrock Edition — gunakan endpoint /bedrock/3/ bukan /3/ */
-  const SERVER_HOST = 'laughtale.my.id';
-  const SERVER_PORT = '19214';
-  let playerChart = null;
-  let refreshPromise = null;
+  var SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
+  var SERVER_HOST  = 'laughtale.my.id';
+  var SERVER_PORT  = '19214';
+  var playerChart  = null;
+  var _running     = false;
 
+  /* Ambil anon key — coba semua kemungkinan variabel */
   function getKey() {
-    return window._supabaseKey || window.SUPABASE_KEY || '';
+    return window._supabaseKey || window.SUPABASE_KEY || window.SUPABASE_ANON_KEY || '';
   }
 
-  async function fetchLivePlayers() {
-    try {
-      const host = window.SERVER_HOST || SERVER_HOST;
-      const port = window.SERVER_PORT || SERVER_PORT;
-      /* Bedrock Edition wajib pakai /bedrock/3/ */
-      const apiRes = await fetch(`https://api.mcsrvstat.us/bedrock/3/${host}:${port}`);
-      if (!apiRes.ok) return null;
-      const data = await apiRes.json();
-      if (!data || !data.online) return 0;
-      return typeof data.players?.online === 'number' ? data.players.online : 0;
-    } catch (_) {
-      return null;
-    }
+  /* Fetch jumlah pemain live dari mcsrvstat (Bedrock) */
+  function fetchLivePlayers() {
+    return fetch('https://api.mcsrvstat.us/bedrock/3/' + SERVER_HOST + ':' + SERVER_PORT)
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.online) return 0;
+        return (d.players && typeof d.players.online === 'number') ? d.players.online : 0;
+      })
+      .catch(function () { return null; });
   }
 
-  async function loadPlayerSnapshots() {
-    const key = getKey();
-    try {
-      const since = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/player_snapshots?select=player_count,recorded_at&recorded_at=gte.${encodeURIComponent(since)}&order=recorded_at.asc&limit=60`,
-        { headers: { 'apikey': key, 'Authorization': `Bearer ${key}` } }
-      );
-      if (!res.ok) return [];
-      return await res.json();
-    } catch (_) {
-      return [];
-    }
+  /* Fetch 60 snapshot terakhir dari Supabase */
+  function loadPlayerSnapshots() {
+    var key   = getKey();
+    var since = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
+    var url   = SUPABASE_URL + '/rest/v1/player_snapshots'
+      + '?select=player_count,recorded_at'
+      + '&recorded_at=gte.' + encodeURIComponent(since)
+      + '&order=recorded_at.asc&limit=60';
+    return fetch(url, {
+      headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
+    })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .catch(function () { return []; });
   }
 
-  function destroyPlayerChart() {
-    const canvas = document.getElementById('fv2-player-chart');
-    try { if (playerChart) playerChart.destroy(); } catch (_) {}
+  /* Destroy chart lama agar tidak double-render */
+  function destroyChart() {
+    var canvas = document.getElementById('fv2-player-chart');
+    try { if (playerChart) playerChart.destroy(); } catch (e) {}
     playerChart = null;
     try {
-      if (window.Chart?.getChart && canvas) {
-        const ex = window.Chart.getChart(canvas);
+      if (window.Chart && window.Chart.getChart && canvas) {
+        var ex = window.Chart.getChart(canvas);
         if (ex) ex.destroy();
       }
-    } catch (_) {}
+    } catch (e) {}
   }
 
-  function renderPlayerChart(snapshots) {
-    const canvas = document.getElementById('fv2-player-chart');
+  /* Render line chart snapshot */
+  function renderChart(snapshots) {
+    var canvas = document.getElementById('fv2-player-chart');
     if (!canvas || !window.Chart) return;
-    destroyPlayerChart();
-    const ctx = canvas.getContext('2d');
-    const labels = snapshots.map(d => new Date(d.recorded_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
-    const values = snapshots.map(d => d.player_count);
-    playerChart = new window.Chart(ctx, {
+    destroyChart();
+    var labels = snapshots.map(function (d) {
+      return new Date(d.recorded_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    });
+    var values = snapshots.map(function (d) { return d.player_count; });
+    playerChart = new window.Chart(canvas.getContext('2d'), {
       type: 'line',
       data: {
-        labels,
-        datasets: [{ data: values, borderColor: '#4a8fff', backgroundColor: 'rgba(74,143,255,0.12)', borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.4 }]
+        labels: labels,
+        datasets: [{
+          data: values,
+          borderColor: '#4a8fff',
+          backgroundColor: 'rgba(74,143,255,0.12)',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.4
+        }]
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: {
-            title: items => new Date(snapshots[items[0].dataIndex].recorded_at).toLocaleString('id-ID'),
-            label: item => ` ${item.raw} pemain`
-          }}
+          tooltip: {
+            callbacks: {
+              title: function (items) {
+                return new Date(snapshots[items[0].dataIndex].recorded_at)
+                  .toLocaleString('id-ID');
+              },
+              label: function (item) { return ' ' + item.raw + ' pemain'; }
+            }
+          }
         },
         scales: {
           x: { ticks: { maxTicksLimit: 6, font: { size: 10 }, color: '#666' }, grid: { color: 'rgba(255,255,255,0.04)' } },
@@ -405,74 +423,111 @@
     });
   }
 
-  async function refreshPlayerCard() {
-    if (refreshPromise) return refreshPromise;
-    refreshPromise = (async () => {
-      const numEl   = document.getElementById('fv2-player-num');
-      const labelEl = document.getElementById('fv2-player-label');
-      const dotEl   = document.getElementById('fv2-player-dot');
-      const nextEl  = document.getElementById('fv2-player-next-update');
+  /* Refresh seluruh kartu player */
+  function refreshPlayerCard() {
+    if (_running) return;
+    _running = true;
 
-      const [live, snapshots] = await Promise.all([fetchLivePlayers(), loadPlayerSnapshots()]);
+    Promise.all([fetchLivePlayers(), loadPlayerSnapshots()])
+      .then(function (results) {
+        var live      = results[0];
+        var snapshots = Array.isArray(results[1]) ? results[1] : [];
 
-      if (numEl)   numEl.textContent   = live !== null ? live : '—';
-      if (labelEl) labelEl.textContent = live === null ? 'gagal memuat' : live > 0 ? 'pemain online sekarang' : 'server kosong';
-      if (dotEl) {
-        dotEl.classList.toggle('pg-dot-online',  live > 0);
-        dotEl.classList.toggle('pg-dot-offline', live === 0 || live === null);
-      }
-      renderPlayerChart(Array.isArray(snapshots) ? snapshots : []);
-      if (nextEl) nextEl.textContent = 'Update berikutnya: ' + new Date(Date.now() + 5 * 60 * 1000).toLocaleTimeString('id-ID');
-    })();
-    try { await refreshPromise; } finally { refreshPromise = null; }
+        var numEl   = document.getElementById('fv2-player-num');
+        var labelEl = document.getElementById('fv2-player-label');
+        var dotEl   = document.getElementById('fv2-player-dot');
+        var nextEl  = document.getElementById('fv2-player-next-update');
+
+        if (numEl)   numEl.textContent   = live !== null ? String(live) : '—';
+        if (labelEl) labelEl.textContent = live === null
+          ? 'gagal memuat'
+          : (live > 0 ? 'pemain online sekarang' : 'server kosong');
+
+        if (dotEl) {
+          dotEl.classList.toggle('pg-dot-online',  live !== null && live > 0);
+          dotEl.classList.toggle('pg-dot-offline', live === null || live === 0);
+        }
+
+        if (snapshots.length) renderChart(snapshots);
+
+        if (nextEl) {
+          nextEl.textContent = 'Update berikutnya: '
+            + new Date(Date.now() + 5 * 60 * 1000).toLocaleTimeString('id-ID');
+        }
+      })
+      .finally(function () { _running = false; });
   }
 
-  window.financeV2RecordPlayer = async function () {
-    const btn = document.querySelector('.fv2-player-record-btn');
-    const resetBtn = () => {
+  /* Expose refresh agar bisa dipanggil dari luar */
+  window._fv2PlayerRefresh = refreshPlayerCard;
+
+  /* Tombol Catat — insert snapshot ke Supabase lalu refresh */
+  window.financeV2RecordPlayer = function () {
+    var btn = document.querySelector('.fv2-player-record-btn');
+    function resetBtn() {
       if (!btn) return;
       btn.disabled = false;
-      btn.innerHTML = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> Catat';
-    };
+      btn.innerHTML = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">'
+        + '<circle cx="12" cy="12" r="10"/>'
+        + '<line x1="12" y1="8" x2="12" y2="16"/>'
+        + '<line x1="8" y1="12" x2="16" y2="12"/>'
+        + '</svg> Catat';
+    }
     if (btn) { btn.disabled = true; btn.textContent = 'Mencatat...'; }
 
-    try {
-      const live = await fetchLivePlayers();
-      if (live === null) throw new Error('Gagal ambil data server Bedrock');
-
-      const key = getKey();
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/player_snapshots`, {
-        method: 'POST',
-        headers: { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ player_count: live })
+    fetchLivePlayers()
+      .then(function (live) {
+        if (live === null) throw new Error('Gagal ambil data server Bedrock');
+        var key = getKey();
+        return fetch(SUPABASE_URL + '/rest/v1/player_snapshots', {
+          method: 'POST',
+          headers: {
+            'apikey': key,
+            'Authorization': 'Bearer ' + key,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ player_count: live })
+        }).then(function (r) {
+          if (!r.ok) throw new Error('Supabase HTTP ' + r.status);
+          return live;
+        });
+      })
+      .then(function (live) {
+        refreshPlayerCard();
+        if (btn) {
+          btn.textContent = '✓ Tercatat (' + live + ' pemain)';
+          setTimeout(resetBtn, 2500);
+        }
+      })
+      .catch(function (e) {
+        if (typeof window.showAdminToast === 'function') window.showAdminToast('Gagal catat: ' + e.message, 'error');
+        else alert('Gagal catat: ' + e.message);
+        resetBtn();
       });
-      if (!res.ok) throw new Error(`Supabase HTTP ${res.status}`);
-
-      await refreshPlayerCard();
-      if (btn) {
-        btn.textContent = `✓ Tercatat (${live} pemain)`;
-        setTimeout(resetBtn, 2500);
-      }
-    } catch (e) {
-      if (typeof window.showAdminToast === 'function') window.showAdminToast('Gagal catat: ' + e.message, 'error');
-      else alert('Gagal catat: ' + e.message);
-      resetBtn();
-    }
   };
 
+  /* Auto-init: tunggu DOM + pastikan canvas sudah ada lalu load */
+  function tryAutoInit() {
+    if (document.getElementById('fv2-player-chart')) {
+      refreshPlayerCard();
+      return true;
+    }
+    return false;
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
-    setTimeout(function () {
-      const orig = window.showSection;
-      if (orig && !window.__fv2PlayerShowSectionHooked) {
-        window.showSection = function (id, el) {
-          orig(id, el);
-          if (id === 'finance-v2') setTimeout(refreshPlayerCard, 150);
-        };
-        window.__fv2PlayerShowSectionHooked = true;
-      }
-    }, 300);
+    /* Coba langsung, lalu retry kalau section belum di-inject */
+    if (!tryAutoInit()) {
+      var attempts = 0;
+      var iv = setInterval(function () {
+        attempts++;
+        if (tryAutoInit() || attempts >= 20) clearInterval(iv);
+      }, 300);
+    }
   });
 
+  /* Auto-refresh tiap 5 menit selama kartu visible */
   setInterval(function () {
     if (document.getElementById('fv2-player-chart')) refreshPlayerCard();
   }, 5 * 60 * 1000);
