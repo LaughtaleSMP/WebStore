@@ -44,6 +44,91 @@
 
 /* Finance V2 modal open state */
 .fv2-modal-overlay[style*="flex"] { display: flex; }
+
+/* ════════════════════════════════════════════════════
+   PLAYER MINI STATS — untuk kartu Player Online
+   ════════════════════════════════════════════════════ */
+.fv2-player-mini-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin: 10px 0 8px;
+}
+
+.fv2-pmini-card {
+  background: rgba(255,255,255,0.028);
+  border: 1px solid rgba(255,255,255,0.055);
+  border-radius: 8px;
+  padding: 8px 6px;
+  text-align: center;
+  transition: border-color 160ms, background 160ms;
+}
+.fv2-pmini-card:hover {
+  border-color: rgba(74,143,255,0.2);
+  background: rgba(74,143,255,0.04);
+}
+
+.fv2-pmini-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.fv2-pmini-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-faint);
+  margin-top: 3px;
+  white-space: nowrap;
+}
+
+/* Responsive: stack 2x2 on narrow */
+@media (max-width: 480px) {
+  .fv2-player-mini-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Player dot fix (dipakai oleh admin-finance.js & admin-finance-v2.js) ── */
+.fv2-player-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex-shrink: 0;
+  transition: background 300ms, box-shadow 300ms;
+}
+.fv2-player-dot.online {
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(52,211,153,0.2);
+  animation: playerDotPulse 2s ease-in-out infinite;
+}
+.fv2-player-dot.offline { background: var(--red); }
+@keyframes playerDotPulse {
+  0%,100% { box-shadow: 0 0 0 3px rgba(52,211,153,0.2); }
+  50%     { box-shadow: 0 0 0 6px rgba(52,211,153,0.04); }
+}
+
+/* ── Charts row-b responsive fix ── */
+@media (max-width: 760px) {
+  .fv2-charts-row-b {
+    grid-template-columns: 1fr !important;
+  }
+  .fv2-player-mini-stats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .fv2-player-mini-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .fv2-pmini-val { font-size: 0.95rem; }
+}
 </style>
 </head>
 <body>
@@ -628,7 +713,6 @@
             </button>
           </div>
         </div>
-        <!-- Bug #1 fix: ID all-orders-table (bukan all-orders-tbody) -->
         <div style="overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);">
           <div id="all-orders-table"><div class="empty-state">Pilih filter dan klik Tampilkan.</div></div>
         </div>
@@ -731,7 +815,7 @@
           </div>
         </div>
 
-        <!-- Charts Row B -->
+        <!-- Charts Row B — FIXED: player card dengan mini stats langsung di HTML -->
         <div class="fv2-charts-row-b">
           <div class="fv2-bar-card">
             <div class="fv2-bar-inner">
@@ -747,25 +831,59 @@
               </div>
             </div>
           </div>
-          <div class="fv2-player-card">
+
+          <!-- Player card — data-enhanced="1" mencegah admin-finance.js memodifikasi DOM -->
+          <div class="fv2-player-card" data-enhanced="1">
             <div class="fv2-chart-header">
               <div class="fv2-chart-header-text">
                 <div class="fv2-chart-title">Player Online</div>
                 <div class="fv2-chart-sub">Riwayat jumlah pemain di server</div>
               </div>
               <button class="fv2-player-record-btn" onclick="financeV2RecordPlayer()">
-                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
                 Catat
               </button>
             </div>
-            <div class="fv2-player-stat" id="fv2-player-stat">
-              <span class="fv2-player-dot" id="fv2-player-dot"></span>
-              <div>
-                <div class="fv2-player-num" id="fv2-player-num">—</div>
-                <div class="fv2-player-label" id="fv2-player-label">Memuat status server…</div>
+
+            <!-- Status row -->
+            <div class="fv2-player-stat" id="fv2-player-stat" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(74,143,255,0.05);border:1px solid rgba(74,143,255,0.1);border-radius:9px;margin-bottom:8px;">
+              <div class="fv2-player-dot" id="fv2-player-dot"></div>
+              <div style="flex:1">
+                <div style="font-size:1.35rem;font-weight:800;color:var(--text-main);letter-spacing:-0.8px;line-height:1;font-variant-numeric:tabular-nums" id="fv2-player-num">—</div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px" id="fv2-player-label">Memuat status server…</div>
               </div>
             </div>
-            <div style="position:relative;width:100%;height:130px"><canvas id="fv2-player-chart"></canvas></div>
+
+            <!-- ═══ MINI STATS — FIXED: langsung di HTML ═══ -->
+            <div class="fv2-player-mini-stats">
+              <div class="fv2-pmini-card">
+                <div class="fv2-pmini-val" id="fv2-pmini-current">—</div>
+                <div class="fv2-pmini-label">Sekarang</div>
+              </div>
+              <div class="fv2-pmini-card">
+                <div class="fv2-pmini-val" id="fv2-pmini-peak" style="color:#fbbf24">—</div>
+                <div class="fv2-pmini-label">Tertinggi</div>
+              </div>
+              <div class="fv2-pmini-card">
+                <div class="fv2-pmini-val" id="fv2-pmini-avg" style="color:#a78bfa">—</div>
+                <div class="fv2-pmini-label">Rata-rata</div>
+              </div>
+              <div class="fv2-pmini-card">
+                <div class="fv2-pmini-val" id="fv2-pmini-count" style="color:#34d399">—</div>
+                <div class="fv2-pmini-label">Rekaman</div>
+              </div>
+            </div>
+
+            <!-- Chart canvas -->
+            <div style="position:relative;width:100%;height:120px">
+              <canvas id="fv2-player-chart"></canvas>
+            </div>
+
+            <!-- Next update label -->
+            <div style="font-size:10px;color:var(--text-faint);margin-top:6px;font-variant-numeric:tabular-nums" id="fv2-player-next-update"></div>
           </div>
         </div>
 
@@ -945,8 +1063,6 @@
 <script>
 /* ================================================================
    INLINE SCRIPT — index.html
-   Hanya berisi helpers yang benar-benar perlu inline.
-   Semua logic utama sudah dipindah ke file JS masing-masing.
 ================================================================ */
 
 /* ── Password toggle ── */
@@ -1051,7 +1167,6 @@ async function _renderFinanceSection(from, to) {
   if (ord)  ord.textContent  = data.length + ' order';
   if (avg2) avg2.textContent = 'Rp ' + avg.toLocaleString('id-ID');
 
-  /* Performa per Admin */
   var adminMap = {};
   data.forEach(function(r) {
     var name = r.wa_admin_name || r.completed_by_name || 'Unknown';
@@ -1075,7 +1190,6 @@ async function _renderFinanceSection(from, to) {
     }).join('') +
     '</tbody></table></div>';
 
-  /* Item Terlaris — Bug #4 fix: fallback ke field 'item' */
   var itemMap = {};
   data.forEach(function(r) {
     var name = r.item_name || '?';
@@ -1097,7 +1211,6 @@ async function _renderFinanceSection(from, to) {
     }).join('') +
     '</tbody></table></div>';
 
-  /* Detail Order */
   ordersTbl.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px;">' +
     '<thead><tr>' +
       '<th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">WAKTU</th>' +
