@@ -504,7 +504,9 @@
     _updateCountdownLabel();
   }
 
-  /* ── Live player count fetch ── */
+  /* ── Live player count fetch ──
+     FIX: setelah dapat data live, update juga angka "SEKARANG" di mini stats
+  */
   function _fetchLivePlayerCount() {
     var ip = _getServerIp();
     var parts = ip.split(':');
@@ -522,14 +524,20 @@
           var onl = data.players ? (data.players.online || 0) : 0;
           var max = data.players ? (data.players.max || '?') : '?';
           if (dotEl) { dotEl.className = 'fv2-player-dot online'; }
-          if (numEl) { numEl.textContent = onl; }
+          if (numEl) { numEl.textContent = onl; numEl.className = 'fv2-player-big-num online-color'; }
           if (lblEl) { lblEl.textContent = 'pemain online sekarang'; }
           if (maxEl) { maxEl.textContent = '/ ' + max + ' maks'; }
+          /* ★ FIX: sinkronkan mini stat "SEKARANG" dengan data live ★ */
+          var curEl = document.getElementById('fv2-pmini-current');
+          if (curEl) curEl.textContent = onl;
         } else {
           if (dotEl) { dotEl.className = 'fv2-player-dot offline'; }
-          if (numEl) { numEl.textContent = '0'; }
+          if (numEl) { numEl.textContent = '0'; numEl.className = 'fv2-player-big-num offline-color'; }
           if (lblEl) { lblEl.textContent = 'Server offline'; }
           if (maxEl) { maxEl.textContent = ''; }
+          /* ★ FIX: set 0 saat offline ★ */
+          var curEl = document.getElementById('fv2-pmini-current');
+          if (curEl) curEl.textContent = '0';
         }
       })
       .catch(function () {
@@ -755,45 +763,35 @@
         canvasParent.style.cssText = 'position:relative;width:100%;height:140px';
       }
     }
-
-    // Inject/update last-recorded info
-    if (oldLabel) {
-      // Akan diupdate oleh _updateCountdownLabel
-    }
   }
 
-  /* ── Render mini stats ── */
+  /* ── Render mini stats ──
+     FIX: "SEKARANG" tidak lagi diisi dari sini, diisi oleh _fetchLivePlayerCount
+     agar selalu sinkron dengan data live API.
+  */
   function _renderPlayerMiniStats(rows) {
     if (!rows || !rows.length) {
-      ['fv2-pmini-current','fv2-pmini-peak','fv2-pmini-avg','fv2-pmini-count'].forEach(function(id) {
+      ['fv2-pmini-peak','fv2-pmini-avg','fv2-pmini-count'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.textContent = '0';
       });
+      // "SEKARANG" dibiarkan — akan diisi oleh _fetchLivePlayerCount
       return;
     }
 
     var counts   = rows.map(function(r) { return Number(r.player_count) || 0; });
     var peak     = Math.max.apply(null, counts);
     var avg      = Math.round(counts.reduce(function(a, b) { return a + b; }, 0) / counts.length);
-    var latest   = counts[counts.length - 1];
     var total    = rows.length;
 
-    var curEl    = document.getElementById('fv2-pmini-current');
+    // Jangan sentuh fv2-pmini-current di sini — diisi oleh _fetchLivePlayerCount
     var peakEl   = document.getElementById('fv2-pmini-peak');
     var avgEl    = document.getElementById('fv2-pmini-avg');
     var countEl  = document.getElementById('fv2-pmini-count');
 
-    if (curEl)   curEl.textContent   = latest;
     if (peakEl)  peakEl.textContent  = peak;
     if (avgEl)   avgEl.textContent   = avg;
     if (countEl) countEl.textContent = total;
-
-    // Update big num juga
-    var bigNum = document.getElementById('fv2-player-num');
-    if (bigNum) {
-      bigNum.textContent = latest;
-      bigNum.className = 'fv2-player-big-num online-color';
-    }
   }
 
   /* ── Build player chart — IMPROVED ── */
@@ -805,7 +803,7 @@
     if (!canvasEl) return;
     if (_playerChart) { _playerChart.destroy(); _playerChart = null; }
 
-    // Render mini stats
+    // Render mini stats (peak, avg, rekaman)
     _renderPlayerMiniStats(rows);
 
     var labels, data, isEmpty;
@@ -832,11 +830,6 @@
     gradient.addColorStop(0, 'rgba(74,143,255,0.35)');
     gradient.addColorStop(0.6, 'rgba(74,143,255,0.08)');
     gradient.addColorStop(1, 'rgba(74,143,255,0.0)');
-
-    // Gradient for "peak" area - highlight highest points
-    var peakGradient = ctx.createLinearGradient(0, 0, 0, 140);
-    peakGradient.addColorStop(0, 'rgba(251,191,36,0.3)');
-    peakGradient.addColorStop(1, 'rgba(251,191,36,0.0)');
 
     _playerChart = new Chart(canvasEl, {
       type: 'line',
@@ -1055,7 +1048,7 @@
         if (!result.error) {
           _lastPlayerData = result.data || [];
           _buildPlayerChart(_lastPlayerData);
-          // Update mini current stat
+          /* ★ FIX: update "SEKARANG" dengan nilai yang baru dicatat ★ */
           var curEl = document.getElementById('fv2-pmini-current');
           if (curEl) curEl.textContent = playerCount;
         }
