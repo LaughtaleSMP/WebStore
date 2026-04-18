@@ -325,21 +325,58 @@
   });
 })();
 
-/* ── Player Online: load chart + tombol Catat ── */
+/* ════════════════════════════════════════════════════════════════
+   Player Online Card — FIXED VERSION
+   - Update mini stats (Tertinggi, Rata-rata, Rekaman, Sekarang)
+   - Fix dot CSS classes (.online / .offline)
+   - Single source of truth: no conflict with admin-finance.js
+════════════════════════════════════════════════════════════════ */
 (function initFv2Player() {
+  'use strict';
+
   var SERVER_HOST = 'laughtale.my.id';
   var SERVER_PORT = '19214';
   var playerChart = null;
   var _running    = false;
 
-  /* Ambil Supabase client yang sudah dibuat di supabase-config.js */
   function getSb() {
     return window._adminSb || null;
   }
 
-  /* Fetch jumlah pemain live dari mcsrvstat (Bedrock) */
+  /* ── Helpers update mini stats ── */
+  function _updateMiniStats(live, snapshots) {
+    /* Sekarang */
+    var curEl = document.getElementById('fv2-pmini-current');
+    if (curEl) curEl.textContent = (live !== null && live !== undefined) ? String(live) : '—';
+
+    if (!snapshots || !snapshots.length) {
+      ['fv2-pmini-peak', 'fv2-pmini-avg', 'fv2-pmini-count'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = '0';
+      });
+      return;
+    }
+
+    var counts  = snapshots.map(function (s) { return Number(s.player_count) || 0; });
+    var peak    = Math.max.apply(null, counts);
+    var avg     = Math.round(counts.reduce(function (a, b) { return a + b; }, 0) / counts.length);
+    var total   = snapshots.length;
+
+    var peakEl  = document.getElementById('fv2-pmini-peak');
+    var avgEl   = document.getElementById('fv2-pmini-avg');
+    var countEl = document.getElementById('fv2-pmini-count');
+
+    if (peakEl)  peakEl.textContent  = peak;
+    if (avgEl)   avgEl.textContent   = avg;
+    if (countEl) countEl.textContent = total;
+  }
+
+  /* ── Fetch live player count ── */
   function fetchLivePlayers() {
-    return fetch('https://api.mcsrvstat.us/bedrock/3/' + SERVER_HOST + ':' + SERVER_PORT)
+    return fetch(
+      'https://api.mcsrvstat.us/bedrock/3/' + SERVER_HOST + ':' + SERVER_PORT,
+      { signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined }
+    )
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d || !d.online) return 0;
@@ -348,7 +385,7 @@
       .catch(function () { return null; });
   }
 
-  /* Fetch 60 snapshot terakhir menggunakan Supabase JS client */
+  /* ── Fetch 60 snapshot terakhir ── */
   function loadPlayerSnapshots() {
     var sb = getSb();
     if (!sb) return Promise.resolve([]);
@@ -360,13 +397,16 @@
       .order('recorded_at', { ascending: true })
       .limit(60)
       .then(function (res) {
-        if (res.error) { console.warn('[fv2-player] loadSnapshots:', res.error.message); return []; }
+        if (res.error) {
+          console.warn('[fv2-player] loadSnapshots:', res.error.message);
+          return [];
+        }
         return res.data || [];
       })
       .catch(function () { return []; });
   }
 
-  /* Destroy chart lama agar tidak double-render */
+  /* ── Destroy chart lama ── */
   function destroyChart() {
     var canvas = document.getElementById('fv2-player-chart');
     try { if (playerChart) playerChart.destroy(); } catch (e) {}
@@ -379,53 +419,126 @@
     } catch (e) {}
   }
 
-  /* Render line chart snapshot */
+  /* ── Render line chart snapshot ── */
   function renderChart(snapshots) {
     var canvas = document.getElementById('fv2-player-chart');
     if (!canvas || !window.Chart) return;
     destroyChart();
+
     var labels = snapshots.map(function (d) {
-      return new Date(d.recorded_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      return new Date(d.recorded_at).toLocaleTimeString('id-ID', {
+        hour: '2-digit', minute: '2-digit'
+      });
     });
     var values = snapshots.map(function (d) { return d.player_count; });
-    playerChart = new window.Chart(canvas.getContext('2d'), {
+
+    var ctx      = canvas.getContext('2d');
+    var gradient = ctx.createLinearGradient(0, 0, 0, 130);
+    gradient.addColorStop(0, 'rgba(74,143,255,0.30)');
+    gradient.addColorStop(1, 'rgba(74,143,255,0.00)');
+
+    playerChart = new window.Chart(ctx, {
       type: 'line',
       data: {
         labels: labels,
         datasets: [{
           data: values,
           borderColor: '#4a8fff',
-          backgroundColor: 'rgba(74,143,255,0.12)',
-          borderWidth: 1.5,
-          pointRadius: 0,
+          backgroundColor: gradient,
+          borderWidth: 2,
+          pointRadius: snapshots.length > 30 ? 0 : 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: '#4a8fff',
+          pointBorderColor: 'rgba(11,16,24,0.8)',
+          pointBorderWidth: 1,
           fill: true,
-          tension: 0.4
+          tension: 0.4,
+          spanGaps: true,
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         plugins: {
           legend: { display: false },
           tooltip: {
+            backgroundColor: 'rgba(12,16,23,0.95)',
+            borderColor: 'rgba(74,143,255,0.3)',
+            borderWidth: 1,
+            titleColor: '#94adff',
+            bodyColor: '#dde3ec',
+            padding: 10,
+            cornerRadius: 8,
             callbacks: {
               title: function (items) {
-                return new Date(snapshots[items[0].dataIndex].recorded_at)
-                  .toLocaleString('id-ID');
+                if (!items[0]) return '';
+                var d = new Date(snapshots[items[0].dataIndex].recorded_at);
+                return d.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
               },
-              label: function (item) { return ' ' + item.raw + ' pemain'; }
+              label: function (item) { return '  ' + item.raw + ' pemain online'; }
             }
           }
         },
         scales: {
-          x: { ticks: { maxTicksLimit: 6, font: { size: 10 }, color: '#666' }, grid: { color: 'rgba(255,255,255,0.04)' } },
-          y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 }, color: '#666' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+          x: {
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: {
+              color: '#3a4458',
+              font: { size: 9 },
+              maxTicksLimit: 6,
+              maxRotation: 0
+            },
+            border: { color: 'rgba(255,255,255,0.05)' }
+          },
+          y: {
+            beginAtZero: true,
+            min: 0,
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: {
+              color: '#3a4458',
+              font: { size: 9 },
+              stepSize: 1,
+              precision: 0,
+              callback: function (v) { return v % 1 === 0 ? v : ''; }
+            },
+            border: { color: 'rgba(255,255,255,0.05)' }
+          }
         }
       }
     });
   }
 
-  /* Refresh seluruh kartu player */
+  /* ── Update status dot & label ── */
+  function _updateStatusDisplay(live) {
+    var numEl   = document.getElementById('fv2-player-num');
+    var labelEl = document.getElementById('fv2-player-label');
+    var dotEl   = document.getElementById('fv2-player-dot');
+
+    if (numEl) numEl.textContent = (live !== null && live !== undefined) ? String(live) : '—';
+
+    if (labelEl) {
+      if (live === null) {
+        labelEl.textContent = 'gagal memuat status';
+      } else if (live > 0) {
+        labelEl.textContent = 'pemain online sekarang';
+      } else {
+        labelEl.textContent = 'server kosong / offline';
+      }
+    }
+
+    /* FIX: gunakan class .online / .offline sesuai CSS di admin-finance.js */
+    if (dotEl) {
+      dotEl.classList.remove('online', 'offline');
+      if (live !== null && live > 0) {
+        dotEl.classList.add('online');
+      } else {
+        dotEl.classList.add('offline');
+      }
+    }
+  }
+
+  /* ── Refresh seluruh kartu player ── */
   function refreshPlayerCard() {
     if (_running) return;
     _running = true;
@@ -435,47 +548,63 @@
         var live      = results[0];
         var snapshots = Array.isArray(results[1]) ? results[1] : [];
 
-        var numEl   = document.getElementById('fv2-player-num');
-        var labelEl = document.getElementById('fv2-player-label');
-        var dotEl   = document.getElementById('fv2-player-dot');
-        var nextEl  = document.getElementById('fv2-player-next-update');
+        /* Update status + dot */
+        _updateStatusDisplay(live);
 
-        if (numEl)   numEl.textContent   = live !== null ? String(live) : '—';
-        if (labelEl) labelEl.textContent = live === null
-          ? 'gagal memuat'
-          : (live > 0 ? 'pemain online sekarang' : 'server kosong');
+        /* Update mini stats — FIX UTAMA */
+        _updateMiniStats(live, snapshots);
 
-        if (dotEl) {
-          dotEl.classList.toggle('pg-dot-online',  live !== null && live > 0);
-          dotEl.classList.toggle('pg-dot-offline', live === null || live === 0);
+        /* Render chart */
+        if (snapshots.length) {
+          renderChart(snapshots);
         }
 
-        if (snapshots.length) renderChart(snapshots);
-
+        /* Next update label */
+        var nextEl = document.getElementById('fv2-player-next-update');
         if (nextEl) {
-          nextEl.textContent = 'Update berikutnya: '
-            + new Date(Date.now() + 5 * 60 * 1000).toLocaleTimeString('id-ID');
+          nextEl.textContent = 'Update berikutnya: ' +
+            new Date(Date.now() + 5 * 60 * 1000).toLocaleTimeString('id-ID');
         }
+      })
+      .catch(function (e) {
+        console.warn('[fv2-player] refreshPlayerCard error:', e);
       })
       .finally(function () { _running = false; });
   }
 
-  /* Expose refresh agar bisa dipanggil dari luar */
+  /* ── Expose refresh ── */
   window._fv2PlayerRefresh = refreshPlayerCard;
 
-  /* Tombol Catat — insert snapshot via Supabase client lalu refresh */
+  /* ── Tombol Catat — override dari admin-finance.js ── */
   window.financeV2RecordPlayer = function () {
     var btn = document.querySelector('.fv2-player-record-btn');
+
     function resetBtn() {
       if (!btn) return;
       btn.disabled = false;
-      btn.innerHTML = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">'
-        + '<circle cx="12" cy="12" r="10"/>'
-        + '<line x1="12" y1="8" x2="12" y2="16"/>'
-        + '<line x1="8" y1="12" x2="16" y2="12"/>'
-        + '</svg> Catat';
+      btn.innerHTML =
+        '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">' +
+        '<polyline points="23 4 23 10 17 10"/>' +
+        '<path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>' +
+        '</svg> Catat';
     }
-    if (btn) { btn.disabled = true; btn.textContent = 'Mencatat...'; }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML =
+        '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"' +
+        ' style="animation:fv2spin .8s linear infinite">' +
+        '<path d="M21 12a9 9 0 1 1-2.12-5.86"/>' +
+        '</svg> Mencatat…';
+    }
+
+    /* Inject keyframe sekali */
+    if (!document.getElementById('fv2-spin-kf')) {
+      var ks = document.createElement('style');
+      ks.id = 'fv2-spin-kf';
+      ks.textContent = '@keyframes fv2spin{to{transform:rotate(360deg)}}';
+      document.head.appendChild(ks);
+    }
 
     var sb = getSb();
     if (!sb) {
@@ -487,6 +616,7 @@
     fetchLivePlayers()
       .then(function (live) {
         if (live === null) throw new Error('Gagal ambil data server Bedrock');
+
         return sb
           .from('player_snapshots')
           .insert({ player_count: live })
@@ -496,20 +626,27 @@
           });
       })
       .then(function (live) {
-        refreshPlayerCard();
+        if (typeof window.showAdminToast === 'function') {
+          window.showAdminToast('✅ Snapshot: ' + live + ' pemain online', 'success');
+        }
+
         if (btn) {
-          btn.textContent = '✓ Tercatat (' + live + ' pemain)';
+          btn.textContent = '✓ ' + live + ' pemain';
           setTimeout(resetBtn, 2500);
         }
+
+        /* Refresh full card setelah catat */
+        setTimeout(function () { refreshPlayerCard(); }, 300);
       })
       .catch(function (e) {
-        if (typeof window.showAdminToast === 'function') window.showAdminToast('Gagal catat: ' + e.message, 'error');
-        else alert('Gagal catat: ' + e.message);
+        if (typeof window.showAdminToast === 'function') {
+          window.showAdminToast('Gagal catat: ' + e.message, 'error');
+        }
         resetBtn();
       });
   };
 
-  /* Auto-init: tunggu DOM + pastikan canvas sudah ada lalu load */
+  /* ── Auto-init: tunggu canvas tersedia ── */
   function tryAutoInit() {
     if (document.getElementById('fv2-player-chart')) {
       refreshPlayerCard();
@@ -528,8 +665,9 @@
     }
   });
 
-  /* Auto-refresh tiap 5 menit selama kartu visible */
+  /* ── Auto-refresh tiap 5 menit ── */
   setInterval(function () {
     if (document.getElementById('fv2-player-chart')) refreshPlayerCard();
   }, 5 * 60 * 1000);
+
 })();
