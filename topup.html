@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#a855f7">
+<title>Admin Topup — Laughtale SMP</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#0a0a12;--bg2:#101019;--surface:rgba(255,255,255,.035);--surface2:rgba(255,255,255,.06);
+--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+--text:#e0e0ec;--dim:#8888a4;--mute:#4e4e6a;
+--ac:#a855f7;--green:#34d399;--red:#f87171;--gold:#facc15;--cyan:#22d3ee;--orange:#fb923c;
+--r:12px;
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;line-height:1.55}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+background:radial-gradient(ellipse 600px 400px at 20% 8%,rgba(168,85,247,.05),transparent),
+radial-gradient(ellipse 500px 350px at 85% 85%,rgba(52,211,153,.03),transparent)}
+.w{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:1.25rem 1rem 3rem}
+.hd{text-align:center;margin-bottom:1.5rem;padding-top:.75rem}
+.logo{font-family:'JetBrains Mono',monospace;font-size:clamp(1rem,3.5vw,1.2rem);font-weight:700;letter-spacing:2px;color:#fff;margin:.4rem 0 .1rem}
+.logo b{color:var(--ac)}.logo .admin-tag{color:var(--orange);font-size:.7em}
+.sub{font-size:.7rem;color:var(--dim);font-weight:500}
+
+/* Login Screen */
+.pin-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:.75rem;text-align:center}
+.pin-screen h2{font-family:'JetBrains Mono',monospace;font-size:.75rem;letter-spacing:2px;color:var(--mute)}
+.pin-screen .lock{font-size:2.5rem;margin-bottom:.5rem;filter:drop-shadow(0 0 20px rgba(168,85,247,.3))}
+.login-input{font-family:'Inter',sans-serif;font-size:.8rem;font-weight:500;text-align:center;width:280px;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:#fff;outline:none;transition:border-color .2s}
+.login-input:focus{border-color:var(--ac)}
+.login-input::placeholder{color:var(--mute)}
+.login-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;letter-spacing:1.5px;padding:10px 32px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--ac),#7c3aed);color:#fff;cursor:pointer;transition:transform .15s,box-shadow .15s,opacity .15s;margin-top:.25rem}
+.login-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 20px rgba(168,85,247,.3)}
+.login-btn:disabled{opacity:.5;cursor:not-allowed}
+.login-hint{font-size:.55rem;color:var(--mute);margin-top:.25rem}
+.login-error{font-size:.7rem;color:var(--red);background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.18);border-radius:8px;padding:8px 14px;max-width:280px;line-height:1.5}
+.admin-bar{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;margin-bottom:.75rem}
+.admin-bar-name{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--dim)}
+.admin-bar-name b{color:var(--green)}
+.admin-bar-logout{font-family:'JetBrains Mono',monospace;font-size:.55rem;font-weight:700;letter-spacing:1px;padding:4px 12px;border-radius:6px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.06);color:var(--red);cursor:pointer;transition:all .15s}
+.admin-bar-logout:hover{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.4)}
+
+/* Card */
+.cd{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;position:relative;overflow:hidden;transition:border-color .3s;margin-bottom:.75rem}
+.cd:hover{border-color:var(--border2)}
+.cd::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(168,85,247,.2),transparent)}
+
+/* Form */
+.form-group{margin-bottom:.85rem}
+.form-label{font-family:'JetBrains Mono',monospace;font-size:.55rem;font-weight:700;letter-spacing:1px;color:var(--dim);margin-bottom:5px;display:block}
+.form-input{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:#fff;font-family:'Inter',sans-serif;font-size:.8rem;outline:none;transition:border-color .2s}
+.form-input:focus{border-color:var(--ac)}
+.form-input::placeholder{color:var(--mute)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.form-select{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:#fff;font-family:'Inter',sans-serif;font-size:.8rem;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238888a4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.form-select:focus{border-color:var(--ac)}
+.submit-btn{width:100%;font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700;letter-spacing:1.5px;padding:12px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--green),#059669);color:#fff;cursor:pointer;transition:transform .15s,box-shadow .15s,opacity .15s}
+.submit-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 20px rgba(52,211,153,.25)}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Divider */
+.dv{display:flex;align-items:center;gap:10px;margin:1.25rem 0 .75rem}
+.dvl{flex:1;height:1px;background:var(--border)}
+.dvt{font-family:'JetBrains Mono',monospace;font-size:.55rem;font-weight:700;letter-spacing:2.5px;color:var(--mute);white-space:nowrap;display:flex;align-items:center;gap:6px}
+.dvt svg{width:12px;height:12px;opacity:.5}
+
+/* History */
+.h-row{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:8px 10px;border-radius:8px;align-items:start;transition:background .15s}
+.h-row:nth-child(even){background:var(--surface)}
+.h-row:hover{background:var(--surface2)}
+.h-status{font-family:'JetBrains Mono',monospace;font-size:.5rem;font-weight:700;letter-spacing:.5px;padding:3px 8px;border-radius:5px;white-space:nowrap;margin-top:2px}
+.h-status.done{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.h-status.failed{background:rgba(248,113,113,.08);color:var(--red);border:1px solid rgba(248,113,113,.15)}
+.h-status.pending{background:rgba(250,204,21,.08);color:var(--gold);border:1px solid rgba(250,204,21,.15);animation:pulse 2s infinite}
+.h-body{min-width:0}
+.h-main{font-size:.75rem;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.h-name{color:#fff}
+.h-amount{font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700}
+.h-amount.gem{color:var(--cyan)}
+.h-amount.coin{color:var(--gold)}
+.h-detail{font-size:.58rem;color:var(--mute);margin-top:2px;line-height:1.4}
+.emp{text-align:center;padding:1.5rem;color:var(--mute);font-size:.72rem}
+
+/* Toast */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(20px);font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:600;padding:8px 20px;border-radius:8px;opacity:0;transition:all .3s;z-index:100;pointer-events:none;white-space:nowrap}
+.toast.ok{background:rgba(52,211,153,.9);color:#fff}
+.toast.err{background:rgba(248,113,113,.9);color:#fff}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Nav */
+.nav-links{display:flex;gap:.5rem;margin-top:.75rem;justify-content:center}
+.nav-links a{font-family:'JetBrains Mono',monospace;font-size:.55rem;font-weight:600;color:var(--dim);text-decoration:none;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);transition:all .2s;display:inline-flex;align-items:center;gap:4px}
+.nav-links a:hover{border-color:var(--ac);color:var(--ac)}
+.nav-links a svg{width:11px;height:11px}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes fs{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:520px){.w{padding:1rem .7rem 2rem}.cd{padding:.9rem 1rem}.form-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="w">
+<header class="hd">
+<div class="logo">LAUGHTALE <b>SMP</b> <span class="admin-tag">ADMIN</span></div>
+<div class="sub">Topup Gem & Koin via Web</div>
+</header>
+
+<!-- Login Screen -->
+<div id="login-screen" class="pin-screen">
+<div class="lock">🔐</div>
+<h2>ADMIN LOGIN</h2>
+<div id="login-error" class="login-error" style="display:none"></div>
+<input type="email" id="login-email" class="login-input" placeholder="Email admin" autocomplete="email" autofocus>
+<input type="password" id="login-password" class="login-input" placeholder="Password" autocomplete="current-password">
+<button type="button" id="login-btn" class="login-btn">MASUK</button>
+<div class="login-hint">Gunakan akun admin yang terdaftar di Admin Panel</div>
+</div>
+
+<!-- Main Content (hidden until PIN verified) -->
+<div id="main-content" style="display:none">
+<div class="admin-bar">
+  <span class="admin-bar-name">👤 Login: <b id="admin-info">—</b></span>
+  <button type="button" class="admin-bar-logout" onclick="doLogout()">KELUAR</button>
+</div>
+
+<div class="cd">
+<form id="topup-form" autocomplete="off">
+<div class="form-group">
+<label class="form-label">NAMA PLAYER</label>
+<input type="text" id="player-name" class="form-input" placeholder="Ketik nama persis seperti di game" list="player-suggestions" required>
+<datalist id="player-suggestions"></datalist>
+</div>
+<div class="form-row">
+<div class="form-group">
+<label class="form-label">JUMLAH</label>
+<input type="number" id="amount" class="form-input" placeholder="100" min="1" max="100000" required>
+</div>
+<div class="form-group">
+<label class="form-label">MATA UANG</label>
+<select id="currency" class="form-select">
+<option value="gem">💎 Gem</option>
+<option value="coin">🪙 Koin</option>
+</select>
+</div>
+</div>
+<div class="form-group">
+<label class="form-label">CATATAN (OPSIONAL)</label>
+<input type="text" id="note" class="form-input" placeholder="Contoh: Pembelian Rp50.000">
+</div>
+<button type="submit" id="submit-btn" class="submit-btn">KIRIM TOPUP</button>
+</form>
+</div>
+
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>RIWAYAT TOPUP</span><div class="dvl"></div></div>
+
+<div class="cd">
+<div id="history"><div class="emp">Memuat riwayat...</div></div>
+</div>
+
+<div class="nav-links">
+<a href="logs.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Economy Logs</a>
+<a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Beranda</a>
+</div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="js/topup-page.js"></script>
+</body>
+</html>

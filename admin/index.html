@@ -463,6 +463,13 @@
         Manajemen Keuangan
         <span style="font-size:8.5px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:20px;margin-left:auto;font-weight:700;letter-spacing:.3px;flex-shrink:0;">NEW</span>
       </div>
+      <div class="nav-item" onclick="showSection('gem-topup',this)" id="nav-gem-topup">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M6 3h12l4 6-10 13L2 9z"/><path d="M6 3l6 6 6-6"/><path d="M2 9h20"/>
+        </svg>
+        Topup Gem / Koin
+        <span class="nav-badge" id="topup-badge" style="display:none">0</span>
+      </div>
       <!-- Nav items tambahan diinjeksi oleh admin-shop.js, admin-wa-template.js, admin-users.js -->
       <div class="nav-item" id="nav-access-requests" style="display:none" onclick="showSection('access-requests',this)">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -989,6 +996,62 @@
         <div id="access-requests-list"><div class="empty-state">Memuat data...</div></div>
       </div>
 
+      <!-- ── TOPUP GEM/KOIN ── -->
+      <div class="section" id="sec-gem-topup">
+        <div class="page-header">
+          <div class="page-title">Topup Gem / Koin</div>
+          <div class="page-sub">Kirim gem atau koin ke player secara langsung dari panel admin. BDS memproses otomatis.</div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Kirim Topup</div>
+            <div class="card-icon"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M6 3l6 6 6-6"/><path d="M2 9h20"/></svg></div>
+          </div>
+          <form id="gt-form" autocomplete="off">
+            <div class="field-group">
+              <div class="field">
+                <label>Nama Player</label>
+                <input id="gt-player" placeholder="Ketik nama persis seperti di game" list="gt-player-list" required>
+                <datalist id="gt-player-list"></datalist>
+                <div class="field-hint">Nama harus sama persis dengan yang terdaftar di server</div>
+              </div>
+              <div class="field">
+                <label>Jumlah</label>
+                <input id="gt-amount" type="number" min="1" max="100000" placeholder="100" required>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="field">
+                <label>Mata Uang</label>
+                <select id="gt-currency">
+                  <option value="gem">💎 Gem</option>
+                  <option value="coin">🪙 Koin</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Catatan (opsional)</label>
+                <input id="gt-note" placeholder="Contoh: Pembelian Rp50.000">
+              </div>
+            </div>
+            <div class="save-bar">
+              <span class="save-bar-hint">BDS memproses dalam ~30 detik setelah pengiriman.</span>
+              <button type="submit" class="save-btn" id="gt-submit">Kirim Topup</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card" style="margin-top:10px">
+          <div class="card-header">
+            <div class="card-title">Riwayat Topup</div>
+            <button class="btn-ghost" style="font-size:12px;padding:5px 11px;display:inline-flex;align-items:center;gap:5px;" onclick="gtRefresh()">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Refresh
+            </button>
+          </div>
+          <div id="gt-history"><div class="empty-state">Memuat riwayat...</div></div>
+        </div>
+      </div>
+
     </div><!-- /main-content -->
   </div><!-- /app-body -->
 </div><!-- /app -->
@@ -1055,6 +1118,7 @@
 <script src="js/admin-finance-v2.js" defer></script>
 <script src="js/admin-collapse.js" defer></script>
 <script src="js/admin-activity-log.js" defer></script>
+<script src="js/admin-topup.js" defer></script>
 
 <!-- Deps -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>

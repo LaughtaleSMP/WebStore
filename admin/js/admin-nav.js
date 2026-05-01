@@ -22,6 +22,7 @@ function showSection(name, el) {
     'access-requests':  'Permintaan Akses',
     'manage-admins':    'Manajemen Admin',
     'activity-log':     'Log Aktivitas',
+    'gem-topup':         'Topup Gem / Koin',
   };
   document.getElementById('topbar-section').textContent = labels[name] || name;
 
@@ -48,6 +49,10 @@ function showSection(name, el) {
 
   if (name === 'activity-log' && typeof window._alLoad === 'function') {
     window._alLoad();
+  }
+
+  if (name === 'gem-topup' && typeof window.gtInit === 'function') {
+    window.gtInit();
   }
 }
 

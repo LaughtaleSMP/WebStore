@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="Laughtale SMP — Status server Minecraft Bedrock realtime, leaderboard mingguan, dan pemain online.">
+<meta name="theme-color" content="#a855f7">
+<title>Leaderboard — Laughtale SMP</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+<div class="w">
+
+<header class="hd">
+  <a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>KEMBALI KE BERANDA</a>
+  <div class="logo">LAUGHTALE <b>SMP</b></div>
+  <div class="sub">Server Status &amp; Weekly Leaderboard</div>
+</header>
+
+<!-- Server Status Card -->
+<div class="cd" id="main-card">
+  <div class="sc">
+    <div class="orb-w">
+      <div class="orb ld" id="s-orb"><div class="orb-c"></div></div>
+      <div class="orb-ring" id="orb-r"></div>
+    </div>
+    <div class="si">
+      <div class="sl ld" id="s-label">MEMUAT</div>
+      <div class="sn">Laughtale SMP</div>
+      <div class="sa" id="s-addr">—</div>
+    </div>
+    <div class="lat-box">
+      <div class="lat-val" id="s-lat">—</div>
+      <div class="lat-unit">MS</div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="sg sg-3">
+  <div class="st"><span class="sv g sk" id="s-on">—</span><div class="stl">Online</div></div>
+  <div class="st"><span class="sv p sk" id="s-max">—</span><div class="stl">Maks Slot</div></div>
+  <div class="st"><span class="sv y sk" id="s-ver">—</span><div class="stl">Versi</div></div>
+</div>
+
+<!-- Players Online -->
+<div class="cd" id="p-card" style="display:none">
+  <div class="ph">
+    <span class="pt-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>PEMAIN ONLINE</span>
+    <span class="pt-count" id="p-cnt">0</span>
+  </div>
+  <div class="pg" id="p-list"></div>
+</div>
+
+<!-- Weekly Leaderboard -->
+<div class="dv">
+  <div class="dvl"></div>
+  <span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h12v6a6 6 0 01-12 0V2z"/><path d="M6 4H3a1 1 0 00-1 1v1a4 4 0 004 4"/><path d="M18 4h3a1 1 0 011 1v1a4 4 0 01-4 4"/><rect x="8" y="19" width="8" height="3" rx="1"/></svg>WEEKLY LEADERBOARD</span>
+  <div class="dvl"></div>
+</div>
+
+<div class="tabs" id="lb-tabs">
+  <button class="tab a" data-cat="score"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>Keseluruhan</button>
+  <button class="tab" data-cat="kills"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 7.5l3-3 4 4-3 3"/><path d="M3 3l3 3"/></svg>Killer</button>
+  <button class="tab" data-cat="mined"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 3.5L20.5 9.5 9.5 20.5 3.5 14.5z"/><path d="M12 6l6 6"/><path d="M2 22l3-3"/></svg>Miner</button>
+  <button class="tab" data-cat="placed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l10 6v8l-10 6L2 16V8z"/><path d="M12 8l10 6M12 8L2 14M12 8v14"/></svg>Builder</button>
+  <button class="tab" data-cat="pvp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 15.88L4 20"/><circle cx="17" cy="7" r="3"/></svg>PvP</button>
+</div>
+<div class="cd"><div class="tbl" id="lb-tbl"></div></div>
+<div style="text-align:right;margin-bottom:.25rem"><span class="up" id="lb-meta"></span></div>
+
+<!-- Reward Info -->
+<div class="cd">
+  <div class="sec-hd" style="margin-bottom:.5rem">
+    <span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>REWARD MINGGUAN</span>
+    <span class="up">Top 3 setiap minggu</span>
+  </div>
+  <div class="rg">
+    <div class="ri"><svg viewBox="0 0 24 24" fill="none" width="22" height="22"><path d="M6 2h12v6a6 6 0 01-12 0V2z" fill="rgba(245,200,66,.1)" stroke="#f5c842" stroke-width="1.5"/><path d="M6 4H3a1 1 0 00-1 1v1a4 4 0 004 4" stroke="#f5c842" stroke-width="1.5"/><path d="M18 4h3a1 1 0 011 1v1a4 4 0 01-4 4" stroke="#f5c842" stroke-width="1.5"/><rect x="8" y="19" width="8" height="3" rx="1" fill="rgba(245,200,66,.08)" stroke="#f5c842" stroke-width="1.5"/></svg><div class="rc">+5.000</div><div class="rl">Juara 1</div></div>
+    <div class="ri"><svg viewBox="0 0 24 24" fill="none" width="22" height="22"><path d="M6 2h12v6a6 6 0 01-12 0V2z" fill="rgba(148,163,184,.07)" stroke="#94a3b8" stroke-width="1.5"/><path d="M6 4H3a1 1 0 00-1 1v1a4 4 0 004 4" stroke="#94a3b8" stroke-width="1.5"/><path d="M18 4h3a1 1 0 011 1v1a4 4 0 01-4 4" stroke="#94a3b8" stroke-width="1.5"/><rect x="8" y="19" width="8" height="3" rx="1" fill="rgba(148,163,184,.05)" stroke="#94a3b8" stroke-width="1.5"/></svg><div class="rc" style="color:#94a3b8">+3.000</div><div class="rl">Juara 2</div></div>
+    <div class="ri"><svg viewBox="0 0 24 24" fill="none" width="22" height="22"><path d="M6 2h12v6a6 6 0 01-12 0V2z" fill="rgba(180,83,9,.08)" stroke="#c58c5c" stroke-width="1.5"/><path d="M6 4H3a1 1 0 00-1 1v1a4 4 0 004 4" stroke="#c58c5c" stroke-width="1.5"/><path d="M18 4h3a1 1 0 011 1v1a4 4 0 01-4 4" stroke="#c58c5c" stroke-width="1.5"/><rect x="8" y="19" width="8" height="3" rx="1" fill="rgba(180,83,9,.06)" stroke="#c58c5c" stroke-width="1.5"/></svg><div class="rc" style="color:#c58c5c">+1.000</div><div class="rl">Juara 3</div></div>
+  </div>
+  <div class="sec-title" style="margin-top:1rem;margin-bottom:.4rem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M4 4v16h16"/><path d="M4 14l4-4 4 2 4-6 4 4"/></svg>SISTEM SKOR</div>
+  <div class="sci">
+    <div class="scw"><span>Kill Mob</span><span>5 pts</span></div>
+    <div class="scw"><span>Mine Blok</span><span>1 pts</span></div>
+    <div class="scw"><span>Pasang Blok</span><span>1 pts</span></div>
+    <div class="scw"><span>PvP Kill</span><span>20 pts</span></div>
+  </div>
+</div>
+
+<!-- Gacha Leaderboard -->
+<div class="dv">
+  <div class="dvl"></div>
+  <span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M12 22V9"/><path d="M2 9h20"/><path d="M6 3l6 6 6-6"/></svg>GACHA LEADERBOARD</span>
+  <div class="dvl"></div>
+</div>
+
+<div class="tabs" id="g-tabs">
+  <button class="tab a" data-cat="gem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M6 3l6 6 6-6"/><path d="M2 9h20"/></svg>Gem</button>
+  <button class="tab" data-cat="coin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 8h-4a2 2 0 000 4h2a2 2 0 010 4H9"/><path d="M12 6v2m0 8v2"/></svg>Koin</button>
+  <button class="tab" data-cat="totalPulls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16h16"/><path d="M4 14l4-4 4 2 4-6 4 4"/></svg>Total Pull</button>
+  <button class="tab" data-cat="ptPulls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>Partikel</button>
+  <button class="tab" data-cat="eqPulls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L4 7v6c0 5.5 3.4 10.7 8 12 4.6-1.3 8-6.5 8-12V7l-8-5z"/><path d="M9 12l2 2 4-4"/></svg>Peralatan</button>
+</div>
+<div class="cd"><div class="tbl" id="g-tbl"></div></div>
+<div style="text-align:right;margin-bottom:.25rem"><span class="up" id="g-meta"></span></div>
+
+<div class="ft">
+  <span class="up" id="s-upd">Mengambil data...</span>
+  <button class="rb" id="rbtn" onclick="fetchStatus()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>REFRESH
+  </button>
+</div>
+
+</div>
+<div class="toast" id="toast"></div>
+<script src="js/status-page.js"></script>
+</body>
+</html>

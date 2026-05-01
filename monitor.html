@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="Laughtale SMP — Monitor performa server realtime: TPS, entity, mob count, latency, dan diagnostik lag.">
+<meta name="theme-color" content="#a855f7">
+<title>Server Monitor — Laughtale SMP</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/pages.css">
+<style>
+/* Monitor-specific overrides */
+.m-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem;margin-bottom:.75rem}
+.m-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:.8rem .5rem;text-align:center;transition:border-color .2s,transform .15s}
+.m-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.m-label{font-size:.5rem;color:var(--mute);letter-spacing:.5px;margin-bottom:5px;text-transform:uppercase;font-weight:600}
+.m-val{font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;display:block;line-height:1}
+.m-val.good{color:var(--green)}.m-val.warn{color:var(--gold)}.m-val.bad{color:var(--red)}.m-val.dim{color:var(--cyan)}
+.m-unit{font-size:.48rem;color:var(--mute);display:block;margin-top:4px;text-transform:uppercase;letter-spacing:.3px}
+
+/* Latency indicator strip */
+.lat-strip{display:flex;align-items:center;gap:.75rem;padding:.65rem 1rem;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:.75rem}
+.lat-strip-label{font-family:'JetBrains Mono',monospace;font-size:.55rem;font-weight:700;color:var(--mute);letter-spacing:1.5px;text-transform:uppercase}
+.lat-ind{font-family:'JetBrains Mono',monospace;font-size:.63rem;font-weight:700;padding:3px 10px;border-radius:20px;margin-left:auto}
+.lat-ind.good{color:var(--green);background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.18)}
+.lat-ind.ok{color:var(--cyan);background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.15)}
+.lat-ind.warn{color:var(--gold);background:rgba(245,200,66,.07);border:1px solid rgba(245,200,66,.15)}
+.lat-ind.bad{color:var(--red);background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.15)}
+
+/* Chart */
+canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);border:1px solid var(--border)}
+
+/* Diag items */
+.diag-item{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-radius:var(--r-xs);font-size:.72rem;line-height:1.55;margin-bottom:4px}
+.diag-icon{flex-shrink:0;margin-top:1px;opacity:.85}
+.diag-item.good{background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.1);color:var(--green)}
+.diag-item.warn{background:rgba(245,200,66,.05);border:1px solid rgba(245,200,66,.1);color:var(--gold)}
+.diag-item.bad{background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.1);color:var(--red)}
+.diag-item.info{background:var(--surface);border:1px solid var(--border);color:var(--dim)}
+
+/* Tip grid */
+.tip-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem}
+.tip{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:.8rem .9rem;transition:border-color .2s}
+.tip:hover{border-color:var(--border2)}
+.tip-ico{margin-bottom:6px}.tip-ico svg{width:20px;height:20px}
+.tip-title{font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:700;color:var(--text);letter-spacing:.3px;margin-bottom:3px}
+.tip-desc{font-size:.63rem;color:var(--dim);line-height:1.5}
+
+/* Player count badge */
+.pt-count{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ac);
+  background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.18);border-radius:20px;padding:2px 9px}
+
+@media(max-width:560px){
+  .m-grid{grid-template-columns:repeat(3,1fr)}
+  .tip-grid{grid-template-columns:1fr}
+  .ent-grid{grid-template-columns:repeat(2,1fr)}
+}
+.mh-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.mh-leg{display:inline-flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;
+  font-size:.55rem;font-weight:600;color:var(--mute);padding:3px 8px;border-radius:var(--r-xs);
+  border:1px solid var(--border);cursor:pointer;transition:all .2s;user-select:none}
+.mh-leg.active{color:var(--lc);border-color:var(--lc);background:color-mix(in srgb,var(--lc) 8%,transparent)}
+.mh-dot{width:8px;height:3px;border-radius:2px;background:var(--lc);opacity:.4;transition:opacity .2s}
+.mh-leg.active .mh-dot{opacity:1}
+.mh-info{font-size:.58rem;color:var(--mute);margin-top:6px;text-align:center}
+</style>
+</head>
+<body>
+<div class="w">
+
+<header class="hd">
+  <a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>KEMBALI KE BERANDA</a>
+  <div class="logo">LAUGHTALE <b>SMP</b></div>
+  <div class="sub"><span class="live-dot"></span>Server Performance Monitor</div>
+</header>
+
+<!-- Server Status Card -->
+<div class="cd" id="main-card">
+  <div class="sc">
+    <div class="orb-w">
+      <div class="orb ld" id="s-orb"><div class="orb-c"></div></div>
+      <div class="orb-ring"></div>
+    </div>
+    <div class="si">
+      <div class="sl ld" id="s-label">MEMUAT...</div>
+      <div class="sn">Laughtale SMP</div>
+      <div class="sa" id="s-addr">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- Metrics Grid: 5 cards -->
+<div class="m-grid">
+  <div class="m-card"><div class="m-label">TPS</div><span class="m-val" id="m-tps">—</span><span class="m-unit">ticks/s</span></div>
+  <div class="m-card"><div class="m-label">Latency</div><span class="m-val" id="m-latency">—</span><span class="m-unit">ms</span></div>
+  <div class="m-card"><div class="m-label">Pemain</div><span class="m-val" id="m-players">—</span><span class="m-unit">slot</span></div>
+  <div class="m-card"><div class="m-label">Versi</div><span class="m-val dim" id="m-version" style="font-size:.68rem">—</span><span class="m-unit">bedrock</span></div>
+  <div class="m-card"><div class="m-label">Status</div><span class="m-val" id="m-status">—</span><span class="m-unit">server</span></div>
+</div>
+
+<!-- Latency quality -->
+<div class="lat-strip">
+  <span class="lat-strip-label">KUALITAS KONEKSI</span>
+  <span class="lat-ind" id="lat-indicator">Memuat...</span>
+</div>
+
+
+<!-- Latency Chart -->
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16h16"/><path d="M4 14l4-4 4 2 4-6 4 4"/></svg>LATENCY HISTORY</span><div class="dvl"></div></div>
+<div style="margin-bottom:.75rem">
+  <div class="sec-hd" style="margin-bottom:6px">
+    <span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Grafik Latency (auto-refresh 30s)</span>
+  </div>
+  <canvas id="latency-chart" height="180"></canvas>
+</div>
+
+<!-- Performance History Chart -->
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>PERFORMANCE HISTORY</span><div class="dvl"></div></div>
+<div class="cd">
+  <div class="sec-hd" style="margin-bottom:8px">
+    <span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Multi-Metric Chart</span>
+  </div>
+  <div class="tabs" id="mh-tabs" style="margin-bottom:8px">
+    <button class="tab a" data-range="day">24 Jam</button>
+    <button class="tab" data-range="week">7 Hari</button>
+    <button class="tab" data-range="month">30 Hari</button>
+  </div>
+  <div class="mh-legend" id="mh-legend">
+    <span class="mh-leg active" data-key="tps" style="--lc:#34d399"><span class="mh-dot"></span>TPS</span>
+    <span class="mh-leg active" data-key="players" style="--lc:#a855f7"><span class="mh-dot"></span>Players</span>
+    <span class="mh-leg active" data-key="mobs" style="--lc:#fb923c"><span class="mh-dot"></span>Mobs</span>
+    <span class="mh-leg active" data-key="entities" style="--lc:#22d3ee"><span class="mh-dot"></span>Entity</span>
+    <span class="mh-leg active" data-key="items" style="--lc:#f87171"><span class="mh-dot"></span>Items</span>
+  </div>
+  <canvas id="mh-chart" height="220"></canvas>
+  <div class="mh-info" id="mh-info">Memuat data histori...</div>
+</div>
+
+<!-- Diagnostics -->
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>DIAGNOSTIK LAG</span><div class="dvl"></div></div>
+<div class="cd">
+  <div class="sec-hd" style="margin-bottom:.6rem">
+    <span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>ANALISIS OTOMATIS</span>
+  </div>
+  <div id="diagnostics"><div class="diag-item info"><span class="diag-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><span>Mengambil data server untuk analisis...</span></div></div>
+</div>
+
+<!-- BDS Metrics -->
+<div id="bds-metrics" style="display:none">
+
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>BDS METRICS</span><div class="dvl"></div></div>
+
+<!-- Mob Count -->
+<div class="cd">
+  <div class="sec-hd">
+    <span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c6.23-.05 7.87-5.57 7.5-10-.36-4.34-3.95-9.96-7.5-5-3.55-4.96-7.14.66-7.5 5-.37 4.43 1.27 9.95 7.5 10z"/></svg>MOB COUNT</span>
+    <span class="pill" id="mob-level">—</span>
+  </div>
+  <div class="ent-grid">
+    <div class="ent-card"><div class="ent-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z"/></svg></div><div class="ent-val" id="mob-overworld">—</div><div class="ent-lbl">Overworld</div></div>
+    <div class="ent-card"><div class="ent-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.73-2.5-1.5-4 .5-6 1 4 4.5 3 4.5 6.5a3.5 3.5 0 01-4 3.5"/></svg></div><div class="ent-val" id="mob-nether">—</div><div class="ent-lbl">Nether</div></div>
+    <div class="ent-card"><div class="ent-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><div class="ent-val" id="mob-end">—</div><div class="ent-lbl">The End</div></div>
+    <div class="ent-card"><div class="ent-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div><div class="ent-val" id="mob-total">—</div><div class="ent-lbl">Total</div></div>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>RINGKASAN ENTITY</span></div>
+  <div class="chip-strip">
+    <div class="chip">Entity Total<div class="chip-sep"></div><b id="sum-entities">0</b></div>
+    <div class="chip">Mob<div class="chip-sep"></div><b id="sum-mobs">0</b></div>
+    <div class="chip">Item Drops<div class="chip-sep"></div><b id="sum-items">0</b></div>
+    <div class="chip">Pemain<div class="chip-sep"></div><b id="sum-players">0</b></div>
+  </div>
+</div>
+
+<!-- Players per Dimension -->
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>PEMAIN PER DIMENSI</span></div>
+  <div class="chip-strip">
+    <div class="chip">Overworld<div class="chip-sep"></div><b id="dim-ow">0</b></div>
+    <div class="chip">Nether<div class="chip-sep"></div><b id="dim-nether">0</b></div>
+    <div class="chip">The End<div class="chip-sep"></div><b id="dim-end">0</b></div>
+  </div>
+</div>
+
+<!-- DP Usage -->
+<div class="bar-wrap">
+  <div class="bar-hd">
+    <span class="bar-lbl">DYNAMIC PROPERTY USAGE</span>
+    <span class="bar-val" id="dp-pct">—</span>
+  </div>
+  <div class="bar-track"><div class="bar-fill g" id="dp-bar-fill" style="width:0%"></div></div>
+  <div class="bar-sub" id="dp-detail">—</div>
+</div>
+
+<!-- World Info -->
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>WORLD INFO</span></div>
+  <div class="info-row"><span>TPS</span><b id="world-tps">—</b></div>
+  <div class="info-row"><span>Waktu Dunia</span><b id="world-time">—</b></div>
+  <div class="info-row"><span>Hari Ke</span><b id="world-day">—</b></div>
+  <div class="info-row"><span>Server Tick</span><b id="world-tick">—</b></div>
+  <div class="info-row"><span>Terakhir Update</span><b id="metrics-time">—</b></div>
+</div>
+
+<!-- Player Details Table -->
+<div class="cd" id="player-details-card" style="display:none">
+  <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>DETAIL PEMAIN</span></div>
+  <table class="dtbl">
+    <thead><tr><th>Nama</th><th>Dimensi</th><th>Koordinat</th><th>Mode</th></tr></thead>
+    <tbody id="player-details-body"></tbody>
+  </table>
+</div>
+
+</div><!-- /bds-metrics -->
+
+<!-- Players Online -->
+<div class="cd" id="player-card" style="display:none">
+  <div class="ph">
+    <span class="pt-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>PEMAIN ONLINE</span>
+    <span class="pt-count" id="sync-players">0</span>
+  </div>
+  <div class="pg" id="player-grid"></div>
+  <div style="margin-top:.6rem;font-size:.6rem;color:var(--mute)">BDS Sync: <span id="sync-time" style="font-family:'JetBrains Mono',monospace;color:var(--cyan)">—</span></div>
+</div>
+
+<!-- Tips -->
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>TIPS MENGATASI LAG</span><div class="dvl"></div></div>
+<div class="tip-grid">
+  <div class="tip"><div class="tip-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round"><path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.95 0"/><circle cx="12" cy="20" r="1"/></svg></div><div class="tip-title">Koneksi Internet</div><div class="tip-desc">Gunakan WiFi stabil atau 4G/5G. Hindari hotspot yang di-share.</div></div>
+  <div class="tip"><div class="tip-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div><div class="tip-title">Render Distance</div><div class="tip-desc">Turunkan ke 8–12 chunk untuk mengurangi beban device.</div></div>
+  <div class="tip"><div class="tip-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></div><div class="tip-title">Restart Game</div><div class="tip-desc">Restart Minecraft berkala untuk membersihkan memory cache.</div></div>
+  <div class="tip"><div class="tip-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><div class="tip-title">Entity &amp; Redstone</div><div class="tip-desc">Terlalu banyak entity atau redstone bisa menurunkan TPS server.</div></div>
+  <div class="tip"><div class="tip-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z"/></svg></div><div class="tip-title">Jarak Server</div><div class="tip-desc">Latency tinggi karena jarak geografis. Gunakan VPN terdekat.</div></div>
+  <div class="tip"><div class="tip-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></div><div class="tip-title">Item Drops</div><div class="tip-desc">Item menumpuk di tanah menyebabkan lag. Bersihkan area farm.</div></div>
+</div>
+
+<!-- Footer -->
+<div class="ft" style="margin-top:1.25rem">
+  <span class="up" id="last-update">Mengambil data...</span>
+  <button class="rb" id="refresh-btn" onclick="doRefresh()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>REFRESH
+  </button>
+</div>
+
+</div>
+<script src="js/monitor-page.js"></script>
+</body>
+</html>
