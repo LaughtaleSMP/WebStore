@@ -179,6 +179,14 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
   </div>
 </div>
 
+<div class="cd" id="entity-breakdown-card">
+  <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>ENTITY PER TIPE (TOP 20)</span></div>
+  <table class="dtbl" style="width:100%">
+    <thead><tr><th style="width:28px">#</th><th>Entity ID</th><th style="width:50px">Jumlah</th><th>Bar</th></tr></thead>
+    <tbody id="entity-breakdown-body"><tr><td colspan="4" style="text-align:center;color:var(--mute);padding:1rem">Menunggu data dari BDS sync...</td></tr></tbody>
+  </table>
+</div>
+
 <!-- Players per Dimension -->
 <div class="cd">
   <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>PEMAIN PER DIMENSI</span></div>
@@ -213,22 +221,13 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
 <div class="cd" id="player-details-card" style="display:none">
   <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>DETAIL PEMAIN</span></div>
   <table class="dtbl">
-    <thead><tr><th>Nama</th><th>Dimensi</th><th>Koordinat</th><th>Mode</th></tr></thead>
+    <thead><tr><th>Nama</th><th>Dimensi</th><th>Koordinat</th><th>Mode</th><th>PvP</th></tr></thead>
     <tbody id="player-details-body"></tbody>
   </table>
 </div>
 
 </div><!-- /bds-metrics -->
 
-<!-- Players Online -->
-<div class="cd" id="player-card" style="display:none">
-  <div class="ph">
-    <span class="pt-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>PEMAIN ONLINE</span>
-    <span class="pt-count" id="sync-players">0</span>
-  </div>
-  <div class="pg" id="player-grid"></div>
-  <div style="margin-top:.6rem;font-size:.6rem;color:var(--mute)">BDS Sync: <span id="sync-time" style="font-family:'JetBrains Mono',monospace;color:var(--cyan)">—</span></div>
-</div>
 
 <!-- Tips -->
 <div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>TIPS MENGATASI LAG</span><div class="dvl"></div></div>

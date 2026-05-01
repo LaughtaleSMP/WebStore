@@ -118,26 +118,40 @@ function renderGacha(logs){
   const el=$('log-content');
   if(!logs.length){el.innerHTML='<div class="emp">Belum ada log gacha</div>';return}
   el.innerHTML=logs.map((h,i)=>{
+    const pName=h.player||h.p||'?';
+    const type=(h.type||h.t||'EQ')==='PT'?'Partikel':'Peralatan';
+    const typeCls=(h.type||h.t||'EQ')==='PT'?'pt':'eq';
     const items=h.items||[];
-    const type=h.type==='PT'?'Partikel':'Peralatan';
-    const typeCls=h.type==='PT'?'pt':'eq';
-    const best=items.reduce((a,b)=>{
-      const rk=['COMMON','UNCOMMON','RARE','EPIC','LEGENDARY'];
-      return rk.indexOf(b.rarity)>rk.indexOf(a.rarity)?b:a;
-    },items[0]||{rarity:'COMMON',name:'?'});
-    const bestColor=RARITY_COLORS[best.rarity]||'var(--dim)';
-    const itemList=items.map(it=>{
-      const c=RARITY_COLORS[it.rarity]||'var(--dim)';
-      return`<span class="pull-item" style="color:${c}">${esc(it.name||'?')}${it.isDup?' <span class="dup">[D]</span>':''}</span>`;
-    }).join('');
+    const rarity=h.r||'COMMON';
+    const iName=h.name||h.n||'?';
+    const rarColor=RARITY_COLORS[rarity]||'var(--dim)';
+    if(items.length>0){
+      const best=items.reduce((a,b)=>{
+        const rk=['COMMON','UNCOMMON','RARE','EPIC','LEGENDARY'];
+        return rk.indexOf(b.rarity||b.r||'COMMON')>rk.indexOf(a.rarity||a.r||'COMMON')?b:a;
+      },items[0]||{});
+      const bestColor=RARITY_COLORS[best.rarity||best.r]||'var(--dim)';
+      const itemList=items.map(it=>{
+        const c=RARITY_COLORS[it.rarity||it.r]||'var(--dim)';
+        return`<span class="pull-item" style="color:${c}">${esc(it.name||it.n||'?')}${it.isDup||it.d?' <span class="dup">[D]</span>':''}</span>`;
+      }).join('');
+      return`<div class="log-row gacha-row" style="animation:fs .3s ${i*30}ms ease both">
+        <div class="log-icon ${typeCls}">${ICONS.gacha}</div>
+        <div class="log-body">
+          <div class="log-main"><span class="pn">${esc(pName)}</span> <span class="badge ${typeCls}">${type}</span> <span class="badge pull">${items.length}x</span></div>
+          <div class="log-detail"><span class="log-time">${timeAgo(h.ts)}</span></div>
+          <div class="pull-items">${itemList}</div>
+        </div>
+        <div class="log-amount" style="color:${bestColor}">${esc(best.name||best.n||'?')}</div>
+      </div>`;
+    }
     return`<div class="log-row gacha-row" style="animation:fs .3s ${i*30}ms ease both">
       <div class="log-icon ${typeCls}">${ICONS.gacha}</div>
       <div class="log-body">
-        <div class="log-main"><span class="pn">${esc(h.player||'?')}</span> <span class="badge ${typeCls}">${type}</span> <span class="badge pull">${items.length}x</span></div>
+        <div class="log-main"><span class="pn">${esc(pName)}</span> <span class="badge ${typeCls}">${type}</span></div>
         <div class="log-detail"><span class="log-time">${timeAgo(h.ts)}</span></div>
-        <div class="pull-items">${itemList}</div>
       </div>
-      <div class="log-amount" style="color:${bestColor}">${esc(best.name||'?')}</div>
+      <div class="log-amount" style="color:${rarColor}">${esc(iName)}</div>
     </div>`;
   }).join('');
 }
@@ -205,10 +219,9 @@ async function fetchLogs(){
 }
 
 function updateStats(){
-  $('st-bank').textContent=allData.bank.length;
-  $('st-auction').textContent=allData.auction.length;
-  $('st-gacha').textContent=allData.gacha.length;
-  $('st-topup').textContent=allData.topup.length;
+  var ids=['st-bank','st-auction','st-gacha','st-topup'];
+  var vals=[allData.bank.length,allData.auction.length,allData.gacha.length,allData.topup.length];
+  for(var i=0;i<ids.length;i++){var el=$(ids[i]);if(el){el.textContent=vals[i];el.classList.remove('sk');}}
 }
 
 bindTabs();

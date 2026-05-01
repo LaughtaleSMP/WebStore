@@ -78,12 +78,24 @@ function applyBDSMetrics(m){
     tbody.innerHTML=details.map(function(p){
       var dl={'overworld':'Overworld','nether':'Nether','the_end':'The End'}[p.dim]||p.dim;
       var co=p.x!==undefined?p.x+', '+p.y+', '+p.z:'\u2014';
-      return'<tr><td>'+esc(p.name)+'</td><td>'+dl+'</td><td class="mono">'+co+'</td><td>'+(p.gamemode||'\u2014')+'</td></tr>';
+      var pvp=p.pvp?'<span style="color:var(--red);font-weight:600">ON</span>':'<span style="color:var(--green);font-weight:600">OFF</span>';
+      return'<tr><td>'+esc(p.name)+'</td><td>'+dl+'</td><td class="mono">'+co+'</td><td>'+(p.gamemode||'\u2014')+'</td><td>'+pvp+'</td></tr>';
     }).join('');
     var pdc=$('player-details-card');if(pdc)pdc.style.display='block';
   }
   safeSet('metrics-time',m.ts?timeAgo(new Date(m.ts).toISOString()):'\u2014');
   var bds=$('bds-metrics');if(bds)bds.style.display='block';
+  var bd=m.entity_breakdown||[];
+  var ebCard=$('entity-breakdown-card');
+  var ebBody=$('entity-breakdown-body');
+  if(ebCard&&ebBody&&bd.length){
+    var maxC=bd[0].count||1;
+    ebBody.innerHTML=bd.map(function(e,i){
+      var pct=Math.round(e.count/maxC*100);
+      var color=e.id==='item'?'var(--gold)':pct>60?'var(--red)':pct>30?'var(--orange)':'var(--green)';
+      return'<tr><td class="mono" style="text-align:center">'+(i+1)+'</td><td class="mono">'+esc(e.id)+'</td><td class="mono" style="text-align:right;color:'+color+'">'+e.count+'</td><td><div style="height:4px;background:var(--surface);border-radius:2px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:2px"></div></div></td></tr>';
+    }).join('');
+  }
   updateDiag(m);
 }
 
