@@ -217,13 +217,39 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
   <div class="info-row"><span>Terakhir Update</span><b id="metrics-time">—</b></div>
 </div>
 
-<!-- Player Details Table -->
+<!-- Player Radar -->
 <div class="cd" id="player-details-card" style="display:none">
-  <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>DETAIL PEMAIN</span></div>
-  <table class="dtbl">
-    <thead><tr><th>Nama</th><th>Dimensi</th><th>Koordinat</th><th>Mode</th><th>PvP</th></tr></thead>
-    <tbody id="player-details-body"></tbody>
-  </table>
+  <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>PLAYER RADAR</span></div>
+  <div class="tabs" id="radar-dim-tabs" style="margin-bottom:8px">
+    <button class="tab a" data-dim="overworld">Overworld</button>
+    <button class="tab" data-dim="nether">Nether</button>
+    <button class="tab" data-dim="the_end">The End</button>
+  </div>
+  <div style="position:relative;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;background:#080c08" id="radar-wrap">
+    <canvas id="radar-canvas" height="360" style="cursor:grab;display:block"></canvas>
+    <button id="radar-center" title="Reset ke 0,0" style="position:absolute;bottom:8px;right:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:var(--r-xs);width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:.45rem;color:var(--mute)">12j lalu</span>
+    <input type="range" id="radar-timeline" min="0" max="144" value="144" style="flex:1;height:4px;accent-color:var(--ac)">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:.45rem;color:var(--mute)">Now</span>
+  </div>
+  <div id="radar-time-label" style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:.48rem;color:var(--ac);margin-top:2px">Live</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+    <div style="display:flex;gap:4px">
+      <button class="tab" id="radar-zout" style="width:28px;padding:2px">−</button>
+      <button class="tab" id="radar-zin" style="width:28px;padding:2px">+</button>
+    </div>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mute)" id="radar-zoom-label">Zoom: 500 blok</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mute)" id="radar-count">0 pemain</span>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:8px;border-radius:50%;background:#34d399"></span>Overworld</span>
+    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:8px;border-radius:50%;background:#fb923c"></span>Nether</span>
+    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:8px;border-radius:50%;background:#a855f7"></span>The End</span>
+    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:8px;border-radius:50%;background:#f87171"></span>PvP ON</span>
+    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.15)"></span>Trail</span>
+  </div>
 </div>
 
 </div><!-- /bds-metrics -->
