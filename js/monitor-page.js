@@ -380,6 +380,7 @@ var radarPanX=0,radarPanZ=0,radarDrag=false,radarDragStart={x:0,z:0,px:0,pz:0};
 var radarHistory=[],radarTimeIdx=-1,radarRaf=0;
 var DIM_COLORS={overworld:'#34d399',nether:'#fb923c',the_end:'#a855f7'};
 var DIM_SHORT={o:'overworld',n:'nether',t:'the_end'};
+var LAND_COLORS=['#34d399','#60a5fa','#f472b6','#a78bfa','#fbbf24','#fb923c','#38bdf8','#4ade80'];
 
 function nameHash(n){var h=0;for(var i=0;i<n.length;i++)h=((h<<5)-h)+n.charCodeAt(i)|0;return Math.abs(h);}
 var SKIN_COLORS=['#c68642','#8d5524','#e0ac69','#f1c27d','#ffdbac','#d2a679','#a0785a','#7b5b3a'];
@@ -484,10 +485,9 @@ function drawRadar(){
     ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='600 8px JetBrains Mono,monospace';ctx.textAlign='left';
     ctx.fillText('0, 0',ox+6,oz-5);
   }
-  var LAND_COLORS=['#34d399','#60a5fa','#f472b6','#a78bfa','#fbbf24','#fb923c','#38bdf8','#4ade80'];
   if(radarLands&&radarLands.length){
     for(var li=0;li<radarLands.length;li++){
-      var l=radarLands[li];
+      var l=radarLands[li];if(!l||l.x1==null||l.z1==null)continue;
       var ldim=DIM_SHORT[l.d]||'overworld';
       if(ldim!==radarDim)continue;
       var lx1=cx+(Math.min(l.x1,l.x2)-radarPanX)*scale;
@@ -619,7 +619,7 @@ async function fetchRadarHistory(){
     });
     window.addEventListener('mousemove',function(e){
       if(!radarDrag)return;
-      var sc=Math.min(canvas.width,360)/(radarZoom*2);
+      var sc=Math.min(parseInt(canvas.style.width)||600,400)/(radarZoom*2);
       radarPanX=radarDragStart.px-(e.clientX-radarDragStart.x)/sc;
       radarPanZ=radarDragStart.pz-(e.clientY-radarDragStart.z)/sc;
       if(!radarRaf){radarRaf=requestAnimationFrame(function(){drawRadar();radarRaf=0;});}
@@ -642,7 +642,7 @@ async function fetchRadarHistory(){
     canvas.addEventListener('touchmove',function(e){
       if(!radarDrag||e.touches.length!==1)return;
       e.preventDefault();var t=e.touches[0];
-      var sc=Math.min(canvas.width,360)/(radarZoom*2);
+      var sc=Math.min(parseInt(canvas.style.width)||600,400)/(radarZoom*2);
       radarPanX=radarDragStart.px-(t.clientX-radarDragStart.x)/sc;
       radarPanZ=radarDragStart.pz-(t.clientY-radarDragStart.z)/sc;
       if(!radarRaf){radarRaf=requestAnimationFrame(function(){drawRadar();radarRaf=0;});}
