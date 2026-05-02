@@ -74,7 +74,6 @@ function applyBDSMetrics(m){
   safeSet('world-tps',tps.toFixed(1)+' / 20');
   radarPlayers=m.player_details||[];
   radarLands=m.land_claims||[];
-  console.log('[Radar] players:',radarPlayers.length,'lands:',radarLands.length);
   if(radarPlayers.length||radarLands.length){
     drawRadar();
     var pdc=$('player-details-card');if(pdc)pdc.style.display='block';
