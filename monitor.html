@@ -67,6 +67,10 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
 .mh-dot{width:8px;height:3px;border-radius:2px;background:var(--lc);opacity:.4;transition:opacity .2s}
 .mh-leg.active .mh-dot{opacity:1}
 .mh-info{font-size:.58rem;color:var(--mute);margin-top:6px;text-align:center}
+#player-details-card:fullscreen,#player-details-card:-webkit-full-screen{background:#060a0e;padding:10px;max-width:100vw;border:none;border-radius:0}
+#player-details-card:fullscreen #radar-wrap,#player-details-card:-webkit-full-screen #radar-wrap{height:calc(100vh - 130px)!important;border-radius:6px}
+#player-details-card:fullscreen #radar-canvas,#player-details-card:-webkit-full-screen #radar-canvas{height:100%!important}
+.dim-badge{font-family:'JetBrains Mono',monospace;font-size:.5rem;font-weight:700;background:rgba(168,85,247,.12);border-radius:8px;padding:1px 5px;margin-left:3px;min-width:14px;text-align:center;display:inline-block}
 </style>
 </head>
 <body>
@@ -187,16 +191,6 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
   </table>
 </div>
 
-<!-- Players per Dimension -->
-<div class="cd">
-  <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>PEMAIN PER DIMENSI</span></div>
-  <div class="chip-strip">
-    <div class="chip">Overworld<div class="chip-sep"></div><b id="dim-ow">0</b></div>
-    <div class="chip">Nether<div class="chip-sep"></div><b id="dim-nether">0</b></div>
-    <div class="chip">The End<div class="chip-sep"></div><b id="dim-end">0</b></div>
-  </div>
-</div>
-
 <!-- DP Usage -->
 <div class="bar-wrap">
   <div class="bar-hd">
@@ -221,34 +215,34 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
 <div class="cd" id="player-details-card" style="display:none">
   <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>PLAYER RADAR</span></div>
   <div class="tabs" id="radar-dim-tabs" style="margin-bottom:8px">
-    <button class="tab a" data-dim="overworld">Overworld</button>
-    <button class="tab" data-dim="nether">Nether</button>
-    <button class="tab" data-dim="the_end">The End</button>
+    <button class="tab a" data-dim="overworld">Overworld <span class="dim-badge" id="dim-ow">0</span></button>
+    <button class="tab" data-dim="nether">Nether <span class="dim-badge" id="dim-nether">0</span></button>
+    <button class="tab" data-dim="the_end">The End <span class="dim-badge" id="dim-end">0</span></button>
   </div>
   <div style="position:relative;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;background:#080c08" id="radar-wrap">
     <canvas id="radar-canvas" height="360" style="cursor:grab;display:block"></canvas>
+    <div id="radar-info" style="display:none;position:absolute;top:8px;left:8px;background:rgba(6,10,14,.92);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 12px;flex-direction:column;gap:2px;min-width:120px;backdrop-filter:blur(6px);z-index:2">
+      <div id="radar-info-content" style="font-family:'JetBrains Mono',monospace"></div>
+      <button id="radar-info-close" style="margin-top:4px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:var(--r-xs);color:var(--mute);font-size:.5rem;padding:2px 8px;cursor:pointer;font-family:'JetBrains Mono',monospace">✕ Batal Pilih</button>
+    </div>
     <button id="radar-center" title="Reset ke 0,0" style="position:absolute;bottom:8px;right:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:var(--r-xs);width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
   </div>
-  <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+  <div style="display:flex;align-items:center;gap:4px;margin-top:8px">
     <span style="font-family:'JetBrains Mono',monospace;font-size:.45rem;color:var(--mute)">12j lalu</span>
+    <button class="tab" id="radar-step-back" style="width:26px;padding:2px;font-size:.65rem;flex-shrink:0" title="Mundur 1 point">◀</button>
     <input type="range" id="radar-timeline" min="0" max="144" value="144" style="flex:1;height:4px;accent-color:var(--ac)">
+    <button class="tab" id="radar-step-fwd" style="width:26px;padding:2px;font-size:.65rem;flex-shrink:0" title="Maju 1 point">▶</button>
     <span style="font-family:'JetBrains Mono',monospace;font-size:.45rem;color:var(--mute)">Now</span>
   </div>
   <div id="radar-time-label" style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:.48rem;color:var(--ac);margin-top:2px">Live</div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-    <div style="display:flex;gap:4px">
-      <button class="tab" id="radar-zout" style="width:28px;padding:2px">−</button>
-      <button class="tab" id="radar-zin" style="width:28px;padding:2px">+</button>
-    </div>
+    <button class="tab" id="radar-fullscreen" style="padding:3px 10px;font-size:.55rem;display:flex;align-items:center;gap:4px" title="Fullscreen Map"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>Fullscreen</button>
     <span style="font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mute)" id="radar-zoom-label">Zoom: 500 blok</span>
     <span style="font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mute)" id="radar-count">0 pemain</span>
   </div>
   <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:8px;border-radius:50%;background:#34d399"></span>Overworld</span>
-    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:8px;border-radius:50%;background:#fb923c"></span>Nether</span>
-    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:8px;border-radius:50%;background:#a855f7"></span>The End</span>
     <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:8px;border-radius:50%;background:#f87171"></span>PvP ON</span>
-    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.15)"></span>Trail</span>
+    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:12px;height:2px;border-bottom:2px dotted rgba(255,255,255,.4)"></span>Trail</span>
   </div>
 </div>
 
