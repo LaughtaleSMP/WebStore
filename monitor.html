@@ -59,14 +59,17 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
   .tip-grid{grid-template-columns:1fr}
   .ent-grid{grid-template-columns:repeat(2,1fr)}
 }
-.mh-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.mh-leg{display:inline-flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;
-  font-size:.55rem;font-weight:600;color:var(--mute);padding:3px 8px;border-radius:var(--r-xs);
-  border:1px solid var(--border);cursor:pointer;transition:all .2s;user-select:none}
-.mh-leg.active{color:var(--lc);border-color:var(--lc);background:color-mix(in srgb,var(--lc) 8%,transparent)}
-.mh-dot{width:8px;height:3px;border-radius:2px;background:var(--lc);opacity:.4;transition:opacity .2s}
-.mh-leg.active .mh-dot{opacity:1}
 .mh-info{font-size:.58rem;color:var(--mute);margin-top:6px;text-align:center}
+.mh-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:4px;transition:border-color .2s}
+.mh-row:hover{border-color:var(--border2)}
+.mh-row:last-child{margin-bottom:0}
+.mh-row-hd{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.mh-row-dot{width:8px;height:8px;border-radius:2px;background:var(--mc);flex-shrink:0}
+.mh-row-name{font-family:'JetBrains Mono',monospace;font-size:.5rem;font-weight:700;color:var(--dim);letter-spacing:.5px;text-transform:uppercase}
+.mh-row-val{font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;color:var(--mc);margin-left:auto}
+.mh-row-cv{width:100%;height:32px;border-radius:4px;display:block}
+.mh-row-range{display:flex;justify-content:space-between;margin-top:3px}
+.mh-row-range span{font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mute)}
 /* Fullscreen radar — all controls visible */
 #player-details-card:fullscreen,#player-details-card:-webkit-full-screen{
   background:#060a0e;padding:10px 14px 10px;max-width:100vw;width:100vw;height:100vh;
@@ -78,6 +81,168 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
 #player-details-card:fullscreen #radar-canvas,#player-details-card:-webkit-full-screen #radar-canvas{
   display:block}
 .dim-badge{font-family:'JetBrains Mono',monospace;font-size:.5rem;font-weight:700;background:rgba(168,85,247,.12);border-radius:8px;padding:1px 5px;margin-left:3px;min-width:14px;text-align:center;display:inline-block}
+
+/* Health Index Gauge */
+.health-wrap{text-align:center;margin-bottom:.75rem}
+.health-gauge{display:inline-flex;align-items:center;gap:1rem;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1.5rem;position:relative;overflow:hidden}
+.health-gauge::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(168,85,247,.18),transparent)}
+.gauge-svg{width:60px;height:60px;transform:rotate(-90deg);flex-shrink:0}
+.gauge-bg{fill:none;stroke:rgba(255,255,255,.06);stroke-width:4}
+.gauge-fill{fill:none;stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset .8s ease,stroke .5s}
+.gauge-center{text-align:left}
+.gauge-score{font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;line-height:1}
+.gauge-label{font-size:.45rem;color:var(--mute);text-transform:uppercase;letter-spacing:1.5px;margin-top:2px;display:block}
+.gauge-sub{font-size:.52rem;color:var(--dim);margin-top:3px;display:block}
+
+/* TPS Trend Arrow */
+.trend{font-size:.5rem;display:block;margin-top:2px;font-weight:700;letter-spacing:.3px}
+.trend.up{color:var(--green)}.trend.flat{color:var(--dim)}.trend.down{color:var(--red)}
+
+/* Uptime Bar */
+.uptime-wrap{margin-bottom:.75rem}
+.uptime-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.uptime-pct{font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700}
+.uptime-lbl{font-family:'JetBrains Mono',monospace;font-size:.48rem;color:var(--mute);text-transform:uppercase;letter-spacing:1.5px;font-weight:600}
+.uptime-track{height:5px;background:var(--surface);border-radius:3px;display:flex;overflow:hidden;border:1px solid var(--border)}
+.uptime-seg{height:100%;min-width:1px}.uptime-seg.on{background:var(--green)}.uptime-seg.off{background:var(--red)}
+.uptime-times{display:flex;justify-content:space-between;margin-top:3px}
+.uptime-times span{font-size:.4rem;color:var(--mute);font-family:'JetBrains Mono',monospace}
+
+/* Notification Bell */
+.notif-wrap{position:relative;display:inline-block;margin-left:6px;vertical-align:middle}
+.notif-bell{background:none;border:1px solid var(--border);border-radius:var(--r-xs);padding:3px 8px;cursor:pointer;color:var(--mute);transition:all .2s;display:inline-flex;align-items:center;gap:3px;font-size:.45rem;font-family:'JetBrains Mono',monospace;letter-spacing:.5px}
+.notif-bell:hover{border-color:var(--border2);color:var(--dim)}
+.notif-bell.active{border-color:rgba(52,211,153,.3);color:var(--green)}
+.notif-badge{position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;font-size:.38rem;font-weight:700;width:13px;height:13px;border-radius:50%;display:none;line-height:13px;text-align:center}
+.notif-panel{display:none;position:absolute;top:calc(100% + 6px);right:-20px;width:240px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow);z-index:50;max-height:260px;overflow-y:auto;scrollbar-width:thin}
+.notif-panel.open{display:block}
+.notif-hd{padding:7px 10px;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:.48rem;font-weight:700;color:var(--dim);letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.notif-clear{font-size:.42rem;color:var(--mute);cursor:pointer;border:none;background:none;font-family:inherit;padding:2px 6px;border-radius:3px}
+.notif-clear:hover{color:var(--red)}
+.notif-item{display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.02)}
+.notif-item:last-child{border-bottom:none}
+.notif-ico{flex-shrink:0;font-size:.65rem;line-height:1}
+.notif-msg{color:var(--dim);font-size:.55rem;line-height:1.4}
+.notif-ts{font-size:.42rem;color:var(--mute);margin-top:1px;font-family:'JetBrains Mono',monospace}
+
+/* Heatmap Toggle */
+.hm-chk{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:.48rem;color:var(--mute);transition:color .2s}
+.hm-chk:hover{color:var(--dim)}
+.hm-chk input{accent-color:var(--orange);width:11px;height:11px;cursor:pointer}
+
+/* Peak Hours Bar */
+.peak-wrap{position:relative}
+.peak-desc{font-family:'JetBrains Mono',monospace;font-size:.48rem;color:var(--mute);margin-bottom:8px;line-height:1.6}
+.peak-grid{display:flex;gap:1px;align-items:flex-end;height:56px;margin-top:6px;position:relative}
+.peak-bar{flex:1;min-width:0;border-radius:2px 2px 0 0;transition:height .4s ease,opacity .15s;cursor:crosshair;position:relative}
+.peak-bar:hover{opacity:.85}
+.peak-labels{display:flex;gap:1px;margin-top:2px}
+.peak-labels span{flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.32rem;color:var(--mute)}
+.peak-tip{position:absolute;display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-xs);padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:.48rem;color:var(--text);pointer-events:none;z-index:20;white-space:nowrap;box-shadow:var(--shadow);backdrop-filter:blur(6px);top:-4px;transform:translateY(-100%)}
+.peak-tip::after{content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);border-left:4px solid transparent;border-right:4px solid transparent;border-top:4px solid var(--border2)}
+.peak-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.peak-legend-item{display:flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mute)}
+.peak-legend-dot{width:8px;height:4px;border-radius:1px;flex-shrink:0}
+.peak-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.peak-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xs);padding:6px 8px;text-align:center}
+.peak-stat-label{font-family:'JetBrains Mono',monospace;font-size:.38rem;color:var(--mute);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.peak-stat-val{font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:700;line-height:1}
+@media(max-width:400px){.peak-stats{grid-template-columns:1fr}}
+
+/* Export Buttons */
+.exp-btns{display:flex;gap:4px;margin-left:auto}
+.exp-btn{font-family:'JetBrains Mono',monospace;font-size:.42rem;font-weight:600;padding:3px 8px;border-radius:var(--r-xs);border:1px solid var(--border);background:var(--surface);color:var(--mute);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:3px;letter-spacing:.3px}
+.exp-btn:hover{border-color:var(--border2);color:var(--dim)}
+.exp-btn svg{width:9px;height:9px;opacity:.5}
+
+/* Theme Toggle */
+.theme-btn{background:none;border:1px solid var(--border);border-radius:var(--r-xs);padding:3px 8px;cursor:pointer;color:var(--mute);transition:all .2s;display:inline-flex;align-items:center;gap:3px;font-size:.45rem;font-family:'JetBrains Mono',monospace;letter-spacing:.5px;margin-left:4px}
+.theme-btn:hover{border-color:var(--border2);color:var(--dim)}
+body.light{--bg:#f0f0f5;--bg2:#fff;--bg3:#e8e8f0;--surface:rgba(0,0,0,.03);--surface2:rgba(0,0,0,.05);--surface3:rgba(0,0,0,.08);--border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.14);--border3:rgba(0,0,0,.22);--text:#1a1a2e;--dim:#555580;--mute:#8888aa}
+body.light::before{background:radial-gradient(ellipse 700px 450px at 15% 5%,rgba(168,85,247,.06),transparent),radial-gradient(ellipse 500px 400px at 88% 90%,rgba(34,211,238,.04),transparent)}
+body.light canvas{background:rgba(0,0,0,.015)}
+
+/* Radar Search */
+.radar-search{display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap}
+.radar-search input{font-family:'JetBrains Mono',monospace;font-size:.52rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xs);color:var(--text);padding:4px 8px;outline:none;transition:border-color .2s}
+.radar-search input:focus{border-color:var(--ac)}
+.radar-search input::placeholder{color:var(--mute)}
+.rs-name{flex:1;min-width:100px}
+.rs-coord{width:60px}
+.rs-btn{font-family:'JetBrains Mono',monospace;font-size:.45rem;font-weight:600;padding:4px 10px;border-radius:var(--r-xs);border:1px solid var(--border);background:var(--surface);color:var(--dim);cursor:pointer;transition:all .2s}
+.rs-btn:hover{border-color:var(--ac);color:var(--ac)}
+
+/* Metric comparison delta */
+.mh-delta{font-family:'JetBrains Mono',monospace;font-size:.42rem;font-weight:600;margin-left:6px;padding:1px 5px;border-radius:3px}
+.mh-delta.up{color:var(--green);background:rgba(52,211,153,.08)}
+.mh-delta.down{color:var(--red);background:rgba(248,113,113,.08)}
+.mh-delta.flat{color:var(--mute);background:var(--surface)}
+
+/* Chart Tooltip */
+.chart-tip{position:absolute;display:none;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-xs);padding:5px 9px;font-family:'JetBrains Mono',monospace;font-size:.48rem;color:var(--text);pointer-events:none;z-index:10;white-space:nowrap;box-shadow:var(--shadow)}
+.chart-tip-line{position:absolute;display:none;width:1px;background:rgba(168,85,247,.3);pointer-events:none;z-index:9;top:0;bottom:0}
+
+/* Metric Sparkline Background */
+.m-card{position:relative;overflow:hidden}
+.m-spark{position:absolute;bottom:0;left:0;right:0;height:20px;opacity:.3;pointer-events:none}
+
+/* Radar Mini-Map */
+.radar-minimap{position:absolute;bottom:8px;left:8px;width:80px;height:80px;background:rgba(6,10,14,.85);border:1px solid var(--border);border-radius:var(--r-xs);z-index:3;display:none;backdrop-filter:blur(4px);overflow:hidden}
+.radar-minimap canvas{width:100%;height:100%;display:block}
+
+/* Measure Tool */
+.measure-btn{font-family:'JetBrains Mono',monospace;font-size:.45rem;font-weight:600;padding:3px 8px;border-radius:var(--r-xs);border:1px solid var(--border);background:var(--surface);color:var(--mute);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:3px}
+.measure-btn:hover{border-color:var(--border2);color:var(--dim)}
+.measure-btn.active{border-color:rgba(245,200,66,.3);color:var(--gold);background:rgba(245,200,66,.06)}
+.measure-info{font-family:'JetBrains Mono',monospace;font-size:.45rem;color:var(--gold);margin-left:auto}
+.radar-coord-tip{position:absolute;display:none;background:rgba(6,10,14,.92);border:1px solid var(--border2);border-radius:var(--r-xs);padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:.52rem;color:var(--cyan);pointer-events:none;z-index:4;white-space:nowrap;backdrop-filter:blur(6px);animation:coordFadeIn .2s ease}
+@keyframes coordFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* Server Selector */
+.srv-select{font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xs);color:var(--text);padding:4px 24px 4px 8px;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238888aa' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;background-size:10px;transition:border-color .2s,box-shadow .2s;max-width:200px}
+.srv-select:hover{border-color:var(--border2)}
+.srv-select:focus{border-color:var(--ac);outline:none;box-shadow:0 0 0 2px rgba(168,85,247,.15)}
+.srv-select option{background:var(--bg2);color:var(--text);padding:4px}
+body.light .srv-select{background-color:rgba(0,0,0,.03);border-color:rgba(0,0,0,.1);color:#1a1a2e;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23555580' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")}
+body.light .srv-select option{background:#fff;color:#1a1a2e}
+
+
+
+/* Keyboard Shortcuts Bar */
+.kbd-bar{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:6px}
+.kbd{font-family:'JetBrains Mono',monospace;font-size:.38rem;color:var(--mute);border:1px solid var(--border);border-radius:3px;padding:1px 5px;background:var(--surface);display:inline-flex;gap:3px;align-items:center}
+.kbd b{color:var(--dim);font-weight:700}
+
+/* Light theme polish */
+body.light .cd{background:rgba(255,255,255,.8);border-color:rgba(0,0,0,.06)}
+body.light .tab{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.08);color:#555580}
+body.light .tab.a{background:rgba(168,85,247,.08);border-color:rgba(168,85,247,.2);color:#7c3aed}
+body.light .orb.on{background:radial-gradient(circle,#22c55e 0%,#15803d 100%)}
+body.light .m-card{background:rgba(255,255,255,.7);border-color:rgba(0,0,0,.06)}
+body.light .hd a{color:#555580}
+body.light .notif-bell{border-color:rgba(0,0,0,.1);color:#555580}
+body.light .theme-btn{border-color:rgba(0,0,0,.1);color:#555580}
+body.light .measure-btn{border-color:rgba(0,0,0,.1);color:#555580;background:rgba(0,0,0,.02)}
+body.light .rs-btn{border-color:rgba(0,0,0,.1);color:#555580;background:rgba(0,0,0,.02)}
+body.light .radar-search input{background:rgba(0,0,0,.03);border-color:rgba(0,0,0,.08);color:#1a1a2e}
+body.light .exp-btn{border-color:rgba(0,0,0,.1);color:#555580;background:rgba(0,0,0,.02)}
+body.light .mh-row{background:rgba(0,0,0,.02);border-color:rgba(0,0,0,.06)}
+body.light .info-row{border-color:rgba(0,0,0,.04)}
+body.light .tip{background:rgba(255,255,255,.7);border-color:rgba(0,0,0,.06)}
+body.light .ft{background:rgba(255,255,255,.5);border-color:rgba(0,0,0,.06)}
+body.light .rb{background:rgba(168,85,247,.08);border-color:rgba(168,85,247,.2);color:#7c3aed}
+body.light .diag-item{background:rgba(0,0,0,.02);border-color:rgba(0,0,0,.06)}
+body.light .notif-panel{background:#fff;border-color:rgba(0,0,0,.1)}
+body.light .chart-tip{background:#fff;border-color:rgba(0,0,0,.12);color:#1a1a2e}
+
+/* Integrated health in status card */
+.sc{justify-content:space-between}
+.health-inline{display:none;align-items:center;gap:8px}
+.health-inline .gauge-svg{width:44px;height:44px}
+.health-inline .gauge-center{text-align:right}
+.health-inline .gauge-score{font-size:1rem}
+.health-inline .gauge-label{font-size:.38rem}
+.health-inline .gauge-sub{font-size:.42rem}
 </style>
 </head>
 <body>
@@ -86,29 +251,45 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
 <header class="hd">
   <a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>KEMBALI KE BERANDA</a>
   <div class="logo">LAUGHTALE <b>SMP</b></div>
-  <div class="sub"><span class="live-dot"></span>Server Performance Monitor</div>
+  <div class="sub"><span class="live-dot"></span>Server Performance Monitor
+    <span class="notif-wrap"><button class="notif-bell" id="notif-bell" title="Toggle notifikasi"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>ALERT</button><span class="notif-badge" id="notif-badge">0</span><div class="notif-panel" id="notif-panel"><div class="notif-hd"><span>Notifikasi</span><button class="notif-clear" id="notif-clear">Hapus</button></div><div id="notif-list"><div style="padding:12px;text-align:center;color:var(--mute);font-size:.55rem">Belum ada notifikasi</div></div></div></span>
+    <button class="theme-btn" id="theme-toggle" title="Toggle tema"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><span id="theme-label">LIGHT</span></button>
+  </div>
 </header>
 
 <!-- Server Status Card -->
 <div class="cd" id="main-card">
   <div class="sc">
-    <div class="orb-w">
-      <div class="orb ld" id="s-orb"><div class="orb-c"></div></div>
-      <div class="orb-ring"></div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div class="orb-w">
+        <div class="orb ld" id="s-orb"><div class="orb-c"></div></div>
+        <div class="orb-ring"></div>
+      </div>
+      <div class="si">
+        <div class="sl ld" id="s-label">MEMUAT...</div>
+        <div class="sn"><span id="srv-name">Laughtale SMP</span><select class="srv-select" id="srv-select" style="display:none" title="Pilih server"></select></div>
+        <div class="sa" id="s-addr">—</div>
+      </div>
     </div>
-    <div class="si">
-      <div class="sl ld" id="s-label">MEMUAT...</div>
-      <div class="sn">Laughtale SMP</div>
-      <div class="sa" id="s-addr">—</div>
+    <div class="health-inline" id="health-wrap">
+      <div class="gauge-center"><span class="gauge-score" id="health-score">—</span><span class="gauge-label">HEALTH</span><span class="gauge-sub" id="health-desc">Memuat...</span></div>
+      <svg class="gauge-svg" viewBox="0 0 36 36" style="transform:rotate(-90deg)"><circle class="gauge-bg" cx="18" cy="18" r="15.9"/><circle class="gauge-fill" id="gauge-fill" cx="18" cy="18" r="15.9" stroke="var(--green)" stroke-dasharray="100 100" stroke-dashoffset="100"/></svg>
     </div>
   </div>
 </div>
 
+<!-- Uptime Tracker -->
+<div class="uptime-wrap">
+  <div class="uptime-hd"><span class="uptime-lbl">UPTIME 24 JAM</span><span class="uptime-pct" id="uptime-pct" style="color:var(--green)">—</span></div>
+  <div class="uptime-track" id="uptime-track"></div>
+  <div class="uptime-times"><span>24j lalu</span><span>Sekarang</span></div>
+</div>
+
 <!-- Metrics Grid: 5 cards -->
 <div class="m-grid">
-  <div class="m-card"><div class="m-label">TPS</div><span class="m-val" id="m-tps">—</span><span class="m-unit">ticks/s</span></div>
-  <div class="m-card"><div class="m-label">Latency</div><span class="m-val" id="m-latency">—</span><span class="m-unit">ms</span></div>
-  <div class="m-card"><div class="m-label">Pemain</div><span class="m-val" id="m-players">—</span><span class="m-unit">slot</span></div>
+  <div class="m-card"><div class="m-label">TPS</div><span class="m-val" id="m-tps">—</span><span class="trend" id="tps-trend"></span><span class="m-unit">ticks/s</span><canvas class="m-spark" id="ms-tps"></canvas></div>
+  <div class="m-card"><div class="m-label">Latency</div><span class="m-val" id="m-latency">—</span><span class="m-unit">ms</span><canvas class="m-spark" id="ms-lat"></canvas></div>
+  <div class="m-card"><div class="m-label">Pemain</div><span class="m-val" id="m-players">—</span><span class="m-unit">slot</span><canvas class="m-spark" id="ms-players"></canvas></div>
   <div class="m-card"><div class="m-label">Versi</div><span class="m-val dim" id="m-version" style="font-size:.68rem">—</span><span class="m-unit">bedrock</span></div>
   <div class="m-card"><div class="m-label">Status</div><span class="m-val" id="m-status">—</span><span class="m-unit">server</span></div>
 </div>
@@ -122,11 +303,26 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
 
 <!-- Latency Chart -->
 <div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16h16"/><path d="M4 14l4-4 4 2 4-6 4 4"/></svg>LATENCY HISTORY</span><div class="dvl"></div></div>
-<div style="margin-bottom:.75rem">
+<div style="margin-bottom:.75rem;position:relative">
   <div class="sec-hd" style="margin-bottom:6px">
     <span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Grafik Latency (auto-refresh 30s)</span>
   </div>
   <canvas id="latency-chart" height="180"></canvas>
+  <div class="chart-tip" id="lat-tip"></div>
+  <div class="chart-tip-line" id="lat-tip-line"></div>
+</div>
+
+<!-- Peak Hours -->
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>PEAK HOURS</span></div>
+  <div class="peak-desc" id="peak-desc">Rata-rata jumlah pemain online per jam. Hover pada bar untuk melihat detail.</div>
+  <div class="peak-wrap" id="peak-wrap">
+    <div class="peak-grid" id="peak-grid"></div>
+    <div class="peak-tip" id="peak-tip"></div>
+  </div>
+  <div class="peak-labels" id="peak-labels"></div>
+  <div class="peak-legend" id="peak-legend"></div>
+  <div class="peak-stats" id="peak-stats"></div>
 </div>
 
 <!-- Performance History Chart -->
@@ -134,20 +330,20 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
 <div class="cd">
   <div class="sec-hd" style="margin-bottom:8px">
     <span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Multi-Metric Chart</span>
+    <div class="exp-btns"><button class="exp-btn" id="exp-csv" title="Export CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>CSV</button><button class="exp-btn" id="exp-png" title="Export PNG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>PNG</button></div>
   </div>
   <div class="tabs" id="mh-tabs" style="margin-bottom:8px">
     <button class="tab a" data-range="day">24 Jam</button>
     <button class="tab" data-range="week">7 Hari</button>
     <button class="tab" data-range="month">30 Hari</button>
   </div>
-  <div class="mh-legend" id="mh-legend">
-    <span class="mh-leg active" data-key="tps" style="--lc:#34d399"><span class="mh-dot"></span>TPS</span>
-    <span class="mh-leg active" data-key="players" style="--lc:#a855f7"><span class="mh-dot"></span>Players</span>
-    <span class="mh-leg active" data-key="mobs" style="--lc:#fb923c"><span class="mh-dot"></span>Mobs</span>
-    <span class="mh-leg active" data-key="entities" style="--lc:#22d3ee"><span class="mh-dot"></span>Entity</span>
-    <span class="mh-leg active" data-key="items" style="--lc:#f87171"><span class="mh-dot"></span>Items</span>
+  <div id="mh-rows">
+    <div class="mh-row" style="--mc:#34d399"><div class="mh-row-hd"><span class="mh-row-dot"></span><span class="mh-row-name">TPS</span><span class="mh-row-val" id="mhr-tps-v">—</span></div><canvas class="mh-row-cv" id="mhc-tps" height="32"></canvas><div class="mh-row-range"><span id="mhr-tps-min">min: —</span><span id="mhr-tps-max">max: —</span></div></div>
+    <div class="mh-row" style="--mc:#a855f7"><div class="mh-row-hd"><span class="mh-row-dot"></span><span class="mh-row-name">Players</span><span class="mh-row-val" id="mhr-players-v">—</span></div><canvas class="mh-row-cv" id="mhc-players" height="32"></canvas><div class="mh-row-range"><span id="mhr-players-min">min: —</span><span id="mhr-players-max">max: —</span></div></div>
+    <div class="mh-row" style="--mc:#fb923c"><div class="mh-row-hd"><span class="mh-row-dot"></span><span class="mh-row-name">Mobs</span><span class="mh-row-val" id="mhr-mobs-v">—</span></div><canvas class="mh-row-cv" id="mhc-mobs" height="32"></canvas><div class="mh-row-range"><span id="mhr-mobs-min">min: —</span><span id="mhr-mobs-max">max: —</span></div></div>
+    <div class="mh-row" style="--mc:#22d3ee"><div class="mh-row-hd"><span class="mh-row-dot"></span><span class="mh-row-name">Entity</span><span class="mh-row-val" id="mhr-entities-v">—</span></div><canvas class="mh-row-cv" id="mhc-entities" height="32"></canvas><div class="mh-row-range"><span id="mhr-entities-min">min: —</span><span id="mhr-entities-max">max: —</span></div></div>
+    <div class="mh-row" style="--mc:#f87171"><div class="mh-row-hd"><span class="mh-row-dot"></span><span class="mh-row-name">Items</span><span class="mh-row-val" id="mhr-items-v">—</span></div><canvas class="mh-row-cv" id="mhc-items" height="32"></canvas><div class="mh-row-range"><span id="mhr-items-min">min: —</span><span id="mhr-items-max">max: —</span></div></div>
   </div>
-  <canvas id="mh-chart" height="220"></canvas>
   <div class="mh-info" id="mh-info">Memuat data histori...</div>
 </div>
 
@@ -198,14 +394,40 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
   </table>
 </div>
 
-<!-- DP Usage -->
-<div class="bar-wrap">
-  <div class="bar-hd">
-    <span class="bar-lbl">DYNAMIC PROPERTY USAGE</span>
-    <span class="bar-val" id="dp-pct">—</span>
+<!-- DP Storage -->
+<div class="cd" id="dp-card">
+  <div class="sec-hd">
+    <span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/><rect x="2" y="7" width="20" height="10" rx="2"/></svg>DYNAMIC PROPERTY</span>
+    <span class="pill p" id="dp-pill">--</span>
   </div>
-  <div class="bar-track"><div class="bar-fill g" id="dp-bar-fill" style="width:0%"></div></div>
-  <div class="bar-sub" id="dp-detail">—</div>
+  <div style="display:flex;align-items:center;gap:1.2rem;margin-bottom:.9rem">
+    <!-- Gauge -->
+    <div style="position:relative;width:76px;height:76px;flex-shrink:0">
+      <svg viewBox="0 0 36 36" style="width:100%;height:100%;transform:rotate(-90deg)">
+        <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--surface)" stroke-width="2.5"/>
+        <circle cx="18" cy="18" r="15.5" fill="none" stroke-width="2.5" stroke-linecap="round"
+                stroke-dasharray="97.4 97.4" stroke-dashoffset="97.4"
+                id="dp-gauge" style="transition:stroke-dashoffset .8s ease,stroke .4s"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <span id="dp-pct-num" style="font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:700;color:#fff;line-height:1">--</span>
+        <span style="font-size:.38rem;color:var(--mute);letter-spacing:.5px;text-transform:uppercase;margin-top:1px">USED</span>
+      </div>
+    </div>
+    <!-- Summary -->
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;color:var(--dim);letter-spacing:.3px" id="dp-pct">--</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.52rem;color:var(--mute)" id="dp-detail">--</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill g" id="dp-bar-fill" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px">
+        <span style="font-size:.42rem;color:var(--mute);letter-spacing:.3px">0 KB</span>
+        <span style="font-size:.42rem;color:var(--mute);letter-spacing:.3px">1024 KB</span>
+      </div>
+    </div>
+  </div>
+  <div id="dp-breakdown"></div>
 </div>
 
 <!-- World Info -->
@@ -221,18 +443,26 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
 <!-- Player Radar -->
 <div class="cd" id="player-details-card" style="display:none">
   <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>PLAYER RADAR</span></div>
+  <div class="radar-search">
+    <input type="text" class="rs-name" id="rs-name" placeholder="Cari pemain...">
+    <input type="number" class="rs-coord" id="rs-x" placeholder="X">
+    <input type="number" class="rs-coord" id="rs-z" placeholder="Z">
+    <button class="rs-btn" id="rs-go">JUMP</button>
+  </div>
   <div class="tabs" id="radar-dim-tabs" style="margin-bottom:8px">
     <button class="tab a" data-dim="overworld">Overworld <span class="dim-badge" id="dim-ow">0</span></button>
     <button class="tab" data-dim="nether">Nether <span class="dim-badge" id="dim-nether">0</span></button>
     <button class="tab" data-dim="the_end">The End <span class="dim-badge" id="dim-end">0</span></button>
   </div>
   <div style="position:relative;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;background:#080c08" id="radar-wrap">
-    <canvas id="radar-canvas" height="360" style="cursor:grab;display:block"></canvas>
+    <canvas id="radar-canvas" height="360" style="cursor:crosshair;display:block"></canvas>
     <div id="radar-info" style="display:none;position:absolute;top:8px;left:8px;background:rgba(6,10,14,.92);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 12px;flex-direction:column;gap:2px;min-width:120px;backdrop-filter:blur(6px);z-index:2">
       <div id="radar-info-content" style="font-family:'JetBrains Mono',monospace"></div>
       <button id="radar-info-close" style="margin-top:4px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:var(--r-xs);color:var(--mute);font-size:.5rem;padding:2px 8px;cursor:pointer;font-family:'JetBrains Mono',monospace">✕ Batal Pilih</button>
     </div>
     <button id="radar-center" title="Reset ke 0,0" style="position:absolute;bottom:8px;right:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:var(--r-xs);width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
+    <div class="radar-minimap" id="radar-minimap"><canvas id="radar-mm-cv" width="80" height="80"></canvas></div>
+    <div class="radar-coord-tip" id="radar-coord-tip"></div>
   </div>
   <div style="display:flex;align-items:center;gap:4px;margin-top:8px">
     <span style="font-family:'JetBrains Mono',monospace;font-size:.45rem;color:var(--mute)">12j lalu</span>
@@ -244,12 +474,16 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
   <div id="radar-time-label" style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:.48rem;color:var(--ac);margin-top:2px">Live</div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
     <button class="tab" id="radar-fullscreen" style="padding:3px 10px;font-size:.55rem;display:flex;align-items:center;gap:4px" title="Fullscreen Map"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>Fullscreen</button>
+    <button class="measure-btn" id="measure-toggle" title="Ukur jarak"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 12h20M12 2v20"/></svg>UKUR</button>
+    <span class="measure-info" id="measure-info"></span>
     <span style="font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mute)" id="radar-zoom-label">Zoom: 500 blok</span>
     <span style="font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mute)" id="radar-count">0 pemain</span>
   </div>
-  <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+  <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center">
+    <label class="hm-chk"><input type="checkbox" id="hm-check">Heatmap</label>
     <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:8px;border-radius:50%;background:#f87171"></span>PvP ON</span>
     <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:12px;height:2px;border-bottom:2px dotted rgba(255,255,255,.4)"></span>Trail</span>
+    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:4px;border-radius:1px;background:rgba(251,146,60,.5)"></span>Heatmap</span>
   </div>
 </div>
 
@@ -273,6 +507,13 @@ canvas{width:100%;border-radius:var(--r-sm);background:rgba(255,255,255,.012);bo
   <button class="rb" id="refresh-btn" onclick="doRefresh()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>REFRESH
   </button>
+</div>
+<div class="kbd-bar">
+  <span class="kbd"><b>R</b> Refresh</span>
+  <span class="kbd"><b>F</b> Fullscreen</span>
+  <span class="kbd"><b>1/2/3</b> Dimensi</span>
+  <span class="kbd"><b>Esc</b> Batal</span>
+  <span class="kbd"><b>+/−</b> Zoom</span>
 </div>
 
 </div>
