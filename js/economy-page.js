@@ -50,6 +50,8 @@ async function fetchAll(){
     var el=$('eco-sync');
     if(el)el.textContent='Sync: '+(row.synced_at?new Date(row.synced_at).toLocaleString('id-ID'):'—');
     renderAnalytics();renderLogStats();renderLogs();renderDiscCodes();
+    // Fetch trend AFTER _data is ready so fallback can use analytics
+    fetchTrend();
   }catch(e){console.warn('[Eco]',e)}
 }
 
@@ -287,9 +289,9 @@ function renderDiscCodes(){
 window.copyCode=function(code){navigator.clipboard.writeText(code).then(function(){var t=$('dc-toast');t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2000)}).catch(function(){})};
 
 /* ═══ Economy Trend Chart ═══ */
-var _trendData=[],_trendRange='week';
-var TREND_COLORS={coin_total:'#fbbf24',player_count:'#22d3ee',coin_median:'#34d399'};
-var TREND_LABELS={coin_total:'Total Coin',player_count:'Pemain',coin_median:'Median Coin'};
+var _trendData=[],_trendRange='day',_trendMetric='coin_total';
+var _candles=[],_hoverIdx=-1;
+var CU='#26a69a',CD='#ef5350';
 
 function bindTrendTabs(){
   var el=$('trend-tabs');if(!el)return;
@@ -298,143 +300,168 @@ function bindTrendTabs(){
     el.querySelectorAll('.tab').forEach(function(b){b.classList.remove('a')});
     t.classList.add('a');_trendRange=t.dataset.range;fetchTrend();
   });
+  var mel=$('trend-metric-tabs');
+  if(mel)mel.addEventListener('click',function(e){
+    var t=e.target.closest('.tab');if(!t)return;
+    mel.querySelectorAll('.tab').forEach(function(b){b.classList.remove('a')});
+    t.classList.add('a');_trendMetric=t.dataset.metric;
+    _candles=_agg(_trendData,_trendMetric);_hoverIdx=-1;drawTrendChart();
+  });
+}
+
+function _bucketMs(){return{day:3600000,week:21600000,month:86400000}[_trendRange]||3600000}
+
+function _agg(data,metric){
+  if(!data.length)return[];
+  var bms=_bucketMs(),bk={};
+  for(var i=0;i<data.length;i++){
+    var t=new Date(data[i].ts).getTime(),k=Math.floor(t/bms)*bms;
+    if(!bk[k])bk[k]={t:k,v:[]};bk[k].v.push(data[i][metric]||0);
+  }
+  var ks=Object.keys(bk).sort(function(a,b){return a-b}),r=[];
+  for(var i=0;i<ks.length;i++){
+    var b=bk[ks[i]],v=b.v,hi=v[0],lo=v[0];
+    for(var j=1;j<v.length;j++){if(v[j]>hi)hi=v[j];if(v[j]<lo)lo=v[j]}
+    r.push({t:b.t,o:v[0],c:v[v.length-1],h:hi,l:lo,n:v.length});
+  }
+  return r;
 }
 
 async function fetchTrend(){
-  var ranges={day:'24',week:'168',month:'720'};
-  var hours=ranges[_trendRange]||'168';
-  var since=new Date(Date.now()-hours*3600000).toISOString();
+  var hrs={day:'24',week:'168',month:'720'}[_trendRange]||'168';
+  var since=new Date(Date.now()-hrs*3600000).toISOString();
   try{
     var r=await fetch(SB_URL+'/rest/v1/economy_history?ts=gte.'+since+'&order=ts.asc&limit=2000',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
     var d=await r.json();
-    if(Array.isArray(d)){
-      _trendData=d;
-      var info=$('trend-info');
-      if(info)info.textContent=d.length>0?d.length+' data points':'Belum ada data trend. Data akan muncul setelah BDS sync berjalan.';
-      drawTrendChart();renderTrendDeltas();renderTrendLegend();
-    }
-  }catch(e){
-    var info=$('trend-info');if(info)info.textContent='Gagal memuat data trend.';
+    _trendData=(Array.isArray(d)&&d.length>0)?d:_fbTrend();
+  }catch(e){_trendData=_fbTrend()}
+  _candles=_agg(_trendData,_trendMetric);_hoverIdx=-1;
+  var info=$('trend-info');
+  if(info){
+    if(_candles.length>1)info.textContent=_candles.length+' candles ('+_trendData.length+' snapshots)';
+    else if(_candles.length===1)info.textContent='1 candle — data bertambah setiap sync BDS.';
+    else info.textContent='Menunggu data dari BDS sync...';
   }
+  drawTrendChart();renderTrendDeltas();
+}
+
+function _fbTrend(){
+  if(!_data||!_data.lb||!_data.lb.summary)return[];
+  var s=_data.lb.summary;
+  return[{ts:_data.synced||new Date().toISOString(),coin_total:s.coin?s.coin.total:0,player_count:s.n||0,coin_median:s.coin?s.coin.median:0,coin_avg:s.coin?s.coin.avg:0}];
+}
+
+function _updHdr(c){
+  var el=$('trend-hdr');if(!el)return;
+  if(!c){el.innerHTML='<span style="color:var(--mute)">— Menunggu data —</span>';return}
+  var d=c.c-c.o,pct=c.o>0?((d/c.o)*100).toFixed(2):'0.00',clr=d>=0?CU:CD,sg=d>=0?'+':'';
+  var t=new Date(c.t),ts=t.getDate()+'/'+(t.getMonth()+1)+' '+String(t.getHours()).padStart(2,'0')+':00';
+  el.innerHTML='<span style="color:var(--mute)">'+ts+'</span> <span>O:<b style="color:var(--dim)">'+fmtN(c.o)+'</b></span> <span>H:<b style="color:'+CU+'">'+fmtN(c.h)+'</b></span> <span>L:<b style="color:'+CD+'">'+fmtN(c.l)+'</b></span> <span>C:<b style="color:var(--text)">'+fmtN(c.c)+'</b></span> <span style="color:'+clr+'">'+sg+fmtN(Math.abs(Math.round(d)))+' ('+sg+pct+'%)</span>';
 }
 
 function drawTrendChart(){
-  var cv=$('trend-chart');if(!cv||!_trendData.length)return;
+  var cv=$('trend-chart');if(!cv)return;
   var par=cv.parentElement;
   var W=par?(par.clientWidth||600):600;if(W<100)W=600;
-  var H=140;
+  var H=220;
   cv.width=W;cv.height=H;
   var ctx=cv.getContext('2d');
   ctx.clearRect(0,0,W,H);
-
-  var pad={t:15,r:10,b:22,l:50},cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  var pad={t:12,r:52,b:20,l:6},cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
   if(cw<=0||ch<=0)return;
-
-  var keys=['coin_total','player_count','coin_median'];
-  var pts=_trendData.length;
-
-  // Grid
+  var n=_candles.length;
+  if(!n){
+    ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
+    for(var g=0;g<=5;g++){var gy=pad.t+ch*(g/5);ctx.beginPath();ctx.moveTo(pad.l,gy);ctx.lineTo(W-pad.r,gy);ctx.stroke()}
+    ctx.fillStyle='rgba(255,255,255,0.12)';ctx.font='600 11px JetBrains Mono,monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('Menunggu data dari BDS sync...',W/2,H/2);
+    _updHdr(null);return;
+  }
+  var mn=Infinity,mx=-Infinity;
+  for(var i=0;i<n;i++){if(_candles[i].l<mn)mn=_candles[i].l;if(_candles[i].h>mx)mx=_candles[i].h}
+  if(mx<=mn)mx=mn+1;
+  var rng=mx-mn,pv=rng*0.08;mn=Math.max(0,mn-pv);mx=mx+pv;
+  function yOf(v){return pad.t+ch*(1-(v-mn)/(mx-mn))}
   ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
-  for(var g=0;g<=4;g++){var gy=pad.t+ch*(g/4);ctx.beginPath();ctx.moveTo(pad.l,gy);ctx.lineTo(W-pad.r,gy);ctx.stroke()}
-
-  // Time labels
+  ctx.fillStyle='rgba(255,255,255,0.22)';ctx.font='9px JetBrains Mono,monospace';ctx.textAlign='left';
+  for(var g=0;g<=5;g++){
+    var gy=pad.t+ch*(g/5);ctx.beginPath();ctx.moveTo(pad.l,gy);ctx.lineTo(W-pad.r,gy);ctx.stroke();
+    var val=mx-(mx-mn)*(g/5);ctx.fillText(fmtN(Math.round(val)),W-pad.r+4,gy+3);
+  }
+  var gap=Math.max(1,Math.round(cw*0.12/n));
+  var bw=Math.max(3,Math.floor((cw-gap*(n-1))/n));if(bw>28)bw=28;
+  var tw=n*bw+(n-1)*gap,ox=pad.l+Math.floor((cw-tw)/2);
+  for(var i=0;i<n;i++){
+    var c=_candles[i],x=ox+i*(bw+gap),cx=x+bw/2,up=c.c>=c.o,clr=up?CU:CD;
+    ctx.strokeStyle=clr;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(Math.round(cx)+.5,yOf(c.h));ctx.lineTo(Math.round(cx)+.5,yOf(c.l));ctx.stroke();
+    var bt=yOf(up?c.c:c.o),bb=yOf(up?c.o:c.c),bh=Math.max(1,bb-bt);
+    ctx.fillStyle=up?'rgba(38,166,154,0.85)':'rgba(239,83,80,0.85)';
+    ctx.fillRect(x,bt,bw,bh);
+    ctx.strokeRect(x+.5,bt+.5,bw-1,Math.max(0,bh-1));
+    if(i===_hoverIdx){ctx.fillStyle='rgba(255,255,255,0.05)';ctx.fillRect(x-1,pad.t,bw+2,ch)}
+  }
   ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='8px JetBrains Mono,monospace';ctx.textAlign='center';
-  var step=Math.max(1,Math.floor(pts/6));
-  for(var i=0;i<pts;i+=step){
-    var x=pad.l+(pts>1?cw*(i/(pts-1)):0);
-    var t=new Date(_trendData[i].ts);
-    var label=_trendRange==='day'?t.getHours()+':00':(t.getDate()+'/'+(t.getMonth()+1));
-    ctx.fillText(label,x,H-pad.b+14);
+  var ls=Math.max(1,Math.floor(n/7));
+  for(var i=0;i<n;i+=ls){
+    var t=new Date(_candles[i].t);
+    var lb=_trendRange==='day'?t.getHours()+':00':_trendRange==='week'?(t.getDate()+'/'+(t.getMonth()+1)):t.getDate()+'/'+(t.getMonth()+1);
+    ctx.fillText(lb,ox+i*(bw+gap)+bw/2,H-pad.b+14);
   }
-
-  // Draw each metric line
-  for(var ki=0;ki<keys.length;ki++){
-    var k=keys[ki],color=TREND_COLORS[k]||'#fff';
-    var mn=Infinity,mx=-Infinity;
-    for(var i=0;i<pts;i++){var v=_trendData[i][k]||0;if(v<mn)mn=v;if(v>mx)mx=v}
-    if(mn===Infinity)mn=0;if(mx<=mn)mx=mn+1;
-    var range=mx-mn,padV=range*0.1;mn=Math.max(0,mn-padV);mx=mx+padV;
-
-    // Y-axis labels (only for first key to avoid clutter)
-    if(ki===0){
-      ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='8px JetBrains Mono,monospace';ctx.textAlign='right';
-      for(var g=0;g<=4;g++){
-        var val=mx-(mx-mn)*(g/4);
-        ctx.fillText(val>=1e6?(val/1e6).toFixed(1)+'M':val>=1e3?(val/1e3).toFixed(0)+'K':Math.round(val),pad.l-4,pad.t+ch*(g/4)+3);
-      }
-    }
-
-    // Fill gradient
-    var grad=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
-    grad.addColorStop(0,hexA(color,0.08));grad.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.beginPath();
-    for(var i=0;i<pts;i++){
-      var x=pad.l+(pts>1?cw*(i/(pts-1)):0),v=_trendData[i][k]||0;
-      var y=pad.t+ch*(1-(v-mn)/(mx-mn));
-      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-    }
-    ctx.lineTo(pad.l+(pts>1?cw:0),H-pad.b);ctx.lineTo(pad.l,H-pad.b);ctx.closePath();
-    ctx.fillStyle=grad;ctx.fill();
-
-    // Line
-    ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.lineJoin='round';
-    for(var i=0;i<pts;i++){
-      var x=pad.l+(pts>1?cw*(i/(pts-1)):0),v=_trendData[i][k]||0;
-      var y=pad.t+ch*(1-(v-mn)/(mx-mn));
-      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-    }
-    ctx.stroke();
-
-    // Last value dot
-    if(pts>0){
-      var lv=_trendData[pts-1][k]||0;
-      var lx=pad.l+cw,ly=pad.t+ch*(1-(lv-mn)/(mx-mn));
-      ctx.beginPath();ctx.arc(lx,ly,3,0,6.28);ctx.fillStyle=color;ctx.fill();
-    }
+  if(_hoverIdx>=0&&_hoverIdx<n){
+    var hc=_candles[_hoverIdx],hx=ox+_hoverIdx*(bw+gap)+bw/2;
+    ctx.setLineDash([2,2]);ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(hx,pad.t);ctx.lineTo(hx,pad.t+ch);ctx.stroke();
+    var hy=yOf(hc.c);ctx.beginPath();ctx.moveTo(pad.l,hy);ctx.lineTo(W-pad.r,hy);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=hc.c>=hc.o?'rgba(38,166,154,0.9)':'rgba(239,83,80,0.9)';
+    ctx.fillRect(W-pad.r,hy-7,pad.r,14);
+    ctx.fillStyle='#fff';ctx.font='bold 8px JetBrains Mono,monospace';ctx.textAlign='left';
+    ctx.fillText(fmtN(Math.round(hc.c)),W-pad.r+3,hy+3);
   }
-}
-
-function hexA(hex,a){var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return'rgba('+r+','+g+','+b+','+a+')'}
-
-function renderTrendLegend(){
-  var el=$('trend-legend');if(!el)return;
-  var keys=['coin_total','player_count','coin_median'];
-  el.innerHTML=keys.map(function(k){return'<span style="font-family:\'JetBrains Mono\',monospace;font-size:.38rem;color:var(--text);display:flex;align-items:center;gap:3px"><span style="width:8px;height:3px;border-radius:2px;background:'+TREND_COLORS[k]+';flex-shrink:0"></span>'+TREND_LABELS[k]+'</span>'}).join('');
+  _updHdr(_hoverIdx>=0?_candles[_hoverIdx]:_candles[n-1]);
 }
 
 function renderTrendDeltas(){
   var el=$('trend-deltas');if(!el||!_trendData.length)return;
-  if(_trendData.length<4){el.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--mute);font-size:.45rem;padding:8px">Data belum cukup untuk kalkulasi delta. Minimal 4 data points.</div>';return}
+  if(_trendData.length<4){el.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--mute);font-size:.45rem;padding:8px">Minimal 4 data points untuk delta.</div>';return}
   var mid=Math.floor(_trendData.length/2);
-  var keys=[
-    {k:'coin_total',label:'Coin Supply',color:'var(--gold)'},
-    {k:'player_count',label:'Pemain',color:'var(--cyan)'},
-    {k:'coin_median',label:'Median Coin',color:'var(--green)'},
-    {k:'coin_avg',label:'Avg Coin',color:'var(--ac)'}
-  ];
+  var keys=[{k:'coin_total',label:'Coin Supply',color:'var(--gold)'},{k:'player_count',label:'Pemain',color:'var(--cyan)'},{k:'coin_median',label:'Median Coin',color:'var(--green)'},{k:'coin_avg',label:'Avg Coin',color:'var(--ac)'}];
   var h='';
   for(var i=0;i<keys.length;i++){
-    var ki=keys[i],sumA=0,cntA=0,sumB=0,cntB=0;
-    for(var j=0;j<mid;j++){sumA+=(_trendData[j][ki.k]||0);cntA++}
-    for(var j=mid;j<_trendData.length;j++){sumB+=(_trendData[j][ki.k]||0);cntB++}
-    var avgA=cntA?sumA/cntA:0,avgB=cntB?sumB/cntB:0;
-    var delta=avgB-avgA,pct=avgA>0?Math.round(delta/avgA*100):0;
-    var sign=delta>0?'+':'';var cls=Math.abs(pct)<2?'var(--mute)':delta>0?'var(--green)':'var(--red)';
-    var last=_trendData.length>0?(_trendData[_trendData.length-1][ki.k]||0):0;
-    h+=mkStatCard(ki.label,ki.color,fmtN(last),'<span style="color:'+cls+'">'+sign+pct+'% vs sebelumnya</span>');
+    var ki=keys[i],sA=0,cA=0,sB=0,cB=0;
+    for(var j=0;j<mid;j++){sA+=(_trendData[j][ki.k]||0);cA++}
+    for(var j=mid;j<_trendData.length;j++){sB+=(_trendData[j][ki.k]||0);cB++}
+    var aA=cA?sA/cA:0,aB=cB?sB/cB:0,d=aB-aA,pct=aA>0?Math.round(d/aA*100):0;
+    var sg=d>0?'+':'',cl=Math.abs(pct)<2?'var(--mute)':d>0?'var(--green)':'var(--red)';
+    var last=_trendData[_trendData.length-1][ki.k]||0;
+    h+=mkStatCard(ki.label,ki.color,fmtN(last),'<span style="color:'+cl+'">'+sg+pct+'%</span>');
   }
   el.innerHTML=h;
 }
 
 setInterval(fetchAll,120000);
-document.addEventListener('visibilitychange',function(){if(!document.hidden){fetchAll();fetchTrend()}});
+document.addEventListener('visibilitychange',function(){if(!document.hidden)fetchAll()});
 
-// Init trend
 window.addEventListener('DOMContentLoaded',function(){
   bindTrendTabs();
-  // Delay trend fetch slightly to not compete with main fetchAll
-  setTimeout(fetchTrend,1500);
+  setTimeout(drawTrendChart,100);
+  var cv=$('trend-chart');
+  if(cv){
+    cv.addEventListener('mousemove',function(e){
+      if(!_candles.length)return;
+      var rect=cv.getBoundingClientRect(),sc=cv.width/rect.width;
+      var sx=(e.clientX-rect.left)*sc,n=_candles.length;
+      var pad_l=6,pad_r=52,cw=cv.width-pad_l-pad_r;
+      var gap=Math.max(1,Math.round(cw*0.12/n));
+      var bw=Math.max(3,Math.floor((cw-gap*(n-1))/n));if(bw>28)bw=28;
+      var tw=n*bw+(n-1)*gap,ox=pad_l+Math.floor((cw-tw)/2);
+      var idx=Math.round((sx-ox-bw/2)/(bw+gap));
+      if(idx<0)idx=0;if(idx>=n)idx=n-1;
+      if(_hoverIdx!==idx){_hoverIdx=idx;drawTrendChart()}
+    });
+    cv.addEventListener('mouseleave',function(){if(_hoverIdx!==-1){_hoverIdx=-1;drawTrendChart()}});
+  }
 });
-// Resize handler for trend chart
-window.addEventListener('resize',function(){if(_trendData.length)drawTrendChart()});
+window.addEventListener('resize',function(){drawTrendChart()});
 })();

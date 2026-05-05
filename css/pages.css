@@ -235,7 +235,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 .dc-bottom{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .dc-meta{font-size:.58rem;color:var(--mute);display:flex;align-items:center;gap:4px}
 .dc-meta svg{width:10px;height:10px;opacity:.45}
-.dc-type{font-family:'JetBrains Mono',monospace;font-size:.48rem;font-weight:700;letter-spacing:.3px;padding:2px 6px;border-radius:3px}
+.dc-type{font-family:'JetBrains Mono',monospace;font-size:.48rem;font-weight:700;letter-spacing:.3px;padding:2px 6px;border-radius:3px;display:inline-block;width:auto}
 .dc-type.all,.dc-type.pt{background:rgba(168,85,247,.1);color:var(--ac);border:1px solid rgba(168,85,247,.2)}
 .dc-type.eq{background:rgba(245,200,66,.08);color:var(--gold);border:1px solid rgba(245,200,66,.15)}
 .dc-bar{height:2px;background:var(--surface);border-radius:1px;margin-top:8px;overflow:hidden}
