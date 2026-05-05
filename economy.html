@@ -1,169 +1,401 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta name="description" content="Laughtale SMP — Analisis ekonomi server dan log aktivitas: distribusi kekayaan, inflasi, pricing intelligence.">
-<meta name="theme-color" content="#a855f7">
-<title>Economy — Laughtale SMP</title>
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/pages.css">
-<style>
-.eco-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.75rem}
-@media(max-width:700px){.eco-grid{grid-template-columns:repeat(2,1fr)}}
-.eco-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem .6rem;text-align:center;transition:border-color .2s,transform .15s}
-.eco-card:hover{border-color:var(--border2);transform:translateY(-1px)}
-.eco-lbl{font-size:.42rem;color:var(--mute);letter-spacing:.6px;margin-bottom:4px;text-transform:uppercase;font-weight:600}
-.eco-val{font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;line-height:1}
-.eco-sub{font-size:.38rem;color:var(--dim);margin-top:3px}
-.wb{display:flex;height:8px;border-radius:4px;overflow:hidden;border:1px solid var(--border);margin:8px 0}
-.wb div{height:100%;transition:width .6s}
-.ptbl{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.48rem}
-.ptbl th{text-align:left;color:var(--mute);font-weight:600;padding:5px 7px;border-bottom:1px solid var(--border);font-size:.38rem;text-transform:uppercase;letter-spacing:.5px}
-.ptbl td{padding:5px 7px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text)}
-.ptbl tr:hover td{background:rgba(255,255,255,.02)}
-.mod-tabs{display:flex;gap:4px;margin-bottom:.75rem;border-bottom:1px solid var(--border);padding-bottom:6px}
-.mod-tab{font-family:'JetBrains Mono',monospace;font-size:.5rem;font-weight:600;padding:6px 14px;border-radius:var(--r-xs) var(--r-xs) 0 0;background:none;border:1px solid transparent;color:var(--mute);cursor:pointer;letter-spacing:.5px;transition:all .2s}
-.mod-tab:hover{color:var(--text);background:rgba(255,255,255,.03)}
-.mod-tab.active{color:var(--ac);border-color:var(--border);border-bottom-color:var(--bg);background:var(--surface)}
-.mod{display:none}.mod.active{display:block}
-.sv.bk{color:var(--green)}.sv.ac{color:var(--cyan)}.sv.gc{color:var(--ac)}.sv.tp{color:var(--orange)}
-.st.clickable{cursor:pointer}
-.log-amount.coin{color:var(--gold)}.log-amount.add{color:var(--green)}.log-amount.deduct{color:var(--red)}
-.log-amount.expired{color:var(--mute);font-size:.6rem}
-.log-amount .cur{font-size:.52rem;font-weight:500;opacity:.7}
-.log-amount .cur.gem{color:var(--cyan)}.log-amount .cur.coin{color:var(--gold)}
-.tx{font-size:.52rem;color:var(--red);opacity:.7;display:block}
-.dup{opacity:.5;font-size:.5rem}
-.dc-empty{text-align:center;padding:1rem;color:var(--mute);font-size:.6rem;border:1px dashed var(--border);border-radius:var(--r-sm)}
-.dc-toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(168,85,247,.9);color:#fff;font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:600;padding:6px 16px;border-radius:var(--r-xs);opacity:0;transition:all .3s;z-index:100;pointer-events:none}
-.dc-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="description"
+    content="Laughtale SMP — Analisis ekonomi server dan log aktivitas: distribusi kekayaan, inflasi, pricing intelligence.">
+  <meta name="theme-color" content="#a855f7">
+  <title>Economy — Laughtale SMP</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/pages.css">
+  <style>
+    .eco-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.75rem}
+    .eco-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem .6rem;text-align:center;transition:border-color .2s,transform .15s}
+    .eco-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+    .eco-lbl{font-size:.42rem;color:var(--mute);letter-spacing:.6px;margin-bottom:4px;text-transform:uppercase;font-weight:600}
+    .eco-val{font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;line-height:1}
+    .eco-sub{font-size:.38rem;color:var(--dim);margin-top:3px}
+    .wb{display:flex;height:8px;border-radius:4px;overflow:hidden;border:1px solid var(--border);margin:8px 0}
+    .wb div{height:100%;transition:width .6s}
+    .ptbl{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.48rem}
+    .ptbl th{text-align:left;color:var(--mute);font-weight:600;padding:5px 7px;border-bottom:1px solid var(--border);font-size:.38rem;text-transform:uppercase;letter-spacing:.5px}
+    .ptbl td{padding:5px 7px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text)}
+    .ptbl tr:hover td{background:rgba(255,255,255,.02)}
+    .mod-tabs{display:flex;gap:4px;margin-bottom:.75rem;border-bottom:1px solid var(--border);padding-bottom:6px;flex-wrap:wrap}
+    .mod-tab{font-family:'JetBrains Mono',monospace;font-size:.5rem;font-weight:600;padding:6px 14px;border-radius:var(--r-xs) var(--r-xs) 0 0;background:none;border:1px solid transparent;color:var(--mute);cursor:pointer;letter-spacing:.5px;transition:all .2s;white-space:nowrap}
+    .mod-tab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+    .mod-tab.active{color:var(--ac);border-color:var(--border);border-bottom-color:var(--bg);background:var(--surface)}
+    .mod{display:none}.mod.active{display:block}
+    .sv.bk{color:var(--green)}.sv.ac{color:var(--cyan)}.sv.gc{color:var(--ac)}.sv.tp{color:var(--orange)}
+    .st.clickable{cursor:pointer}
+    .log-amount.coin{color:var(--gold)}.log-amount.add{color:var(--green)}.log-amount.deduct{color:var(--red)}
+    .log-amount.expired{color:var(--mute);font-size:.6rem}
+    .log-amount .cur{font-size:.52rem;font-weight:500;opacity:.7}
+    .log-amount .cur.gem{color:var(--cyan)}.log-amount .cur.coin{color:var(--gold)}
+    .tx{font-size:.52rem;color:var(--red);opacity:.7;display:block}
+    .dup{opacity:.5;font-size:.5rem}
+    .dc-empty{text-align:center;padding:1rem;color:var(--mute);font-size:.6rem;border:1px dashed var(--border);border-radius:var(--r-sm)}
+    .dc-toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(168,85,247,.9);color:#fff;font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:600;padding:6px 16px;border-radius:var(--r-xs);opacity:0;transition:all .3s;z-index:100;pointer-events:none}
+    .dc-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    #inf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    #tx-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+    .holder-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .holder-label{font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mute);margin-bottom:4px;letter-spacing:.5px}
+    #trend-metric-tabs .tab{font-size:.42rem;padding:4px 10px}
+    #health-content{font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);line-height:1.7}
+    .ptbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    @media(max-width:700px){
+      .eco-grid{grid-template-columns:repeat(2,1fr)}
+      #tx-grid{grid-template-columns:repeat(2,1fr)}
+      .eco-val{font-size:.8rem}
+      .mod-tab{font-size:.42rem;padding:5px 10px}
+      #trend-metric-tabs .tab{font-size:.38rem;padding:3px 8px}
+    }
+    @media(max-width:480px){
+      .eco-grid{grid-template-columns:1fr 1fr;gap:.35rem}
+      #inf-grid{grid-template-columns:repeat(3,1fr)}
+      #tx-grid{grid-template-columns:1fr 1fr}
+      .eco-card{padding:.6rem .4rem}
+      .eco-val{font-size:.7rem}
+      .eco-lbl{font-size:.36rem}
+      .ptbl{font-size:.38rem}
+      .ptbl th{font-size:.32rem;padding:4px 5px}
+      .ptbl td{padding:4px 5px;font-size:.38rem}
+      #health-content{font-size:.36rem;line-height:1.6}
+      .mod-tab{font-size:.36rem;padding:4px 8px}
+      #trend-metric-tabs .tab{font-size:.32rem;padding:3px 5px}
+      .sec-title{font-size:.42rem !important}
+    }
+  </style>
 </head>
+
 <body>
-<div class="wrap">
+<div class="w">
+
 <header class="hd">
-  <a href="index.html" class="logo">Laughtale<span>SMP</span></a>
-  <nav class="nav">
-    <a href="index.html">Home</a>
-    <a href="monitor.html">Monitor</a>
-    <a href="economy.html" class="active">Economy</a>
-  </nav>
+  <a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>KEMBALI KE BERANDA</a>
+  <div class="logo">LAUGHTALE <b>SMP</b></div>
+  <div class="sub"><span class="live-dot"></span>Economy Analytics
+    <span style="font-family:'JetBrains Mono',monospace;font-size:.5rem;color:var(--mute);margin-left:6px" id="eco-sync">Memuat...</span>
+  </div>
 </header>
 
-<main class="main" style="max-width:860px;margin:0 auto">
-<div class="dv"><div class="dvl"></div><span class="dvt">ECONOMY</span><div class="dvl"></div></div>
-<p style="text-align:center;font-size:.5rem;color:var(--mute);margin-bottom:.75rem" id="eco-sync">Memuat...</p>
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>ECONOMY DASHBOARD</span><div class="dvl"></div></div>
 
 <div class="mod-tabs">
   <button class="mod-tab active" data-mod="analytics">ANALYTICS</button>
   <button class="mod-tab" data-mod="logs">ACTIVITY LOGS</button>
+  <button class="mod-tab" data-mod="panduan">PANDUAN</button>
 </div>
 
-<!-- ════════ MODULE: ANALYTICS ════════ -->
-<div class="mod active" id="mod-analytics">
+      <!-- ════════ MODULE: ANALYTICS ════════ -->
+      <div class="mod active" id="mod-analytics">
 
-<div class="eco-grid" id="kpi-grid">
-  <div class="eco-card"><div class="eco-lbl">Total Pemain</div><div class="eco-val" style="color:var(--cyan)" id="kpi-n">—</div><div class="eco-sub" id="kpi-n-sub"></div></div>
-  <div class="eco-card"><div class="eco-lbl">Total Coin</div><div class="eco-val" style="color:var(--gold)" id="kpi-coin">—</div><div class="eco-sub" id="kpi-coin-sub"></div></div>
-  <div class="eco-card"><div class="eco-lbl">Total Gem</div><div class="eco-val" style="color:#a855f7" id="kpi-gem">—</div><div class="eco-sub" id="kpi-gem-sub"></div></div>
-  <div class="eco-card"><div class="eco-lbl">Median Coin</div><div class="eco-val" style="color:var(--green)" id="kpi-median">—</div><div class="eco-sub" id="kpi-median-sub"></div></div>
+        <div class="eco-grid" id="kpi-grid">
+          <div class="eco-card">
+            <div class="eco-lbl">Total Pemain</div>
+            <div class="eco-val" style="color:var(--cyan)" id="kpi-n">—</div>
+            <div class="eco-sub" id="kpi-n-sub"></div>
+          </div>
+          <div class="eco-card">
+            <div class="eco-lbl">Total Coin</div>
+            <div class="eco-val" style="color:var(--gold)" id="kpi-coin">—</div>
+            <div class="eco-sub" id="kpi-coin-sub"></div>
+          </div>
+          <div class="eco-card">
+            <div class="eco-lbl">Total Gem</div>
+            <div class="eco-val" style="color:#a855f7" id="kpi-gem">—</div>
+            <div class="eco-sub" id="kpi-gem-sub"></div>
+          </div>
+          <div class="eco-card">
+            <div class="eco-lbl">Median Coin</div>
+            <div class="eco-val" style="color:var(--green)" id="kpi-median">—</div>
+            <div class="eco-sub" id="kpi-median-sub"></div>
+          </div>
+        </div>
+
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>ANALISIS</span><div class="dvl"></div></div>
+
+        <div class="cd" id="wealth-card">
+          <div class="sec-hd"><span class="sec-title">DISTRIBUSI KEKAYAAN</span><span class="pill"
+              id="gini-pill">—</span></div>
+          <div class="wb" id="wealth-bar"></div>
+          <div id="wealth-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
+          <div id="wealth-detail" style="font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim)">
+          </div>
+        </div>
+
+        <div class="cd" id="inflation-card">
+          <div class="sec-hd"><span class="sec-title">INDIKATOR INFLASI</span><span class="pill" id="inf-pill">—</span></div>
+          <div id="inf-grid"></div>
+          <div id="inf-flows" style="margin-top:6px"></div>
+        </div>
+
+        <div class="cd" id="tx-card">
+          <div class="sec-hd"><span class="sec-title">VOLUME TRANSAKSI</span></div>
+          <div id="tx-grid"></div>
+        </div>
+
+        <div class="cd">
+          <div class="sec-hd"><span class="sec-title">TOP HOLDERS</span></div>
+          <div class="holder-grid">
+            <div>
+              <div class="holder-label">TOP COIN</div>
+              <table class="ptbl" id="tbl-coin">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Player</th>
+                    <th style="text-align:right">Coin</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div>
+              <div class="holder-label">TOP GEM</div>
+              <table class="ptbl" id="tbl-gem">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Player</th>
+                    <th style="text-align:right">Gem</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="cd" id="pricing-card">
+          <div class="sec-hd"><span class="sec-title">PRICING INTELLIGENCE</span><span class="pill g">INCOME-BASED</span>
+          </div>
+          <div id="pricing-basis" style="font-family:'JetBrains Mono',monospace;font-size:.38rem;color:var(--dim);margin-bottom:8px"></div>
+          <div class="ptbl-wrap">
+          <table class="ptbl" id="tbl-price">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Kategori</th>
+                <th style="text-align:right">Min</th>
+                <th style="text-align:right">Ideal</th>
+                <th style="text-align:right">Max</th>
+                <th>Catatan</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          </div>
+        </div>
+
+        <div class="cd">
+          <div class="sec-hd"><span class="sec-title">GACHA ECONOMY</span></div>
+          <div class="eco-grid" id="gacha-grid"></div>
+        </div>
+
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16h16"/><path d="M4 14l4-4 4 2 4-6 4 4"/></svg>TREND & INSIGHT</span><div class="dvl"></div></div>
+
+        <div class="cd" id="trend-card">
+          <div class="sec-hd"><span class="sec-title">ECONOMY TREND</span>
+            <div class="tabs" id="trend-tabs" style="margin:0;border:0;padding:0;gap:2px">
+              <button class="tab a" data-range="day">24j</button>
+              <button class="tab" data-range="week">7h</button>
+              <button class="tab" data-range="month">30h</button>
+            </div>
+          </div>
+          <div id="trend-hdr"
+            style="font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);margin-bottom:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          </div>
+          <div id="trend-info"
+            style="font-family:'JetBrains Mono',monospace;font-size:.36rem;color:var(--mute);margin-bottom:4px"></div>
+          <div style="position:relative;width:100%;margin-bottom:8px">
+            <canvas id="trend-chart"
+              style="width:100%;height:220px;border-radius:var(--r-xs);background:var(--bg2);cursor:crosshair"></canvas>
+          </div>
+          <div class="tabs" id="trend-metric-tabs" style="margin-bottom:0;border:0;padding:0;gap:2px;flex-wrap:wrap">
+            <button class="tab a" data-metric="coin_total">Supply</button>
+            <button class="tab" data-metric="coin_median">Median</button>
+            <button class="tab" data-metric="player_count">Pemain</button>
+            <button class="tab" data-metric="income_per_hour">Income/jam</button>
+            <button class="tab" data-metric="velocity">Velocity</button>
+            <button class="tab" data-metric="net_flow">Net Flow</button>
+            <button class="tab" data-metric="gini">Gini</button>
+            <button class="tab" data-metric="inflation_rate">Inflasi %/jam</button>
+            <button class="tab" data-metric="purchasing_power">Purchasing Power</button>
+          </div>
+          <div class="eco-grid" id="trend-deltas" style="margin-top:8px"></div>
+        </div>
+
+        <div class="cd" id="health-card">
+          <div class="sec-hd"><span class="sec-title">SARAN EKONOMI</span><span class="pill" id="health-pill">—</span></div>
+          <div id="health-content"></div>
+        </div>
+
+      </div>
+
+      <!-- ════════ MODULE: LOGS ════════ -->
+      <div class="mod" id="mod-logs">
+
+        <div class="sg sg-4">
+          <div class="st clickable" onclick="document.querySelector('[data-cat=bank]').click()"><span class="sv bk sk"
+              id="st-bank">—</span>
+            <div class="stl">Transfer</div>
+          </div>
+          <div class="st clickable" onclick="document.querySelector('[data-cat=auction]').click()"><span
+              class="sv ac sk" id="st-auction">—</span>
+            <div class="stl">Auction</div>
+          </div>
+          <div class="st clickable" onclick="document.querySelector('[data-cat=gacha]').click()"><span class="sv gc sk"
+              id="st-gacha">—</span>
+            <div class="stl">Gacha</div>
+          </div>
+          <div class="st clickable" onclick="document.querySelector('[data-cat=topup]').click()"><span class="sv tp sk"
+              id="st-topup">—</span>
+            <div class="stl">Topup</div>
+          </div>
+        </div>
+
+        <div id="disc-content">
+          <div class="dc-empty">Memuat...</div>
+        </div>
+
+        <div class="tabs" id="log-tabs">
+          <button class="tab a" data-cat="bank">Transfer</button>
+          <button class="tab" data-cat="auction">Auction</button>
+          <button class="tab" data-cat="gacha">Gacha</button>
+          <button class="tab" data-cat="topup">Topup</button>
+        </div>
+        <div class="cd">
+          <div id="log-content">
+            <div class="emp">Memuat...</div>
+          </div>
+        </div>
+        <div style="text-align:right;margin-bottom:.25rem"><span class="up" id="log-meta"></span></div>
+
+      </div>
+
+      <!-- ════════ MODULE: PANDUAN ════════ -->
+      <div class="mod" id="mod-panduan">
+        <div class="cd" style="font-family:'JetBrains Mono',monospace;font-size:.44rem;color:var(--dim);line-height:1.8">
+
+          <div class="sec-hd"><span class="sec-title">CARA MEMBACA DASHBOARD INI</span><span class="pill g">PANDUAN</span></div>
+          <p style="margin-bottom:12px;color:var(--text)">Dashboard ini menampilkan kondisi ekonomi server secara real-time. Data diperbarui otomatis setiap 5 menit dari server dan setiap 2 menit di halaman ini.</p>
+
+          <div style="margin-bottom:18px">
+            <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">KPI (Angka Utama)</div>
+            <table style="width:100%;border-collapse:collapse;font-size:.4rem">
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;white-space:nowrap;font-weight:600;width:100px">Jumlah Player</td><td style="padding:5px 8px">Total player yang terdaftar di server.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Total Coin</td><td style="padding:5px 8px">Jumlah seluruh koin yang beredar. Kalau naik terus tanpa batas = <span style="color:var(--red)">inflasi</span>.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Total Gem</td><td style="padding:5px 8px">Jumlah seluruh gem (mata uang premium) yang beredar.</td></tr>
+              <tr><td style="color:var(--gold);padding:5px 8px;font-weight:600">Median Coin</td><td style="padding:5px 8px">Koin yang dimiliki player "tengah". Dari 100 player diurutkan miskin ke kaya, ini koin player ke-50. <span style="color:var(--green)">Lebih akurat dari rata-rata</span> karena tidak terpengaruh 1-2 player super kaya.</td></tr>
+            </table>
+          </div>
+
+          <div style="margin-bottom:18px">
+            <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Distribusi Kekayaan</div>
+            <table style="width:100%;border-collapse:collapse;font-size:.4rem">
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600;width:100px">Gini Index</td><td style="padding:5px 8px">Mengukur ketimpangan. <span style="color:var(--green)">0 = semua player sama rata</span>. <span style="color:var(--red)">1 = 1 player pegang semua</span>. Di bawah 0.3 = bagus. 0.3-0.5 = wajar. Di atas 0.5 = timpang.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">P25 / P75</td><td style="padding:5px 8px">P25 = koin player 25% terbawah. P75 = koin player 75%. Makin jauh jaraknya, makin besar ketimpangan.</td></tr>
+              <tr><td style="color:var(--gold);padding:5px 8px;font-weight:600">Bar Warna</td><td style="padding:5px 8px">Proporsi kekayaan tiap kelompok. Kalau <span style="color:#f87171">merah (Top 25%)</span> dominan = kekayaan terpusat ke atas.</td></tr>
+            </table>
+          </div>
+
+          <div style="margin-bottom:18px">
+            <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Aliran Koin</div>
+            <p style="margin-bottom:6px">Darimana koin masuk dan kemana keluar dalam 5 menit terakhir.</p>
+            <table style="width:100%;border-collapse:collapse;font-size:.4rem">
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--green);padding:5px 8px;font-weight:600;width:100px">Sumber (+)</td><td style="padding:5px 8px"><b>Mob Kill</b> = bunuh mob. <b>Gacha Refund</b> = pengembalian. <b>Weekly LB</b> = hadiah mingguan. <b>1st Sale</b> = bonus penjualan pertama.</td></tr>
+              <tr><td style="color:var(--red);padding:5px 8px;font-weight:600">Pengeluaran (-)</td><td style="padding:5px 8px"><b>Gacha Cost</b> = biaya gacha. <b>Bank Tax</b> = pajak transfer. <b>Anti-Stack</b> = penalti farm berlebihan. <b>Auction Fee</b> = biaya listing. <b>Wealth Tax</b> = pajak kekayaan harian (offline).</td></tr>
+            </table>
+            <p style="margin-top:6px"><span style="color:var(--green)">Sumber > Pengeluaran</span> = inflasi. <span style="color:var(--red)">Pengeluaran > Sumber</span> = deflasi. Idealnya <span style="color:var(--cyan)">seimbang</span>.</p>
+          </div>
+
+          <div style="margin-bottom:18px">
+            <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Pricing Intelligence</div>
+            <p style="margin-bottom:6px">Menghitung <span style="color:var(--green)">harga wajar</span> untuk item berdasarkan penghasilan nyata player.</p>
+            <table style="width:100%;border-collapse:collapse;font-size:.4rem">
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600;width:100px">Low</td><td style="padding:5px 8px">Harga minimum wajar. Di bawah ini = terlalu murah.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--green);padding:5px 8px;font-weight:700">Mid</td><td style="padding:5px 8px;color:var(--green)"><b>Harga ideal.</b> Player perlu usaha cukup, tapi tidak terlalu sulit.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">High</td><td style="padding:5px 8px">Harga maksimum. Di atas ini = terlalu mahal untuk player biasa.</td></tr>
+              <tr><td style="color:var(--gold);padding:5px 8px;font-weight:600">Basis</td><td style="padding:5px 8px">Waktu farming dibutuhkan. Contoh: "4-8j farming" = player perlu farming 4-8 jam.</td></tr>
+            </table>
+          </div>
+
+          <div style="margin-bottom:18px">
+            <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Economy Trend (Grafik Candlestick)</div>
+            <p style="margin-bottom:6px">Grafik lilin menampilkan perubahan nilai ekonomi dari waktu ke waktu.</p>
+            <div style="margin-bottom:8px;padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.02)">
+              <div style="font-weight:700;margin-bottom:4px;color:var(--text)">Cara Membaca Candle:</div>
+              <div style="display:flex;gap:16px;flex-wrap:wrap">
+                <div><span style="color:#26a69a;font-weight:700">Hijau</span> = nilai <b>naik</b> (buka &lt; tutup)</div>
+                <div><span style="color:#ef5350;font-weight:700">Merah</span> = nilai <b>turun</b> (buka &gt; tutup)</div>
+              </div>
+              <div style="margin-top:4px"><b>Badan tebal</b> = jarak buka-tutup. <b>Garis tipis</b> = nilai tertinggi &amp; terendah.</div>
+              <div style="margin-top:4px"><b>Hover</b> mouse untuk lihat detail: O (Open), H (High), L (Low), C (Close).</div>
+            </div>
+            <div style="font-weight:700;margin-bottom:4px;margin-top:10px;color:var(--text)">Periode:</div>
+            <table style="width:100%;border-collapse:collapse;font-size:.4rem">
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--cyan);padding:4px 8px;font-weight:600;width:60px">24j</td><td style="padding:4px 8px">1 candle = 15 menit. Pantau pergerakan harian.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--cyan);padding:4px 8px;font-weight:600">7h</td><td style="padding:4px 8px">1 candle = 2 jam. Lihat tren mingguan.</td></tr>
+              <tr><td style="color:var(--cyan);padding:4px 8px;font-weight:600">30h</td><td style="padding:4px 8px">1 candle = 12 jam. Evaluasi bulanan.</td></tr>
+            </table>
+          </div>
+
+          <div style="margin-bottom:18px">
+            <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Tab Metrik</div>
+            <table style="width:100%;border-collapse:collapse;font-size:.4rem">
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600;width:110px">Supply</td><td style="padding:5px 8px">Total koin di server. Naik terus = inflasi. Turun = deflasi.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Median</td><td style="padding:5px 8px">Koin player "tengah". Menunjukkan kondisi player biasa.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Pemain</td><td style="padding:5px 8px">Jumlah player terdaftar.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Income/jam</td><td style="padding:5px 8px">Rata-rata koin yang dihasilkan 1 player per jam dari farming.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Velocity</td><td style="padding:5px 8px">Kecepatan uang berputar. <span style="color:var(--green)">Tinggi = banyak jual beli</span>. <span style="color:var(--red)">Rendah = menimbun</span>.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Net Flow</td><td style="padding:5px 8px">Selisih koin masuk vs keluar. <span style="color:var(--green)">+ = bertambah</span>. <span style="color:var(--red)">- = berkurang</span>.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Gini</td><td style="padding:5px 8px">Tren ketimpangan. Naik = yang kaya makin kaya.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Inflasi %/jam</td><td style="padding:5px 8px">% pertambahan uang per jam. &gt;1% = <span style="color:var(--red)">terlalu cepat</span>. 0-0.1% = <span style="color:var(--green)">ideal</span>.</td></tr>
+              <tr><td style="color:var(--gold);padding:5px 8px;font-weight:600">Purchasing Power</td><td style="padding:5px 8px">% ekonomi yang dimiliki player median. Turun = kekayaan makin terpusat.</td></tr>
+            </table>
+          </div>
+
+          <div style="margin-bottom:18px">
+            <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Skor Kesehatan Ekonomi</div>
+            <table style="width:100%;border-collapse:collapse;font-size:.4rem">
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--green);padding:5px 8px;font-weight:600;width:100px">80-100</td><td style="padding:5px 8px">SEHAT — Ekonomi berjalan baik. Tidak perlu tindakan.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">50-79</td><td style="padding:5px 8px">PERLU PERHATIAN — Ada masalah yang perlu dipantau.</td></tr>
+              <tr><td style="color:var(--red);padding:5px 8px;font-weight:600">0-49</td><td style="padding:5px 8px">KRITIS — Perlu tindakan segera untuk selamatkan ekonomi.</td></tr>
+            </table>
+          </div>
+
+          <div>
+            <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Tips Umum</div>
+            <div style="padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.02);line-height:2">
+              <div>1. Pantau <b style="color:var(--green)">Gini</b> rutin. Ketimpangan tinggi bikin player baru cepat bosan.</div>
+              <div>2. Jaga <b style="color:var(--cyan)">Inflasi</b> tetap rendah. Uang kebanyakan = harga barang naik.</div>
+              <div>3. Dorong <b style="color:var(--gold)">Velocity</b>. Ekonomi sehat = uang bergerak, bukan ditimbun.</div>
+              <div>4. Cek <b style="color:#c084fc">Purchasing Power</b> untuk tahu apakah player biasa bisa ikut berpartisipasi.</div>
+              <div>5. Pakai <b style="color:var(--ac)">Pricing Intelligence</b> sebagai panduan harga item baru.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+<!-- Footer -->
+<div class="ft" style="margin-top:1.25rem">
+  <span class="up" id="eco-countdown-wrap">Refresh: <span id="eco-countdown">120s</span></span>
 </div>
 
-<div class="cd" id="wealth-card">
-  <div class="sec-hd"><span class="sec-title">DISTRIBUSI KEKAYAAN</span><span class="pill" id="gini-pill">—</span></div>
-  <div class="wb" id="wealth-bar"></div>
-  <div id="wealth-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
-  <div id="wealth-detail" style="font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim)"></div>
-</div>
-
-<div class="cd" id="inflation-card">
-  <div class="sec-hd"><span class="sec-title">INDIKATOR INFLASI</span><span class="pill" id="inf-pill">—</span></div>
-  <div id="inf-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"></div>
-</div>
-
-<div class="cd" id="tx-card">
-  <div class="sec-hd"><span class="sec-title">VOLUME TRANSAKSI</span></div>
-  <div id="tx-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px"></div>
-</div>
-
-<div class="cd">
-  <div class="sec-hd"><span class="sec-title">TOP HOLDERS</span></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-    <div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mute);margin-bottom:4px;letter-spacing:.5px">TOP COIN</div>
-      <table class="ptbl" id="tbl-coin"><thead><tr><th>#</th><th>Player</th><th style="text-align:right">Coin</th></tr></thead><tbody></tbody></table>
-    </div>
-    <div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mute);margin-bottom:4px;letter-spacing:.5px">TOP GEM</div>
-      <table class="ptbl" id="tbl-gem"><thead><tr><th>#</th><th>Player</th><th style="text-align:right">Gem</th></tr></thead><tbody></tbody></table>
-    </div>
-  </div>
-</div>
-
-<div class="cd" id="pricing-card">
-  <div class="sec-hd"><span class="sec-title">PRICING INTELLIGENCE</span><span class="pill g">REKOMENDASI</span></div>
-  <table class="ptbl" id="tbl-price"><thead><tr><th>Item</th><th>Kategori</th><th style="text-align:right">Min</th><th style="text-align:right">Ideal</th><th style="text-align:right">Max</th><th>Catatan</th></tr></thead><tbody></tbody></table>
-</div>
-
-<div class="cd">
-  <div class="sec-hd"><span class="sec-title">GACHA ECONOMY</span></div>
-  <div class="eco-grid" id="gacha-grid"></div>
-</div>
-
-<div class="cd" id="trend-card">
-  <div class="sec-hd"><span class="sec-title">ECONOMY TREND</span>
-    <div class="tabs" id="trend-tabs" style="margin:0;border:0;padding:0;gap:2px">
-      <button class="tab a" data-range="day">24j</button>
-      <button class="tab" data-range="week">7h</button>
-      <button class="tab" data-range="month">30h</button>
-    </div>
-  </div>
-  <div id="trend-hdr" style="font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);margin-bottom:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
-  <div id="trend-info" style="font-family:'JetBrains Mono',monospace;font-size:.36rem;color:var(--mute);margin-bottom:4px"></div>
-  <div style="position:relative;width:100%;margin-bottom:8px">
-    <canvas id="trend-chart" style="width:100%;height:220px;border-radius:var(--r-xs);background:var(--bg2);cursor:crosshair"></canvas>
-  </div>
-  <div class="tabs" id="trend-metric-tabs" style="margin-bottom:0;border:0;padding:0;gap:2px">
-    <button class="tab a" data-metric="coin_total">Coin Supply</button>
-    <button class="tab" data-metric="coin_median">Median</button>
-    <button class="tab" data-metric="player_count">Pemain</button>
-  </div>
-  <div class="eco-grid" id="trend-deltas" style="margin-top:8px"></div>
-</div>
-
-</div>
-
-<!-- ════════ MODULE: LOGS ════════ -->
-<div class="mod" id="mod-logs">
-
-<div class="sg sg-4">
-  <div class="st clickable" onclick="document.querySelector('[data-cat=bank]').click()"><span class="sv bk sk" id="st-bank">—</span><div class="stl">Transfer</div></div>
-  <div class="st clickable" onclick="document.querySelector('[data-cat=auction]').click()"><span class="sv ac sk" id="st-auction">—</span><div class="stl">Auction</div></div>
-  <div class="st clickable" onclick="document.querySelector('[data-cat=gacha]').click()"><span class="sv gc sk" id="st-gacha">—</span><div class="stl">Gacha</div></div>
-  <div class="st clickable" onclick="document.querySelector('[data-cat=topup]').click()"><span class="sv tp sk" id="st-topup">—</span><div class="stl">Topup</div></div>
-</div>
-
-<div id="disc-content"><div class="dc-empty">Memuat...</div></div>
-
-<div class="tabs" id="log-tabs">
-  <button class="tab a" data-cat="bank">Transfer</button>
-  <button class="tab" data-cat="auction">Auction</button>
-  <button class="tab" data-cat="gacha">Gacha</button>
-  <button class="tab" data-cat="topup">Topup</button>
-</div>
-<div class="cd"><div id="log-content"><div class="emp">Memuat...</div></div></div>
-<div style="text-align:right;margin-bottom:.25rem"><span class="up" id="log-meta"></span></div>
-
-</div>
-
-</main>
 </div>
 <div class="dc-toast" id="dc-toast">Kode disalin!</div>
-<script>var SB_URL='https://jlxtnbnrirxhwuyqjlzw.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI'</script>
+<script>var SB_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co', SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI'</script>
 <script src="js/economy-page.js"></script>
 </body>
+
 </html>
