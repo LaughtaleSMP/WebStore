@@ -10,6 +10,8 @@ var _notifOn=false,_notifCD={},_notifHist=[],_NOTIF_CD=300000;
 var _uptimeLog=null,_prevOnline=null;
 var _fetchLock=false,_lastBDSHash='',_srvStatCache=null,_srvStatCacheTs=0;
 var _fetchFails=0,_maxRetries=3,_retryDelay=2000;
+var _lastDP=null;
+try{var _savedDP=localStorage.getItem('lt_lastDP');if(_savedDP)_lastDP=JSON.parse(_savedDP);}catch(e){}
 
 /* ═══ Feature 18: Multi-Server Support ═══ */
 var _servers=[{name:'Laughtale SMP',ip:'laughtale.my.id:19214',sync_id:'current'}];
@@ -72,6 +74,7 @@ function _switchServer(idx){
   _uptimeLog=null;lastMetrics=null;
   _msBuf={tps:[],lat:[],players:[]};_animVals={};
   _srvStatCache=null;_srvStatCacheTs=0;_lastBDSHash='';_fetchFails=0;_headCache={};
+  _lastDP=null;radarLands=[];radarPlayers=[];
   _hideErrBanner();
   // Reset UI to loading state
   _origSafeSet('s-label','MEMUAT...');safeClass('s-label','sl ld');
@@ -80,6 +83,7 @@ function _switchServer(idx){
   _origSafeSet('m-version','—');_origSafeSet('m-status','—');_origSafeSet('s-addr','—');
   var bds=$('bds-metrics');if(bds)bds.style.display='none';
   var pdc=$('player-details-card');if(pdc)pdc.style.display='none';
+  var lcc=$('lag-contrib-card');if(lcc)lcc.style.display='none';
   // Re-fetch everything
   fetchStatus();fetchMH();fetchRadarHistory();
 }
@@ -134,11 +138,19 @@ function applyBDSMetrics(m){
   safeSet('dim-ow',m.players_per_dim?m.players_per_dim.overworld:0);
   safeSet('dim-nether',m.players_per_dim?m.players_per_dim.nether:0);
   safeSet('dim-end',m.players_per_dim?m.players_per_dim.the_end:0);
-  var dpPct=m.dp_pct||0;
+  // DP: cache last known values so reload doesn't show 0
+  // Accept dp_pct >= 0 (including 0 from real data), only skip if truly undefined
+  if(m.dp_pct!==undefined&&m.dp_pct!==null){
+    _lastDP={pct:m.dp_pct,bytes:m.dp_bytes||0,max:m.dp_max||1048576,bd:m.dp_breakdown||(_lastDP?_lastDP.bd:null)};
+    try{localStorage.setItem('lt_lastDP',JSON.stringify(_lastDP));}catch(e){}
+  }
+  var dpPct=m.dp_pct!==undefined&&m.dp_pct!==null?m.dp_pct:(_lastDP?_lastDP.pct:0);
   var dpFill=$('dp-bar-fill');
   if(dpFill){dpFill.style.width=dpPct+'%';dpFill.className='bar-fill '+(dpPct<50?'g':dpPct<80?'y':'r');}
   safeSet('dp-pct',dpPct+'% terpakai');
-  safeSet('dp-detail',fmtBytes(m.dp_bytes||0)+' / '+fmtBytes(m.dp_max||1048576));
+  var dpBytes=m.dp_bytes!==undefined?m.dp_bytes:(_lastDP?_lastDP.bytes:0);
+  var dpMax=m.dp_max!==undefined?m.dp_max:(_lastDP?_lastDP.max:1048576);
+  safeSet('dp-detail',fmtBytes(dpBytes)+' / '+fmtBytes(dpMax));
   // Gauge ring
   var gauge=$('dp-gauge');
   if(gauge){
@@ -153,8 +165,8 @@ function applyBDSMetrics(m){
     pill.textContent=dpPct<50?'AMAN':dpPct<80?'SEDANG':'PENUH';
     pill.className='pill '+(dpPct<50?'g':dpPct<80?'y':'r');
   }
-  // DP breakdown per fitur
-  var dpbd=$('dp-breakdown'),dbb=m.dp_breakdown;
+  // DP breakdown per fitur — use current data, fallback to last cached
+  var dpbd=$('dp-breakdown'),dbb=m.dp_breakdown||(_lastDP?_lastDP.bd:null);
   if(dpbd&&dbb&&Object.keys(dbb).length){
     var totalEst=Object.values(dbb).reduce(function(s,v){return s+v.b;},0)||1;
     var colors={Gacha:'#c084fc',Daily:'#60a5fa',Bank:'#fbbf24',Auction:'#34d399',Combat:'#f87171',Land:'#2dd4bf',System:'#64748b'};
@@ -203,34 +215,138 @@ function applyBDSMetrics(m){
   var wt=m.world_time||0,td=wt%24000,tod='';
   if(td<6000)tod='Pagi';else if(td<12000)tod='Siang';else if(td<18000)tod='Sore';else tod='Malam';
   safeSet('world-time',tod+' ('+wt+')');
-  safeSet('world-day','Hari ke-'+(m.world_day||0));
+  if(m.world_day!==undefined)safeSet('world-day','Hari ke-'+m.world_day);
   safeSet('world-tick',fmtN(m.tick||0));
   safeSet('world-tps',tps.toFixed(1)+' / 20');
   radarPlayers=m.player_details||[];
-  radarLands=m.land_claims||[];
+  // Preserve existing radarLands if this sync doesn't include land_claims
+  if(m.land_claims&&m.land_claims.length)radarLands=m.land_claims;
   if(radarPlayers.length||radarLands.length){
     drawRadar();
     var pdc=$('player-details-card');if(pdc)pdc.style.display='block';
   }
   safeSet('metrics-time',m.ts?timeAgo(new Date(m.ts).toISOString()):'\u2014');
   var bds=$('bds-metrics');if(bds)bds.style.display='block';
-  var bd=m.entity_breakdown||[];
-  var ebCard=$('entity-breakdown-card');
-  var ebBody=$('entity-breakdown-body');
-  if(ebCard&&ebBody&&bd.length){
-    var maxC=bd[0].count||1;
-    ebBody.innerHTML=bd.map(function(e,i){
-      var pct=Math.round(e.count/maxC*100);
-      var color=e.id==='item'?'var(--gold)':pct>60?'var(--red)':pct>30?'var(--orange)':'var(--green)';
-      return'<tr><td class="mono" style="text-align:center">'+(i+1)+'</td><td class="mono">'+esc(e.id)+'</td><td class="mono" style="text-align:right;color:'+color+'">'+e.count+'</td><td><div style="height:4px;background:var(--surface);border-radius:2px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:2px"></div></div></td></tr>';
-    }).join('');
-  }
+  _renderLagContrib(m);
   updateDiag(m);
-  _updateHealth(m);_pushTPS(m.tps||0);_checkAlerts({tps:m.tps,dpPct:m.dp_pct});_hmDirty=true;
+  _updateHealth(m);_pushTPS(m.tps||0);_checkAlerts({tps:m.tps,dpPct:m.dp_pct||(_lastDP?_lastDP.pct:0)});_hmDirty=true;
 }
 
+/* ═══ LAG CONTRIBUTORS — Client-side analysis from server metrics ═══ */
+var _LC_WEIGHTS={
+  zombie:1.5,zombie_villager:2,drowned:1.5,husk:1.5,
+  skeleton:1.8,stray:1.8,creeper:1.5,spider:1.3,cave_spider:1.3,
+  enderman:2,witch:2,slime:1,magma_cube:1,blaze:2,ghast:2.5,
+  wither_skeleton:1.8,piglin:1.5,piglin_brute:1.5,hoglin:1.5,
+  pillager:2,vindicator:1.8,evoker:2.5,ravager:2,phantom:2,warden:3,
+  villager_v2:3,iron_golem:1.5,item:0.3,xp_orb:0.2,arrow:0.1
+};
+var _LC_CATS={
+  mob:{icon:'M',color:'#f87171',bg:'rgba(248,113,113,.06)',bd:'rgba(248,113,113,.12)',label:'Mob'},
+  item:{icon:'I',color:'#fbbf24',bg:'rgba(251,191,36,.06)',bd:'rgba(251,191,36,.12)',label:'Item'},
+  chunk:{icon:'C',color:'#fb923c',bg:'rgba(251,146,60,.06)',bd:'rgba(251,146,60,.12)',label:'Hotspot'},
+  player:{icon:'P',color:'#22d3ee',bg:'rgba(34,211,238,.06)',bd:'rgba(34,211,238,.12)',label:'Player'}
+};
+
+function _renderLagContrib(m){
+  var card=$('lag-contrib-card');if(!card)return;
+  var tps=m.tps||0,totalEnt=m.entities?m.entities.total:0;
+  var hostile=m.mobs?m.mobs.total:0,items=m.items?m.items.total:0;
+  var bd=m.entity_breakdown||[],hs=m.entity_hotspots||[],pd=m.player_details||[];
+  // Only re-render when entity_breakdown exists (full sync data)
+  // During micro-sync bd=[] and hs=[] — preserve last rendered state
+  if(!bd.length&&!hs.length)return;
+  card.style.display='block';
+  var maxEnt=Math.max(1,totalEnt);
+  // Build contributors
+  var contrib=[];
+  // Source 1: Entity breakdown (from full sync)
+  for(var i=0;i<bd.length;i++){
+    var e=bd[i],cnt=e.count||0;if(cnt<3)continue;
+    var w=_LC_WEIGHTS[e.id]||1.0;
+    var isItem=e.id==='item'||e.id==='xp_orb';
+    contrib.push({score:Math.round(cnt*w),cat:isItem?'item':'mob',name:e.id,count:cnt,
+      pct:Math.round(cnt/maxEnt*100),weight:w});
+  }
+  // Source 2: Chunk hotspots
+  for(var i=0;i<Math.min(hs.length,8);i++){
+    var h=hs[i];if(!h||h.c<8)continue;
+    var dimL=h.d==='n'?'Nether':h.d==='e'?'End':'OW';
+    contrib.push({score:Math.round(h.c*1.5),cat:'chunk',name:h.x+', '+h.z+' ('+dimL+')',
+      count:h.c,pct:Math.round(h.c/maxEnt*100),weight:1.5});
+  }
+  // Source 3: Player proximity
+  for(var i=0;i<pd.length;i++){
+    var p=pd[i];if(!p||p.x===undefined)continue;
+    // Estimate nearby entities from hotspot data
+    var nearCount=0;
+    for(var j=0;j<hs.length;j++){
+      var hh=hs[j],dx=Math.abs((hh.x||0)-p.x),dz=Math.abs((hh.z||0)-p.z);
+      var pDim=p.dim==='nether'?'n':p.dim==='the_end'?'e':'o',hDim=hh.d||'o';
+      if(pDim===hDim&&dx<48&&dz<48)nearCount+=hh.c;
+    }
+    if(nearCount<5)continue;
+    var dimS=(p.dim||'overworld').replace('_',' ');
+    contrib.push({score:Math.round(nearCount*1.2),cat:'player',name:p.name+' ('+dimS+')',
+      count:nearCount,pct:Math.round(nearCount/maxEnt*100),weight:1.2});
+  }
+  contrib.sort(function(a,b){return b.score-a.score;});
+  // Health label for pill
+  var hi=Math.min(100,Math.round(Math.max(0,20-tps)*5+Math.min(30,hostile/5)+Math.min(20,items/10)+Math.min(10,Math.max(0,totalEnt-200)/30)));
+  var displayScore=100-hi;
+  var hLabel=displayScore>=60?'SEHAT':displayScore>=30?'WASPADA':'KRITIS';
+  var pill=$('lag-health-pill');
+  if(pill){pill.textContent=hLabel;pill.className='pill '+(displayScore>=60?'g':displayScore>=30?'y':'r');}
+  // Render contributor list
+  var listEl=$('lag-contrib-list');
+  if(listEl){
+    var topN=contrib.slice(0,12),maxSc=topN.length?topN[0].score:1;
+    var html='';
+    for(var i=0;i<topN.length;i++){
+      var c=topN[i],cat=_LC_CATS[c.cat]||_LC_CATS.mob;
+      var relPct=Math.round(c.score/maxSc*100);
+      var barCol=relPct>=70?'var(--red)':relPct>=40?'var(--gold)':'var(--green)';
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:3px;background:'+cat.bg+';border:1px solid '+cat.bd+';border-radius:var(--r-xs);transition:border-color .2s">';
+      // Rank
+      html+='<span style="font-family:\'JetBrains Mono\',monospace;font-size:.52rem;font-weight:700;color:var(--mute);width:18px;text-align:center;flex-shrink:0">'+(i+1)+'</span>';
+      // Category badge
+      html+='<span style="font-family:\'JetBrains Mono\',monospace;font-size:.5rem;font-weight:800;color:'+cat.color+';width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;background:'+cat.bg+';border:1px solid '+cat.bd+';border-radius:4px;flex-shrink:0">'+cat.icon+'</span>';
+      // Info
+      html+='<div style="flex:1;min-width:0">';
+      html+='<div style="display:flex;justify-content:space-between;align-items:baseline">';
+      html+='<span style="font-family:\'JetBrains Mono\',monospace;font-size:.55rem;font-weight:700;color:var(--text);letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(c.name)+'</span>';
+      html+='<span style="font-family:\'JetBrains Mono\',monospace;font-size:.48rem;font-weight:700;color:'+cat.color+';flex-shrink:0;margin-left:8px">'+c.count+' <span style="color:var(--mute);font-weight:500">('+c.pct+'%)</span></span>';
+      html+='</div>';
+      // Bar
+      html+='<div style="display:flex;align-items:center;gap:6px;margin-top:3px">';
+      html+='<div style="flex:1;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden"><div style="width:'+relPct+'%;height:100%;background:'+barCol+';border-radius:2px;transition:width .6s"></div></div>';
+      html+='<span style="font-family:\'JetBrains Mono\',monospace;font-size:.4rem;color:var(--mute);flex-shrink:0;width:28px;text-align:right">×'+c.weight+'</span>';
+      html+='</div></div></div>';
+    }
+    if(!topN.length)html='<div style="text-align:center;color:var(--mute);font-size:.6rem;padding:.75rem">Tidak ada kontributor lag signifikan</div>';
+    listEl.innerHTML=html;
+  }
+  // Category summary
+  var catEl=$('lag-cat-summary');
+  if(catEl){
+    var cats=['mob','item','chunk','player'];
+    var catHtml='';
+    for(var ci=0;ci<cats.length;ci++){
+      var ck=cats[ci],cat=_LC_CATS[ck];
+      var items2=contrib.filter(function(c){return c.cat===ck;});
+      var totalC=items2.reduce(function(s,c){return s+c.count;},0);
+      catHtml+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xs)">';
+      catHtml+='<div style="width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:'+cat.bg+';border:1px solid '+cat.bd+';flex-shrink:0;font-family:\'JetBrains Mono\',monospace;font-size:.6rem;font-weight:800;color:'+cat.color+'">'+cat.icon+'</div>';
+      catHtml+='<div style="flex:1;min-width:0">';
+      catHtml+='<div style="font-family:\'JetBrains Mono\',monospace;font-size:.48rem;font-weight:700;color:var(--text);letter-spacing:.3px">'+cat.label+'</div>';
+      catHtml+='<div style="font-family:\'JetBrains Mono\',monospace;font-size:.4rem;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+items2.length+' tipe · '+fmtN(totalC)+' total</div>';
+      catHtml+='</div></div>';
+    }
+    catEl.innerHTML=catHtml;
+  }
+}
 function updateDiag(m){
-  var diags=[],tps=m.tps||0,totalMob=m.mobs?m.mobs.total:0,totalItem=m.items?m.items.total:0,dpPct=m.dp_pct||0;
+  var diags=[],tps=m.tps||0,totalMob=m.mobs?m.mobs.total:0,totalItem=m.items?m.items.total:0,dpPct=m.dp_pct!==undefined?m.dp_pct:(_lastDP?_lastDP.pct:0);
   if(tps<10)diags.push({t:'TPS sangat rendah ('+tps.toFixed(1)+'/20). Server sangat lag.',l:'bad'});
   else if(tps<15)diags.push({t:'TPS di bawah normal ('+tps.toFixed(1)+'/20). Ada tekanan pada server.',l:'warn'});
   else if(tps<18)diags.push({t:'TPS sedikit turun ('+tps.toFixed(1)+'/20). Masih playable.',l:'warn'});
@@ -411,16 +527,62 @@ window.addEventListener('DOMContentLoaded',function(){
   loadConfig().then(function(){
     fetchStatus();
     refreshTimer=setInterval(fetchStatus,30000);
+    _fastPollTimer=setInterval(_fastPollPositions,5000);
   });
 });
+// Fast-poll: lightweight 5s fetch for player radar positions only
+var _fastPollTimer=0,_fastPollLock=false;
+async function _fastPollPositions(){
+  if(_fastPollLock||document.hidden)return;
+  _fastPollLock=true;
+  try{
+    var sid=(_servers[_currentIdx]&&_servers[_currentIdx].sync_id)||'current';
+    var r=await fetch(SB_URL+'/rest/v1/leaderboard_sync?id=eq.'+sid+'&select=server_metrics',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
+    var d=await r.json();if(!d||!d[0]||!d[0].server_metrics)return;
+    var m=typeof d[0].server_metrics==='string'?JSON.parse(d[0].server_metrics):d[0].server_metrics;
+    if(!m||!m.player_details)return;
+    radarPlayers=m.player_details;
+    // Preserve land claims from micro-sync if present
+    if(m.land_claims&&m.land_claims.length)radarLands=m.land_claims;
+    // Preserve entity hotspots from micro-sync for heatmap
+    if(m.entity_hotspots&&m.entity_hotspots.length){
+      if(!lastMetrics)lastMetrics={};
+      lastMetrics.entity_hotspots=m.entity_hotspots;
+      _hmDirty=true;
+    }
+    // Preserve DP data from micro-sync
+    if(m.dp_pct!==undefined&&m.dp_pct!==null){
+      _lastDP={pct:m.dp_pct,bytes:m.dp_bytes||0,max:m.dp_max||1048576,bd:m.dp_breakdown||(_lastDP?_lastDP.bd:null)};
+      try{localStorage.setItem('lt_lastDP',JSON.stringify(_lastDP));}catch(e){}
+      // Update DP display
+      var dpFill=$('dp-bar-fill');
+      if(dpFill){dpFill.style.width=m.dp_pct+'%';dpFill.className='bar-fill '+(m.dp_pct<50?'g':m.dp_pct<80?'y':'r');}
+      safeSet('dp-pct',m.dp_pct+'% terpakai');
+      safeSet('dp-detail',fmtBytes(m.dp_bytes||0)+' / '+fmtBytes(m.dp_max||1048576));
+      var gauge=$('dp-gauge');
+      if(gauge){var arc=97.4,off=arc-(m.dp_pct/100*arc);gauge.setAttribute('stroke-dashoffset',off.toFixed(1));gauge.setAttribute('stroke',m.dp_pct<50?'var(--green)':m.dp_pct<80?'var(--gold)':'var(--red)');}
+      (_origSafeSet||safeSet)('dp-pct-num',m.dp_pct+'%');
+      var pill=$('dp-pill');
+      if(pill){pill.textContent=m.dp_pct<50?'AMAN':m.dp_pct<80?'SEDANG':'PENUH';pill.className='pill '+(m.dp_pct<50?'g':m.dp_pct<80?'y':'r');}
+    }
+    // Update TPS display (lightweight, no full re-render)
+    if(m.tps!==undefined){
+      var tps=m.tps||0;
+      safeSet('m-tps',tps.toFixed(1));
+      safeClass('m-tps','m-val '+(tps>=18?'good':tps>=15?'warn':'bad'));
+    }
+    drawRadar();
+  }catch(e){}
+  finally{_fastPollLock=false;}
+}
 window.addEventListener('resize',function(){
   if(latHistory.length>1)requestAnimationFrame(drawChart);
   drawMHChart();
   drawRadar();
 });
 document.addEventListener('visibilitychange',function(){
-  if(document.hidden){if(refreshTimer)clearInterval(refreshTimer);}
-  else{fetchStatus();refreshTimer=setInterval(fetchStatus,30000);}
+  if(document.hidden){if(refreshTimer)clearInterval(refreshTimer);if(_fastPollTimer)clearInterval(_fastPollTimer);}
+  else{fetchStatus();refreshTimer=setInterval(fetchStatus,30000);_fastPollTimer=setInterval(_fastPollPositions,5000);}
 });
 window.doRefresh=function(){fetchStatus();};
 
@@ -799,10 +961,10 @@ async function fetchRadarHistory(){
   }
   var tl=$('radar-timeline');
   if(tl)tl.addEventListener('input',function(){var v=parseInt(tl.value),lb=$('radar-time-label');if(v>=radarHistory.length){radarTimeIdx=-1;_stopAnim();if(lb)lb.textContent='Live';}else{radarTimeIdx=v;if(lb&&radarHistory[v]){var t=new Date(radarHistory[v].ts);lb.textContent=t.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+' WIB';}_startAnim();}drawRadar();});
-  var sb=$('radar-step-back'),sf=$('radar-step-fwd'),_hId=0,_hCnt=0;
+  var sb=$('radar-step-back'),sf=$('radar-step-fwd'),_hId=0,_hDelay=0,_hCnt=0;
   function _stepDir(dir){var s=$('radar-timeline');if(!s)return;s.value=dir<0?Math.max(0,parseInt(s.value)-1):Math.min(parseInt(s.max)||radarHistory.length,parseInt(s.value)+1);s.dispatchEvent(new Event('input'));}
-  function _hStart(dir){_hCnt=0;_stepDir(dir);_hId=setInterval(function(){_hCnt++;_stepDir(dir);if(_hCnt===5){clearInterval(_hId);_hId=setInterval(function(){_stepDir(dir);},50);}},200);}
-  function _hStop(){if(_hId){clearInterval(_hId);_hId=0;}}
+  function _hStart(dir){_stepDir(dir);_hDelay=setTimeout(function(){_hCnt=0;_hId=setInterval(function(){_hCnt++;_stepDir(dir);if(_hCnt===5){clearInterval(_hId);_hId=setInterval(function(){_stepDir(dir);},50);}},150);},400);}
+  function _hStop(){if(_hDelay){clearTimeout(_hDelay);_hDelay=0;}if(_hId){clearInterval(_hId);_hId=0;}}
   if(sb){sb.addEventListener('mousedown',function(e){e.preventDefault();_hStart(-1);});sb.addEventListener('touchstart',function(e){e.preventDefault();_hStart(-1);},{passive:false});}
   if(sf){sf.addEventListener('mousedown',function(e){e.preventDefault();_hStart(1);});sf.addEventListener('touchstart',function(e){e.preventDefault();_hStart(1);},{passive:false});}
   window.addEventListener('mouseup',_hStop);window.addEventListener('touchend',_hStop);
@@ -935,7 +1097,7 @@ function _pushTPS(tps){
 /* ═══ Feature 5: Server Health Index ═══ */
 function _updateHealth(m){
   var hw=$('health-wrap');if(hw)hw.style.display='flex';
-  var tps=m.tps||0,mobs=m.mobs?m.mobs.total:0,items=m.items?m.items.total:0,dp=m.dp_pct||0;
+  var tps=m.tps||0,mobs=m.mobs?m.mobs.total:0,items=m.items?m.items.total:0,dp=m.dp_pct!==undefined?m.dp_pct:(_lastDP?_lastDP.pct:0);
   var h=Math.round((Math.min(tps/20,1)*0.4+Math.max(0,1-mobs/500)*0.25+Math.max(0,1-items/300)*0.15+Math.max(0,1-dp/100)*0.2)*100);
   h=Math.max(0,Math.min(100,h));
   var se=$('health-score'),de=$('health-desc'),fe=$('gauge-fill');

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="Laughtale SMP — Analisis ekonomi server dan log aktivitas: distribusi kekayaan, inflasi, pricing intelligence.">
+<meta name="theme-color" content="#a855f7">
+<title>Economy — Laughtale SMP</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/pages.css">
+<style>
+.eco-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.75rem}
+@media(max-width:700px){.eco-grid{grid-template-columns:repeat(2,1fr)}}
+.eco-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem .6rem;text-align:center;transition:border-color .2s,transform .15s}
+.eco-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.eco-lbl{font-size:.42rem;color:var(--mute);letter-spacing:.6px;margin-bottom:4px;text-transform:uppercase;font-weight:600}
+.eco-val{font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;line-height:1}
+.eco-sub{font-size:.38rem;color:var(--dim);margin-top:3px}
+.wb{display:flex;height:8px;border-radius:4px;overflow:hidden;border:1px solid var(--border);margin:8px 0}
+.wb div{height:100%;transition:width .6s}
+.pt{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.48rem}
+.pt th{text-align:left;color:var(--mute);font-weight:600;padding:5px 7px;border-bottom:1px solid var(--border);font-size:.38rem;text-transform:uppercase;letter-spacing:.5px}
+.pt td{padding:5px 7px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text)}
+.pt tr:hover td{background:rgba(255,255,255,.02)}
+.mod-tabs{display:flex;gap:4px;margin-bottom:.75rem;border-bottom:1px solid var(--border);padding-bottom:6px}
+.mod-tab{font-family:'JetBrains Mono',monospace;font-size:.5rem;font-weight:600;padding:6px 14px;border-radius:var(--r-xs) var(--r-xs) 0 0;background:none;border:1px solid transparent;color:var(--mute);cursor:pointer;letter-spacing:.5px;transition:all .2s}
+.mod-tab:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.mod-tab.active{color:var(--ac);border-color:var(--border);border-bottom-color:var(--bg);background:var(--surface)}
+.mod{display:none}.mod.active{display:block}
+.sv.bk{color:var(--green)}.sv.ac{color:var(--cyan)}.sv.gc{color:var(--ac)}.sv.tp{color:var(--orange)}
+.st.clickable{cursor:pointer}
+.log-amount.coin{color:var(--gold)}.log-amount.add{color:var(--green)}.log-amount.deduct{color:var(--red)}
+.log-amount.expired{color:var(--mute);font-size:.6rem}
+.log-amount .cur{font-size:.52rem;font-weight:500;opacity:.7}
+.log-amount .cur.gem{color:var(--cyan)}.log-amount .cur.coin{color:var(--gold)}
+.tx{font-size:.52rem;color:var(--red);opacity:.7;display:block}
+.dup{opacity:.5;font-size:.5rem}
+.dc-empty{text-align:center;padding:1rem;color:var(--mute);font-size:.6rem;border:1px dashed var(--border);border-radius:var(--r-sm)}
+.dc-toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(168,85,247,.9);color:#fff;font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:600;padding:6px 16px;border-radius:var(--r-xs);opacity:0;transition:all .3s;z-index:100;pointer-events:none}
+.dc-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hd">
+  <a href="index.html" class="logo">Laughtale<span>SMP</span></a>
+  <nav class="nav">
+    <a href="index.html">Home</a>
+    <a href="monitor.html">Monitor</a>
+    <a href="economy.html" class="active">Economy</a>
+  </nav>
+</header>
+
+<main class="main" style="max-width:860px;margin:0 auto">
+<div class="dv"><div class="dvl"></div><span class="dvt">ECONOMY</span><div class="dvl"></div></div>
+<p style="text-align:center;font-size:.5rem;color:var(--mute);margin-bottom:.75rem" id="eco-sync">Memuat...</p>
+
+<div class="mod-tabs">
+  <button class="mod-tab active" data-mod="analytics">ANALYTICS</button>
+  <button class="mod-tab" data-mod="logs">ACTIVITY LOGS</button>
+</div>
+
+<!-- ════════ MODULE: ANALYTICS ════════ -->
+<div class="mod active" id="mod-analytics">
+
+<div class="eco-grid" id="kpi-grid">
+  <div class="eco-card"><div class="eco-lbl">Total Pemain</div><div class="eco-val" style="color:var(--cyan)" id="kpi-n">—</div><div class="eco-sub" id="kpi-n-sub"></div></div>
+  <div class="eco-card"><div class="eco-lbl">Total Coin</div><div class="eco-val" style="color:var(--gold)" id="kpi-coin">—</div><div class="eco-sub" id="kpi-coin-sub"></div></div>
+  <div class="eco-card"><div class="eco-lbl">Total Gem</div><div class="eco-val" style="color:#a855f7" id="kpi-gem">—</div><div class="eco-sub" id="kpi-gem-sub"></div></div>
+  <div class="eco-card"><div class="eco-lbl">Median Coin</div><div class="eco-val" style="color:var(--green)" id="kpi-median">—</div><div class="eco-sub" id="kpi-median-sub"></div></div>
+</div>
+
+<div class="cd" id="wealth-card">
+  <div class="sec-hd"><span class="sec-title">DISTRIBUSI KEKAYAAN</span><span class="pill" id="gini-pill">—</span></div>
+  <div class="wb" id="wealth-bar"></div>
+  <div id="wealth-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
+  <div id="wealth-detail" style="font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim)"></div>
+</div>
+
+<div class="cd" id="inflation-card">
+  <div class="sec-hd"><span class="sec-title">INDIKATOR INFLASI</span><span class="pill" id="inf-pill">—</span></div>
+  <div id="inf-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"></div>
+</div>
+
+<div class="cd" id="tx-card">
+  <div class="sec-hd"><span class="sec-title">VOLUME TRANSAKSI</span></div>
+  <div id="tx-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px"></div>
+</div>
+
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title">TOP HOLDERS</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mute);margin-bottom:4px;letter-spacing:.5px">TOP COIN</div>
+      <table class="pt" id="tbl-coin"><thead><tr><th>#</th><th>Player</th><th style="text-align:right">Coin</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mute);margin-bottom:4px;letter-spacing:.5px">TOP GEM</div>
+      <table class="pt" id="tbl-gem"><thead><tr><th>#</th><th>Player</th><th style="text-align:right">Gem</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</div>
+
+<div class="cd" id="pricing-card">
+  <div class="sec-hd"><span class="sec-title">PRICING INTELLIGENCE</span><span class="pill g">REKOMENDASI</span></div>
+  <table class="pt" id="tbl-price"><thead><tr><th>Item</th><th>Kategori</th><th style="text-align:right">Min</th><th style="text-align:right">Ideal</th><th style="text-align:right">Max</th><th>Catatan</th></tr></thead><tbody></tbody></table>
+</div>
+
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title">GACHA ECONOMY</span></div>
+  <div class="eco-grid" id="gacha-grid"></div>
+</div>
+
+<div class="cd" id="trend-card">
+  <div class="sec-hd"><span class="sec-title">ECONOMY TREND</span>
+    <div class="tabs" id="trend-tabs" style="margin:0;border:0;padding:0;gap:2px">
+      <button class="tab" data-range="day">24j</button>
+      <button class="tab a" data-range="week">7h</button>
+      <button class="tab" data-range="month">30h</button>
+    </div>
+  </div>
+  <div id="trend-info" style="font-family:'JetBrains Mono',monospace;font-size:.38rem;color:var(--mute);margin-bottom:6px"></div>
+  <div style="position:relative;width:100%;margin-bottom:8px">
+    <canvas id="trend-chart" style="width:100%;height:140px;border-radius:var(--r-xs);background:var(--bg2)"></canvas>
+  </div>
+  <div id="trend-legend" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px"></div>
+  <div class="eco-grid" id="trend-deltas"></div>
+</div>
+
+</div>
+
+<!-- ════════ MODULE: LOGS ════════ -->
+<div class="mod" id="mod-logs">
+
+<div class="sg sg-4">
+  <div class="st clickable" onclick="document.querySelector('[data-cat=bank]').click()"><span class="sv bk sk" id="st-bank">—</span><div class="stl">Transfer</div></div>
+  <div class="st clickable" onclick="document.querySelector('[data-cat=auction]').click()"><span class="sv ac sk" id="st-auction">—</span><div class="stl">Auction</div></div>
+  <div class="st clickable" onclick="document.querySelector('[data-cat=gacha]').click()"><span class="sv gc sk" id="st-gacha">—</span><div class="stl">Gacha</div></div>
+  <div class="st clickable" onclick="document.querySelector('[data-cat=topup]').click()"><span class="sv tp sk" id="st-topup">—</span><div class="stl">Topup</div></div>
+</div>
+
+<div id="disc-content"><div class="dc-empty">Memuat...</div></div>
+
+<div class="tabs" id="log-tabs">
+  <button class="tab a" data-cat="bank">Transfer</button>
+  <button class="tab" data-cat="auction">Auction</button>
+  <button class="tab" data-cat="gacha">Gacha</button>
+  <button class="tab" data-cat="topup">Topup</button>
+</div>
+<div class="cd"><div id="log-content"><div class="emp">Memuat...</div></div></div>
+<div style="text-align:right;margin-bottom:.25rem"><span class="up" id="log-meta"></span></div>
+
+</div>
+
+</main>
+</div>
+<div class="dc-toast" id="dc-toast">Kode disalin!</div>
+<script>var SB_URL='https://jlxtnbnrirxhwuyqjlzw.supabase.co',SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI'</script>
+<script src="js/economy-page.js"></script>
+</body>
+</html>

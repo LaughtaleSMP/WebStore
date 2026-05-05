@@ -364,14 +364,14 @@ body.light .chart-tip{background:#fff;border-color:rgba(0,0,0,.12);color:#1a1a2e
 <!-- Mob Count -->
 <div class="cd">
   <div class="sec-hd">
-    <span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c6.23-.05 7.87-5.57 7.5-10-.36-4.34-3.95-9.96-7.5-5-3.55-4.96-7.14.66-7.5 5-.37 4.43 1.27 9.95 7.5 10z"/></svg>MOB COUNT</span>
+    <span class="sec-title">MOB COUNT</span>
     <span class="pill" id="mob-level">—</span>
   </div>
   <div class="ent-grid">
-    <div class="ent-card"><div class="ent-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z"/></svg></div><div class="ent-val" id="mob-overworld">—</div><div class="ent-lbl">Overworld</div></div>
-    <div class="ent-card"><div class="ent-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.73-2.5-1.5-4 .5-6 1 4 4.5 3 4.5 6.5a3.5 3.5 0 01-4 3.5"/></svg></div><div class="ent-val" id="mob-nether">—</div><div class="ent-lbl">Nether</div></div>
-    <div class="ent-card"><div class="ent-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><div class="ent-val" id="mob-end">—</div><div class="ent-lbl">The End</div></div>
-    <div class="ent-card"><div class="ent-ico"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div><div class="ent-val" id="mob-total">—</div><div class="ent-lbl">Total</div></div>
+    <div class="ent-card"><div class="ent-ico" style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div><div class="ent-val" id="mob-overworld">—</div><div class="ent-lbl">Overworld</div></div>
+    <div class="ent-card"><div class="ent-ico" style="width:8px;height:8px;border-radius:50%;background:var(--orange)"></div><div class="ent-val" id="mob-nether">—</div><div class="ent-lbl">Nether</div></div>
+    <div class="ent-card"><div class="ent-ico" style="width:8px;height:8px;border-radius:50%;background:var(--ac)"></div><div class="ent-val" id="mob-end">—</div><div class="ent-lbl">The End</div></div>
+    <div class="ent-card"><div class="ent-ico" style="width:8px;height:8px;border-radius:50%;background:var(--cyan)"></div><div class="ent-val" id="mob-total">—</div><div class="ent-lbl">Total</div></div>
   </div>
 </div>
 
@@ -386,13 +386,17 @@ body.light .chart-tip{background:#fff;border-color:rgba(0,0,0,.12);color:#1a1a2e
   </div>
 </div>
 
-<div class="cd" id="entity-breakdown-card">
-  <div class="sec-hd"><span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>ENTITY PER TIPE (TOP 20)</span></div>
-  <table class="dtbl" style="width:100%">
-    <thead><tr><th style="width:28px">#</th><th>Entity ID</th><th style="width:50px">Jumlah</th><th>Bar</th></tr></thead>
-    <tbody id="entity-breakdown-body"><tr><td colspan="4" style="text-align:center;color:var(--mute);padding:1rem">Menunggu data dari BDS sync...</td></tr></tbody>
-  </table>
+
+<!-- Lag Contributors -->
+<div class="cd" id="lag-contrib-card" style="display:none">
+  <div class="sec-hd">
+    <span class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>LAG CONTRIBUTORS</span>
+    <span class="pill" id="lag-health-pill">—</span>
+  </div>
+    <div id="lag-contrib-list"></div>
+  <div id="lag-cat-summary" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:6px"></div>
 </div>
+
 
 <!-- DP Storage -->
 <div class="cd" id="dp-card">

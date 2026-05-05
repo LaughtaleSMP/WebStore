@@ -2,93 +2,10 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta name="description" content="Laughtale SMP — Log aktivitas ekonomi server: transfer, auction, gacha, dan topup admin.">
-<meta name="theme-color" content="#a855f7">
-<title>Economy Logs — Laughtale SMP</title>
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/pages.css">
-<style>
-.sv.bk{color:var(--green)}.sv.ac{color:var(--cyan)}.sv.gc{color:var(--ac)}.sv.tp{color:var(--orange)}
-.st.clickable{cursor:pointer}
-.log-amount.coin{color:var(--gold)}.log-amount.add{color:var(--green)}.log-amount.deduct{color:var(--red)}
-.log-amount.expired{color:var(--mute);font-size:.6rem}
-.log-amount .cur{font-size:.52rem;font-weight:500;opacity:.7}
-.log-amount .cur.gem{color:var(--cyan)}.log-amount .cur.coin{color:var(--gold)}
-.tx{font-size:.52rem;color:var(--red);opacity:.7;display:block}
-.dup{opacity:.5;font-size:.5rem}
-.dc-empty{text-align:center;padding:1.25rem;color:var(--mute);font-size:.7rem;border:1px dashed var(--border);border-radius:var(--r-sm)}
-.dc-toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(20px);
-  background:rgba(168,85,247,.9);color:#fff;font-family:'JetBrains Mono',monospace;font-size:.62rem;
-  font-weight:600;padding:6px 16px;border-radius:var(--r-xs);opacity:0;transition:all .3s;z-index:100;pointer-events:none}
-.dc-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.emp.loading{animation:blink-emp 1.5s infinite}
-@keyframes blink-emp{0%,100%{opacity:.4}50%{opacity:1}}
-</style>
+<meta http-equiv="refresh" content="0;url=economy.html">
+<title>Redirecting...</title>
 </head>
 <body>
-<div class="w">
-
-<header class="hd">
-  <a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>KEMBALI KE BERANDA</a>
-  <div class="logo">LAUGHTALE <b>SMP</b></div>
-  <div class="sub">Economy Activity Logs</div>
-</header>
-
-<!-- Stats Summary -->
-<div class="sg sg-4">
-  <div class="st clickable" onclick="document.querySelector('[data-cat=bank]').click()">
-    <span class="sv bk sk" id="st-bank">—</span><div class="stl">Transfer</div>
-  </div>
-  <div class="st clickable" onclick="document.querySelector('[data-cat=auction]').click()">
-    <span class="sv ac sk" id="st-auction">—</span><div class="stl">Auction</div>
-  </div>
-  <div class="st clickable" onclick="document.querySelector('[data-cat=gacha]').click()">
-    <span class="sv gc sk" id="st-gacha">—</span><div class="stl">Gacha</div>
-  </div>
-  <div class="st clickable" onclick="document.querySelector('[data-cat=topup]').click()">
-    <span class="sv tp sk" id="st-topup">—</span><div class="stl">Topup</div>
-  </div>
-</div>
-
-<!-- Active Discount Codes -->
-<div class="dv">
-  <div class="dvl"></div>
-  <span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>KODE DISKON AKTIF</span>
-  <div class="dvl"></div>
-</div>
-<div id="disc-content"><div class="dc-empty">Memuat...</div></div>
-
-<!-- Activity Logs -->
-<div class="dv">
-  <div class="dvl"></div>
-  <span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>ACTIVITY LOGS</span>
-  <div class="dvl"></div>
-</div>
-
-<div class="tabs" id="log-tabs">
-  <button class="tab a" data-cat="bank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7h20L12 2z"/><rect x="3" y="10" width="18" height="10" rx="1"/><path d="M7 14v3m5-3v3m5-3v3"/></svg>Transfer</button>
-  <button class="tab" data-cat="auction"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 7.5l3-3 4 4-3 3"/></svg>Auction</button>
-  <button class="tab" data-cat="gacha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M6 3l6 6 6-6"/><path d="M2 9h20"/></svg>Gacha</button>
-  <button class="tab" data-cat="topup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Topup Admin</button>
-</div>
-
-<div class="cd">
-  <div id="log-content"><div class="emp loading">Memuat data...</div></div>
-</div>
-<div style="text-align:right;margin-bottom:.25rem"><span class="up" id="log-meta"></span></div>
-
-<div class="nav-links">
-  <a href="status.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2h12v6a6 6 0 01-12 0V2z"/><rect x="8" y="19" width="8" height="3" rx="1"/></svg>Leaderboard</a>
-  <a href="monitor.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Monitor</a>
-  <a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Beranda</a>
-</div>
-
-</div>
-<div class="dc-toast" id="dc-toast">Kode disalin!</div>
-<script src="js/logs-page.js"></script>
+<p>Redirecting to <a href="economy.html">Economy</a>...</p>
 </body>
 </html>
