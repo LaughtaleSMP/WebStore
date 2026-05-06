@@ -49,6 +49,16 @@
     .holder-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .holder-label{font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mute);margin-bottom:4px;letter-spacing:.5px}
     #trend-metric-tabs .tab{font-size:.42rem;padding:4px 10px}
+    #trend-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab;user-select:none;position:relative;border-radius:var(--r-xs)}
+    #trend-scroll::-webkit-scrollbar{display:none}
+    #trend-scroll.grabbing{cursor:grabbing}
+    #trend-scroll canvas{display:block}
+    .trend-minimap{height:3px;border-radius:1.5px;background:rgba(255,255,255,.06);margin-top:4px;position:relative;overflow:hidden}
+    .trend-minimap-thumb{height:100%;border-radius:1.5px;background:rgba(168,85,247,.5);position:absolute;transition:left .1s,width .1s}
+    .trend-zoom{display:flex;align-items:center;gap:4px;margin-left:auto}
+    .trend-zoom button{font-family:'JetBrains Mono',monospace;font-size:.36rem;font-weight:600;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--mute);cursor:pointer;transition:all .2s;line-height:1}
+    .trend-zoom button:hover{color:var(--text);border-color:var(--border2);background:rgba(255,255,255,.06)}
+    .trend-zoom span{font-family:'JetBrains Mono',monospace;font-size:.34rem;color:var(--mute);min-width:40px;text-align:center}
     #health-content{font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);line-height:1.7}
     .ptbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
     @media(max-width:700px){
@@ -72,6 +82,8 @@
       .mod-tab{font-size:.36rem;padding:4px 8px}
       #trend-metric-tabs .tab{font-size:.32rem;padding:3px 5px}
       .sec-title{font-size:.42rem !important}
+      .trend-zoom button{padding:5px 10px;font-size:.38rem}
+      .trend-zoom span{font-size:.36rem}
     }
   </style>
 </head>
@@ -216,9 +228,20 @@
           </div>
           <div id="trend-info"
             style="font-family:'JetBrains Mono',monospace;font-size:.36rem;color:var(--mute);margin-bottom:4px"></div>
-          <div style="position:relative;width:100%;margin-bottom:8px">
-            <canvas id="trend-chart"
-              style="width:100%;height:220px;border-radius:var(--r-xs);background:var(--bg2);cursor:crosshair"></canvas>
+          <div style="position:relative;width:100%;margin-bottom:4px">
+            <div id="trend-scroll">
+              <canvas id="trend-chart" style="height:220px;background:var(--bg2)"></canvas>
+            </div>
+            <div class="trend-minimap" id="trend-minimap"><div class="trend-minimap-thumb" id="trend-minimap-thumb"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <div class="trend-zoom">
+              <button id="trend-zoom-out" title="Zoom Out">−</button>
+              <span id="trend-zoom-label">100%</span>
+              <button id="trend-zoom-in" title="Zoom In">+</button>
+              <button id="trend-zoom-fit" title="Fit to View" style="margin-left:2px">FIT</button>
+              <button id="trend-zoom-reset" title="Reset">1:1</button>
+            </div>
           </div>
           <div class="tabs" id="trend-metric-tabs" style="margin-bottom:0;border:0;padding:0;gap:2px;flex-wrap:wrap">
             <button class="tab a" data-metric="coin_total">Supply</button>
@@ -312,8 +335,8 @@
             <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Aliran Koin</div>
             <p style="margin-bottom:6px">Darimana koin masuk dan kemana keluar dalam 5 menit terakhir.</p>
             <table style="width:100%;border-collapse:collapse;font-size:.4rem">
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--green);padding:5px 8px;font-weight:600;width:100px">Sumber (+)</td><td style="padding:5px 8px"><b>Mob Kill</b> = bunuh mob. <b>Gacha Refund</b> = pengembalian. <b>Weekly LB</b> = hadiah mingguan. <b>1st Sale</b> = bonus penjualan pertama.</td></tr>
-              <tr><td style="color:var(--red);padding:5px 8px;font-weight:600">Pengeluaran (-)</td><td style="padding:5px 8px"><b>Gacha Cost</b> = biaya gacha. <b>Bank Tax</b> = pajak transfer. <b>Anti-Stack</b> = penalti farm berlebihan. <b>Auction Fee</b> = biaya listing. <b>Wealth Tax</b> = pajak kekayaan harian (offline).</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--green);padding:5px 8px;font-weight:600;width:100px">Sumber (+)</td><td style="padding:5px 8px"><b>Mob Kill</b> = bunuh mob. <b>Gacha Refund</b> = pengembalian. <b>Weekly LB</b> = hadiah mingguan. <b>1st Sale</b> = bonus penjualan pertama. <b>Land Refund</b> = refund hapus land.</td></tr>
+              <tr><td style="color:var(--red);padding:5px 8px;font-weight:600">Pengeluaran (-)</td><td style="padding:5px 8px"><b>Gacha Cost</b> = biaya gacha. <b>Bank Tax</b> = pajak transfer. <b>Anti-Stack</b> = penalti farm berlebihan. <b>Auction Fee</b> = biaya listing. <b>Wealth Tax</b> = pajak kekayaan harian (offline). <b>Land Buy</b> = beli land (koin). <b>Land PPN</b> = pajak land.</td></tr>
             </table>
             <p style="margin-top:6px"><span style="color:var(--green)">Sumber > Pengeluaran</span> = inflasi. <span style="color:var(--red)">Pengeluaran > Sumber</span> = deflasi. Idealnya <span style="color:var(--cyan)">seimbang</span>.</p>
           </div>
@@ -385,6 +408,13 @@
           </div>
 
         </div>
+
+        <div class="cd" style="font-family:'JetBrains Mono',monospace;font-size:.44rem;color:var(--dim);line-height:1.8">
+          <div class="sec-hd"><span class="sec-title">PANDUAN FITUR & HARGA</span><span class="pill" id="guide-price-pill">LIVE</span></div>
+          <p style="margin-bottom:12px;color:var(--text)">Harga di bawah ini dihitung otomatis berdasarkan kondisi ekonomi server saat ini. Semua harga bersifat <b style="color:var(--green)">dinamis</b> dan berubah sesuai income rata-rata player.</p>
+          <div id="feature-guide"><div class="dc-empty">Memuat data harga...</div></div>
+        </div>
+
       </div>
 
 <!-- Footer -->

@@ -8,6 +8,7 @@
   function setText(id, t) { var el = $(id); if (el) el.textContent = t }
 
   var _data = null, _activeTab = 'bank', _activeMod = 'analytics';
+  var _lastPricing = null;
   var RARITY_COLORS = { COMMON: 'var(--dim)', UNCOMMON: 'var(--green)', RARE: '#3b82f6', EPIC: 'var(--ac)', LEGENDARY: 'var(--gold)' };
   var _ic = {
     sent: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',
@@ -132,12 +133,14 @@
     var sources = [
       { k: 'mob_kill', label: 'Mob Kill' }, { k: 'topup', label: 'Topup' },
       { k: 'gacha_refund', label: 'Gacha Refund' }, { k: 'pvp_refund', label: 'PvP Refund' },
-      { k: 'weekly_reward', label: 'Weekly LB' }, { k: 'first_sale', label: '1st Sale' }
+      { k: 'weekly_reward', label: 'Weekly LB' }, { k: 'first_sale', label: '1st Sale' },
+      { k: 'land_refund', label: 'Land Refund' }
     ];
     var sinks = [
       { k: 'gacha_cost', label: 'Gacha Cost' }, { k: 'bank_tax', label: 'Bank Tax' },
       { k: 'mob_penalty', label: 'Anti-Stack' }, { k: 'pvp_penalty', label: 'PvP Penalty' },
-      { k: 'auction_fee', label: 'Auction Fee' }, { k: 'wealth_tax', label: 'Wealth Tax' }
+      { k: 'auction_fee', label: 'Auction Fee' }, { k: 'wealth_tax', label: 'Wealth Tax' },
+      { k: 'land_buy', label: 'Land Buy' }, { k: 'land_ppn', label: 'Land PPN' }
     ];
     if (flow) {
       for (var i = 0; i < sources.length; i++) { var v = flow[sources[i].k] || 0; if (v > 0) injected += v; }
@@ -197,7 +200,7 @@
   }
 
   function _aggFlow() {
-    var f = { mob_kill: 0, gacha_refund: 0, pvp_refund: 0, first_sale: 0, topup: 0, weekly_reward: 0, gacha_cost: 0, bank_tax: 0, mob_penalty: 0, pvp_penalty: 0, auction_fee: 0 };
+    var f = { mob_kill: 0, gacha_refund: 0, pvp_refund: 0, first_sale: 0, topup: 0, weekly_reward: 0, gacha_cost: 0, bank_tax: 0, mob_penalty: 0, pvp_penalty: 0, auction_fee: 0, land_buy: 0, land_ppn: 0, land_buy_gem: 0, land_refund: 0, wealth_tax: 0 };
     var bv = 0, av = 0, cnt = 0, gini = 0, giniCnt = 0;
     for (var i = 0; i < _trendData.length; i++) {
       var row = _trendData[i], cf = row.coin_flow;
@@ -261,6 +264,95 @@
       var gemCoinRatio = (g.avg && avg) ? Math.round(avg / g.avg) : 100;
       basisEl.innerHTML = 'Coin basis: ' + fmtN(Math.round(coinBasis)) + '/jam <span style="color:var(--cyan)">(' + coinAnchor + ')</span> | vMul: ' + vMul.toFixed(2) + ' | gMul: ' + gMul.toFixed(2) + ' | <span style="color:#c084fc">Gem: tetap</span> | 1 Gem ~ ' + fmtN(gemCoinRatio) + ' Coin';
     }
+    _lastPricing = { coinBasis: coinBasis, vMul: vMul, gMul: gMul, anchor: coinAnchor, gemRatio: gemCoinRatio, summary: s, calcC: calcC };
+    renderFeatureGuide();
+  }
+
+  function renderFeatureGuide() {
+    var el = $('feature-guide'); if (!el || !_data || !_data.lb || !_data.lb.guide) return;
+    var g = _data.lb.guide, cb = g.basis || 1;
+    var pill = $('guide-price-pill');
+    if (pill) { pill.textContent = 'BASIS: ' + fmtN(Math.round(cb)) + '/JAM'; pill.className = 'pill g'; }
+    var h = '';
+    function sec(icon, title, color, content) {
+      h += '<div style="margin-bottom:16px;padding:12px 14px;border-radius:8px;background:rgba(255,255,255,0.015);border-left:3px solid ' + color + '">';
+      h += '<div style="color:' + color + ';font-weight:700;font-size:.5rem;margin-bottom:8px;display:flex;align-items:center;gap:6px">' + icon + ' ' + title + '</div>';
+      h += content + '</div>';
+    }
+    function row(label, val, note) {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03)">' +
+        '<span>' + label + '</span><span style="text-align:right"><b style="color:var(--green)">' + val + '</b>' + (note ? ' <span style="color:var(--mute);font-size:.36rem">' + note + '</span>' : '') + '</span></div>';
+    }
+    // ━━━ 1. MIMI LAND (from server) ━━━
+    var ld = g.land, lr = ld.tiers || [], ex = ld.examples || [];
+    var landRows = '';
+    for (var i = 0; i < lr.length; i++) {
+      var lbl = i === 0 ? '≤15×15' : i === 1 ? '≤30×30' : i === 2 ? '≤50×50' : '>50×50';
+      landRows += row(lbl, fmtN(lr[i].r) + '⛃/blok²', '');
+    }
+    var exRows = '';
+    for (var i = 0; i < ex.length; i++) {
+      var hrs = cb > 0 ? Math.round(ex[i].price / cb) : '?';
+      exRows += row('Land ' + ex[i].sz + ' (' + fmtN(ex[i].area) + ' blok²)', fmtN(ex[i].price) + ' Koin', '~' + hrs + 'j farming');
+    }
+    sec('■', 'MIMI LAND — Klaim Area', 'var(--green)',
+      '<p style="margin-bottom:8px;color:var(--text)">Harga per block² dari server (eco:pricing).</p>' +
+      '<div style="margin-bottom:8px;padding:6px 8px;border-radius:4px;background:rgba(255,255,255,0.02)"><div style="color:var(--gold);font-weight:600;margin-bottom:4px">Rate per Block²:</div>' + landRows + '</div>' +
+      '<div style="color:var(--gold);font-weight:600;margin-bottom:4px">Contoh Harga:</div>' + exRows +
+      '<div style="margin-top:8px;padding:6px 8px;border-radius:4px;background:rgba(255,255,255,0.02);font-size:.38rem"><div style="color:var(--text);font-weight:600;margin-bottom:3px">Info:</div>' +
+      '<div>• Gem diskon ' + (ld.gemDiscount||99) + '% · PPN ' + (ld.ppnPct||12) + '% (land ke-' + ((ld.ppnFreeLimit||3)+1) + '+) · Max ' + (ld.maxPerPlayer||5) + ' land · Min ' + (ld.minArea||9) + ' blok²</div></div>'
+    );
+    // ━━━ 2. GACHA (from server) ━━━
+    var gc = g.gacha;
+    sec('■', 'GACHA — Equipment & Partikel', '#c084fc',
+      '<p style="margin-bottom:8px;color:var(--text)">Harga aktual dari server (eco:pricing).</p>' +
+      '<div style="color:var(--gold);font-weight:600;margin-bottom:4px">Peralatan (Koin):</div>' +
+      row('1x Pull', fmtN(gc.eq1) + ' Koin', '~' + (cb>0?(gc.eq1/cb).toFixed(1):'?') + 'j') +
+      row('10x Pull', fmtN(gc.eq10) + ' Koin', 'hemat ' + fmtN(gc.eq1*10-gc.eq10) + '⛃') +
+      '<div style="height:6px"></div><div style="color:var(--gold);font-weight:600;margin-bottom:4px">Partikel (Gem — tetap):</div>' +
+      row('1x Pull', gc.pt1 + ' Gem', '') + row('10x Pull', gc.pt10 + ' Gem', 'hemat ' + (gc.pt1*10-gc.pt10) + ' Gem') +
+      '<div style="margin-top:8px;padding:6px 8px;border-radius:4px;background:rgba(255,255,255,0.02);font-size:.38rem">' +
+      '<div>■ Common ' + (gc.rates?.common||70) + '% · <span style="color:var(--green)">■</span> Uncommon ' + (gc.rates?.uncommon||22) + '% · <span style="color:#3b82f6">■</span> Rare ' + (gc.rates?.rare||6.5) + '%</div>' +
+      '<div><span style="color:var(--ac)">■</span> Epic ' + (gc.rates?.epic||1.45) + '% · <span style="color:var(--gold)">■</span> Legendary ' + (gc.rates?.legendary||0.05) + '%</div>' +
+      '<div style="margin-top:3px">• Pity Rare: ' + fmtN(gc.pityRare) + ' pull · Pity Legendary: ' + fmtN(gc.pityLeg) + ' pull · Dup refund: ' + gc.gemRefund + ' Gem</div></div>'
+    );
+    // ━━━ 3. AUCTION (from server) ━━━
+    var ac = g.auction;
+    sec('■', 'AUCTION HOUSE — Jual Beli Item', 'var(--cyan)',
+      '<div style="color:var(--gold);font-weight:600;margin-bottom:4px">Biaya & Limit:</div>' +
+      row('Listing Fee', ac.feePct + '%', 'dari harga jual') + row('Harga', fmtN(ac.minPrice) + ' — ' + fmtN(ac.maxPrice) + ' Koin', '') +
+      row('Durasi', ac.durationH + ' jam', '') + row('Max Listing', ac.maxPerPlayer + '/player, ' + ac.maxGlobal + ' global', '') +
+      row('First Sale Bonus', '+' + fmtN(ac.firstSaleBonus) + ' Koin', '') +
+      '<div style="margin-top:8px;padding:6px 8px;border-radius:4px;background:rgba(255,255,255,0.02);font-size:.38rem">' +
+      '<div>• Bid +' + ac.bidIncrPct + '% (min ' + fmtN(ac.minBidIncr) + '⛃) · Anti-snipe ' + ac.antiSnipeMin + ' menit</div></div>'
+    );
+    // ━━━ 4. BANK (from server) ━━━
+    var bk = g.bank, bt = bk.baseTax, adj = bk.policyAdj || 0, eTax = bk.effectiveTax;
+    var adjTxt = adj > 0 ? ' <span style="color:var(--red)">(+' + adj + '% stabilizer)</span>' : adj < 0 ? ' <span style="color:var(--green)">(' + adj + '% stabilizer)</span>' : '';
+    sec('■', 'BANK — Transfer Koin', 'var(--gold)',
+      '<div style="color:var(--gold);font-weight:600;margin-bottom:4px">Ketentuan:</div>' +
+      row('Transfer', fmtN(bk.minTransfer) + ' — ' + fmtN(bk.maxTransfer) + ' Koin', '') +
+      row('Limit Harian', fmtN(bk.dailyLimit) + ' Koin', '') + row('Free Transfer', bk.freeTransfers + 'x/hari', 'tanpa pajak') +
+      '<div style="height:6px"></div><div style="color:var(--gold);font-weight:600;margin-bottom:4px">Pajak Efektif (base ' + bt + '%' + adjTxt + '):</div>' +
+      '<div style="padding:6px 8px;border-radius:4px;background:rgba(255,255,255,0.02);font-size:.38rem">' +
+      row('≤100⛃', eTax + '%', '') + row('101—1.000⛃', (eTax+3) + '%', '') + row('1.001—3.000⛃', (eTax+6) + '%', '') + row('>3.000⛃', (eTax+10) + '%', '') +
+      '</div>' +
+      '<div style="margin-top:6px;padding:6px 8px;border-radius:4px;background:rgba(255,255,255,0.02);font-size:.38rem"><div style="color:var(--text);font-weight:600;margin-bottom:3px">Contoh:</div>' +
+      row('100⛃ (free)', fmtN(100), 'pajak 0') +
+      row('100⛃', fmtN(100+Math.ceil(100*eTax/100)), 'pajak ' + Math.ceil(100*eTax/100)) +
+      row('1.000⛃', fmtN(1000+Math.ceil(1000*(eTax+3)/100)), 'pajak ' + fmtN(Math.ceil(1000*(eTax+3)/100))) +
+      row('5.000⛃', fmtN(5000+Math.ceil(5000*(eTax+10)/100)), 'pajak ' + fmtN(Math.ceil(5000*(eTax+10)/100))) + '</div>'
+    );
+    // ━━━ 5. WEALTH TAX (from server) ━━━
+    var wt = g.wealthTax;
+    sec('■', 'WEALTH TAX — Pajak Kekayaan', '#c084fc',
+      '<p style="margin-bottom:8px;color:var(--text)">Pajak harian otomatis untuk player offline dengan saldo tinggi.</p>' +
+      row('P75 (acuan)', fmtN(wt.p75) + ' Koin', '') +
+      row('Tier 1 (>' + fmtN(wt.tier1) + '⛃)', 'pajak ' + wt.rate1 + '%/hari', 'P75×3') +
+      row('Tier 2 (>' + fmtN(wt.tier2) + '⛃)', 'pajak ' + wt.rate2 + '%/hari', 'P75×10') +
+      '<div style="margin-top:6px;font-size:.38rem;color:var(--mute)">• Hanya player offline. Online = aman.</div>'
+    );
+    el.innerHTML = h;
   }
 
   function renderGacha(s) {
@@ -350,6 +442,7 @@
   var _trendData = [], _trendRange = 'day', _trendMetric = 'coin_total';
   var _candles = [], _hoverIdx = -1;
   var CU = '#26a69a', CD = '#ef5350';
+  var _candleW = 14, _candleGap = 4, _zoomLevel = 1;
 
   function bindTrendTabs() {
     var el = $('trend-tabs'); if (!el) return;
@@ -453,7 +546,7 @@
       else if (_candles.length === 1) info.textContent = '1 candle (' + _trendData.length + ' snapshots) — candle baru setiap 15 menit';
       else info.textContent = 'Menunggu data dari BDS sync...';
     }
-    drawTrendChart(); renderTrendDeltas();
+    drawTrendChart(); setTimeout(_scrollToEnd, 50); renderTrendDeltas();
     if (_data && _data.lb && _data.lb.summary) renderPricing(_data.lb.summary);
     renderHealthAdvisor();
   }
@@ -474,36 +567,65 @@
 
   function drawTrendChart() {
     var cv = $('trend-chart'); if (!cv) return;
-    var par = cv.parentElement;
-    var W = par ? (par.clientWidth || 600) : 600; if (W < 100) W = 600;
+    var scrollEl = $('trend-scroll');
+    var viewW = scrollEl ? scrollEl.clientWidth : 600; if (viewW < 100) viewW = 600;
     var H = 220;
+    var pad = { t: 12, r: 52, b: 20, l: 6 };
+    var n = _candles.length;
+
+    // Calculate scaled candle dimensions
+    var bw = Math.max(3, Math.round(_candleW * _zoomLevel));
+    var gap = Math.max(1, Math.round(_candleGap * _zoomLevel));
+    if (bw > 48) bw = 48;
+
+    // Calculate total canvas width: always expand to fit all candles
+    var chartAreaMin = viewW - pad.l - pad.r;
+    var neededW = n > 0 ? n * bw + (n - 1) * gap : 0;
+    var cw = Math.max(chartAreaMin, neededW);
+    var W = cw + pad.l + pad.r;
+
     cv.width = W; cv.height = H;
+    cv.style.width = W + 'px';
+    cv.style.height = H + 'px';
     var ctx = cv.getContext('2d');
     ctx.clearRect(0, 0, W, H);
-    var pad = { t: 12, r: 52, b: 20, l: 6 }, cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+    var ch = H - pad.t - pad.b;
     if (cw <= 0 || ch <= 0) return;
-    var n = _candles.length;
+
     if (!n) {
+      // Make canvas fit viewport when empty
+      cv.width = viewW; cv.style.width = viewW + 'px';
       ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
-      for (var g = 0; g <= 5; g++) { var gy = pad.t + ch * (g / 5); ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(W - pad.r, gy); ctx.stroke() }
+      for (var g = 0; g <= 5; g++) { var gy = pad.t + ch * (g / 5); ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(viewW - pad.r, gy); ctx.stroke() }
       ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.font = '600 11px JetBrains Mono,monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('Menunggu data dari BDS sync...', W / 2, H / 2);
-      _updHdr(null); return;
+      ctx.fillText('Menunggu data dari BDS sync...', viewW / 2, H / 2);
+      _updHdr(null); _updMinimap(); return;
     }
     var mn = Infinity, mx = -Infinity;
     for (var i = 0; i < n; i++) { if (_candles[i].l < mn) mn = _candles[i].l; if (_candles[i].h > mx) mx = _candles[i].h }
     if (mx <= mn) mx = mn + 1;
     var rng = mx - mn, pv = rng * 0.08; mn = Math.max(0, mn - pv); mx = mx + pv;
     function yOf(v) { return pad.t + ch * (1 - (v - mn) / (mx - mn)) }
+
+    // Grid lines (drawn at viewport-relative positions for y-axis label visibility)
     ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
     ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.font = '9px JetBrains Mono,monospace'; ctx.textAlign = 'left';
+    var scrollLeft = scrollEl ? scrollEl.scrollLeft : 0;
     for (var g = 0; g <= 5; g++) {
-      var gy = pad.t + ch * (g / 5); ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(W - pad.r, gy); ctx.stroke();
-      var val = mx - (mx - mn) * (g / 5); ctx.fillText(fmtN(val), W - pad.r + 4, gy + 3);
+      var gy = pad.t + ch * (g / 5);
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+      var val = mx - (mx - mn) * (g / 5);
+      // Draw y-axis labels at the right edge, sticky to scroll position
+      var labelX = scrollLeft + viewW - pad.r + 4;
+      if (labelX > W - pad.r + 4) labelX = W - pad.r + 4;
+      ctx.fillText(fmtN(val), labelX, gy + 3);
     }
-    var gap = Math.max(1, Math.round(cw * 0.12 / n));
-    var bw = Math.max(3, Math.floor((cw - gap * (n - 1)) / n)); if (bw > 28) bw = 28;
-    var tw = n * bw + (n - 1) * gap, ox = pad.l + Math.floor((cw - tw) / 2);
+
+    // Place candles from left edge
+    var tw = n * bw + (n - 1) * gap;
+    var ox = pad.l + (cw > tw ? Math.floor((cw - tw) / 2) : 0);
+    if (neededW > chartAreaMin) ox = pad.l; // left-align when scrollable
+
     for (var i = 0; i < n; i++) {
       var c = _candles[i], x = ox + i * (bw + gap), cx = x + bw / 2, up = c.c >= c.o, clr = up ? CU : CD;
       ctx.strokeStyle = clr; ctx.lineWidth = 1;
@@ -514,25 +636,54 @@
       ctx.strokeRect(x + .5, bt + .5, bw - 1, Math.max(0, bh - 1));
       if (i === _hoverIdx) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(x - 1, pad.t, bw + 2, ch) }
     }
+
+    // X-axis time labels
     ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.font = '8px JetBrains Mono,monospace'; ctx.textAlign = 'center';
-    var ls = Math.max(1, Math.floor(n / 7));
-    for (var i = 0; i < n; i += ls) {
+    var labelEvery = Math.max(1, Math.floor(60 / (bw + gap))); // show label roughly every ~60px
+    for (var i = 0; i < n; i += labelEvery) {
       var t = new Date(_candles[i].t);
       var lb = _trendRange === 'day' ? String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') : _trendRange === 'week' ? (t.getDate() + '/' + (t.getMonth() + 1) + ' ' + t.getHours() + 'h') : t.getDate() + '/' + (t.getMonth() + 1);
       ctx.fillText(lb, ox + i * (bw + gap) + bw / 2, H - pad.b + 14);
     }
+
+    // Hover crosshair
     if (_hoverIdx >= 0 && _hoverIdx < n) {
       var hc = _candles[_hoverIdx], hx = ox + _hoverIdx * (bw + gap) + bw / 2;
       ctx.setLineDash([2, 2]); ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(hx, pad.t); ctx.lineTo(hx, pad.t + ch); ctx.stroke();
       var hy = yOf(hc.c); ctx.beginPath(); ctx.moveTo(pad.l, hy); ctx.lineTo(W - pad.r, hy); ctx.stroke();
       ctx.setLineDash([]);
+      // Price tag at right edge (sticky)
+      var tagX = scrollLeft + viewW - pad.r;
+      if (tagX > W - pad.r) tagX = W - pad.r;
       ctx.fillStyle = hc.c >= hc.o ? 'rgba(38,166,154,0.9)' : 'rgba(239,83,80,0.9)';
-      ctx.fillRect(W - pad.r, hy - 7, pad.r, 14);
+      ctx.fillRect(tagX, hy - 7, pad.r, 14);
       ctx.fillStyle = '#fff'; ctx.font = 'bold 8px JetBrains Mono,monospace'; ctx.textAlign = 'left';
-      ctx.fillText(fmtN(Math.round(hc.c)), W - pad.r + 3, hy + 3);
+      ctx.fillText(fmtN(Math.round(hc.c)), tagX + 3, hy + 3);
     }
     _updHdr(_hoverIdx >= 0 ? _candles[_hoverIdx] : _candles[n - 1]);
+    _updMinimap();
+    _updZoomLabel();
+  }
+
+  function _updMinimap() {
+    var scrollEl = $('trend-scroll'), thumb = $('trend-minimap-thumb'), map = $('trend-minimap');
+    if (!scrollEl || !thumb || !map) return;
+    var sw = scrollEl.scrollWidth, vw = scrollEl.clientWidth;
+    if (sw <= vw) { thumb.style.width = '100%'; thumb.style.left = '0'; return; }
+    var ratio = vw / sw, left = scrollEl.scrollLeft / sw;
+    thumb.style.width = Math.max(10, ratio * 100) + '%';
+    thumb.style.left = (left * 100) + '%';
+  }
+
+  function _updZoomLabel() {
+    var el = $('trend-zoom-label');
+    if (el) el.textContent = Math.round(_zoomLevel * 100) + '%';
+  }
+
+  function _scrollToEnd() {
+    var scrollEl = $('trend-scroll');
+    if (scrollEl) scrollEl.scrollLeft = scrollEl.scrollWidth;
   }
 
   function renderTrendDeltas() {
@@ -739,23 +890,107 @@
 
   function _initTrend() {
     bindTrendTabs();
-    setTimeout(drawTrendChart, 100);
+    setTimeout(function() { drawTrendChart(); _scrollToEnd(); }, 100);
     var cv = $('trend-chart');
-    if (cv) {
-      cv.addEventListener('mousemove', function (e) {
-        if (!_candles.length) return;
-        var rect = cv.getBoundingClientRect(), sc = cv.width / rect.width;
-        var sx = (e.clientX - rect.left) * sc, n = _candles.length;
-        var pad_l = 6, pad_r = 52, cw = cv.width - pad_l - pad_r;
-        var gap = Math.max(1, Math.round(cw * 0.12 / n));
-        var bw = Math.max(3, Math.floor((cw - gap * (n - 1)) / n)); if (bw > 28) bw = 28;
-        var tw = n * bw + (n - 1) * gap, ox = pad_l + Math.floor((cw - tw) / 2);
-        var idx = Math.round((sx - ox - bw / 2) / (bw + gap));
-        if (idx < 0) idx = 0; if (idx >= n) idx = n - 1;
-        if (_hoverIdx !== idx) { _hoverIdx = idx; drawTrendChart() }
-      });
-      cv.addEventListener('mouseleave', function () { if (_hoverIdx !== -1) { _hoverIdx = -1; drawTrendChart() } });
+    var scrollEl = $('trend-scroll');
+    if (!cv || !scrollEl) return;
+
+    // ── Mouse hover on canvas ──
+    cv.addEventListener('mousemove', function (e) {
+      if (!_candles.length) return;
+      var rect = cv.getBoundingClientRect(), sc = cv.width / rect.width;
+      var sx = (e.clientX - rect.left) * sc, n = _candles.length;
+      var pad_l = 6, pad_r = 52;
+      var bw = Math.max(3, Math.round(_candleW * _zoomLevel)); if (bw > 48) bw = 48;
+      var gap = Math.max(1, Math.round(_candleGap * _zoomLevel));
+      var viewW = scrollEl.clientWidth || 600;
+      var chartAreaMin = viewW - pad_l - pad_r;
+      var neededW = n * bw + (n - 1) * gap;
+      var cw = Math.max(chartAreaMin, neededW);
+      var tw = n * bw + (n - 1) * gap;
+      var ox = pad_l + (cw > tw ? Math.floor((cw - tw) / 2) : 0);
+      if (neededW > chartAreaMin) ox = pad_l;
+      var idx = Math.round((sx - ox - bw / 2) / (bw + gap));
+      if (idx < 0) idx = 0; if (idx >= n) idx = n - 1;
+      if (_hoverIdx !== idx) { _hoverIdx = idx; drawTrendChart() }
+    });
+    cv.addEventListener('mouseleave', function () { if (_hoverIdx !== -1) { _hoverIdx = -1; drawTrendChart() } });
+
+    // ── Drag to scroll (mouse) ──
+    var _dragging = false, _dragStartX = 0, _dragScrollLeft = 0;
+    scrollEl.addEventListener('mousedown', function (e) {
+      // Only drag on empty space / canvas, not on hover
+      _dragging = true;
+      _dragStartX = e.pageX;
+      _dragScrollLeft = scrollEl.scrollLeft;
+      scrollEl.classList.add('grabbing');
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!_dragging) return;
+      var dx = e.pageX - _dragStartX;
+      scrollEl.scrollLeft = _dragScrollLeft - dx;
+    });
+    document.addEventListener('mouseup', function () {
+      if (_dragging) { _dragging = false; scrollEl.classList.remove('grabbing'); }
+    });
+
+    // ── Touch drag ──
+    var _touchStartX = 0, _touchScrollLeft = 0;
+    scrollEl.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 1) {
+        _touchStartX = e.touches[0].pageX;
+        _touchScrollLeft = scrollEl.scrollLeft;
+      }
+    }, { passive: true });
+    scrollEl.addEventListener('touchmove', function (e) {
+      if (e.touches.length === 1) {
+        var dx = e.touches[0].pageX - _touchStartX;
+        scrollEl.scrollLeft = _touchScrollLeft - dx;
+      }
+    }, { passive: true });
+
+    // ── Scroll event → update minimap + redraw for sticky y-axis ──
+    var _scrollRAF = 0;
+    scrollEl.addEventListener('scroll', function () {
+      _updMinimap();
+      if (!_scrollRAF) {
+        _scrollRAF = requestAnimationFrame(function () { _scrollRAF = 0; drawTrendChart(); });
+      }
+    });
+
+    // ── Zoom controls ──
+    var zIn = $('trend-zoom-in'), zOut = $('trend-zoom-out'), zFit = $('trend-zoom-fit'), zReset = $('trend-zoom-reset');
+    function doZoom(newZoom) {
+      var oldZoom = _zoomLevel;
+      _zoomLevel = Math.max(0.3, Math.min(4, newZoom));
+      // Preserve scroll center
+      var scrollCenter = scrollEl.scrollLeft + scrollEl.clientWidth / 2;
+      var ratio = _zoomLevel / oldZoom;
+      drawTrendChart();
+      scrollEl.scrollLeft = scrollCenter * ratio - scrollEl.clientWidth / 2;
+      _updMinimap();
     }
+    if (zIn) zIn.addEventListener('click', function () { doZoom(_zoomLevel + 0.25); });
+    if (zOut) zOut.addEventListener('click', function () { doZoom(_zoomLevel - 0.25); });
+    if (zReset) zReset.addEventListener('click', function () { doZoom(1); setTimeout(_scrollToEnd, 50); });
+    if (zFit) zFit.addEventListener('click', function () {
+      var n = _candles.length; if (!n) return;
+      var viewW = scrollEl.clientWidth || 600;
+      var chartArea = viewW - 6 - 52;
+      var fitZoom = chartArea / (n * (_candleW + _candleGap));
+      doZoom(Math.max(0.3, Math.min(4, fitZoom)));
+      scrollEl.scrollLeft = 0;
+    });
+
+    // ── Mouse wheel zoom ──
+    scrollEl.addEventListener('wheel', function (e) {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        var delta = e.deltaY > 0 ? -0.15 : 0.15;
+        doZoom(_zoomLevel + delta);
+      }
+    }, { passive: false });
   }
-  window.addEventListener('resize', function () { drawTrendChart() });
+  window.addEventListener('resize', function () { drawTrendChart(); _updMinimap(); });
 })();
