@@ -195,7 +195,7 @@ body.light canvas{background:rgba(0,0,0,.015)}
 .measure-btn:hover{border-color:var(--border2);color:var(--dim)}
 .measure-btn.active{border-color:rgba(245,200,66,.3);color:var(--gold);background:rgba(245,200,66,.06)}
 .measure-info{font-family:'JetBrains Mono',monospace;font-size:.45rem;color:var(--gold);margin-left:auto}
-.radar-coord-tip{position:absolute;display:none;background:rgba(6,10,14,.92);border:1px solid var(--border2);border-radius:var(--r-xs);padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:.52rem;color:var(--cyan);pointer-events:none;z-index:4;white-space:nowrap;backdrop-filter:blur(6px);animation:coordFadeIn .2s ease}
+.radar-coord-tip{position:absolute;display:none;background:rgba(6,10,14,.92);border:1px solid var(--border2);border-radius:var(--r-xs);padding:5px 10px;font-family:'JetBrains Mono',monospace;font-size:.52rem;line-height:1.5;color:var(--cyan);pointer-events:none;z-index:4;white-space:normal;max-width:min(280px,80vw);word-break:break-word;backdrop-filter:blur(6px);animation:coordFadeIn .2s ease}
 @keyframes coordFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
 /* Server Selector */
@@ -488,6 +488,9 @@ body.light .chart-tip{background:#fff;border-color:rgba(0,0,0,.12);color:#1a1a2e
     <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:8px;border-radius:50%;background:#f87171"></span>PvP ON</span>
     <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:12px;height:2px;border-bottom:2px dotted rgba(255,255,255,.4)"></span>Trail</span>
     <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:var(--mute)"><span style="width:8px;height:4px;border-radius:1px;background:rgba(251,146,60,.5)"></span>Heatmap</span>
+    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:#fb923c;font-family:'JetBrains Mono',monospace;font-weight:600"><span style="width:8px;height:8px;border:1.5px solid #fb923c;border-radius:1px"></span>7d</span>
+    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:#f87171;font-family:'JetBrains Mono',monospace;font-weight:600"><span style="width:8px;height:8px;border:1.5px solid #f87171;border-radius:1px"></span>10d</span>
+    <span style="display:flex;align-items:center;gap:3px;font-size:.48rem;color:#f87171;font-family:'JetBrains Mono',monospace;font-weight:600"><span style="width:8px;height:8px;border:2px solid #f87171;border-radius:1px;background:rgba(248,113,113,.15)"></span>14d</span>
   </div>
 </div>
 
@@ -522,5 +525,7 @@ body.light .chart-tip{background:#fff;border-color:rgba(0,0,0,.12);color:#1a1a2e
 
 </div>
 <script src="js/monitor-page.js"></script>
+<script src="js/page-nav.js"></script>
+<script src="js/auto-refresh.js"></script>
 </body>
 </html>

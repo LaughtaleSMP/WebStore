@@ -802,8 +802,65 @@ function drawRadar(){
   ctx.setLineDash([]);
   var ox=cX-radarPanX*sc,oz=cY-radarPanZ*sc;
   if(ox>=0&&ox<=W&&oz>=0&&oz<=H){ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox,H);ctx.stroke();ctx.beginPath();ctx.moveTo(0,oz);ctx.lineTo(W,oz);ctx.stroke();ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='600 7px JetBrains Mono,monospace';ctx.textAlign='left';ctx.fillText('0,0',ox+4,oz-4);}
-  var _lVis=0,_lTot=0;
-  if(radarLands&&radarLands.length){for(var li=0;li<radarLands.length;li++){var l=radarLands[li];if(!l||l.x1==null)continue;if((DIM_SHORT[l.d]||'overworld')!==radarDim)continue;_lTot++;var lx1=cX+(Math.min(l.x1,l.x2)-radarPanX)*sc,lz1=cY+(Math.min(l.z1,l.z2)-radarPanZ)*sc,lx2=cX+(Math.max(l.x1,l.x2)-radarPanX)*sc,lz2=cY+(Math.max(l.z1,l.z2)-radarPanZ)*sc,lw=lx2-lx1,lh=lz2-lz1;if(lx2<0||lx1>W||lz2<0||lz1>H)continue;_lVis++;var lc=LAND_COLORS[nameHash(l.o)%LAND_COLORS.length];ctx.globalAlpha=0.07;ctx.fillStyle=lc;ctx.fillRect(lx1,lz1,lw,lh);ctx.globalAlpha=0.3;ctx.strokeStyle=lc;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.strokeRect(lx1,lz1,lw,lh);ctx.setLineDash([]);if(!isInteract){var _lfs=Math.min(16,Math.max(7,Math.floor(lw/8)));var _lfs2=Math.min(13,Math.max(6,Math.floor(lw/10)));var _lpad=_lfs+2;if(lw>30&&lh>_lfs){ctx.globalAlpha=0.55;ctx.font='600 '+_lfs+'px JetBrains Mono,monospace';ctx.textAlign='left';ctx.fillStyle=lc;ctx.fillText(l.n,Math.max(lx1+4,2),Math.max(lz1+_lfs+2,_lfs+2));if(l.o&&lh>_lpad+_lfs2+2){ctx.globalAlpha=0.4;ctx.font='500 '+_lfs2+'px JetBrains Mono,monospace';ctx.fillStyle='rgba(255,255,255,0.55)';ctx.fillText(l.o,Math.max(lx1+4,2),Math.max(lz1+_lpad+_lfs2,_lpad+_lfs2));}}}ctx.globalAlpha=1;}}
+  var _lVis=0,_lTot=0,_lExp=0;
+  var _WARN_DAYS=7,_CRIT_DAYS=10,_CLEAN_DAYS=14;
+  if(radarLands&&radarLands.length){for(var li=0;li<radarLands.length;li++){var l=radarLands[li];if(!l||l.x1==null)continue;if((DIM_SHORT[l.d]||'overworld')!==radarDim)continue;_lTot++;var lx1=cX+(Math.min(l.x1,l.x2)-radarPanX)*sc,lz1=cY+(Math.min(l.z1,l.z2)-radarPanZ)*sc,lx2=cX+(Math.max(l.x1,l.x2)-radarPanX)*sc,lz2=cY+(Math.max(l.z1,l.z2)-radarPanZ)*sc,lw=lx2-lx1,lh=lz2-lz1;if(lx2<0||lx1>W||lz2<0||lz1>H)continue;_lVis++;
+    // Determine expiry status from di (daysInactive)
+    var di=typeof l.di==='number'?l.di:-1;
+    var isWarn=di>=_WARN_DAYS&&di<_CRIT_DAYS;
+    var isCrit=di>=_CRIT_DAYS&&di<_CLEAN_DAYS;
+    var isDead=di>=_CLEAN_DAYS;
+    var isExpiring=isWarn||isCrit||isDead;
+    if(isExpiring)_lExp++;
+    // Choose color: normal=owner-hash, warn=orange, crit=red pulse, dead=bright red
+    var lc=isExpiring?'#f87171':LAND_COLORS[nameHash(l.o)%LAND_COLORS.length];
+    if(isWarn)lc='#fb923c';
+    // Fill
+    var fillAlpha=isDead?0.12:isCrit?0.10:isWarn?0.08:0.07;
+    ctx.globalAlpha=fillAlpha;ctx.fillStyle=lc;ctx.fillRect(lx1,lz1,lw,lh);
+    // Border
+    var borderAlpha=isDead?0.7:isCrit?0.55:isWarn?0.45:0.3;
+    // Pulsing effect for critical/dead lands
+    if(isCrit||isDead){var pulse=(Math.sin(Date.now()/400)+1)/2;borderAlpha=borderAlpha*(0.5+pulse*0.5);}
+    ctx.globalAlpha=borderAlpha;ctx.strokeStyle=lc;ctx.lineWidth=isDead?2:isCrit?1.5:1;
+    if(isExpiring){ctx.setLineDash([]);ctx.strokeRect(lx1,lz1,lw,lh);}
+    else{ctx.setLineDash([3,3]);ctx.strokeRect(lx1,lz1,lw,lh);ctx.setLineDash([]);}
+    // Labels (skip during interaction for perf)
+    if(!isInteract){
+      var _lfs=Math.min(16,Math.max(7,Math.floor(lw/8)));
+      var _lfs2=Math.min(13,Math.max(6,Math.floor(lw/10)));
+      var _lpad=_lfs+2;
+      if(lw>30&&lh>_lfs){
+        // Land name
+        ctx.globalAlpha=isExpiring?0.75:0.55;
+        ctx.font='600 '+_lfs+'px JetBrains Mono,monospace';ctx.textAlign='left';
+        ctx.fillStyle=lc;
+        ctx.fillText(l.n,Math.max(lx1+4,2),Math.max(lz1+_lfs+2,_lfs+2));
+        // Owner name
+        if(l.o&&lh>_lpad+_lfs2+2){
+          ctx.globalAlpha=isExpiring?0.6:0.4;
+          ctx.font='500 '+_lfs2+'px JetBrains Mono,monospace';
+          ctx.fillStyle=isExpiring?lc:'rgba(255,255,255,0.55)';
+          ctx.fillText(l.o,Math.max(lx1+4,2),Math.max(lz1+_lpad+_lfs2,_lpad+_lfs2));
+        }
+        // Expiry badge
+        if(isExpiring&&lw>50&&lh>_lpad+_lfs2+_lfs2+8){
+          var _ey=Math.max(lz1+_lpad+_lfs2*2+4,_lpad+_lfs2*2+4);
+          var _efs=Math.min(10,Math.max(6,Math.floor(lw/12)));
+          ctx.font='700 '+_efs+'px JetBrains Mono,monospace';
+          if(isDead){ctx.globalAlpha=0.9;ctx.fillStyle='#f87171';ctx.fillText('[CLEAN] '+di+'d',Math.max(lx1+4,2),_ey);}
+          else if(isCrit){ctx.globalAlpha=0.8;ctx.fillStyle='#f87171';ctx.fillText('[!] '+di+'d expiring',Math.max(lx1+4,2),_ey);}
+          else{ctx.globalAlpha=0.7;ctx.fillStyle='#fb923c';ctx.fillText('[~] '+di+'d inactive',Math.max(lx1+4,2),_ey);}
+        }
+        // Corner warning icon for small lands
+        else if(isExpiring&&lw>15&&lh>15){
+          ctx.globalAlpha=isDead?0.9:0.7;ctx.font='700 '+Math.min(12,Math.max(8,Math.floor(Math.min(lw,lh)/3)))+'px sans-serif';
+          ctx.textAlign='center';ctx.fillStyle=lc;
+          ctx.fillText(isDead?'X':isCrit?'!':'~',lx1+lw/2,lz1+lh/2+4);
+        }
+      }
+    }
+    ctx.globalAlpha=1;}}
   if(!isLive&&radarTimeIdx>0){
     var tr={},st=Math.max(0,radarTimeIdx-24);
     for(var t=st;t<=radarTimeIdx;t++){var sn=radarHistory[t];if(!sn||!sn._pos)continue;for(var j=0;j<sn._pos.length;j++){var tp=sn._pos[j];if((DIM_SHORT[tp.d]||'overworld')!==radarDim)continue;if(!tr[tp.n])tr[tp.n]=[];tr[tp.n].push({x:tp.x,z:tp.z,t:t});}}
@@ -845,7 +902,7 @@ function drawRadar(){
   }
   ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='600 10px Inter,sans-serif';ctx.textAlign='center';
   ctx.fillText('N',W/2,13);ctx.fillText('S',W/2,H-5);ctx.fillText('W',9,H/2+4);ctx.fillText('E',W-9,H/2+4);
-  safeSet('radar-count',ap.length+' pemain'+(_lTot?' \u00b7 '+_lVis+'/'+_lTot+' land':''));safeSet('radar-zoom-label','Zoom: '+radarZoom+' blok');
+  safeSet('radar-count',ap.length+' pemain'+(_lTot?' \u00b7 '+_lVis+'/'+_lTot+' land'+(_lExp?' \u00b7 '+_lExp+' expiring':''):''));safeSet('radar-zoom-label','Zoom: '+radarZoom+' blok');
   // Update dimension badges based on current time point
   var _dcOw=0,_dcNe=0,_dcEn=0;
   if(isLive){
@@ -1705,7 +1762,27 @@ function _pixelToWorld(cv,clientX,clientY){
 }
 function _showCoordTip(cv,worldX,worldZ,px,pz){
   var tip=$('radar-coord-tip');if(!tip)return;
-  tip.textContent='X: '+worldX+' \u00b7 Z: '+worldZ;
+  var text='X: '+worldX+' \u00b7 Z: '+worldZ;
+  // Check if click is inside a land claim
+  if(radarLands&&radarLands.length){
+    for(var i=0;i<radarLands.length;i++){
+      var l=radarLands[i];if(!l||l.x1==null)continue;
+      if((DIM_SHORT[l.d]||'overworld')!==radarDim)continue;
+      var x1=Math.min(l.x1,l.x2),x2=Math.max(l.x1,l.x2);
+      var z1=Math.min(l.z1,l.z2),z2=Math.max(l.z1,l.z2);
+      if(worldX>=x1&&worldX<=x2&&worldZ>=z1&&worldZ<=z2){
+        text=l.n+' \u00b7 '+l.o;
+        var di=typeof l.di==='number'?l.di:-1;
+        if(di>=14)text+=' \u00b7 AUTO-CLEAN';
+        else if(di>=10)text+=' \u00b7 '+di+'d EXPIRING';
+        else if(di>=7)text+=' \u00b7 '+di+'d inactive';
+        else if(di>=0)text+=' \u00b7 seen '+di+'d ago';
+        text+='\n'+x1+','+z1+' > '+x2+','+z2;
+        break;
+      }
+    }
+  }
+  tip.innerHTML=text.replace(/\n/g,'<br>');
   tip.style.display='block';
   // Position relative to radar-wrap
   var wrap=cv.parentElement;
@@ -1715,11 +1792,13 @@ function _showCoordTip(cv,worldX,worldZ,px,pz){
   var offsetY=cvRect.top-wrapRect.top+pz;
   // Keep tooltip inside canvas bounds
   var tipW=tip.offsetWidth||100;
+  var tipH=tip.offsetHeight||20;
   if(offsetX+tipW+8>cv.clientWidth)offsetX=offsetX-tipW-12;
+  if(offsetY-28+tipH>cv.clientHeight)offsetY=offsetY-tipH-8;
   tip.style.left=Math.max(4,offsetX+8)+'px';
   tip.style.top=Math.max(4,offsetY-28)+'px';
   clearTimeout(_coordTipTimer);
-  _coordTipTimer=setTimeout(function(){tip.style.display='none';},3000);
+  _coordTipTimer=setTimeout(function(){tip.style.display='none';},5000);
 }
 (function(){
   var cv=$('radar-canvas');
