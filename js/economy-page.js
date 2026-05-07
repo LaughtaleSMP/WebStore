@@ -542,12 +542,49 @@
     return row[metric] || 0;
   }
 
+  // ── Outlier filter: remove data rows whose metric is a statistical anomaly ──
+  // Uses IQR × fence to catch BDS-duplicate spikes without touching normal variance.
+  function _filterOutliers(data, metric, fenceFactor) {
+    if (data.length < 4) return { clean: data, removed: 0 };
+    var fence = fenceFactor || 5;
+    var vals = [];
+    for (var i = 0; i < data.length; i++) {
+      var v = _computeMetric(data[i], metric);
+      if (isFinite(v) && v > 0) vals.push(v);
+    }
+    if (vals.length < 4) return { clean: data, removed: 0 };
+    vals.sort(function(a, b) { return a - b; });
+    var q1 = vals[Math.floor(vals.length * 0.25)];
+    var q3 = vals[Math.floor(vals.length * 0.75)];
+    var iqr = q3 - q1;
+    var lo = q1 - fence * iqr;
+    var hi = q3 + fence * iqr;
+    // Never filter if IQR is too small (flat data)
+    if (iqr < 1) return { clean: data, removed: 0 };
+    var clean = [], removed = 0;
+    for (var i = 0; i < data.length; i++) {
+      var v2 = _computeMetric(data[i], metric);
+      if (v2 >= lo && v2 <= hi) {
+        clean.push(data[i]);
+      } else {
+        removed++;
+      }
+    }
+    return { clean: clean, removed: removed };
+  }
+
   function _agg(data, metric) {
     if (!data.length) return [];
+    // Strip outliers caused by duplicate BDS instances before bucketing
+    var filtered = _filterOutliers(data, metric, 5);
+    var cleanData = filtered.clean;
+    if (filtered.removed > 0) {
+      _showOutlierWarning(filtered.removed);
+    }
     var bms = _bucketMs(), bk = {};
-    for (var i = 0; i < data.length; i++) {
-      var t = new Date(data[i].ts).getTime(), k = Math.floor(t / bms) * bms;
-      if (!bk[k]) bk[k] = { t: k, v: [] }; bk[k].v.push(_computeMetric(data[i], metric));
+    for (var i = 0; i < cleanData.length; i++) {
+      var t = new Date(cleanData[i].ts).getTime(), k = Math.floor(t / bms) * bms;
+      if (!bk[k]) bk[k] = { t: k, v: [] }; bk[k].v.push(_computeMetric(cleanData[i], metric));
     }
     var ks = Object.keys(bk).sort(function (a, b) { return a - b }), r = [];
     for (var i = 0; i < ks.length; i++) {
@@ -582,6 +619,22 @@
       }
     }
     return r;
+  }
+
+  var _outlierWarnShown = false;
+  function _showOutlierWarning(count) {
+    if (_outlierWarnShown) return;
+    _outlierWarnShown = true;
+    var existing = document.getElementById('outlier-warn');
+    if (existing) existing.remove();
+    var warn = document.createElement('div');
+    warn.id = 'outlier-warn';
+    warn.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:.42rem;background:rgba(239,83,80,0.12);border:1px solid rgba(239,83,80,0.35);border-radius:6px;padding:8px 12px;margin-bottom:8px;color:#fca5a5;display:flex;align-items:center;gap:8px;line-height:1.4';
+    warn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;color:#ef5350"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+      '<span><b style="color:#ef5350">PERINGATAN:</b> ' + count + ' snapshot anomali disaring otomatis (kemungkinan disebabkan BDS duplikat yang aktif bersamaan). Grafik ditampilkan tanpa data corrupt. Harap hapus data tersebut dari Supabase tabel <b>economy_history</b> untuk membersihkan permanen.</span>' +
+      '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:none;border:none;color:#ef5350;cursor:pointer;font-size:.5rem;padding:2px 6px;border-radius:4px;flex-shrink:0" title="Tutup">✕</button>';
+    var trendCard = document.getElementById('trend-card');
+    if (trendCard) trendCard.insertBefore(warn, trendCard.firstChild);
   }
 
   // ═══════════════════════════════════════════════════════════

@@ -913,6 +913,8 @@ function drawRadar(){
   }
   safeSet('dim-ow',_dcOw);safeSet('dim-nether',_dcNe);safeSet('dim-end',_dcEn);
   _rInfo(ap);
+  // Update land expiry panel (skip during interaction for perf)
+  if(!isInteract&&typeof _renderExpPanel==='function')try{_renderExpPanel();}catch(ex){}
   }catch(e){console.warn('[R]',e);}
 }
 
@@ -1028,6 +1030,99 @@ async function fetchRadarHistory(){
   fetchRadarHistory();
   setInterval(fetchRadarHistory,300000);
 })();
+
+/* ═══ Land Claims Panel ═══ */
+var _expCollapsed=true,_expLastHash='';
+(function(){
+  var tog=$('land-exp-toggle');
+  if(tog)tog.addEventListener('click',function(){
+    _expCollapsed=!_expCollapsed;
+    var body=$('land-exp-body'),chev=$('land-exp-chevron'),sum=$('land-exp-summary');
+    if(body)body.classList.toggle('collapsed',_expCollapsed);
+    if(chev)chev.style.transform=_expCollapsed?'':'rotate(180deg)';
+    if(sum)sum.style.display=_expCollapsed?'':'none';
+  });
+})();
+function _renderExpPanel(){
+  var card=$('land-expiry-card'),tbody=$('land-exp-tbody'),cnt=$('land-exp-count'),info=$('land-exp-info');
+  if(!card||!tbody)return;
+  if(!radarLands||!radarLands.length){card.style.display='none';return;}
+  // Collect ALL valid lands
+  var items=[];
+  for(var i=0;i<radarLands.length;i++){
+    var l=radarLands[i];if(!l||l.x1==null)continue;
+    items.push(l);
+  }
+  if(!items.length){card.style.display='none';return;}
+  // Sort: highest di first (most urgent), unknowns (-1) at bottom
+  items.sort(function(a,b){
+    var da=typeof a.di==='number'?a.di:-1,db=typeof b.di==='number'?b.di:-1;
+    if(da===-1&&db===-1)return 0;
+    if(da===-1)return 1;
+    if(db===-1)return -1;
+    return db-da;
+  });
+  // Diff check — avoid re-render if data unchanged
+  var hash=items.length+'|'+items.map(function(l){return l.n+(l.di||'');}).join(',');
+  if(hash===_expLastHash)return;
+  _expLastHash=hash;
+  card.style.display='';
+  // Count at-risk lands (7d+)
+  var atRisk=0;
+  for(var i=0;i<items.length;i++){var d=typeof items[i].di==='number'?items[i].di:-1;if(d>=7)atRisk++;}
+  if(cnt){cnt.textContent=items.length;cnt.className='pill '+(atRisk>0?'r':'g');cnt.style.fontSize='.42rem';}
+  // Inline summary (visible when collapsed)
+  var sum=$('land-exp-summary');
+  if(sum){
+    if(atRisk>0)sum.textContent=atRisk+' at risk';
+    else sum.textContent='all safe';
+    sum.style.display=_expCollapsed?'':'none';
+  }
+  var DIM_LABEL={o:'OW',n:'N',t:'END'};
+  var html='';
+  for(var i=0;i<items.length;i++){
+    var l=items[i],di=typeof l.di==='number'?l.di:-1;
+    var stClass,stLabel,diText,diColor;
+    if(di===-1){stClass='st-ok';stLabel='NO DATA';diText='--';diColor='var(--mute)';}
+    else if(di>=14){stClass='st-dead';stLabel='CLEAN';diText=di+'d';diColor='#f87171';}
+    else if(di>=10){stClass='st-crit';stLabel='EXPIRING';diText=di+'d';diColor='#f87171';}
+    else if(di>=7){stClass='st-warn';stLabel='WARNING';diText=di+'d';diColor='#fb923c';}
+    else if(di>=5){stClass='st-ok';stLabel='WATCH';diText=di+'d';diColor='var(--dim)';}
+    else{stClass='st-ok';stLabel='ACTIVE';diText=di+'d';diColor='#34d399';}
+    var x1=Math.min(l.x1,l.x2),z1=Math.min(l.z1,l.z2),x2=Math.max(l.x1,l.x2),z2=Math.max(l.z1,l.z2);
+    var dim=DIM_LABEL[l.d]||'OW';
+    html+='<tr data-lx="'+((x1+x2)/2)+'" data-lz="'+((z1+z2)/2)+'" data-ld="'+(l.d||'o')+'" style="cursor:pointer">';
+    html+='<td class="exp-name">'+esc(l.n)+'</td>';
+    html+='<td class="exp-owner">'+esc(l.o)+'</td>';
+    html+='<td style="color:'+diColor+'">'+diText+'</td>';
+    html+='<td><span class="exp-st '+stClass+'">'+stLabel+'</span></td>';
+    html+='<td class="exp-pos">'+dim+' '+x1+','+z1+'</td>';
+    html+='</tr>';
+  }
+  tbody.innerHTML=html;
+  if(info){
+    if(atRisk>0)info.textContent=items.length+' total \u00b7 '+atRisk+' at risk \u00b7 auto-clean: 14d';
+    else info.textContent=items.length+' land'+(items.length>1?'s':'')+' claimed \u00b7 auto-clean: 14d inactive';
+  }
+  // Click row → navigate radar to that land
+  tbody.querySelectorAll('tr').forEach(function(tr){
+    tr.addEventListener('click',function(){
+      var lx=parseFloat(tr.dataset.lx)||0,lz=parseFloat(tr.dataset.lz)||0,ld=tr.dataset.ld||'o';
+      var dimFull=DIM_SHORT[ld]||'overworld';
+      if(dimFull!==radarDim){
+        radarDim=dimFull;
+        var dt=$('radar-dim-tabs');
+        if(dt)dt.querySelectorAll('.tab').forEach(function(b){b.classList.remove('a');if(b.dataset.dim===dimFull)b.classList.add('a');});
+      }
+      radarPanX=lx;radarPanZ=lz;
+      radarZoom=Math.min(radarZoom,200);
+      rFollow=false;rSel=null;
+      drawRadar();
+      var cv=$('radar-canvas');
+      if(cv)cv.scrollIntoView({behavior:'smooth',block:'center'});
+    });
+  });
+}
 
 /* ═══ Feature 1: Notification & Alert System ═══ */
 (function(){
@@ -1762,7 +1857,8 @@ function _pixelToWorld(cv,clientX,clientY){
 }
 function _showCoordTip(cv,worldX,worldZ,px,pz){
   var tip=$('radar-coord-tip');if(!tip)return;
-  var text='X: '+worldX+' \u00b7 Z: '+worldZ;
+  var html='<span class="tip-dim">'+worldX+', '+worldZ+'</span>';
+  var isLand=false;
   // Check if click is inside a land claim
   if(radarLands&&radarLands.length){
     for(var i=0;i<radarLands.length;i++){
@@ -1771,18 +1867,20 @@ function _showCoordTip(cv,worldX,worldZ,px,pz){
       var x1=Math.min(l.x1,l.x2),x2=Math.max(l.x1,l.x2);
       var z1=Math.min(l.z1,l.z2),z2=Math.max(l.z1,l.z2);
       if(worldX>=x1&&worldX<=x2&&worldZ>=z1&&worldZ<=z2){
-        text=l.n+' \u00b7 '+l.o;
+        isLand=true;
+        html='<b>'+esc(l.n)+'</b>';
+        html+='<br><span class="tip-dim">'+esc(l.o)+'</span>';
         var di=typeof l.di==='number'?l.di:-1;
-        if(di>=14)text+=' \u00b7 AUTO-CLEAN';
-        else if(di>=10)text+=' \u00b7 '+di+'d EXPIRING';
-        else if(di>=7)text+=' \u00b7 '+di+'d inactive';
-        else if(di>=0)text+=' \u00b7 seen '+di+'d ago';
-        text+='\n'+x1+','+z1+' > '+x2+','+z2;
+        if(di>=14)html+=' <span class="tip-crit">auto-clean</span>';
+        else if(di>=10)html+=' <span class="tip-crit">'+di+'d expiring</span>';
+        else if(di>=7)html+=' <span class="tip-warn">'+di+'d inactive</span>';
+        else if(di>=0)html+=' <span class="tip-ok">active</span>';
+        html+='<br><span class="tip-dim">'+x1+', '+z1+' &rarr; '+x2+', '+z2+'</span>';
         break;
       }
     }
   }
-  tip.innerHTML=text.replace(/\n/g,'<br>');
+  tip.innerHTML=html;
   tip.style.display='block';
   // Position relative to radar-wrap
   var wrap=cv.parentElement;
