@@ -125,11 +125,10 @@
 
   function renderInflation(s) {
     var bank = _data.bank, topup = _data.topup, gacha = _data.gacha;
-    var flow = null;
-    if (_trendData.length > 0) {
-      var latest = _trendData[_trendData.length - 1];
-      if (latest.coin_flow) flow = typeof latest.coin_flow === 'string' ? safeParse(latest.coin_flow, null) : latest.coin_flow;
-    }
+    var agg = _aggFlow();
+    var flow = agg.flow;
+    var hasFlow = false;
+    for (var k in flow) { if (flow[k] !== 0) { hasFlow = true; break; } }
     var injected = 0, sunk = 0;
     var sources = [
       { k: 'mob_kill', label: 'Mob Kill' }, { k: 'topup', label: 'Topup' },
@@ -143,7 +142,7 @@
       { k: 'auction_fee', label: 'Auction Fee' }, { k: 'wealth_tax', label: 'Wealth Tax' },
       { k: 'land_buy', label: 'Land Buy' }, { k: 'land_ppn', label: 'Land PPN' }
     ];
-    if (flow) {
+    if (hasFlow) {
       for (var i = 0; i < sources.length; i++) { var v = flow[sources[i].k] || 0; if (v > 0) injected += v; }
       for (var i = 0; i < sinks.length; i++) { var v = Math.abs(flow[sinks[i].k] || 0); if (v > 0) sunk += v; }
     } else {
@@ -158,16 +157,17 @@
       pill.textContent = lbl + ' (' + rate + '%)';
       pill.className = 'pill ' + (Math.abs(rate) <= 5 ? 'g' : Math.abs(rate) <= 15 ? 'y' : 'r');
     }
+    var rangeLabel = { day: '24j', week: '7h', month: '30h' }[_trendRange] || '24j';
     var grid = $('inf-grid');
     if (grid) {
-      var wt = Math.abs(flow ? (flow.wealth_tax || 0) : 0);
-      grid.innerHTML = mkStatCard('Coin Masuk', 'var(--green)', '+' + fmtN(injected), flow ? 'flow tracker' : 'log')
-        + mkStatCard('Coin Keluar', 'var(--red)', '-' + fmtN(sunk), flow ? 'flow tracker' : 'log')
-        + mkStatCard('Net Flow', net >= 0 ? 'var(--gold)' : 'var(--red)', (net >= 0 ? '+' : '') + fmtN(net), flow ? 'akurat' : 'estimasi')
-        + mkStatCard('Wealth Tax', '#c084fc', wt > 0 ? '-' + fmtN(wt) : '0', 'harian');
+      var wt = Math.abs(flow.wealth_tax || 0);
+      grid.innerHTML = mkStatCard('Coin Masuk', 'var(--green)', '+' + fmtN(injected), agg.snapshots + ' snap / ' + rangeLabel)
+        + mkStatCard('Coin Keluar', 'var(--red)', '-' + fmtN(sunk), agg.snapshots + ' snap / ' + rangeLabel)
+        + mkStatCard('Net Flow', net >= 0 ? 'var(--gold)' : 'var(--red)', (net >= 0 ? '+' : '') + fmtN(net), hasFlow ? 'akurat' : 'estimasi')
+        + mkStatCard('Wealth Tax', '#c084fc', wt > 0 ? '-' + fmtN(wt) : '0', 'total ' + rangeLabel);
     }
     var fd = $('inf-flows');
-    if (fd && flow) {
+    if (fd && hasFlow) {
       var srcH = '', snkH = '';
       for (var i = 0; i < sources.length; i++) {
         var v = flow[sources[i].k] || 0; if (v === 0) continue;
