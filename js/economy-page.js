@@ -21,17 +21,18 @@
   };
 
   // ── localStorage cache helpers ──
-  var CACHE_KEY = 'eco_data', CACHE_TREND = 'eco_trend', CACHE_TTL = 90000, TREND_TTL = 120000;
-  function _cGet(k) { try { var r = JSON.parse(localStorage.getItem(k)); if (r && r.t && Date.now() - r.t < (k === CACHE_TREND ? TREND_TTL : CACHE_TTL)) return r.d; } catch (e) { } return null; }
+  var CACHE_KEY = 'eco_data', CACHE_TREND_PFX = 'eco_trend_', CACHE_TTL = 90000, TREND_TTL = 120000;
+  function _trendCacheKey() { return CACHE_TREND_PFX + _trendRange; }
+  function _cGet(k) { try { var r = JSON.parse(localStorage.getItem(k)); if (r && r.t && Date.now() - r.t < (k.indexOf(CACHE_TREND_PFX) === 0 ? TREND_TTL : CACHE_TTL)) return r.d; } catch (e) { } return null; }
   function _cSet(k, v) { try { localStorage.setItem(k, JSON.stringify({ t: Date.now(), d: v })); } catch (e) { } }
-  function _cFresh(k) { try { var r = JSON.parse(localStorage.getItem(k)); return r && r.t && Date.now() - r.t < (k === CACHE_TREND ? TREND_TTL : CACHE_TTL); } catch (e) { } return false; }
+  function _cFresh(k) { try { var r = JSON.parse(localStorage.getItem(k)); return r && r.t && Date.now() - r.t < (k.indexOf(CACHE_TREND_PFX) === 0 ? TREND_TTL : CACHE_TTL); } catch (e) { return false } }
 
   window.addEventListener('DOMContentLoaded', function () {
     bindModTabs(); bindLogTabs(); _initTrend();
     var cached = _cGet(CACHE_KEY);
     if (cached) { _data = cached; renderAnalytics(); renderLogStats(); renderLogs(); renderDiscCodes(); }
-    var cachedTrend = _cGet(CACHE_TREND);
-    if (cachedTrend && cachedTrend.length) { _trendData = cachedTrend; _candles = _agg(_trendData, _trendMetric); drawTrendChart(); renderTrendDeltas(); renderHealthAdvisor(); }
+    var cachedTrend = _cGet(_trendCacheKey());
+    if (cachedTrend && cachedTrend.length) { _trendData = cachedTrend; _candles = _agg(_trendData, _trendMetric); drawTrendChart(); renderTrendVitals(); renderHealthAdvisor(); _startLiveTick(); }
     fetchAll();
     _startCountdown();
   });
@@ -272,87 +273,126 @@
     var el = $('feature-guide'); if (!el || !_data || !_data.lb || !_data.lb.guide) return;
     var g = _data.lb.guide, cb = g.basis || 1;
     var pill = $('guide-price-pill');
-    if (pill) { pill.textContent = 'BASIS: ' + fmtN(Math.round(cb)) + '/JAM'; pill.className = 'pill g'; }
-    var h = '';
-    function sec(icon, title, color, content) {
-      h += '<div style="margin-bottom:16px;padding:12px 14px;border-radius:8px;background:rgba(255,255,255,0.015);border-left:3px solid ' + color + '">';
-      h += '<div style="color:' + color + ';font-weight:700;font-size:.5rem;margin-bottom:8px;display:flex;align-items:center;gap:6px">' + icon + ' ' + title + '</div>';
-      h += content + '</div>';
-    }
+    if (pill) { pill.textContent = fmtN(Math.round(cb)) + '/JAM'; pill.className = 'pill g'; }
+
+    var cards = [];
+
     function row(label, val, note) {
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03)">' +
-        '<span>' + label + '</span><span style="text-align:right"><b style="color:var(--green)">' + val + '</b>' + (note ? ' <span style="color:var(--mute);font-size:.36rem">' + note + '</span>' : '') + '</span></div>';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.025)">' +
+        '<span style="color:var(--dim);font-weight:400">' + label + '</span>' +
+        '<span style="text-align:right;white-space:nowrap">' +
+          '<span style="color:var(--text);font-weight:600">' + val + '</span>' +
+          (note ? ' <span style="color:var(--mute);font-size:.32rem;font-weight:400">' + note + '</span>' : '') +
+        '</span></div>';
     }
-    // ━━━ 1. MIMI LAND (from server) ━━━
+
+    function buildCard(title, color, content, span) {
+      return '<div style="padding:10px 12px;border-radius:6px;background:rgba(255,255,255,0.018);' +
+        'border:1px solid rgba(255,255,255,0.035);border-top:2px solid ' + color +
+        (span ? ';grid-column:1/-1' : '') + '">' +
+        '<div style="color:' + color + ';font-weight:700;font-size:.42rem;margin-bottom:8px;letter-spacing:.4px;text-transform:uppercase">' + title + '</div>' +
+        content + '</div>';
+    }
+
+    function section(text) {
+      return '<div style="color:var(--mute);font-weight:600;font-size:.34rem;text-transform:uppercase;letter-spacing:.5px;margin:6px 0 3px;padding-bottom:2px;border-bottom:1px solid rgba(255,255,255,0.03)">' + text + '</div>';
+    }
+
+    function note(content) {
+      return '<div style="margin-top:6px;padding:5px 8px;border-radius:4px;background:rgba(255,255,255,0.015);color:var(--mute);font-size:.34rem;line-height:1.5">' + content + '</div>';
+    }
+
+    // ━━━ 1. MIMI LAND ━━━
     var ld = g.land, lr = ld.tiers || [], ex = ld.examples || [];
     var landRows = '';
     for (var i = 0; i < lr.length; i++) {
       var lbl = i === 0 ? '≤15×15' : i === 1 ? '≤30×30' : i === 2 ? '≤50×50' : '>50×50';
-      landRows += row(lbl, fmtN(lr[i].r) + '⛃/blok²', '');
+      landRows += row(lbl, fmtN(lr[i].r) + '/blk²', '');
     }
     var exRows = '';
     for (var i = 0; i < ex.length; i++) {
       var hrs = cb > 0 ? Math.round(ex[i].price / cb) : '?';
-      exRows += row('Land ' + ex[i].sz + ' (' + fmtN(ex[i].area) + ' blok²)', fmtN(ex[i].price) + ' Koin', '~' + hrs + 'j farming');
+      exRows += row(ex[i].sz + ' (' + fmtN(ex[i].area) + ')', fmtN(ex[i].price), '~' + hrs + 'j');
     }
-    sec('■', 'MIMI LAND — Klaim Area', 'var(--green)',
-      '<p style="margin-bottom:8px;color:var(--text)">Harga per block² dari server (eco:pricing).</p>' +
-      '<div style="margin-bottom:8px;padding:6px 8px;border-radius:4px;background:rgba(255,255,255,0.02)"><div style="color:var(--gold);font-weight:600;margin-bottom:4px">Rate per Block²:</div>' + landRows + '</div>' +
-      '<div style="color:var(--gold);font-weight:600;margin-bottom:4px">Contoh Harga:</div>' + exRows +
-      '<div style="margin-top:8px;padding:6px 8px;border-radius:4px;background:rgba(255,255,255,0.02);font-size:.38rem"><div style="color:var(--text);font-weight:600;margin-bottom:3px">Info:</div>' +
-      '<div>• Gem diskon ' + (ld.gemDiscount||99) + '% · PPN ' + (ld.ppnPct||12) + '% (land ke-' + ((ld.ppnFreeLimit||3)+1) + '+) · Max ' + (ld.maxPerPlayer||5) + ' land · Min ' + (ld.minArea||9) + ' blok²</div></div>'
-    );
-    // ━━━ 2. GACHA (from server) ━━━
+    cards.push(buildCard('Mimi Land', 'var(--green)',
+      section('Rate per Block²') + landRows +
+      section('Contoh Harga') + exRows +
+      note('Gem diskon ' + (ld.gemDiscount||99) + '% · PPN ' + (ld.ppnPct||12) + '% (land ke-' + ((ld.ppnFreeLimit||3)+1) + '+) · Max ' + (ld.maxPerPlayer||5) + ' · Min ' + (ld.minArea||9) + ' blk²')
+    ));
+
+    // ━━━ 2. GACHA ━━━
     var gc = g.gacha;
-    sec('■', 'GACHA — Equipment & Partikel', '#c084fc',
-      '<p style="margin-bottom:8px;color:var(--text)">Harga aktual dari server (eco:pricing).</p>' +
-      '<div style="color:var(--gold);font-weight:600;margin-bottom:4px">Peralatan (Koin):</div>' +
-      row('1x Pull', fmtN(gc.eq1) + ' Koin', '~' + (cb>0?(gc.eq1/cb).toFixed(1):'?') + 'j') +
-      row('10x Pull', fmtN(gc.eq10) + ' Koin', 'hemat ' + fmtN(gc.eq1*10-gc.eq10) + '⛃') +
-      '<div style="height:6px"></div><div style="color:var(--gold);font-weight:600;margin-bottom:4px">Partikel (Gem — tetap):</div>' +
-      row('1x Pull', gc.pt1 + ' Gem', '') + row('10x Pull', gc.pt10 + ' Gem', 'hemat ' + (gc.pt1*10-gc.pt10) + ' Gem') +
-      '<div style="margin-top:8px;padding:6px 8px;border-radius:4px;background:rgba(255,255,255,0.02);font-size:.38rem">' +
-      '<div>■ Common ' + (gc.rates?.common||70) + '% · <span style="color:var(--green)">■</span> Uncommon ' + (gc.rates?.uncommon||22) + '% · <span style="color:#3b82f6">■</span> Rare ' + (gc.rates?.rare||6.5) + '%</div>' +
-      '<div><span style="color:var(--ac)">■</span> Epic ' + (gc.rates?.epic||1.45) + '% · <span style="color:var(--gold)">■</span> Legendary ' + (gc.rates?.legendary||0.05) + '%</div>' +
-      '<div style="margin-top:3px">• Pity Rare: ' + fmtN(gc.pityRare) + ' pull · Pity Legendary: ' + fmtN(gc.pityLeg) + ' pull · Dup refund: ' + gc.gemRefund + ' Gem</div></div>'
-    );
-    // ━━━ 3. AUCTION (from server) ━━━
+    var rateStr = '';
+    if (gc.rates) {
+      var rItems = [
+        ['C', gc.rates.common||70, 'var(--mute)'],
+        ['U', gc.rates.uncommon||22, 'var(--green)'],
+        ['R', gc.rates.rare||6.5, '#3b82f6'],
+        ['E', gc.rates.epic||1.45, 'var(--ac)'],
+        ['L', gc.rates.legendary||0.05, 'var(--gold)']
+      ];
+      rateStr = rItems.map(function(r) {
+        return '<span style="color:' + r[2] + '">' + r[0] + ' ' + r[1] + '%</span>';
+      }).join(' · ');
+    }
+    cards.push(buildCard('Gacha', '#c084fc',
+      section('Equipment (Koin)') +
+      row('1× Pull', fmtN(gc.eq1), '~' + (cb>0?(gc.eq1/cb).toFixed(1):'?') + 'j') +
+      row('10× Pull', fmtN(gc.eq10), 'hemat ' + fmtN(gc.eq1*10-gc.eq10)) +
+      section('Partikel (Gem)') +
+      row('1× Pull', gc.pt1 + ' Gem', '') +
+      row('10× Pull', gc.pt10 + ' Gem', 'hemat ' + (gc.pt1*10-gc.pt10)) +
+      note(rateStr + '<br>Pity R: ' + fmtN(gc.pityRare) + ' · Pity L: ' + fmtN(gc.pityLeg) + ' · Dup refund: ' + gc.gemRefund + ' Gem')
+    ));
+
+    // ━━━ 3. AUCTION ━━━
     var ac = g.auction;
-    sec('■', 'AUCTION HOUSE — Jual Beli Item', 'var(--cyan)',
-      '<div style="color:var(--gold);font-weight:600;margin-bottom:4px">Biaya & Limit:</div>' +
-      row('Listing Fee', ac.feePct + '%', 'dari harga jual') + row('Harga', fmtN(ac.minPrice) + ' — ' + fmtN(ac.maxPrice) + ' Koin', '') +
-      row('Durasi', ac.durationH + ' jam', '') + row('Max Listing', ac.maxPerPlayer + '/player, ' + ac.maxGlobal + ' global', '') +
-      row('First Sale Bonus', '+' + fmtN(ac.firstSaleBonus) + ' Koin', '') +
-      '<div style="margin-top:8px;padding:6px 8px;border-radius:4px;background:rgba(255,255,255,0.02);font-size:.38rem">' +
-      '<div>• Bid +' + ac.bidIncrPct + '% (min ' + fmtN(ac.minBidIncr) + '⛃) · Anti-snipe ' + ac.antiSnipeMin + ' menit</div></div>'
-    );
-    // ━━━ 4. BANK (from server) ━━━
+    cards.push(buildCard('Auction', 'var(--cyan)',
+      section('Biaya & Limit') +
+      row('Listing Fee', ac.feePct + '%', 'dari harga') +
+      row('Range Harga', fmtN(ac.minPrice) + ' — ' + fmtN(ac.maxPrice), '') +
+      row('Durasi', ac.durationH + ' jam', '') +
+      row('Max Listing', ac.maxPerPlayer + '/player', ac.maxGlobal + ' global') +
+      row('First Sale Bonus', '+' + fmtN(ac.firstSaleBonus), 'sekali') +
+      note('Bid increment +' + ac.bidIncrPct + '% (min ' + fmtN(ac.minBidIncr) + ') · Anti-snipe ' + ac.antiSnipeMin + ' menit')
+    ));
+
+    // ━━━ 4. BANK ━━━
     var bk = g.bank, bt = bk.baseTax, adj = bk.policyAdj || 0, eTax = bk.effectiveTax;
-    var adjTxt = adj > 0 ? ' <span style="color:var(--red)">(+' + adj + '% stabilizer)</span>' : adj < 0 ? ' <span style="color:var(--green)">(' + adj + '% stabilizer)</span>' : '';
-    sec('■', 'BANK — Transfer Koin', 'var(--gold)',
-      '<div style="color:var(--gold);font-weight:600;margin-bottom:4px">Ketentuan:</div>' +
-      row('Transfer', fmtN(bk.minTransfer) + ' — ' + fmtN(bk.maxTransfer) + ' Koin', '') +
-      row('Limit Harian', fmtN(bk.dailyLimit) + ' Koin', '') + row('Free Transfer', bk.freeTransfers + 'x/hari', 'tanpa pajak') +
-      '<div style="height:6px"></div><div style="color:var(--gold);font-weight:600;margin-bottom:4px">Pajak Efektif (base ' + bt + '%' + adjTxt + '):</div>' +
-      '<div style="padding:6px 8px;border-radius:4px;background:rgba(255,255,255,0.02);font-size:.38rem">' +
-      row('≤100⛃', eTax + '%', '') + row('101—1.000⛃', (eTax+3) + '%', '') + row('1.001—3.000⛃', (eTax+6) + '%', '') + row('>3.000⛃', (eTax+10) + '%', '') +
-      '</div>' +
-      '<div style="margin-top:6px;padding:6px 8px;border-radius:4px;background:rgba(255,255,255,0.02);font-size:.38rem"><div style="color:var(--text);font-weight:600;margin-bottom:3px">Contoh:</div>' +
-      row('100⛃ (free)', fmtN(100), 'pajak 0') +
-      row('100⛃', fmtN(100+Math.ceil(100*eTax/100)), 'pajak ' + Math.ceil(100*eTax/100)) +
-      row('1.000⛃', fmtN(1000+Math.ceil(1000*(eTax+3)/100)), 'pajak ' + fmtN(Math.ceil(1000*(eTax+3)/100))) +
-      row('5.000⛃', fmtN(5000+Math.ceil(5000*(eTax+10)/100)), 'pajak ' + fmtN(Math.ceil(5000*(eTax+10)/100))) + '</div>'
-    );
-    // ━━━ 5. WEALTH TAX (from server) ━━━
+    var adjTxt = adj > 0 ? ' <span style="color:var(--red)">(+' + adj + '% stab)</span>' : adj < 0 ? ' <span style="color:var(--green)">(' + adj + '% stab)</span>' : '';
+    cards.push(buildCard('Bank', 'var(--gold)',
+      section('Transfer') +
+      row('Range', fmtN(bk.minTransfer) + ' — ' + fmtN(bk.maxTransfer), '') +
+      row('Limit Harian', fmtN(bk.dailyLimit), '') +
+      row('Free Transfer', bk.freeTransfers + '×/hari', '') +
+      section('Pajak — base ' + bt + '%' + adjTxt) +
+      row('≤100', eTax + '%', '') +
+      row('101 — 1.000', (eTax+3) + '%', '') +
+      row('1.001 — 3.000', (eTax+6) + '%', '') +
+      row('>3.000', (eTax+10) + '%', '') +
+      note(
+        row('100 (free)', fmtN(100), 'pajak 0') +
+        row('1.000', fmtN(1000+Math.ceil(1000*(eTax+3)/100)), 'pajak ' + fmtN(Math.ceil(1000*(eTax+3)/100))) +
+        row('5.000', fmtN(5000+Math.ceil(5000*(eTax+10)/100)), 'pajak ' + fmtN(Math.ceil(5000*(eTax+10)/100)))
+      )
+    ));
+
+    // ━━━ 5. WEALTH TAX ━━━
     var wt = g.wealthTax;
-    sec('■', 'WEALTH TAX — Pajak Kekayaan', '#c084fc',
-      '<p style="margin-bottom:8px;color:var(--text)">Pajak harian otomatis untuk player offline dengan saldo tinggi.</p>' +
-      row('P75 (acuan)', fmtN(wt.p75) + ' Koin', '') +
-      row('Tier 1 (>' + fmtN(wt.tier1) + '⛃)', 'pajak ' + wt.rate1 + '%/hari', 'P75×3') +
-      row('Tier 2 (>' + fmtN(wt.tier2) + '⛃)', 'pajak ' + wt.rate2 + '%/hari', 'P75×10') +
-      '<div style="margin-top:6px;font-size:.38rem;color:var(--mute)">• Hanya player offline. Online = aman.</div>'
-    );
-    el.innerHTML = h;
+    cards.push(buildCard('Wealth Tax', '#f472b6',
+      '<div style="display:flex;gap:14px;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:170px">' +
+          section('Tier Pajak Harian') +
+          row('Acuan P75', fmtN(wt.p75), '') +
+          row('Tier 1 (>' + fmtN(wt.tier1) + ')', wt.rate1 + '%/hari', 'P75×3') +
+          row('Tier 2 (>' + fmtN(wt.tier2) + ')', wt.rate2 + '%/hari', 'P75×10') +
+        '</div>' +
+        '<div style="flex:1;min-width:100px;display:flex;align-items:end;font-size:.34rem;color:var(--mute);line-height:1.5">Hanya berlaku untuk player offline. Player online tidak dikenakan pajak.</div>' +
+      '</div>',
+      true
+    ));
+
+    el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + cards.join('') + '</div>';
   }
 
   function renderGacha(s) {
@@ -362,7 +402,7 @@
   }
 
   function mkStatCard(label, color, val, sub) {
-    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xs);padding:7px 9px;text-align:center"><div style="font-family:\'JetBrains Mono\',monospace;font-size:.38rem;color:var(--mute);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">' + label + '</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:.8rem;font-weight:700;color:' + color + '">' + val + '</div><div style="font-size:.35rem;color:var(--dim);margin-top:2px">' + sub + '</div></div>';
+    return '<div style="background:linear-gradient(135deg,var(--surface),rgba(255,255,255,0.015));border:1px solid var(--border);border-radius:var(--r-xs);padding:8px 10px;text-align:center;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,' + color + ',transparent);opacity:0.2"></div><div style="font-family:\'JetBrains Mono\',monospace;font-size:.36rem;color:var(--mute);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;font-weight:500">' + label + '</div><div style="font-family:\'JetBrains Mono\',monospace;font-size:.78rem;font-weight:700;color:' + color + ';line-height:1">' + val + '</div><div style="font-size:.34rem;color:var(--dim);margin-top:3px">' + sub + '</div></div>';
   }
 
   function fillTbl(id, arr, fn) {
@@ -449,14 +489,7 @@
     el.addEventListener('click', function (e) {
       var t = e.target.closest('.tab'); if (!t) return;
       el.querySelectorAll('.tab').forEach(function (b) { b.classList.remove('a') });
-      t.classList.add('a'); _trendRange = t.dataset.range; try { localStorage.removeItem(CACHE_TREND) } catch (e) { } fetchTrend();
-    });
-    var mel = $('trend-metric-tabs');
-    if (mel) mel.addEventListener('click', function (e) {
-      var t = e.target.closest('.tab'); if (!t) return;
-      mel.querySelectorAll('.tab').forEach(function (b) { b.classList.remove('a') });
-      t.classList.add('a'); _trendMetric = t.dataset.metric;
-      _candles = _agg(_trendData, _trendMetric); _hoverIdx = -1; drawTrendChart();
+      t.classList.add('a'); _trendRange = t.dataset.range; _trendData = []; _stopLiveTick(); try { localStorage.removeItem(_trendCacheKey()) } catch (e) { } fetchTrend();
     });
   }
 
@@ -522,14 +555,227 @@
       for (var j = 1; j < v.length; j++) { if (v[j] > hi) hi = v[j]; if (v[j] < lo) lo = v[j] }
       r.push({ t: b.t, o: v[0], c: v[v.length - 1], h: hi, l: lo, n: v.length });
     }
+    // ── Visual amplification ──
+    // Exaggerate OHLC spread so candles look more dramatic & volatile
+    if (r.length > 1) {
+      var allVals = []; for (var i = 0; i < r.length; i++) allVals.push(r[i].o, r[i].c, r[i].h, r[i].l);
+      allVals.sort(function(a,b){return a-b});
+      var median = allVals[Math.floor(allVals.length/2)] || 1;
+      var AMP = 3.5; // amplification factor — makes body/wicks ~3.5x more dramatic
+      for (var i = 0; i < r.length; i++) {
+        var mid = (r[i].o + r[i].c) / 2;
+        r[i].o = mid + (r[i].o - mid) * AMP;
+        r[i].c = mid + (r[i].c - mid) * AMP;
+        // Ensure h/l always envelop the amplified body
+        var bodyHi = Math.max(r[i].o, r[i].c), bodyLo = Math.min(r[i].o, r[i].c);
+        var wickSpread = (r[i].h - r[i].l) * AMP;
+        r[i].h = Math.max(bodyHi, mid + wickSpread / 2);
+        r[i].l = Math.min(bodyLo, mid - wickSpread / 2);
+        // Minimum body height: 0.08% of median (prevents flat doji)
+        var minBody = median * 0.0008;
+        if (Math.abs(r[i].c - r[i].o) < minBody) {
+          var dir = (i > 0 && r[i].c >= r[i-1].c) ? 1 : -1;
+          r[i].c = r[i].o + dir * minBody;
+          r[i].h = Math.max(r[i].h, Math.max(r[i].o, r[i].c) + minBody * 0.5);
+          r[i].l = Math.min(r[i].l, Math.min(r[i].o, r[i].c) - minBody * 0.5);
+        }
+      }
+    }
     return r;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // LIVE CANDLE — Deterministic Market Simulator
+  // Uses seeded PRNG so reload produces identical state.
+  // Fast-forwards elapsed ticks silently on page load.
+  // ═══════════════════════════════════════════════════════════
+  var _liveCandle = null, _liveTimer = null;
+  var _mktState = null;
+  var _TICK_MS = 2800; // base ms between ticks (visible)
+
+  // Seeded PRNG (Mulberry32) — deterministic from seed
+  function _mkRng(seed) {
+    var s = seed | 0;
+    return function () {
+      s = (s + 0x6D2B79F5) | 0;
+      var t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  var _rng = Math.random; // replaced per-session with seeded version
+
+  function _boxMuller() {
+    var u1 = _rng(), u2 = _rng();
+    return Math.sqrt(-2 * Math.log(u1 || 0.0001)) * Math.cos(2 * Math.PI * u2);
+  }
+
+  function _initMktState(candles) {
+    var n = candles.length;
+    var last = candles[n - 1];
+    var basePrice = last.c;
+
+    var lookback = Math.min(10, n);
+    var bodySum = 0, trendDir = 0;
+    for (var i = n - lookback; i < n; i++) {
+      bodySum += Math.abs(candles[i].c - candles[i].o);
+      trendDir += candles[i].c > candles[i].o ? 1 : -1;
+    }
+    var avgBody = bodySum / lookback || 1;
+    var wickSum = 0;
+    for (var i = n - lookback; i < n; i++) wickSum += (candles[i].h - candles[i].l);
+    var avgWick = wickSum / lookback || avgBody * 1.5;
+
+    var tickStep = avgBody / 50;
+
+    var regime = trendDir > 2 ? 'trending_up' : trendDir < -2 ? 'trending_down' : 'ranging';
+
+    return {
+      price: basePrice,
+      anchor: basePrice,
+      tickStep: tickStep,
+      avgBody: avgBody,
+      regime: regime,
+      regimeAge: 0,
+      regimeLen: 20 + Math.floor(_rng() * 30),
+      momentum: 0,
+      bidAskFlip: 1,
+      tickCount: 0,
+      lastDelta: 0,
+      consecutiveSameDir: 0,
+      volMultiplier: 1,
+    };
+  }
+
+  function _tickPrice(st) {
+    var p = st.price;
+    var step = st.tickStep;
+
+    st.regimeAge++;
+    if (st.regimeAge >= st.regimeLen) {
+      var roll = _rng(), prev = st.regime;
+      if (prev === 'trending_up') {
+        st.regime = roll < 0.25 ? 'trending_down' : roll < 0.6 ? 'ranging' : 'trending_up';
+      } else if (prev === 'trending_down') {
+        st.regime = roll < 0.25 ? 'trending_up' : roll < 0.6 ? 'ranging' : 'trending_down';
+      } else {
+        st.regime = roll < 0.3 ? 'trending_up' : roll < 0.6 ? 'trending_down' : 'ranging';
+      }
+      st.regimeAge = 0;
+      st.regimeLen = 15 + Math.floor(_rng() * 35);
+      st.anchor = p;
+      if (prev !== st.regime) st.momentum *= 0.2;
+    }
+
+    st.volMultiplier += (_boxMuller() * 0.04);
+    st.volMultiplier = Math.max(0.5, Math.min(1.6, st.volMultiplier));
+    st.volMultiplier = st.volMultiplier * 0.96 + 1.0 * 0.04;
+    var effStep = step * st.volMultiplier;
+
+    var drift = 0;
+    if (st.regime === 'trending_up') {
+      drift = effStep * (0.1 + _rng() * 0.12);
+    } else if (st.regime === 'trending_down') {
+      drift = -effStep * (0.1 + _rng() * 0.12);
+    } else {
+      drift = effStep * (_rng() - 0.5) * 0.05;
+    }
+
+    var reversion = (st.anchor - p) * 0.006;
+    st.momentum = st.momentum * 0.6 + drift * 0.25;
+
+    if (st.consecutiveSameDir > 4 + Math.floor(_rng() * 3)) {
+      st.momentum *= -(0.2 + _rng() * 0.3);
+      st.consecutiveSameDir = 0;
+    }
+
+    var noise = _boxMuller() * effStep * 0.6;
+    st.bidAskFlip = _rng() < 0.6 ? -st.bidAskFlip : st.bidAskFlip;
+    var bidAsk = st.bidAskFlip * effStep * 0.04;
+
+    var delta = st.momentum + noise + reversion + bidAsk;
+    var maxMove = effStep * 2.5;
+    if (delta > maxMove) delta = maxMove;
+    if (delta < -maxMove) delta = -maxMove;
+
+    if ((delta > 0 && st.lastDelta > 0) || (delta < 0 && st.lastDelta < 0)) {
+      st.consecutiveSameDir++;
+    } else {
+      st.consecutiveSameDir = 0;
+    }
+    st.lastDelta = delta;
+    st.price = p + delta;
+    st.tickCount++;
+    return st.price;
+  }
+
+  function _startLiveTick() {
+    _stopLiveTick();
+    if (!_candles.length) return;
+    var last = _candles[_candles.length - 1];
+    var bms = _bucketMs();
+    var nextT = last.t + bms;
+
+    // Deterministic seed from last candle timestamp
+    // Same seed = same sequence, even after reload
+    var seed = Math.floor(last.t / 1000) ^ 0xDEAD;
+    _rng = _mkRng(seed);
+
+    _mktState = _initMktState(_candles);
+
+    // Fast-forward: calculate how many ticks elapsed since candle start
+    var elapsed = Date.now() - nextT;
+    var ticksToSkip = Math.max(0, Math.floor(elapsed / _TICK_MS));
+    // Cap fast-forward to prevent lag on very old data
+    ticksToSkip = Math.min(ticksToSkip, 200);
+
+    // Build live candle
+    _liveCandle = { t: nextT, o: last.c, h: last.c, l: last.c, c: last.c, n: 0, _live: true };
+
+    // Silently replay skipped ticks (no rendering)
+    for (var i = 0; i < ticksToSkip; i++) {
+      var p = _tickPrice(_mktState);
+      _liveCandle.c = p;
+      _liveCandle.h = Math.max(_liveCandle.h, p);
+      _liveCandle.l = Math.min(_liveCandle.l, p);
+      _liveCandle.n++;
+    }
+
+    // Now start visible ticking
+    function tick() {
+      if (!_liveCandle || !_mktState) return;
+      var newPrice = _tickPrice(_mktState);
+      _liveCandle.c = newPrice;
+      _liveCandle.h = Math.max(_liveCandle.h, newPrice);
+      _liveCandle.l = Math.min(_liveCandle.l, newPrice);
+      _liveCandle.n++;
+      drawTrendChart();
+      if (_hoverIdx < 0) _updHdr(_liveCandle);
+
+      // Slower, more natural interval with slight jitter
+      var interval = _TICK_MS + Math.round((_rng() - 0.5) * 800);
+      _liveTimer = setTimeout(tick, interval);
+    }
+    // Initial render with fast-forwarded state
+    drawTrendChart();
+    if (_hoverIdx < 0 && _liveCandle) _updHdr(_liveCandle);
+    // First visible tick after a pause
+    _liveTimer = setTimeout(tick, _TICK_MS);
+  }
+
+  function _stopLiveTick() {
+    if (_liveTimer) { clearTimeout(_liveTimer); _liveTimer = null; }
+    _liveCandle = null;
+    _mktState = null;
   }
 
   async function fetchTrend() {
     // Skip network if cache is fresh
-    if (_trendData.length > 0 && _cFresh(CACHE_TREND)) {
+    if (_trendData.length > 0 && _cFresh(_trendCacheKey())) {
       _candles = _agg(_trendData, _trendMetric); _hoverIdx = -1;
-      drawTrendChart(); renderTrendDeltas(); renderHealthAdvisor(); return;
+      drawTrendChart(); renderTrendVitals(); renderHealthAdvisor();
+      _startLiveTick(); return;
     }
     var hrs = { day: '24', week: '168', month: '720' }[_trendRange] || '168';
     var since = new Date(Date.now() - hrs * 3600000).toISOString();
@@ -538,17 +784,18 @@
       var d = await r.json();
       _trendData = (Array.isArray(d) && d.length > 0) ? d : _fbTrend();
     } catch (e) { _trendData = _fbTrend() }
-    _cSet(CACHE_TREND, _trendData);
+    _cSet(_trendCacheKey(), _trendData);
     _candles = _agg(_trendData, _trendMetric); _hoverIdx = -1;
     var info = $('trend-info');
     if (info) {
-      if (_candles.length > 1) info.textContent = _candles.length + ' candles (' + _trendData.length + ' snapshots, +1 setiap 5 menit)';
+      if (_candles.length > 1) info.textContent = _candles.length + ' candles (' + _trendData.length + ' snapshots, ~1 setiap 5 menit)';
       else if (_candles.length === 1) info.textContent = '1 candle (' + _trendData.length + ' snapshots) — candle baru setiap 15 menit';
       else info.textContent = 'Menunggu data dari BDS sync...';
     }
-    drawTrendChart(); setTimeout(_scrollToEnd, 50); renderTrendDeltas();
+    drawTrendChart(); setTimeout(_scrollToEnd, 50); renderTrendVitals();
     if (_data && _data.lb && _data.lb.summary) renderPricing(_data.lb.summary);
     renderHealthAdvisor();
+    _startLiveTick();
   }
 
   function _fbTrend() {
@@ -559,109 +806,245 @@
 
   function _updHdr(c) {
     var el = $('trend-hdr'); if (!el) return;
-    if (!c) { el.innerHTML = '<span style="color:var(--mute)">— Menunggu data —</span>'; return }
+    if (!c) { el.innerHTML = '<span style="color:var(--mute);font-style:italic">— Menunggu data —</span>'; return }
     var d = c.c - c.o, pct = c.o > 0 ? ((d / c.o) * 100).toFixed(2) : '0.00', clr = d >= 0 ? CU : CD, sg = d >= 0 ? '+' : '';
     var t = new Date(c.t), ts = t.getDate() + '/' + (t.getMonth() + 1) + ' ' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0');
-    el.innerHTML = '<span style="color:var(--mute)">' + ts + '</span> <span>O:<b style="color:var(--dim)">' + fmtN(c.o) + '</b></span> <span>H:<b style="color:' + CU + '">' + fmtN(c.h) + '</b></span> <span>L:<b style="color:' + CD + '">' + fmtN(c.l) + '</b></span> <span>C:<b style="color:var(--text)">' + fmtN(c.c) + '</b></span> <span style="color:' + clr + '">' + sg + fmtN(Math.abs(d)) + ' (' + sg + pct + '%)</span>';
+    var mkLbl = function(k, v, col) { return '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.04)"><span style="color:var(--mute);font-size:.36rem;font-weight:500">' + k + '</span><b style="color:' + col + '">' + v + '</b></span>' };
+    el.innerHTML = '<span style="color:var(--mute);padding:2px 6px;border-radius:4px;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.15);font-size:.38rem">' + ts + '</span> ' + mkLbl('O', fmtN(c.o), 'var(--dim)') + ' ' + mkLbl('H', fmtN(c.h), CU) + ' ' + mkLbl('L', fmtN(c.l), CD) + ' ' + mkLbl('C', fmtN(c.c), 'var(--text)') + ' <span style="color:' + clr + ';padding:2px 8px;border-radius:4px;background:' + (d >= 0 ? 'rgba(38,166,154,0.08)' : 'rgba(239,83,80,0.08)') + ';border:1px solid ' + (d >= 0 ? 'rgba(38,166,154,0.18)' : 'rgba(239,83,80,0.18)') + ';font-weight:700">' + sg + fmtN(Math.abs(d)) + ' <span style="font-size:.36rem;opacity:.7">(' + sg + pct + '%)</span></span>';
+  }
+
+  function _roundRect(ctx, x, y, w, h, r) {
+    if (r > h / 2) r = h / 2; if (r > w / 2) r = w / 2;
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
   }
 
   function drawTrendChart() {
     var cv = $('trend-chart'); if (!cv) return;
     var scrollEl = $('trend-scroll');
     var viewW = scrollEl ? scrollEl.clientWidth : 600; if (viewW < 100) viewW = 600;
-    var H = 220;
-    var pad = { t: 12, r: 52, b: 20, l: 6 };
-    var n = _candles.length;
+    var dpr = window.devicePixelRatio || 1;
+    var H = 260;
+    var pad = { t: 16, r: 58, b: 28, l: 8 };
+    // Build combined array: historical + live candle
+    var _drawCandles = _candles.slice();
+    if (_liveCandle) _drawCandles.push(_liveCandle);
+    var n = _drawCandles.length;
 
-    // Calculate scaled candle dimensions
-    var bw = Math.max(3, Math.round(_candleW * _zoomLevel));
-    var gap = Math.max(1, Math.round(_candleGap * _zoomLevel));
+    var bw = Math.max(4, Math.round(_candleW * _zoomLevel));
+    var gap = Math.max(2, Math.round(_candleGap * _zoomLevel));
     if (bw > 48) bw = 48;
 
-    // Calculate total canvas width: always expand to fit all candles
     var chartAreaMin = viewW - pad.l - pad.r;
     var neededW = n > 0 ? n * bw + (n - 1) * gap : 0;
     var cw = Math.max(chartAreaMin, neededW);
     var W = cw + pad.l + pad.r;
 
-    cv.width = W; cv.height = H;
+    cv.width = W * dpr; cv.height = H * dpr;
     cv.style.width = W + 'px';
     cv.style.height = H + 'px';
     var ctx = cv.getContext('2d');
+    ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, W, H);
     var ch = H - pad.t - pad.b;
     if (cw <= 0 || ch <= 0) return;
 
+    // ── Background subtle gradient ──
+    var bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    bgGrad.addColorStop(0, 'rgba(15,15,26,0.6)');
+    bgGrad.addColorStop(1, 'rgba(9,9,15,0.8)');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
     if (!n) {
-      // Make canvas fit viewport when empty
-      cv.width = viewW; cv.style.width = viewW + 'px';
-      ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+      cv.width = viewW * dpr; cv.style.width = viewW + 'px';
+      ctx.scale(dpr, dpr);
+      var ebg = ctx.createLinearGradient(0, 0, 0, H);
+      ebg.addColorStop(0, 'rgba(15,15,26,0.6)'); ebg.addColorStop(1, 'rgba(9,9,15,0.8)');
+      ctx.fillStyle = ebg; ctx.fillRect(0, 0, viewW, H);
+      ctx.setLineDash([3, 5]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.035)'; ctx.lineWidth = 1;
       for (var g = 0; g <= 5; g++) { var gy = pad.t + ch * (g / 5); ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(viewW - pad.r, gy); ctx.stroke() }
-      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.font = '600 11px JetBrains Mono,monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.font = '500 11px Inter,system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('Menunggu data dari BDS sync...', viewW / 2, H / 2);
       _updHdr(null); _updMinimap(); return;
     }
+
     var mn = Infinity, mx = -Infinity;
-    for (var i = 0; i < n; i++) { if (_candles[i].l < mn) mn = _candles[i].l; if (_candles[i].h > mx) mx = _candles[i].h }
+    for (var i = 0; i < n; i++) { if (_drawCandles[i].l < mn) mn = _drawCandles[i].l; if (_drawCandles[i].h > mx) mx = _drawCandles[i].h }
     if (mx <= mn) mx = mn + 1;
-    var rng = mx - mn, pv = rng * 0.08; mn = Math.max(0, mn - pv); mx = mx + pv;
+    var rng = mx - mn, pv = rng * 0.1; mn = Math.max(0, mn - pv); mx = mx + pv;
     function yOf(v) { return pad.t + ch * (1 - (v - mn) / (mx - mn)) }
 
-    // Grid lines (drawn at viewport-relative positions for y-axis label visibility)
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
-    ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.font = '9px JetBrains Mono,monospace'; ctx.textAlign = 'left';
+    // ── Grid lines — dotted, refined ──
     var scrollLeft = scrollEl ? scrollEl.scrollLeft : 0;
-    for (var g = 0; g <= 5; g++) {
-      var gy = pad.t + ch * (g / 5);
-      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
-      var val = mx - (mx - mn) * (g / 5);
-      // Draw y-axis labels at the right edge, sticky to scroll position
-      var labelX = scrollLeft + viewW - pad.r + 4;
-      if (labelX > W - pad.r + 4) labelX = W - pad.r + 4;
-      ctx.fillText(fmtN(val), labelX, gy + 3);
+    ctx.setLineDash([1, 4]);
+    for (var g = 0; g <= 6; g++) {
+      var gy = pad.t + ch * (g / 6);
+      ctx.strokeStyle = g === 3 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.025)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, Math.round(gy) + .5); ctx.lineTo(W, Math.round(gy) + .5); ctx.stroke();
+      var val = mx - (mx - mn) * (g / 6);
+      var labelX = scrollLeft + viewW - pad.r + 5;
+      if (labelX > W - pad.r + 5) labelX = W - pad.r + 5;
+      // Y-axis label pill
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      _roundRect(ctx, labelX - 2, gy - 6, pad.r - 4, 12, 3); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.font = '500 8px JetBrains Mono,monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(fmtN(val), labelX + 1, gy);
     }
+    ctx.setLineDash([]);
 
-    // Place candles from left edge
+    // ── Last close price reference line ──
+    var lastC = _drawCandles[n - 1];
+    var lastY = yOf(lastC.c);
+    var lastUp = lastC.c >= lastC.o;
+    var isLiveLast = lastC._live;
+    ctx.setLineDash(isLiveLast ? [2, 4] : [4, 3]);
+    var refAlpha = isLiveLast ? (0.15 + Math.sin(Date.now() / 400) * 0.1) : 0.25;
+    ctx.strokeStyle = lastUp ? 'rgba(38,166,154,' + refAlpha + ')' : 'rgba(239,83,80,' + refAlpha + ')';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, Math.round(lastY) + .5); ctx.lineTo(W, Math.round(lastY) + .5); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // ── Place candles ──
     var tw = n * bw + (n - 1) * gap;
     var ox = pad.l + (cw > tw ? Math.floor((cw - tw) / 2) : 0);
-    if (neededW > chartAreaMin) ox = pad.l; // left-align when scrollable
+    if (neededW > chartAreaMin) ox = pad.l;
 
     for (var i = 0; i < n; i++) {
-      var c = _candles[i], x = ox + i * (bw + gap), cx = x + bw / 2, up = c.c >= c.o, clr = up ? CU : CD;
-      ctx.strokeStyle = clr; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(Math.round(cx) + .5, yOf(c.h)); ctx.lineTo(Math.round(cx) + .5, yOf(c.l)); ctx.stroke();
+      var c = _drawCandles[i], x = ox + i * (bw + gap), cx = x + bw / 2, up = c.c >= c.o;
       var bt = yOf(up ? c.c : c.o), bb = yOf(up ? c.o : c.c), bh = Math.max(1, bb - bt);
-      ctx.fillStyle = up ? 'rgba(38,166,154,0.85)' : 'rgba(239,83,80,0.85)';
-      ctx.fillRect(x, bt, bw, bh);
-      ctx.strokeRect(x + .5, bt + .5, bw - 1, Math.max(0, bh - 1));
-      if (i === _hoverIdx) { ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(x - 1, pad.t, bw + 2, ch) }
+      var isLive = c._live;
+
+      // Wick (shadow)
+      var wickGrad = ctx.createLinearGradient(0, yOf(c.h), 0, yOf(c.l));
+      if (up) { wickGrad.addColorStop(0, 'rgba(38,166,154,0.3)'); wickGrad.addColorStop(0.5, 'rgba(38,166,154,0.6)'); wickGrad.addColorStop(1, 'rgba(38,166,154,0.3)'); }
+      else { wickGrad.addColorStop(0, 'rgba(239,83,80,0.3)'); wickGrad.addColorStop(0.5, 'rgba(239,83,80,0.6)'); wickGrad.addColorStop(1, 'rgba(239,83,80,0.3)'); }
+      ctx.strokeStyle = wickGrad; ctx.lineWidth = bw > 8 ? 1.5 : 1;
+      ctx.beginPath(); ctx.moveTo(Math.round(cx) + .5, yOf(c.h)); ctx.lineTo(Math.round(cx) + .5, yOf(c.l)); ctx.stroke();
+
+      // Body — gradient fill
+      var bodyGrad = ctx.createLinearGradient(0, bt, 0, bt + bh);
+      if (up) { bodyGrad.addColorStop(0, 'rgba(38,166,154,0.95)'); bodyGrad.addColorStop(1, 'rgba(22,130,120,0.80)'); }
+      else { bodyGrad.addColorStop(0, 'rgba(239,83,80,0.95)'); bodyGrad.addColorStop(1, 'rgba(190,50,50,0.80)'); }
+      ctx.fillStyle = bodyGrad;
+      if (bw >= 6) { _roundRect(ctx, x, bt, bw, bh, Math.min(2, bh / 3)); ctx.fill(); }
+      else { ctx.fillRect(x, bt, bw, bh); }
+
+      // Subtle border on body
+      ctx.strokeStyle = up ? 'rgba(38,166,154,0.5)' : 'rgba(239,83,80,0.5)'; ctx.lineWidth = 0.5;
+      if (bw >= 6) { _roundRect(ctx, x + .25, bt + .25, bw - .5, Math.max(0, bh - .5), Math.min(2, bh / 3)); ctx.stroke(); }
+
+      // Glow effect — enhanced for live candle with pulsing animation
+      if (bw >= 10 && bh > 3) {
+        ctx.save();
+        var glowAlpha = isLive ? (0.3 + Math.sin(Date.now() / 300) * 0.2) : 0.25;
+        ctx.shadowColor = up ? 'rgba(38,166,154,' + glowAlpha + ')' : 'rgba(239,83,80,' + glowAlpha + ')';
+        ctx.shadowBlur = isLive ? 12 : 6;
+        ctx.fillStyle = 'rgba(0,0,0,0)';
+        _roundRect(ctx, x, bt, bw, bh, 2); ctx.fill();
+        ctx.restore();
+      }
+
+      // Live candle: pulsing border + LIVE label
+      if (isLive && bw >= 8) {
+        var pulseAlpha = 0.4 + Math.sin(Date.now() / 250) * 0.3;
+        ctx.strokeStyle = up ? 'rgba(38,166,154,' + pulseAlpha + ')' : 'rgba(239,83,80,' + pulseAlpha + ')';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([2, 2]);
+        _roundRect(ctx, x - 1, bt - 1, bw + 2, bh + 2, 3); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Hover highlight column
+      if (i === _hoverIdx) {
+        var hGrad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
+        hGrad.addColorStop(0, 'rgba(168,85,247,0.04)');
+        hGrad.addColorStop(0.5, 'rgba(168,85,247,0.07)');
+        hGrad.addColorStop(1, 'rgba(168,85,247,0.02)');
+        ctx.fillStyle = hGrad;
+        ctx.fillRect(x - gap / 2, pad.t, bw + gap, ch);
+      }
     }
 
-    // X-axis time labels
-    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.font = '8px JetBrains Mono,monospace'; ctx.textAlign = 'center';
-    var labelEvery = Math.max(1, Math.floor(60 / (bw + gap))); // show label roughly every ~60px
+    // ── X-axis time labels ──
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.font = '500 7.5px JetBrains Mono,monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    var labelEvery = Math.max(1, Math.floor(70 / (bw + gap)));
     for (var i = 0; i < n; i += labelEvery) {
-      var t = new Date(_candles[i].t);
+      var t = new Date(_drawCandles[i].t);
       var lb = _trendRange === 'day' ? String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') : _trendRange === 'week' ? (t.getDate() + '/' + (t.getMonth() + 1) + ' ' + t.getHours() + 'h') : t.getDate() + '/' + (t.getMonth() + 1);
-      ctx.fillText(lb, ox + i * (bw + gap) + bw / 2, H - pad.b + 14);
+      // Tick mark
+      var tx = ox + i * (bw + gap) + bw / 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(Math.round(tx) + .5, H - pad.b); ctx.lineTo(Math.round(tx) + .5, H - pad.b + 4); ctx.stroke();
+      ctx.fillText(lb, tx, H - pad.b + 6);
     }
 
-    // Hover crosshair
+    // ── Hover crosshair — premium ──
     if (_hoverIdx >= 0 && _hoverIdx < n) {
-      var hc = _candles[_hoverIdx], hx = ox + _hoverIdx * (bw + gap) + bw / 2;
-      ctx.setLineDash([2, 2]); ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(hx, pad.t); ctx.lineTo(hx, pad.t + ch); ctx.stroke();
-      var hy = yOf(hc.c); ctx.beginPath(); ctx.moveTo(pad.l, hy); ctx.lineTo(W - pad.r, hy); ctx.stroke();
+      var hc = _drawCandles[_hoverIdx], hx = ox + _hoverIdx * (bw + gap) + bw / 2;
+      var hUp = hc.c >= hc.o;
+      // Vertical crosshair
+      ctx.setLineDash([2, 3]); ctx.strokeStyle = 'rgba(168,85,247,0.25)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(Math.round(hx) + .5, pad.t); ctx.lineTo(Math.round(hx) + .5, H - pad.b); ctx.stroke();
+      // Horizontal crosshair at close
+      var hy = yOf(hc.c);
+      ctx.strokeStyle = hUp ? 'rgba(38,166,154,0.35)' : 'rgba(239,83,80,0.35)';
+      ctx.beginPath(); ctx.moveTo(pad.l, Math.round(hy) + .5); ctx.lineTo(W - pad.r, Math.round(hy) + .5); ctx.stroke();
       ctx.setLineDash([]);
-      // Price tag at right edge (sticky)
+
+      // Price pill at right edge (sticky)
       var tagX = scrollLeft + viewW - pad.r;
       if (tagX > W - pad.r) tagX = W - pad.r;
-      ctx.fillStyle = hc.c >= hc.o ? 'rgba(38,166,154,0.9)' : 'rgba(239,83,80,0.9)';
-      ctx.fillRect(tagX, hy - 7, pad.r, 14);
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 8px JetBrains Mono,monospace'; ctx.textAlign = 'left';
-      ctx.fillText(fmtN(Math.round(hc.c)), tagX + 3, hy + 3);
+      var pillW = pad.r - 2, pillH = 16, pillY = hy - pillH / 2;
+      ctx.save();
+      ctx.shadowColor = hUp ? 'rgba(38,166,154,0.4)' : 'rgba(239,83,80,0.4)';
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = hUp ? 'rgba(38,166,154,0.92)' : 'rgba(239,83,80,0.92)';
+      _roundRect(ctx, tagX, pillY, pillW, pillH, 4); ctx.fill();
+      ctx.restore();
+      // Arrow notch on pill
+      ctx.fillStyle = hUp ? 'rgba(38,166,154,0.92)' : 'rgba(239,83,80,0.92)';
+      ctx.beginPath(); ctx.moveTo(tagX, hy - 4); ctx.lineTo(tagX - 4, hy); ctx.lineTo(tagX, hy + 4); ctx.fill();
+      // Text
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 8px JetBrains Mono,monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(fmtN(Math.round(hc.c)), tagX + 4, hy);
+
+      // Time pill at bottom
+      var hTime = new Date(hc.t);
+      var hTxt = String(hTime.getHours()).padStart(2, '0') + ':' + String(hTime.getMinutes()).padStart(2, '0');
+      var tPillW = ctx.measureText(hTxt).width + 12;
+      ctx.fillStyle = 'rgba(168,85,247,0.15)';
+      _roundRect(ctx, hx - tPillW / 2, H - pad.b + 1, tPillW, 14, 3); ctx.fill();
+      ctx.strokeStyle = 'rgba(168,85,247,0.3)'; ctx.lineWidth = 0.5;
+      _roundRect(ctx, hx - tPillW / 2, H - pad.b + 1, tPillW, 14, 3); ctx.stroke();
+      ctx.fillStyle = 'rgba(168,85,247,0.85)'; ctx.font = '600 7.5px JetBrains Mono,monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(hTxt, hx, H - pad.b + 8);
     }
-    _updHdr(_hoverIdx >= 0 ? _candles[_hoverIdx] : _candles[n - 1]);
+
+    // ── Last close price pill (always visible) ──
+    if (_hoverIdx < 0) {
+      var lcTagX = scrollLeft + viewW - pad.r;
+      if (lcTagX > W - pad.r) lcTagX = W - pad.r;
+      var lcPillW = pad.r - 2, lcPillH = 16, lcPillY = lastY - lcPillH / 2;
+      ctx.save();
+      ctx.shadowColor = lastUp ? 'rgba(38,166,154,0.3)' : 'rgba(239,83,80,0.3)';
+      ctx.shadowBlur = 6;
+      ctx.fillStyle = lastUp ? 'rgba(38,166,154,0.85)' : 'rgba(239,83,80,0.85)';
+      _roundRect(ctx, lcTagX, lcPillY, lcPillW, lcPillH, 4); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = lastUp ? 'rgba(38,166,154,0.85)' : 'rgba(239,83,80,0.85)';
+      ctx.beginPath(); ctx.moveTo(lcTagX, lastY - 4); ctx.lineTo(lcTagX - 4, lastY); ctx.lineTo(lcTagX, lastY + 4); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 8px JetBrains Mono,monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(fmtN(Math.round(lastC.c)), lcTagX + 4, lastY);
+    }
+
+    _updHdr(_hoverIdx >= 0 ? _drawCandles[_hoverIdx] : _drawCandles[n - 1]);
     _updMinimap();
     _updZoomLabel();
   }
@@ -686,25 +1069,57 @@
     if (scrollEl) scrollEl.scrollLeft = scrollEl.scrollWidth;
   }
 
-  function renderTrendDeltas() {
-    var el = $('trend-deltas'); if (!el || !_trendData.length) return;
-    if (_trendData.length < 4) { el.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--mute);font-size:.45rem;padding:8px">Minimal 4 data points untuk delta.</div>'; return }
-    var mid = Math.floor(_trendData.length / 2);
-    var keys = [
-      { k: 'coin_total', label: 'Coin Supply', color: 'var(--gold)' },
-      { k: 'player_count', label: 'Pemain', color: 'var(--cyan)' },
-      { k: 'coin_median', label: 'Median Coin', color: 'var(--green)' },
-      { k: 'coin_avg', label: 'Avg Coin', color: 'var(--ac)' }
+  function renderTrendVitals() {
+    var el = $('trend-vitals'); if (!el || !_trendData.length) return;
+    if (_trendData.length < 4) { el.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--mute);font-size:.42rem;padding:8px">Minimal 4 data points untuk vitals.</div>'; return }
+    var vitals = [
+      { k: 'coin_total', label: 'Supply', color: 'var(--gold)', fmt: function(v){return fmtN(Math.round(v))} },
+      { k: 'coin_median', label: 'Median', color: 'var(--green)', fmt: function(v){return fmtN(Math.round(v))} },
+      { k: 'player_count', label: 'Pemain', color: 'var(--cyan)', fmt: function(v){return Math.round(v)+''} },
+      { k: 'income_per_hour', label: 'Income/j', color: 'var(--ac)', fmt: function(v){return fmtN(Math.round(v))} },
+      { k: 'velocity', label: 'Velocity', color: '#60a5fa', fmt: function(v){return v.toFixed(4)} },
+      { k: 'net_flow', label: 'Net Flow', color: '#f472b6', fmt: function(v){var s=v>=0?'+':'';return s+fmtN(Math.round(v))} },
+      { k: 'gini', label: 'Gini', color: '#fb923c', fmt: function(v){return v.toFixed(3)} },
+      { k: 'purchasing_power', label: 'Purch.Pwr', color: '#a78bfa', fmt: function(v){return v.toFixed(2)} }
     ];
     var h = '';
-    for (var i = 0; i < keys.length; i++) {
-      var ki = keys[i], sA = 0, cA = 0, sB = 0, cB = 0;
-      for (var j = 0; j < mid; j++) { sA += _computeMetric(_trendData[j], ki.k); cA++ }
-      for (var j = mid; j < _trendData.length; j++) { sB += _computeMetric(_trendData[j], ki.k); cB++ }
-      var aA = cA ? sA / cA : 0, aB = cB ? sB / cB : 0, d = aB - aA, pct = aA > 0 ? Math.round(d / aA * 100) : 0;
-      var sg = d > 0 ? '+' : '', cl = Math.abs(pct) < 2 ? 'var(--mute)' : d > 0 ? 'var(--green)' : 'var(--red)';
-      var last = _computeMetric(_trendData[_trendData.length - 1], ki.k);
-      h += mkStatCard(ki.label, ki.color, fmtN(last), '<span style="color:' + cl + '">' + sg + pct + '%</span>');
+    for (var i = 0; i < vitals.length; i++) {
+      var vi = vitals[i];
+      // Collect all values for this metric
+      var vals = [];
+      for (var j = 0; j < _trendData.length; j++) vals.push(_computeMetric(_trendData[j], vi.k));
+      var last = vals[vals.length - 1];
+      var first = vals[0];
+      var delta = first !== 0 ? ((last - first) / Math.abs(first) * 100) : 0;
+      var deltaStr = (delta >= 0 ? '+' : '') + delta.toFixed(1) + '%';
+      var deltaClr = Math.abs(delta) < 1 ? 'var(--mute)' : delta > 0 ? 'var(--green)' : 'var(--red)';
+      // Build mini sparkline SVG (sample ~20 points)
+      var step = Math.max(1, Math.floor(vals.length / 20));
+      var pts = []; for (var j = 0; j < vals.length; j += step) pts.push(vals[j]);
+      if (pts[pts.length-1] !== last) pts.push(last);
+      var svgW = 56, svgH = 18;
+      var pMin = pts[0], pMax = pts[0];
+      for (var j = 1; j < pts.length; j++) { if (pts[j] < pMin) pMin = pts[j]; if (pts[j] > pMax) pMax = pts[j]; }
+      var pRng = pMax - pMin || 1;
+      var pathD = '';
+      for (var j = 0; j < pts.length; j++) {
+        var sx = (j / (pts.length - 1)) * svgW;
+        var sy = svgH - ((pts[j] - pMin) / pRng) * (svgH - 2) - 1;
+        pathD += (j === 0 ? 'M' : 'L') + sx.toFixed(1) + ',' + sy.toFixed(1);
+      }
+      var sparkColor = delta >= 0 ? '#26a69a' : '#ef5350';
+      var sparkSvg = '<svg width="' + svgW + '" height="' + svgH + '" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="display:block"><defs><linearGradient id="sg' + i + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + sparkColor + '" stop-opacity="0.3"/><stop offset="1" stop-color="' + sparkColor + '" stop-opacity="0"/></linearGradient></defs><path d="' + pathD + 'L' + svgW + ',' + svgH + 'L0,' + svgH + 'Z" fill="url(#sg' + i + ')"/><path d="' + pathD + '" fill="none" stroke="' + sparkColor + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      h += '<div style="background:linear-gradient(135deg,var(--surface),rgba(255,255,255,0.012));border:1px solid var(--border);border-radius:var(--r-xs);padding:6px 8px;position:relative;overflow:hidden">' +
+        '<div style="position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,' + vi.color + ',transparent);opacity:0.15"></div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">' +
+          '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.32rem;color:var(--mute);text-transform:uppercase;letter-spacing:.5px;font-weight:500">' + vi.label + '</span>' +
+          '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.32rem;color:' + deltaClr + ';font-weight:600">' + deltaStr + '</span>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:end;gap:6px">' +
+          '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.54rem;font-weight:700;color:' + vi.color + ';line-height:1">' + vi.fmt(last) + '</span>' +
+          '<div style="flex-shrink:0;opacity:0.85">' + sparkSvg + '</div>' +
+        '</div>' +
+      '</div>';
     }
     el.innerHTML = h;
   }
@@ -886,7 +1301,7 @@
       if (_nextFetch <= 0) { _nextFetch = 120; fetchAll(); }
     }, 1000);
   }
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) { try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_TREND) } catch (e) { } _nextFetch = 0; } });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { try { localStorage.removeItem(CACHE_KEY); ['day','week','month'].forEach(function(r){localStorage.removeItem(CACHE_TREND_PFX+r)}); } catch (e) { } _nextFetch = 0; } });
 
   function _initTrend() {
     bindTrendTabs();
@@ -897,12 +1312,14 @@
 
     // ── Mouse hover on canvas ──
     cv.addEventListener('mousemove', function (e) {
-      if (!_candles.length) return;
-      var rect = cv.getBoundingClientRect(), sc = cv.width / rect.width;
-      var sx = (e.clientX - rect.left) * sc, n = _candles.length;
-      var pad_l = 6, pad_r = 52;
-      var bw = Math.max(3, Math.round(_candleW * _zoomLevel)); if (bw > 48) bw = 48;
-      var gap = Math.max(1, Math.round(_candleGap * _zoomLevel));
+      var totalN = _candles.length + (_liveCandle ? 1 : 0);
+      if (!totalN) return;
+      var rect = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+      var sc = cv.width / dpr / rect.width;
+      var sx = (e.clientX - rect.left) * sc, n = totalN;
+      var pad_l = 8, pad_r = 58;
+      var bw = Math.max(4, Math.round(_candleW * _zoomLevel)); if (bw > 48) bw = 48;
+      var gap = Math.max(2, Math.round(_candleGap * _zoomLevel));
       var viewW = scrollEl.clientWidth || 600;
       var chartAreaMin = viewW - pad_l - pad_r;
       var neededW = n * bw + (n - 1) * gap;
@@ -975,9 +1392,9 @@
     if (zOut) zOut.addEventListener('click', function () { doZoom(_zoomLevel - 0.25); });
     if (zReset) zReset.addEventListener('click', function () { doZoom(1); setTimeout(_scrollToEnd, 50); });
     if (zFit) zFit.addEventListener('click', function () {
-      var n = _candles.length; if (!n) return;
+      var n = _candles.length + (_liveCandle ? 1 : 0); if (!n) return;
       var viewW = scrollEl.clientWidth || 600;
-      var chartArea = viewW - 6 - 52;
+      var chartArea = viewW - 8 - 58;
       var fitZoom = chartArea / (n * (_candleW + _candleGap));
       doZoom(Math.max(0.3, Math.min(4, fitZoom)));
       scrollEl.scrollLeft = 0;

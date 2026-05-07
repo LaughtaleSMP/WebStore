@@ -48,25 +48,35 @@
     #tx-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
     .holder-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .holder-label{font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mute);margin-bottom:4px;letter-spacing:.5px}
-    #trend-metric-tabs .tab{font-size:.42rem;padding:4px 10px}
-    #trend-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab;user-select:none;position:relative;border-radius:var(--r-xs)}
+
+    /* ═══ Premium Trend Chart ═══ */
+    .trend-ohlc-bar{font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);margin-bottom:6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center;min-height:24px}
+    .trend-info-line{font-family:'JetBrains Mono',monospace;font-size:.34rem;color:var(--mute);margin-bottom:6px;letter-spacing:.3px}
+    .trend-canvas-wrap{position:relative;width:100%;margin-bottom:6px;border-radius:var(--r-sm);overflow:hidden;border:1px solid rgba(255,255,255,0.04);box-shadow:inset 0 1px 4px rgba(0,0,0,0.3),0 0 0 1px rgba(168,85,247,0.04)}
+    #trend-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab;user-select:none;position:relative}
     #trend-scroll::-webkit-scrollbar{display:none}
     #trend-scroll.grabbing{cursor:grabbing}
     #trend-scroll canvas{display:block}
-    .trend-minimap{height:3px;border-radius:1.5px;background:rgba(255,255,255,.06);margin-top:4px;position:relative;overflow:hidden}
-    .trend-minimap-thumb{height:100%;border-radius:1.5px;background:rgba(168,85,247,.5);position:absolute;transition:left .1s,width .1s}
-    .trend-zoom{display:flex;align-items:center;gap:4px;margin-left:auto}
-    .trend-zoom button{font-family:'JetBrains Mono',monospace;font-size:.36rem;font-weight:600;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--mute);cursor:pointer;transition:all .2s;line-height:1}
-    .trend-zoom button:hover{color:var(--text);border-color:var(--border2);background:rgba(255,255,255,.06)}
-    .trend-zoom span{font-family:'JetBrains Mono',monospace;font-size:.34rem;color:var(--mute);min-width:40px;text-align:center}
+    .trend-minimap{height:4px;border-radius:2px;background:rgba(255,255,255,0.04);margin-top:0;position:relative;overflow:hidden;border-top:1px solid rgba(255,255,255,0.03)}
+    .trend-minimap-thumb{height:100%;border-radius:2px;background:linear-gradient(90deg,rgba(168,85,247,0.35),rgba(34,211,238,0.3));position:absolute;transition:left .12s ease,width .12s ease}
+    .trend-toolbar{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+    .trend-zoom{display:flex;align-items:center;gap:3px;margin-left:auto;padding:2px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)}
+    .trend-zoom button{font-family:'JetBrains Mono',monospace;font-size:.36rem;font-weight:600;padding:4px 10px;border-radius:4px;background:transparent;border:1px solid transparent;color:var(--mute);cursor:pointer;transition:all .2s;line-height:1}
+    .trend-zoom button:hover{color:var(--text);border-color:var(--border2);background:rgba(255,255,255,.05)}
+    .trend-zoom button:active{background:rgba(168,85,247,0.1);color:var(--ac)}
+    .trend-zoom span{font-family:'JetBrains Mono',monospace;font-size:.34rem;color:var(--dim);min-width:36px;text-align:center;padding:0 4px}
+    .trend-metric-bar .tab{font-size:.42rem;padding:4px 10px;transition:all .2s}
+    .trend-metric-bar .tab.a{box-shadow:0 0 8px rgba(168,85,247,0.1)}
     #health-content{font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);line-height:1.7}
     .ptbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    @keyframes fs{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
     @media(max-width:700px){
       .eco-grid{grid-template-columns:repeat(2,1fr)}
       #tx-grid{grid-template-columns:repeat(2,1fr)}
       .eco-val{font-size:.8rem}
       .mod-tab{font-size:.42rem;padding:5px 10px}
-      #trend-metric-tabs .tab{font-size:.38rem;padding:3px 8px}
+      .trend-metric-bar .tab{font-size:.38rem;padding:3px 8px}
+      .trend-ohlc-bar{font-size:.36rem;gap:3px}
     }
     @media(max-width:480px){
       .eco-grid{grid-template-columns:1fr 1fr;gap:.35rem}
@@ -80,10 +90,12 @@
       .ptbl td{padding:4px 5px;font-size:.38rem}
       #health-content{font-size:.36rem;line-height:1.6}
       .mod-tab{font-size:.36rem;padding:4px 8px}
-      #trend-metric-tabs .tab{font-size:.32rem;padding:3px 5px}
+      .trend-metric-bar .tab{font-size:.32rem;padding:3px 5px}
       .sec-title{font-size:.42rem !important}
       .trend-zoom button{padding:5px 10px;font-size:.38rem}
       .trend-zoom span{font-size:.36rem}
+      .trend-ohlc-bar{font-size:.34rem;gap:2px}
+      .trend-ohlc-bar span{padding:1px 4px !important}
     }
   </style>
 </head>
@@ -215,7 +227,7 @@
 
 <div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16h16"/><path d="M4 14l4-4 4 2 4-6 4 4"/></svg>TREND & INSIGHT</span><div class="dvl"></div></div>
 
-        <div class="cd" id="trend-card">
+        <div class="cd" id="trend-card" style="padding-bottom:1rem">
           <div class="sec-hd"><span class="sec-title">ECONOMY TREND</span>
             <div class="tabs" id="trend-tabs" style="margin:0;border:0;padding:0;gap:2px">
               <button class="tab a" data-range="day">24j</button>
@@ -223,38 +235,24 @@
               <button class="tab" data-range="month">30h</button>
             </div>
           </div>
-          <div id="trend-hdr"
-            style="font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);margin-bottom:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          </div>
-          <div id="trend-info"
-            style="font-family:'JetBrains Mono',monospace;font-size:.36rem;color:var(--mute);margin-bottom:4px"></div>
-          <div style="position:relative;width:100%;margin-bottom:4px">
+          <div id="trend-hdr" class="trend-ohlc-bar"></div>
+          <div id="trend-info" class="trend-info-line"></div>
+          <div class="trend-canvas-wrap">
             <div id="trend-scroll">
-              <canvas id="trend-chart" style="height:220px;background:var(--bg2)"></canvas>
+              <canvas id="trend-chart"></canvas>
             </div>
             <div class="trend-minimap" id="trend-minimap"><div class="trend-minimap-thumb" id="trend-minimap-thumb"></div></div>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <div class="trend-toolbar">
             <div class="trend-zoom">
               <button id="trend-zoom-out" title="Zoom Out">−</button>
               <span id="trend-zoom-label">100%</span>
               <button id="trend-zoom-in" title="Zoom In">+</button>
-              <button id="trend-zoom-fit" title="Fit to View" style="margin-left:2px">FIT</button>
+              <button id="trend-zoom-fit" title="Fit to View">FIT</button>
               <button id="trend-zoom-reset" title="Reset">1:1</button>
             </div>
           </div>
-          <div class="tabs" id="trend-metric-tabs" style="margin-bottom:0;border:0;padding:0;gap:2px;flex-wrap:wrap">
-            <button class="tab a" data-metric="coin_total">Supply</button>
-            <button class="tab" data-metric="coin_median">Median</button>
-            <button class="tab" data-metric="player_count">Pemain</button>
-            <button class="tab" data-metric="income_per_hour">Income/jam</button>
-            <button class="tab" data-metric="velocity">Velocity</button>
-            <button class="tab" data-metric="net_flow">Net Flow</button>
-            <button class="tab" data-metric="gini">Gini</button>
-            <button class="tab" data-metric="inflation_rate">Inflasi %/jam</button>
-            <button class="tab" data-metric="purchasing_power">Purchasing Power</button>
-          </div>
-          <div class="eco-grid" id="trend-deltas" style="margin-top:8px"></div>
+          <div class="eco-grid" id="trend-vitals" style="margin-top:10px;grid-template-columns:repeat(4,1fr)"></div>
         </div>
 
         <div class="cd" id="health-card">
