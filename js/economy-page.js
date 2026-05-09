@@ -441,6 +441,14 @@
       '</div>';
     if (wt) {
       var hasTier3 = (wt.tier3 !== undefined) || (wt.rate3 !== undefined);
+      var subsidyNote = '';
+      if (wt.subsidy) {
+        subsidyNote =
+          section('Subsidi Aktivitas (Earned Income)') +
+          row('Kill Mob Bonus', '+' + (wt.subsidy.killBonus || 1) + ' koin/kill', 'dari treasury') +
+          row('Quest/Ach Bonus', '+' + Math.round((wt.subsidy.questMult || 0.20) * 100) + '%', 'dari treasury') +
+          row('Syarat Subsidi', 'Saldo < ' + fmtN(wt.subsidy.balanceCap || 5000), 'koin');
+      }
       var wtContent;
       if (hasTier3 || !wt.tier1) {
         wtContent =
@@ -449,7 +457,8 @@
           row('> ' + fmtN(wt.tier1 || 5000),  (wt.rate1 || 0.5) + '%/hari', 'ringan') +
           row('> ' + fmtN(wt.tier2 || 20000), (wt.rate2 || 1.0) + '%/hari', 'sedang') +
           row('> ' + fmtN(wt.tier3 || 50000), (wt.rate3 || 2.0) + '%/hari', 'tinggi') +
-          note('Dipotong otomatis 1x/hari (20:00 WIB) dari scoreboard. Berlaku untuk semua player (online &amp; offline). Koin masuk Treasury untuk distribusi admin.');
+          subsidyNote +
+          note('Dipotong otomatis 1x/hari (20:00 WIB). Treasury didistribusikan gradual via subsidi aktivitas ke player dengan saldo &lt; 5.000.');
       } else {
         wtContent =
           treasuryBar +
@@ -457,6 +466,7 @@
           row('Acuan P75', fmtN(wt.p75), '') +
           row('Tier 1 (>' + fmtN(wt.tier1) + ')', wt.rate1 + '%/hari', 'P75\u00d73') +
           row('Tier 2 (>' + fmtN(wt.tier2) + ')', wt.rate2 + '%/hari', 'P75\u00d710') +
+          subsidyNote +
           note('Dipotong otomatis 1x/hari dari scoreboard.');
       }
       cards.push(buildCard('Wealth Tax', '#f472b6', wtContent, true));
@@ -467,7 +477,7 @@
         row('> 5.000', '0.5%/hari', 'ringan') +
         row('> 20.000', '1.0%/hari', 'sedang') +
         row('> 50.000', '2.0%/hari', 'tinggi') +
-        note('Dipotong otomatis 1x/hari (20:00 WIB) dari scoreboard. Berlaku untuk semua player (online &amp; offline). Koin masuk Treasury untuk distribusi admin.'),
+        note('Dipotong otomatis 1x/hari (20:00 WIB). Treasury didistribusikan gradual via subsidi aktivitas.'),
         true
       ));
     }
