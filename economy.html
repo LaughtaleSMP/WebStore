@@ -333,8 +333,8 @@
             <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Aliran Koin</div>
             <p style="margin-bottom:6px">Darimana koin masuk dan kemana keluar dalam 5 menit terakhir.</p>
             <table style="width:100%;border-collapse:collapse;font-size:.4rem">
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--green);padding:5px 8px;font-weight:600;width:100px">Sumber (+)</td><td style="padding:5px 8px"><b>Mob Kill</b> = bunuh mob. <b>Gacha Refund</b> = pengembalian. <b>Weekly LB</b> = hadiah mingguan. <b>1st Sale</b> = bonus penjualan pertama. <b>Land Refund</b> = refund hapus land.</td></tr>
-              <tr><td style="color:var(--red);padding:5px 8px;font-weight:600">Pengeluaran (-)</td><td style="padding:5px 8px"><b>Gacha Cost</b> = biaya gacha. <b>Bank Tax</b> = pajak transfer. <b>Anti-Stack</b> = penalti farm berlebihan. <b>Auction Fee</b> = biaya listing. <b>Wealth Tax</b> = pajak kekayaan harian (offline). <b>Land Buy</b> = beli land (koin). <b>Land PPN</b> = pajak land.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--green);padding:5px 8px;font-weight:600;width:100px">Sumber (+)</td><td style="padding:5px 8px"><b>Mob Kill</b> = bunuh mob (2 koin/kill). <b>Gacha Refund</b> = pengembalian. <b>Weekly LB</b> = hadiah mingguan. <b>1st Sale</b> = bonus penjualan pertama. <b>Land Refund</b> = refund hapus land. <b>Tax Distrib</b> = distribusi treasury ke player.</td></tr>
+              <tr><td style="color:var(--red);padding:5px 8px;font-weight:600">Pengeluaran (-)</td><td style="padding:5px 8px"><b>Gacha Cost</b> = biaya gacha. <b>Bank Tax</b> = pajak transfer. <b>Anti-Stack</b> = penalti farm berlebihan. <b>Auction Fee</b> = biaya listing. <b>Wealth Tax</b> = pajak kekayaan harian (>5K: 0.5%, >20K: 1%, >50K: 2%). <b>Land Buy</b> = beli land (koin). <b>Land PPN</b> = pajak land.</td></tr>
             </table>
             <p style="margin-top:6px"><span style="color:var(--green)">Sumber > Pengeluaran</span> = inflasi. <span style="color:var(--red)">Pengeluaran > Sumber</span> = deflasi. Idealnya <span style="color:var(--cyan)">seimbang</span>.</p>
           </div>
@@ -392,6 +392,26 @@
               <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">50-79</td><td style="padding:5px 8px">PERLU PERHATIAN — Ada masalah yang perlu dipantau.</td></tr>
               <tr><td style="color:var(--red);padding:5px 8px;font-weight:600">0-49</td><td style="padding:5px 8px">KRITIS — Perlu tindakan segera untuk selamatkan ekonomi.</td></tr>
             </table>
+          </div>
+
+          <div style="margin-bottom:18px">
+            <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Treasury & Wealth Tax</div>
+            <p style="margin-bottom:6px">Sistem pajak kekayaan otomatis untuk menjaga keseimbangan ekonomi server.</p>
+            <table style="width:100%;border-collapse:collapse;font-size:.4rem">
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600;width:120px">Treasury Saat Ini</td><td style="padding:5px 8px">Total koin yang terkumpul dari pajak kekayaan harian. Koin ini menunggu untuk didistribusikan.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Terkumpul</td><td style="padding:5px 8px">Jumlah koin yang dipotong dari player dalam periode yang dipilih (24j/7h/30h).</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Didistribusi</td><td style="padding:5px 8px">Jumlah koin yang sudah dibagikan kembali ke player dari treasury.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Tier Pajak</td><td style="padding:5px 8px">Saldo <b>&gt;5.000</b> = 0.5%/hari. Saldo <b>&gt;20.000</b> = 1%/hari. Saldo <b>&gt;50.000</b> = 2%/hari.</td></tr>
+            </table>
+            <div style="margin-top:8px;padding:8px 10px;border-radius:6px;background:rgba(255,255,255,0.02);line-height:2">
+              <div style="font-weight:700;margin-bottom:4px;color:var(--text)">Alur Kerja:</div>
+              <div>1. Pajak dipotong <b style="color:var(--gold)">otomatis 1x/hari</b> jam 20:00 WIB dari scoreboard.</div>
+              <div>2. Berlaku untuk <b>semua player</b> (online & offline) yang saldo di atas threshold.</div>
+              <div>3. Koin terpotong masuk ke <b style="color:#f472b6">Treasury</b>.</div>
+              <div>4. Setelah 10 detik, treasury <b style="color:var(--green)">otomatis didistribusikan</b> ke bottom 50% player (weighted — saldo rendah dapat lebih banyak).</div>
+              <div>5. <b>10% treasury</b> disimpan sebagai cadangan, sisanya dibagikan.</div>
+              <div>6. Jika treasury menunjukkan 0, artinya semua sudah terdistribusi atau belum ada koleksi.</div>
+            </div>
           </div>
 
           <div>

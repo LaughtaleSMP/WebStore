@@ -29,10 +29,16 @@
 
   window.addEventListener('DOMContentLoaded', function () {
     bindModTabs(); bindLogTabs(); _initTrend();
+    // Restore trend cache FIRST — agar _aggFlow() punya data saat renderAnalytics() berjalan
+    var cachedTrend = _cGet(_trendCacheKey());
+    if (cachedTrend && cachedTrend.length) {
+      _trendData = cachedTrend;
+      _candles = _agg(_trendData, _trendMetric);
+    }
     var cached = _cGet(CACHE_KEY);
     if (cached) { _data = cached; renderAnalytics(); renderLogStats(); renderLogs(); renderDiscCodes(); }
-    var cachedTrend = _cGet(_trendCacheKey());
-    if (cachedTrend && cachedTrend.length) { _trendData = cachedTrend; _candles = _agg(_trendData, _trendMetric); drawTrendChart(); renderTrendVitals(); renderHealthAdvisor(); _startLiveTick(); }
+    // Gambar chart setelah kedua data siap
+    if (_candles.length) { drawTrendChart(); renderTrendVitals(); renderHealthAdvisor(); _startLiveTick(); }
     fetchAll();
     _startCountdown();
   });
@@ -134,7 +140,7 @@
       { k: 'mob_kill', label: 'Mob Kill' }, { k: 'topup', label: 'Topup' },
       { k: 'gacha_refund', label: 'Gacha Refund' }, { k: 'pvp_refund', label: 'PvP Refund' },
       { k: 'weekly_reward', label: 'Weekly LB' }, { k: 'first_sale', label: '1st Sale' },
-      { k: 'land_refund', label: 'Land Refund' }
+      { k: 'land_refund', label: 'Land Refund' }, { k: 'tax_distribute', label: 'Tax Distrib' }
     ];
     var sinks = [
       { k: 'gacha_cost', label: 'Gacha Cost' }, { k: 'bank_tax', label: 'Bank Tax' },
@@ -145,9 +151,22 @@
     if (hasFlow) {
       for (var i = 0; i < sources.length; i++) { var v = flow[sources[i].k] || 0; if (v > 0) injected += v; }
       for (var i = 0; i < sinks.length; i++) { var v = Math.abs(flow[sinks[i].k] || 0); if (v > 0) sunk += v; }
+      // Simpan snapshot non-zero ke localStorage (TTL 48 jam)
+      try { localStorage.setItem('_eco_flow_snap', JSON.stringify({ f: flow, inj: injected, snk: sunk, snaps: agg.snapshots, ts: Date.now() })); } catch (e) {}
     } else {
-      for (var i = 0; i < topup.length; i++) if ((topup[i].x || topup[i].action) === 'add') injected += Math.abs(topup[i].n || topup[i].amount || 0);
-      for (var i = 0; i < gacha.length; i++) sunk += Math.abs(gacha[i].cost || gacha[i].c || 0);
+      // Coba pakai snapshot terakhir yang valid (dalam 48 jam)
+      try {
+        var snap = JSON.parse(localStorage.getItem('_eco_flow_snap'));
+        if (snap && Date.now() - snap.ts < 172800000) {
+          flow = snap.f || flow; injected = snap.inj || 0; sunk = snap.snk || 0;
+          agg = { flow: flow, snapshots: snap.snaps || 0, bankVol: 0, auctionVol: 0 };
+          hasFlow = injected > 0 || sunk > 0;
+        }
+      } catch (e) {}
+      if (!hasFlow) {
+        for (var i = 0; i < topup.length; i++) if ((topup[i].x || topup[i].action) === 'add') injected += Math.abs(topup[i].n || topup[i].amount || 0);
+        for (var i = 0; i < gacha.length; i++) sunk += Math.abs(gacha[i].cost || gacha[i].c || 0);
+      }
     }
     var net = injected - sunk;
     var rate = s.coin.total > 0 ? Math.round(net / s.coin.total * 100) : 0;
@@ -201,7 +220,7 @@
   }
 
   function _aggFlow() {
-    var f = { mob_kill: 0, gacha_refund: 0, pvp_refund: 0, first_sale: 0, topup: 0, weekly_reward: 0, gacha_cost: 0, bank_tax: 0, mob_penalty: 0, pvp_penalty: 0, auction_fee: 0, land_buy: 0, land_ppn: 0, land_buy_gem: 0, land_refund: 0, wealth_tax: 0 };
+    var f = { mob_kill: 0, gacha_refund: 0, pvp_refund: 0, first_sale: 0, topup: 0, weekly_reward: 0, gacha_cost: 0, bank_tax: 0, mob_penalty: 0, pvp_penalty: 0, auction_fee: 0, land_buy: 0, land_ppn: 0, land_buy_gem: 0, land_refund: 0, wealth_tax: 0, tax_distribute: 0 };
     var bv = 0, av = 0, cnt = 0, gini = 0, giniCnt = 0;
     for (var i = 0; i < _trendData.length; i++) {
       var row = _trendData[i], cf = row.coin_flow;
@@ -317,7 +336,7 @@
     cards.push(buildCard('Mimi Land', 'var(--green)',
       section('Rate per Block²') + landRows +
       section('Contoh Harga') + exRows +
-      note('Gem diskon ' + (ld.gemDiscount||99) + '% · PPN ' + (ld.ppnPct||12) + '% (land ke-' + ((ld.ppnFreeLimit||3)+1) + '+) · Max ' + (ld.maxPerPlayer||5) + ' · Min ' + (ld.minArea||9) + ' blk²')
+      note('Gem diskon ' + (ld.gemDiscount||99) + '% · PPN ' + (ld.ppnPct||5) + '% (land ke-' + ((ld.ppnFreeLimit||3)+1) + '+) · Max ' + (ld.maxPerPlayer||5) + ' · Min ' + (ld.minArea||9) + ' blk²')
     ));
 
     // ━━━ 2. GACHA ━━━
@@ -360,37 +379,98 @@
     // ━━━ 4. BANK ━━━
     var bk = g.bank, bt = bk.baseTax, adj = bk.policyAdj || 0, eTax = bk.effectiveTax;
     var adjTxt = adj > 0 ? ' <span style="color:var(--red)">(+' + adj + '% stab)</span>' : adj < 0 ? ' <span style="color:var(--green)">(' + adj + '% stab)</span>' : '';
+    // [DYNAMIC] Build bracket rows from server data
+    var bkts = bk.brackets || [{ max: 100, extra: 0 }, { max: 1000, extra: 2 }, { max: 3000, extra: 4 }, { max: null, extra: 6 }];
+    var bktRows = '';
+    for (var bi = 0; bi < bkts.length; bi++) {
+      var b = bkts[bi];
+      var label = (b.max === null || b.max === Infinity || b.max > 1e6) ? '>' + fmtN(bkts[bi-1]?.max || 0) : (bi === 0 ? '≤' + fmtN(b.max) : fmtN((bkts[bi-1]?.max || 0)+1) + ' — ' + fmtN(b.max));
+      bktRows += row(label, (eTax + b.extra) + '%', '');
+    }
+    // Example calculations using actual brackets
+    var ex1Extra = 0, ex5Extra = 0;
+    for (var ei = 0; ei < bkts.length; ei++) { if (1000 <= (bkts[ei].max === null || bkts[ei].max === Infinity ? 1e9 : bkts[ei].max)) { ex1Extra = bkts[ei].extra; break; } }
+    for (var fi = 0; fi < bkts.length; fi++) { if (5000 <= (bkts[fi].max === null || bkts[fi].max === Infinity ? 1e9 : bkts[fi].max)) { ex5Extra = bkts[fi].extra; break; } }
     cards.push(buildCard('Bank', 'var(--gold)',
       section('Transfer') +
       row('Range', fmtN(bk.minTransfer) + ' — ' + fmtN(bk.maxTransfer), '') +
       row('Limit Harian', fmtN(bk.dailyLimit), '') +
       row('Free Transfer', bk.freeTransfers + '×/hari', '') +
       section('Pajak — base ' + bt + '%' + adjTxt) +
-      row('≤100', eTax + '%', '') +
-      row('101 — 1.000', (eTax+3) + '%', '') +
-      row('1.001 — 3.000', (eTax+6) + '%', '') +
-      row('>3.000', (eTax+10) + '%', '') +
+      bktRows +
       note(
         row('100 (free)', fmtN(100), 'pajak 0') +
-        row('1.000', fmtN(1000+Math.ceil(1000*(eTax+3)/100)), 'pajak ' + fmtN(Math.ceil(1000*(eTax+3)/100))) +
-        row('5.000', fmtN(5000+Math.ceil(5000*(eTax+10)/100)), 'pajak ' + fmtN(Math.ceil(5000*(eTax+10)/100)))
+        row('1.000', fmtN(1000+Math.ceil(1000*(eTax+ex1Extra)/100)), 'pajak ' + fmtN(Math.ceil(1000*(eTax+ex1Extra)/100))) +
+        row('5.000', fmtN(5000+Math.ceil(5000*(eTax+ex5Extra)/100)), 'pajak ' + fmtN(Math.ceil(5000*(eTax+ex5Extra)/100)))
       )
     ));
 
     // ━━━ 5. WEALTH TAX ━━━
     var wt = g.wealthTax;
-    cards.push(buildCard('Wealth Tax', '#f472b6',
-      '<div style="display:flex;gap:14px;flex-wrap:wrap">' +
-        '<div style="flex:1;min-width:170px">' +
+    var aggWt = _aggFlow();
+    var wtFlowTotal    = Math.abs(aggWt.flow.wealth_tax || 0);
+    var wtDistributed  = Math.abs(aggWt.flow.tax_distribute || 0);
+    // Persistensi: simpan nilai non-zero ke localStorage (TTL 48 jam)
+    if (wtFlowTotal > 0 || wtDistributed > 0) {
+      try { localStorage.setItem('_eco_wt_snap', JSON.stringify({ c: wtFlowTotal, d: wtDistributed, ts: Date.now() })); } catch (e) {}
+    } else {
+      // Fallback ke snapshot terakhir jika masih dalam 48 jam
+      try {
+        var wtSnap = JSON.parse(localStorage.getItem('_eco_wt_snap'));
+        if (wtSnap && Date.now() - wtSnap.ts < 172800000) {
+          wtFlowTotal   = wtSnap.c || 0;
+          wtDistributed = wtSnap.d || 0;
+        }
+      } catch (e) {}
+    }
+    var rangeL = { day: '24j', week: '7h', month: '30h' }[_trendRange] || '24j';
+    function wtStatBox(label, val, color) {
+      return '<div style="flex:1;min-width:80px;text-align:center;padding:8px 6px;border-radius:6px;' +
+        'background:linear-gradient(135deg,rgba(244,114,182,0.05),rgba(244,114,182,0.01));' +
+        'border:1px solid rgba(244,114,182,0.1)">' +
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.30rem;color:var(--mute);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">' + label + '</div>' +
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;font-weight:700;color:' + color + ';line-height:1">' + val + '</div>' +
+        '</div>';
+    }
+    var treasuryVal = (wt && wt.treasury !== undefined) ? wt.treasury : 0;
+    var treasuryBar =
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' +
+        wtStatBox('Treasury Saat Ini', fmtN(treasuryVal) + ' Koin', '#f472b6') +
+        wtStatBox('Terkumpul ' + rangeL, wtFlowTotal > 0 ? fmtN(wtFlowTotal) : '0', 'var(--red)') +
+        wtStatBox('Didistribusi ' + rangeL, wtDistributed > 0 ? fmtN(wtDistributed) : '0', 'var(--green)') +
+      '</div>';
+    if (wt) {
+      var hasTier3 = (wt.tier3 !== undefined) || (wt.rate3 !== undefined);
+      var wtContent;
+      if (hasTier3 || !wt.tier1) {
+        wtContent =
+          treasuryBar +
+          section('Tier Pajak Harian (Semua Player)') +
+          row('> ' + fmtN(wt.tier1 || 5000),  (wt.rate1 || 0.5) + '%/hari', 'ringan') +
+          row('> ' + fmtN(wt.tier2 || 20000), (wt.rate2 || 1.0) + '%/hari', 'sedang') +
+          row('> ' + fmtN(wt.tier3 || 50000), (wt.rate3 || 2.0) + '%/hari', 'tinggi') +
+          note('Dipotong otomatis 1x/hari (20:00 WIB) dari scoreboard. Berlaku untuk semua player (online &amp; offline). Koin masuk Treasury untuk distribusi admin.');
+      } else {
+        wtContent =
+          treasuryBar +
           section('Tier Pajak Harian') +
           row('Acuan P75', fmtN(wt.p75), '') +
-          row('Tier 1 (>' + fmtN(wt.tier1) + ')', wt.rate1 + '%/hari', 'P75×3') +
-          row('Tier 2 (>' + fmtN(wt.tier2) + ')', wt.rate2 + '%/hari', 'P75×10') +
-        '</div>' +
-        '<div style="flex:1;min-width:100px;display:flex;align-items:end;font-size:.34rem;color:var(--mute);line-height:1.5">Hanya berlaku untuk player offline. Player online tidak dikenakan pajak.</div>' +
-      '</div>',
-      true
-    ));
+          row('Tier 1 (>' + fmtN(wt.tier1) + ')', wt.rate1 + '%/hari', 'P75\u00d73') +
+          row('Tier 2 (>' + fmtN(wt.tier2) + ')', wt.rate2 + '%/hari', 'P75\u00d710') +
+          note('Dipotong otomatis 1x/hari dari scoreboard.');
+      }
+      cards.push(buildCard('Wealth Tax', '#f472b6', wtContent, true));
+    } else {
+      cards.push(buildCard('Wealth Tax', '#f472b6',
+        treasuryBar +
+        section('Tier Pajak Harian (Semua Player)') +
+        row('> 5.000', '0.5%/hari', 'ringan') +
+        row('> 20.000', '1.0%/hari', 'sedang') +
+        row('> 50.000', '2.0%/hari', 'tinggi') +
+        note('Dipotong otomatis 1x/hari (20:00 WIB) dari scoreboard. Berlaku untuk semua player (online &amp; offline). Koin masuk Treasury untuk distribusi admin.'),
+        true
+      ));
+    }
 
     el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + cards.join('') + '</div>';
   }
