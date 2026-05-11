@@ -75,9 +75,30 @@
   }
 
   async function loadCatalog() {
-    var res = await fetch('js/store-catalog.json', { cache: 'force-cache' });
-    if (!res.ok) throw new Error('catalog ' + res.status);
-    return res.json();
+    if (window.__STORE_CATALOG__) return window.__STORE_CATALOG__;
+    try {
+      var res = await fetch('js/store-catalog.json', { cache: 'force-cache' });
+      if (res.ok) {
+        var data = await res.json();
+        window.__STORE_CATALOG__ = data;
+        return data;
+      }
+    } catch (_) {}
+    return loadCatalogViaScript();
+  }
+
+  function loadCatalogViaScript() {
+    return new Promise(function (resolve, reject) {
+      if (window.__STORE_CATALOG__) return resolve(window.__STORE_CATALOG__);
+      var s = document.createElement('script');
+      s.src = 'js/store-catalog.js';
+      s.onload = function () {
+        if (window.__STORE_CATALOG__) resolve(window.__STORE_CATALOG__);
+        else reject(new Error('catalog script loaded but global missing'));
+      };
+      s.onerror = function () { reject(new Error('catalog script load error')); };
+      document.head.appendChild(s);
+    });
   }
 
   async function loadBasis() {
@@ -209,7 +230,7 @@
       if (price1x > max) max = price1x;
     }
     if (!isFinite(min)) min = 0;
-    return fmt(min) + ' — ' + fmt(max) + ' ⛃';
+    return fmt(min) + ' — ' + fmt(max);
   }
 
   function toggleCat(el) {
@@ -254,7 +275,7 @@
         + '<td class="name">' + escHtml(label) + ' <span class="qty">×' + qty + '</span></td>'
         + '<td class="num qty">' + qty + '</td>'
         + '<td class="num per-unit per-unit-col">' + fmt(perUnit) + '</td>'
-        + '<td class="num price-1x">' + fmt(price1x) + ' ⛃</td>');
+        + '<td class="num price-1x">' + fmt(price1x) + '</td>');
       for (var j = 1; j < tiers.length; j++) {
         var tp = Math.ceil(price1x * tiers[j].mult);
         var midCls2 = (j !== 1 && j !== tiers.length - 1) ? ' tier-mid' : '';

@@ -472,7 +472,7 @@
           subsidyNote +
           note('Dipotong otomatis 1x/hari dari scoreboard.');
       }
-      cards.push(buildCard('Wealth Tax', '#f472b6', wtContent, true));
+      cards.push(buildCard('Wealth Tax', '#f472b6', wtContent));
     } else {
       cards.push(buildCard('Wealth Tax', '#f472b6',
         treasuryBar +
@@ -480,8 +480,7 @@
         row('> 5.000', '0.5%/hari', 'ringan') +
         row('> 20.000', '1.0%/hari', 'sedang') +
         row('> 50.000', '2.0%/hari', 'tinggi') +
-        note('Dipotong otomatis 1x/hari (20:00 WIB). Treasury didistribusikan gradual via subsidi aktivitas.'),
-        true
+        note('Dipotong otomatis 1x/hari (20:00 WIB). Treasury didistribusikan gradual via subsidi aktivitas.')
       ));
     }
 
@@ -516,8 +515,7 @@
       storeTierRows +
       section('Contoh Harga Wool (basis ' + fmtN(wBasis) + '/jam)') +
       woolRows +
-      note('Beli sedikit → <b style="color:var(--green)">murah</b>. Borong banyak → <b style="color:var(--red)">mahal</b>. Anti-monopoli, ramah pemula, semua koin dibakar sebagai sink. Buka dengan <b style="color:var(--gold)">/store</b>.'),
-      true
+      note('Beli sedikit → <b style="color:var(--green)">murah</b>. Borong banyak → <b style="color:var(--red)">mahal</b>. Anti-monopoli, ramah pemula, semua koin dibakar sebagai sink. Buka dengan <b style="color:var(--gold)">/store</b>.')
     ));
 
     el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + cards.join('') + '</div>';
