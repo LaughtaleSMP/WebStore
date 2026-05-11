@@ -36,7 +36,7 @@
       _candles = _agg(_trendData, _trendMetric);
     }
     var cached = _cGet(CACHE_KEY);
-    if (cached) { _data = cached; renderAnalytics(); renderLogStats(); renderLogs(); renderDiscCodes(); }
+    if (cached) { _data = cached; renderAnalytics(); renderLogStats(); renderLogs(); renderDiscCodes(); renderTax(); }
     // Gambar chart setelah kedua data siap
     if (_candles.length) { drawTrendChart(); renderTrendVitals(); renderHealthAdvisor(); _startLiveTick(); }
     fetchAll();
@@ -81,7 +81,7 @@
       _cSet(CACHE_KEY, _data);
       var el = $('eco-sync');
       if (el) el.textContent = 'Sync: ' + (row.synced_at ? new Date(row.synced_at).toLocaleString('id-ID') : '—');
-      renderAnalytics(); renderLogStats(); renderLogs(); renderDiscCodes();
+      renderAnalytics(); renderLogStats(); renderLogs(); renderDiscCodes(); renderTax();
       fetchTrend();
     } catch (e) { console.warn('[Eco]', e) }
   }
@@ -140,13 +140,16 @@
       { k: 'mob_kill', label: 'Mob Kill' }, { k: 'topup', label: 'Topup' },
       { k: 'gacha_refund', label: 'Gacha Refund' }, { k: 'pvp_refund', label: 'PvP Refund' },
       { k: 'weekly_reward', label: 'Weekly LB' }, { k: 'first_sale', label: '1st Sale' },
-      { k: 'land_refund', label: 'Land Refund' }, { k: 'tax_distribute', label: 'Tax Distrib' }
+      { k: 'land_refund', label: 'Land Refund' }, { k: 'tax_distribute', label: 'Tax Distrib' },
+      { k: 'ubi_injection', label: 'UBI Pemain Baru' }
     ];
     var sinks = [
       { k: 'gacha_cost', label: 'Gacha Cost' }, { k: 'bank_tax', label: 'Bank Tax' },
       { k: 'mob_penalty', label: 'Anti-Stack' }, { k: 'pvp_penalty', label: 'PvP Penalty' },
       { k: 'auction_fee', label: 'Auction Fee' }, { k: 'wealth_tax', label: 'Wealth Tax' },
-      { k: 'land_buy', label: 'Land Buy' }, { k: 'land_ppn', label: 'Land PPN' }
+      { k: 'demurrage', label: 'Demurrage' },
+      { k: 'land_buy', label: 'Land Buy' }, { k: 'land_ppn', label: 'Land PPN' },
+      { k: 'store_sink', label: 'Store Buy' }
     ];
     if (hasFlow) {
       for (var i = 0; i < sources.length; i++) { var v = flow[sources[i].k] || 0; if (v > 0) injected += v; }
@@ -220,7 +223,7 @@
   }
 
   function _aggFlow() {
-    var f = { mob_kill: 0, gacha_refund: 0, pvp_refund: 0, first_sale: 0, topup: 0, weekly_reward: 0, gacha_cost: 0, bank_tax: 0, mob_penalty: 0, pvp_penalty: 0, auction_fee: 0, land_buy: 0, land_ppn: 0, land_buy_gem: 0, land_refund: 0, wealth_tax: 0, tax_distribute: 0 };
+    var f = { mob_kill: 0, gacha_refund: 0, pvp_refund: 0, first_sale: 0, topup: 0, weekly_reward: 0, gacha_cost: 0, bank_tax: 0, mob_penalty: 0, pvp_penalty: 0, auction_fee: 0, land_buy: 0, land_ppn: 0, land_buy_gem: 0, land_refund: 0, wealth_tax: 0, tax_distribute: 0, store_sink: 0, ubi_injection: 0, demurrage: 0 };
     var bv = 0, av = 0, cnt = 0, gini = 0, giniCnt = 0;
     for (var i = 0; i < _trendData.length; i++) {
       var row = _trendData[i], cf = row.coin_flow;
@@ -482,6 +485,41 @@
       ));
     }
 
+    // ━━━ 6. STORE (Bahan Build) ━━━
+    // Tier progresif & kalkulasi harga ikut basis server (coin income/jam).
+    var storeTiers = [
+      { range: '1-5u',    mult: 1.0, color: 'var(--green)' },
+      { range: '6-20u',   mult: 1.6, color: 'var(--gold)' },
+      { range: '21-50u',  mult: 2.8, color: '#f59e0b' },
+      { range: '51-100u', mult: 4.5, color: 'var(--red)' },
+      { range: '100+',    mult: 7.0, color: '#dc2626' },
+    ];
+    var storeTierRows = '';
+    for (var si = 0; si < storeTiers.length; si++) {
+      var t = storeTiers[si];
+      storeTierRows += row(t.range, '<span style="color:' + t.color + '">×' + t.mult.toFixed(1) + '</span>', '');
+    }
+    // Contoh harga wool (baseW 0.55) dengan basis aktual
+    var wBasis = cb;
+    var woolBase = Math.max(1, Math.round(0.55 * wBasis));
+    var woolRows =
+      row('Wool 1-5 stack',   fmtN(woolBase) + '/stack',             '~' + (woolBase / Math.max(1,wBasis)).toFixed(1) + 'j') +
+      row('Wool 6-20 stack',  fmtN(Math.ceil(woolBase * 1.6)) + '/stack', 'tier ×1.6') +
+      row('Wool 21-50 stack', fmtN(Math.ceil(woolBase * 2.8)) + '/stack', 'tier ×2.8') +
+      row('Wool 51+ stack',   fmtN(Math.ceil(woolBase * 4.5)) + '/stack', 'tier ×4.5');
+    cards.push(buildCard('Store (Bahan Build)', '#10b981',
+      section('Kategori & Limit') +
+      row('Total Kategori', '6 kategori', 'Basic, Wool, Decor, Glass, Light, Utility') +
+      row('Limit Harian', '200 unit/kategori', 'reset 20:00 WIB') +
+      row('Max per Klik', '16 unit', 'anti accidental') +
+      section('Tier Progresif (per kategori/hari)') +
+      storeTierRows +
+      section('Contoh Harga Wool (basis ' + fmtN(wBasis) + '/jam)') +
+      woolRows +
+      note('Beli sedikit → <b style="color:var(--green)">murah</b>. Borong banyak → <b style="color:var(--red)">mahal</b>. Anti-monopoli, ramah pemula, semua koin dibakar sebagai sink. Buka dengan <b style="color:var(--gold)">/store</b>.'),
+      true
+    ));
+
     el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + cards.join('') + '</div>';
   }
 
@@ -489,6 +527,180 @@
     var g = s.gacha; if (!g) return;
     var grid = $('gacha-grid');
     if (grid) grid.innerHTML = mkStatCard('Total Pulls', '#c084fc', fmtN(g.pulls), 'semua pemain') + mkStatCard('Pemain Gacha', 'var(--cyan)', g.active, 'dari ' + s.n) + mkStatCard('Participation', 'var(--green)', g.rate + '%', 'aktif gacha') + mkStatCard('Avg Pulls', 'var(--gold)', s.n > 0 ? Math.round(g.pulls / s.n) : 0, 'per pemain');
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // WEALTH TAX MODULE — render from gacha_lb.guide.wealthTax
+  // ═══════════════════════════════════════════════════════════
+  function renderTax() {
+    if (!_data || !_data.lb) return;
+    var g = _data.lb.guide;
+    if (!g || !g.wealthTax) return;
+    var wt = g.wealthTax;
+    var lb = _data.lb;
+    var s = lb.summary || {};
+
+    // ── KPI cards ──
+    setText('tax-treasury', fmtN(wt.treasury || 0));
+
+    // Hitung jumlah player yang masuk tiap tier (dari LB coin)
+    var topCoin = (lb.coin || []);
+    var tier1Count = 0, tier2Count = 0, tier3Count = 0;
+    // Kita tidak punya full list, jadi estimate dari entries jika ada
+    var entries = safeParse(lb.entries, []) || [];
+    if (entries.length === 0 && topCoin.length > 0) entries = topCoin;
+    for (var i = 0; i < entries.length; i++) {
+      var bal = entries[i].coin || entries[i].c || 0;
+      if (bal >= (wt.tier3 || 50000)) tier3Count++;
+      else if (bal >= (wt.tier2 || 20000)) tier2Count++;
+      else if (bal >= (wt.tier1 || 5000)) tier1Count++;
+    }
+    var totalCand = tier1Count + tier2Count + tier3Count;
+    setText('tax-candidates', totalCand);
+
+    // Estimasi harian dari entries
+    var estDaily = 0;
+    for (var j = 0; j < entries.length; j++) {
+      var b = entries[j].coin || entries[j].c || 0;
+      var rate = 0;
+      if (b >= (wt.tier3 || 50000)) rate = (wt.rate3 || 2) / 100;
+      else if (b >= (wt.tier2 || 20000)) rate = (wt.rate2 || 1) / 100;
+      else if (b >= (wt.tier1 || 5000)) rate = (wt.rate1 || 0.5) / 100;
+      estDaily += Math.floor(b * rate);
+    }
+    setText('tax-estimate', fmtN(estDaily));
+
+    // Subsidy info
+    var sub = wt.subsidy || {};
+    setText('tax-subsidy', '+' + fmtN(sub.killBonus || 0));
+
+    // ── Tabel tier ──
+    var tiersBody = document.querySelector('#tbl-tax-tiers tbody');
+    if (tiersBody) {
+      tiersBody.innerHTML = ''
+        + '<tr>'
+        + '<td style="color:var(--green);font-weight:700">1</td>'
+        + '<td style="color:var(--gold)">' + fmtN(wt.tier1 || 5000) + '</td>'
+        + '<td style="text-align:right;color:var(--green);font-weight:700">' + (wt.rate1 || 0.5) + '%</td>'
+        + '<td style="text-align:right;color:var(--dim)">' + tier1Count + '</td>'
+        + '</tr>'
+        + '<tr>'
+        + '<td style="color:var(--gold);font-weight:700">2</td>'
+        + '<td style="color:var(--gold)">' + fmtN(wt.tier2 || 20000) + '</td>'
+        + '<td style="text-align:right;color:var(--gold);font-weight:700">' + (wt.rate2 || 1) + '%</td>'
+        + '<td style="text-align:right;color:var(--dim)">' + tier2Count + '</td>'
+        + '</tr>'
+        + '<tr>'
+        + '<td style="color:var(--red);font-weight:700">3</td>'
+        + '<td style="color:var(--gold)">' + fmtN(wt.tier3 || 50000) + '</td>'
+        + '<td style="text-align:right;color:var(--red);font-weight:700">' + (wt.rate3 || 2) + '%</td>'
+        + '<td style="text-align:right;color:var(--dim)">' + tier3Count + '</td>'
+        + '</tr>';
+    }
+
+    // ── Simulasi pajak ──
+    var simBody = document.querySelector('#tbl-tax-sim tbody');
+    if (simBody) {
+      var samples = [
+        { bal: wt.tier1 || 5000, rate: wt.rate1 || 0.5, color: 'var(--green)' },
+        { bal: 10000, rate: wt.rate1 || 0.5, color: 'var(--green)' },
+        { bal: wt.tier2 || 20000, rate: wt.rate2 || 1, color: 'var(--gold)' },
+        { bal: 35000, rate: wt.rate2 || 1, color: 'var(--gold)' },
+        { bal: wt.tier3 || 50000, rate: wt.rate3 || 2, color: 'var(--red)' },
+        { bal: 100000, rate: wt.rate3 || 2, color: 'var(--red)' }
+      ];
+      var simHtml = '';
+      for (var k = 0; k < samples.length; k++) {
+        var sm = samples[k];
+        var daily = Math.floor(sm.bal * sm.rate / 100);
+        var weekly = daily * 7;
+        simHtml += '<tr>'
+          + '<td style="color:var(--text);font-weight:600">' + fmtN(sm.bal) + '</td>'
+          + '<td style="color:' + sm.color + ';font-weight:700">' + sm.rate + '%</td>'
+          + '<td style="text-align:right;color:var(--red)">−' + fmtN(daily) + '</td>'
+          + '<td style="text-align:right;color:var(--red);opacity:.7">−' + fmtN(weekly) + '</td>'
+          + '</tr>';
+      }
+      simBody.innerHTML = simHtml;
+    }
+
+    // ── Subsidy detail ──
+    var subDet = $('tax-subsidy-detail');
+    if (subDet) {
+      var cap = sub.balanceCap || 1000;
+      var qm = sub.questMult || 2;
+      var kb = sub.killBonus || 1;
+      subDet.innerHTML = ''
+        + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+        + '<span style="color:var(--green);font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Kill Bonus:</b> +' + fmtN(kb) + ' koin/kill untuk player dengan saldo &lt; ' + fmtN(cap) + '.</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+        + '<span style="color:var(--gold);font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Quest Bonus:</b> ×' + qm + ' reward quest untuk player saldo rendah.</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+        + '<span style="color:var(--cyan);font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Cap Saldo:</b> ' + fmtN(cap) + ' koin. Saldo di atas ini tidak dapat subsidy.</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:flex-start;gap:8px">'
+        + '<span style="color:#f472b6;font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Sumber:</b> treasury pajak kekayaan — terdistribusi gradual ke player aktif.</span>'
+        + '</div>';
+    }
+
+    // ── [PhD-v2] UBI detail ──
+    var ubiDet = $('ubi-detail');
+    if (ubiDet) {
+      var ubi = (g.welfare && g.welfare.ubi) || { amount: 100, days: 7 };
+      ubiDet.innerHTML = ''
+        + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+        + '<span style="color:var(--green);font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Bonus:</b> +' + fmtN(ubi.amount) + ' koin/login untuk pemain baru.</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+        + '<span style="color:var(--gold);font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Durasi:</b> ' + ubi.days + ' hari pertama sejak register.</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+        + '<span style="color:var(--cyan);font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Total max:</b> ' + fmtN(ubi.amount * ubi.days) + ' koin — modal awal agar bisa gacha/land.</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:flex-start;gap:8px">'
+        + '<span style="color:#86efac;font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Rationale:</b> Banerjee–Duflo (Nobel 2019) — angkat lantai dulu, player retention naik.</span>'
+        + '</div>';
+    }
+
+    // ── [PhD-v2] Demurrage detail ──
+    var demDet = $('demurrage-detail');
+    if (demDet) {
+      var dem = (g.welfare && g.welfare.demurrage) || {
+        threshold: 50000, graceDays: 7, rateLow: 1, rateHigh: 2, rateHighDay: 14
+      };
+      demDet.innerHTML = ''
+        + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+        + '<span style="color:#c084fc;font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Target:</b> saldo &gt; ' + fmtN(dem.threshold) + ' yang tidak bertransaksi.</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+        + '<span style="color:var(--gold);font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Tarif:</b> hari ' + (dem.graceDays + 1) + '-' + dem.rateHighDay + ' tidak aktif = '
+        + dem.rateLow + '%/hari. Hari ' + (dem.rateHighDay + 1) + '+ = ' + dem.rateHigh + '%/hari.</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+        + '<span style="color:var(--green);font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Reset:</b> lakukan transfer/gacha/auction/land/store untuk reset activity.</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">'
+        + '<span style="color:var(--cyan);font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Grace:</b> ' + dem.graceDays + ' hari pertama bebas. Player aktif tidak pernah kena.</span>'
+        + '</div>'
+        + '<div style="display:flex;align-items:flex-start;gap:8px">'
+        + '<span style="color:#f472b6;font-weight:700">◆</span>'
+        + '<span><b style="color:var(--text)">Rationale:</b> Silvio Gesell (1916), Keynes — memaksa velocity, anti-hoarding.</span>'
+        + '</div>';
+    }
   }
 
   function mkStatCard(label, color, val, sub) {
@@ -1283,7 +1495,7 @@
     var topPct = c.max > 0 ? (c.max / ct * 100) : 0;
     var totalIn = 0, totalOut = 0;
     var srcKeys = ['mob_kill', 'gacha_refund', 'pvp_refund', 'first_sale', 'topup', 'weekly_reward'];
-    var snkKeys = ['gacha_cost', 'bank_tax', 'mob_penalty', 'pvp_penalty', 'auction_fee'];
+    var snkKeys = ['gacha_cost', 'bank_tax', 'mob_penalty', 'pvp_penalty', 'auction_fee', 'store_sink'];
     for (var i = 0; i < srcKeys.length; i++) totalIn += (fl[srcKeys[i]] || 0);
     for (var i = 0; i < snkKeys.length; i++) totalOut += Math.abs(fl[snkKeys[i]] || 0);
     var netAll = totalIn - totalOut;
@@ -1342,8 +1554,8 @@
     }
     if (totalIn > 0 || totalOut > 0) {
       infDesc.push('');
-      var srcLabel = { mob_kill: 'Farming', gacha_refund: 'Refund Gacha', pvp_refund: 'Refund PvP', first_sale: 'First Sale Bonus', topup: 'Admin Topup', weekly_reward: 'Reward Mingguan' };
-      var snkLabel = { gacha_cost: 'Gacha', bank_tax: 'Pajak Transfer', mob_penalty: 'Anti-Stack', pvp_penalty: 'Penalti PvP', auction_fee: 'Fee Auction' };
+      var srcLabel = { mob_kill: 'Farming', gacha_refund: 'Refund Gacha', pvp_refund: 'Refund PvP', first_sale: 'First Sale Bonus', topup: 'Admin Topup', weekly_reward: 'Reward Mingguan', ubi_injection: 'UBI Pemain Baru' };
+      var snkLabel = { gacha_cost: 'Gacha', bank_tax: 'Pajak Transfer', mob_penalty: 'Anti-Stack', pvp_penalty: 'Penalti PvP', auction_fee: 'Fee Auction', store_sink: 'Store Beli' };
       infDesc.push('Sumber penciptaan koin (injection):');
       for (var i = 0; i < srcKeys.length; i++) { var v = fl[srcKeys[i]] || 0; if (v > 0) infDesc.push('  • ' + (srcLabel[srcKeys[i]] || srcKeys[i]) + ': ' + tag(sevC.g, '+' + fmtN(v))); }
       if (totalOut > 0) {

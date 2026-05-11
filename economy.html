@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -77,6 +77,8 @@
       .mod-tab{font-size:.42rem;padding:5px 10px}
       .trend-metric-bar .tab{font-size:.38rem;padding:3px 8px}
       .trend-ohlc-bar{font-size:.36rem;gap:3px}
+      .ts-grid{grid-template-columns:1fr}
+      .ts-kpi-val{font-size:.56rem}
     }
     @media(max-width:480px){
       .eco-grid{grid-template-columns:1fr 1fr;gap:.35rem}
@@ -97,6 +99,106 @@
       .trend-ohlc-bar{font-size:.34rem;gap:2px}
       .trend-ohlc-bar span{padding:1px 4px !important}
     }
+
+    /* ════ STORE TAB — Compact, Professional ════ */
+    /* 2-column grid untuk Tax+Store */
+    .ts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+    .ts-col{display:flex;flex-direction:column;gap:8px;min-width:0}
+    .ts-col .cd{padding:10px 12px}
+    .ts-head{background:linear-gradient(180deg,var(--surface),rgba(255,255,255,0.008))}
+    .ts-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
+    .ts-kpi{text-align:center;padding:5px 3px;border-radius:4px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.03)}
+    .ts-kpi-lbl{font-family:'JetBrains Mono',monospace;font-size:.32rem;color:var(--mute);text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:2px}
+    .ts-kpi-val{font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ts-col .ptbl{font-size:.42rem}
+    .ts-col .ptbl th{font-size:.32rem;padding:4px 6px}
+    .ts-col .ptbl td{padding:4px 6px}
+    .ts-col .sec-title{font-size:.48rem}
+    /* Tax & Simulation tables can scroll horizontally if too wide */
+    .ts-col .cd > table.ptbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+    .ts-col .cd > table.ptbl thead,
+    .ts-col .cd > table.ptbl tbody{display:table;width:100%;table-layout:fixed}
+    /* Store tables in narrow column — horizontal scroll if needed */
+    .ts-col .st-body{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .ts-col .st-tbl{min-width:100%;font-size:.42rem}
+    .ts-col .st-tbl th{font-size:.32rem;padding:4px 6px;white-space:nowrap}
+    .ts-col .st-tbl td{padding:4px 6px}
+    .ts-col .st-tbl .name{font-size:.44rem}
+    .ts-col .st-tier-grid{grid-template-columns:repeat(5,1fr);gap:3px;padding:6px 8px}
+    .ts-col .st-tier{padding:4px 2px}
+    .ts-col .st-tier-mult{font-size:.44rem}
+    .ts-col .st-tier-cap,.ts-col .st-tier-lbl{font-size:.3rem}
+    .ts-col .st-cat-hd{padding:8px 10px;gap:6px}
+    .ts-col .st-cat-name{font-size:.52rem}
+    .ts-col .st-cat-tag{display:none}
+    .ts-col .st-cat-sub{font-size:.36rem}
+    .ts-col .st-cat-count{font-size:.32rem;padding:1px 5px}
+    .ts-col .st-search{min-width:100px;max-width:none;flex:1;font-size:.52rem;padding:5px 10px}
+    .ts-col .st-btn{font-size:.4rem;padding:4px 10px}
+    .ts-col .st-legend{font-size:.38rem;padding:6px 10px;line-height:1.5}
+    /* Dalam grid kanan/kiri, hide tier tengah untuk hemat space */
+    .ts-col .st-tbl .tier-mid{display:none}
+    .ts-col .st-tbl .per-unit-col{display:none}
+    .st-hdr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm)}
+    .st-search{flex:1;min-width:180px;max-width:300px;font-family:'Inter',sans-serif;font-size:.6rem;padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);outline:none;transition:border-color .2s}
+    .st-search:focus{border-color:var(--ac)}
+    .st-search::placeholder{color:var(--mute)}
+    .st-cat{margin-bottom:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
+    .st-cat-hd{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;user-select:none;transition:background .15s;border-left:3px solid transparent}
+    .st-cat-hd:hover{background:rgba(255,255,255,.02)}
+    .st-cat-hd .arr{font-family:'JetBrains Mono',monospace;font-size:.48rem;color:var(--mute);transition:transform .2s;width:10px;display:inline-block}
+    .st-cat.open .st-cat-hd .arr{transform:rotate(90deg)}
+    .st-cat-name{font-weight:700;font-size:.64rem;letter-spacing:.3px}
+    .st-cat-sub{font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mute);margin-left:auto;white-space:nowrap}
+    .st-cat-tag{color:var(--dim);font-size:.44rem;font-family:'Inter',sans-serif}
+    .st-body{display:none;padding:0 8px 10px}
+    .st-cat.open .st-body{display:block}
+    .st-tbl{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.5rem;margin-top:4px}
+    .st-tbl th{text-align:left;color:var(--mute);font-weight:600;padding:6px 10px;border-bottom:1px solid var(--border);font-size:.38rem;text-transform:uppercase;letter-spacing:.5px;background:rgba(0,0,0,.15)}
+    .st-tbl td{padding:5px 10px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text);vertical-align:middle}
+    .st-tbl tr:hover td{background:rgba(255,255,255,.015)}
+    .st-tbl td.num{text-align:right;font-family:'JetBrains Mono',monospace}
+    .st-tbl .name{color:var(--text);font-family:'Inter',sans-serif;font-size:.52rem;font-weight:500}
+    .st-tbl .qty{color:var(--mute);font-size:.42rem}
+    .st-tbl .price-1x{color:var(--green);font-weight:700}
+    .st-tbl .price-tier{color:var(--dim);font-size:.44rem}
+    .st-tbl .per-unit{color:var(--mute);font-size:.42rem}
+    .st-tbl tr.hidden{display:none}
+    .st-tier-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:10px 14px;background:rgba(255,255,255,.015);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:.4rem}
+    .st-tier{text-align:center;padding:5px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.04);background:rgba(0,0,0,.15)}
+    .st-tier-mult{font-weight:700;font-size:.52rem;margin-bottom:2px}
+    .st-tier-cap{color:var(--mute);font-size:.36rem}
+    .st-tier-lbl{color:var(--dim);font-size:.36rem;text-transform:uppercase;letter-spacing:.3px;margin-top:1px}
+    .st-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+    .st-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;text-align:center}
+    .st-stat-lbl{font-size:.36rem;color:var(--mute);letter-spacing:.6px;margin-bottom:3px;text-transform:uppercase;font-weight:600}
+    .st-stat-val{font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:700;line-height:1}
+    .st-stat-sub{font-size:.36rem;color:var(--dim);margin-top:2px}
+    .st-legend{font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--dim);padding:8px 14px;background:rgba(255,255,255,.01);border-left:2px solid var(--ac);margin-bottom:10px;border-radius:4px;line-height:1.6}
+    .st-legend b{color:var(--text)}
+    .st-legend .rule{margin-right:10px;white-space:nowrap}
+    .st-empty{text-align:center;padding:2rem;color:var(--mute);font-size:.6rem;font-family:'JetBrains Mono',monospace}
+    .st-cat-count{display:inline-block;min-width:18px;padding:1px 6px;font-size:.36rem;color:var(--mute);background:rgba(255,255,255,.04);border-radius:8px;font-weight:600;margin-left:4px}
+    .st-btn{font-family:'JetBrains Mono',monospace;font-size:.44rem;padding:5px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;font-weight:600;letter-spacing:.3px;transition:all .15s}
+    .st-btn:hover{border-color:var(--border2);background:rgba(255,255,255,.04)}
+    .st-btn.active{background:rgba(168,85,247,.1);border-color:var(--ac);color:var(--ac)}
+    @media(max-width:700px){
+      .st-tier-grid{gap:3px;padding:8px}
+      .st-tier{padding:3px 2px}
+      .st-tier-mult{font-size:.42rem}
+      .st-tier-cap,.st-tier-lbl{font-size:.3rem}
+      .st-stats{grid-template-columns:repeat(2,1fr)}
+      .st-tbl{font-size:.42rem}
+      .st-tbl th{font-size:.32rem;padding:5px 6px}
+      .st-tbl td{padding:4px 6px}
+      .st-tbl .name{font-size:.46rem}
+      .st-search{min-width:140px}
+    }
+    @media(max-width:480px){
+      .st-tbl .per-unit{display:none}
+      .st-tbl th.per-unit-col,.st-tbl td.per-unit-col{display:none}
+      .st-stat-val{font-size:.64rem}
+    }
   </style>
 </head>
 
@@ -116,6 +218,7 @@
 <div class="mod-tabs">
   <button class="mod-tab active" data-mod="analytics">ANALYTICS</button>
   <button class="mod-tab" data-mod="logs">ACTIVITY LOGS</button>
+  <button class="mod-tab" data-mod="tax-store">TAX &amp; STORE</button>
   <button class="mod-tab" data-mod="panduan">PANDUAN</button>
 </div>
 
@@ -303,6 +406,109 @@
 
       </div>
 
+      <!-- ════════ MODULE: TAX & STORE (2-column grid) ════════ -->
+      <div class="mod" id="mod-tax-store">
+
+        <div class="ts-grid">
+
+          <!-- ════════ LEFT: WEALTH TAX ════════ -->
+          <div class="ts-col">
+            <div class="cd ts-head">
+              <div class="sec-hd"><span class="sec-title" style="color:#f472b6">WEALTH TAX</span><span class="pill">HARIAN</span></div>
+              <div class="ts-kpi-row">
+                <div class="ts-kpi">
+                  <div class="ts-kpi-lbl">Treasury</div>
+                  <div class="ts-kpi-val" style="color:#f472b6" id="tax-treasury">—</div>
+                </div>
+                <div class="ts-kpi">
+                  <div class="ts-kpi-lbl">Kandidat</div>
+                  <div class="ts-kpi-val" style="color:var(--gold)" id="tax-candidates">—</div>
+                </div>
+                <div class="ts-kpi">
+                  <div class="ts-kpi-lbl">Est/Hari</div>
+                  <div class="ts-kpi-val" style="color:var(--red)" id="tax-estimate">—</div>
+                </div>
+                <div class="ts-kpi">
+                  <div class="ts-kpi-lbl">Subsidi</div>
+                  <div class="ts-kpi-val" style="color:var(--green)" id="tax-subsidy">—</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="cd">
+              <div class="sec-hd"><span class="sec-title">TIER PAJAK</span></div>
+              <table class="ptbl" id="tbl-tax-tiers">
+                <thead><tr><th>Tier</th><th>Saldo Min</th><th style="text-align:right">Rate</th><th style="text-align:right">Player</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <div class="cd">
+              <div class="sec-hd"><span class="sec-title">SIMULASI</span></div>
+              <table class="ptbl" id="tbl-tax-sim">
+                <thead><tr><th>Saldo</th><th>Rate</th><th style="text-align:right">/hari</th><th style="text-align:right">/minggu</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <div class="cd">
+              <div class="sec-hd"><span class="sec-title">SUBSIDI PLAYER AKTIF</span></div>
+              <div id="tax-subsidy-detail" style="font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);line-height:1.7"></div>
+            </div>
+
+            <div class="cd">
+              <div class="sec-hd"><span class="sec-title" style="color:var(--green)">UBI PEMAIN BARU</span><span class="pill g">7 HARI</span></div>
+              <div id="ubi-detail" style="font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);line-height:1.7">—</div>
+            </div>
+
+            <div class="cd">
+              <div class="sec-hd"><span class="sec-title" style="color:#c084fc">DEMURRAGE</span><span class="pill">ANTI-HOARD</span></div>
+              <div id="demurrage-detail" style="font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);line-height:1.7">—</div>
+            </div>
+          </div>
+
+          <!-- ════════ RIGHT: STORE ════════ -->
+          <div class="ts-col">
+            <div class="cd ts-head">
+              <div class="sec-hd"><span class="sec-title" style="color:var(--gold)">STORE (BAHAN BUILD)</span><span class="pill g" id="st-basis-pill">—</span></div>
+              <div class="ts-kpi-row">
+                <div class="ts-kpi">
+                  <div class="ts-kpi-lbl">Basis</div>
+                  <div class="ts-kpi-val" style="color:var(--gold)" id="st-basis">—</div>
+                </div>
+                <div class="ts-kpi">
+                  <div class="ts-kpi-lbl">Total</div>
+                  <div class="ts-kpi-val" style="color:var(--cyan)" id="st-total">—</div>
+                </div>
+                <div class="ts-kpi">
+                  <div class="ts-kpi-lbl">Kuota</div>
+                  <div class="ts-kpi-val" style="color:var(--green)" id="st-quota">—</div>
+                </div>
+                <div class="ts-kpi">
+                  <div class="ts-kpi-lbl">Reset</div>
+                  <div class="ts-kpi-val" style="color:var(--ac);font-size:.6rem" id="st-reset">20:00</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="cd" style="padding:10px 12px">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                <input type="text" class="st-search" id="st-search" placeholder="Cari item..." autocomplete="off">
+                <button class="st-btn" id="st-expand">Buka</button>
+                <button class="st-btn" id="st-collapse">Tutup</button>
+              </div>
+              <div class="st-legend" style="margin-top:8px;margin-bottom:0">
+                Harga = <b style="color:var(--green)">baseW × basis × qty</b> | Tier 1-5 progresif | Beli di <code style="color:var(--ac)">/store</code>
+              </div>
+            </div>
+
+            <div id="st-catalog"></div>
+          </div>
+
+        </div><!-- .ts-grid -->
+
+      </div>
+
       <!-- ════════ MODULE: PANDUAN ════════ -->
       <div class="mod" id="mod-panduan">
         <div class="cd" style="font-family:'JetBrains Mono',monospace;font-size:.44rem;color:var(--dim);line-height:1.8">
@@ -333,8 +539,8 @@
             <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Aliran Koin</div>
             <p style="margin-bottom:6px">Darimana koin masuk dan kemana keluar dalam 5 menit terakhir.</p>
             <table style="width:100%;border-collapse:collapse;font-size:.4rem">
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--green);padding:5px 8px;font-weight:600;width:100px">Sumber (+)</td><td style="padding:5px 8px"><b>Mob Kill</b> = bunuh mob (2 koin/kill). <b>Gacha Refund</b> = pengembalian. <b>Weekly LB</b> = hadiah mingguan. <b>1st Sale</b> = bonus penjualan pertama. <b>Land Refund</b> = refund hapus land. <b>Tax Distrib</b> = distribusi treasury ke player.</td></tr>
-              <tr><td style="color:var(--red);padding:5px 8px;font-weight:600">Pengeluaran (-)</td><td style="padding:5px 8px"><b>Gacha Cost</b> = biaya gacha. <b>Bank Tax</b> = pajak transfer. <b>Anti-Stack</b> = penalti farm berlebihan. <b>Auction Fee</b> = biaya listing. <b>Wealth Tax</b> = pajak kekayaan harian (>5K: 0.5%, >20K: 1%, >50K: 2%). <b>Land Buy</b> = beli land (koin). <b>Land PPN</b> = pajak land.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--green);padding:5px 8px;font-weight:600;width:100px">Sumber (+)</td><td style="padding:5px 8px"><b>Mob Kill</b> = bunuh mob (2 koin/kill). <b>Gacha Refund</b> = pengembalian. <b>Weekly LB</b> = hadiah mingguan. <b>1st Sale</b> = bonus penjualan pertama. <b>Land Refund</b> = refund hapus land. <b>Tax Distrib</b> = distribusi treasury ke player. <b style="color:#86efac">UBI</b> = bonus player baru 7 hari.</td></tr>
+              <tr><td style="color:var(--red);padding:5px 8px;font-weight:600">Pengeluaran (-)</td><td style="padding:5px 8px"><b>Gacha Cost</b> = biaya gacha. <b>Bank Tax</b> = pajak transfer <b style="color:#86efac">flat 2%</b>. <b>Anti-Stack</b> = penalti farm berlebihan. <b>Auction Fee</b> = biaya listing. <b>Wealth Tax</b> = pajak kekayaan harian. <b style="color:#c084fc">Demurrage</b> = biaya hoarding saldo &gt;50K tak aktif &gt;7 hari (1-2%/hari). <b>Land Buy</b> = beli land (koin). <b>Land PPN</b> = pajak land. <b>Store Buy</b> = pembelian bahan build di /store.</td></tr>
             </table>
             <p style="margin-top:6px"><span style="color:var(--green)">Sumber > Pengeluaran</span> = inflasi. <span style="color:var(--red)">Pengeluaran > Sumber</span> = deflasi. Idealnya <span style="color:var(--cyan)">seimbang</span>.</p>
           </div>
@@ -398,7 +604,7 @@
             <div style="color:var(--ac);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Treasury & Wealth Tax</div>
             <p style="margin-bottom:6px">Sistem pajak kekayaan otomatis untuk menjaga keseimbangan ekonomi server.</p>
             <table style="width:100%;border-collapse:collapse;font-size:.4rem">
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600;width:120px">Treasury Saat Ini</td><td style="padding:5px 8px">Total koin dari pajak kekayaan harian. Koin ini didistribusikan <b>secara gradual</b> ke player aktif.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600;width:120px">Treasury Saat Ini</td><td style="padding:5px 8px">Total koin dari pajak kekayaan harian + demurrage. Koin ini didistribusikan <b>secara gradual</b> ke player aktif.</td></tr>
               <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Terkumpul</td><td style="padding:5px 8px">Jumlah koin yang dipotong dari player dalam periode yang dipilih (24j/7h/30h).</td></tr>
               <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Didistribusi</td><td style="padding:5px 8px">Jumlah koin yang sudah dibagikan kembali ke player dari treasury via subsidi aktivitas.</td></tr>
               <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--gold);padding:5px 8px;font-weight:600">Tier Pajak</td><td style="padding:5px 8px">Saldo <b>&gt;5.000</b> = 0.5%/hari. Saldo <b>&gt;20.000</b> = 1%/hari. Saldo <b>&gt;50.000</b> = 2%/hari.</td></tr>
@@ -408,14 +614,41 @@
               <div>1. Pajak dipotong <b style="color:var(--gold)">otomatis 1x/hari</b> jam 20:00 WIB dari scoreboard.</div>
               <div>2. Berlaku untuk <b>semua player</b> (online & offline) yang saldo di atas threshold.</div>
               <div>3. Koin terpotong masuk ke <b style="color:#f472b6">Treasury</b>.</div>
-              <div>4. Treasury didistribusikan <b style="color:var(--green)">secara gradual</b> melalui <b>Subsidi Aktivitas</b>:</div>
+              <div>4. Setelah pajak, <b style="color:var(--green)">auto-distribusi</b> otomatis berjalan ke player saldo rendah.</div>
+              <div>5. Treasury juga didistribusi gradual via <b>Subsidi Aktivitas</b>:</div>
               <div style="padding-left:16px">
                 <div>- Kill mob: <b style="color:var(--green)">+1 koin bonus</b> per kill dari treasury</div>
                 <div>- Selesaikan quest/achievement: <b style="color:var(--green)">+20% bonus</b> dari treasury</div>
               </div>
-              <div>5. <b>Syarat subsidi:</b> saldo kamu harus <b style="color:var(--cyan)">&lt; 5.000 koin</b> (tier 1 pajak).</div>
-              <div>6. Semakin aktif bermain, semakin banyak subsidi yang kamu dapat.</div>
-              <div>7. Jika treasury habis atau saldo kamu &gt; 5.000, subsidi otomatis berhenti.</div>
+              <div>6. <b>Syarat subsidi:</b> saldo kamu harus <b style="color:var(--cyan)">&lt; 5.000 koin</b>.</div>
+              <div>7. Semakin aktif bermain, semakin banyak subsidi yang kamu dapat.</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:18px">
+            <div style="color:var(--green);font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">UBI — Bantuan Pemain Baru</div>
+            <p style="margin-bottom:6px"><b style="color:var(--text)">Universal Basic Income</b> untuk player yang baru terdaftar. Berdasarkan riset Banerjee–Duflo (Nobel Ekonomi 2019): player baru yang masuk ke ekonomi tanpa modal awal akan cepat bosan dan keluar.</p>
+            <table style="width:100%;border-collapse:collapse;font-size:.4rem">
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--green);padding:5px 8px;font-weight:600;width:120px">Jumlah</td><td style="padding:5px 8px"><b>+100 koin</b> otomatis tiap login, di luar reward daily biasa.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--green);padding:5px 8px;font-weight:600">Durasi</td><td style="padding:5px 8px"><b>7 hari</b> sejak login pertama. Setelah itu berhenti otomatis.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:var(--green);padding:5px 8px;font-weight:600">Syarat</td><td style="padding:5px 8px">Tidak ada. Otomatis untuk semua player baru. Anti-abuse: 1x/hari (sinkron dengan period daily login).</td></tr>
+              <tr><td style="color:var(--green);padding:5px 8px;font-weight:600">Total Max</td><td style="padding:5px 8px"><b>700 koin</b> selama 7 hari — cukup untuk 1 gacha 10x pull atau beli land kecil.</td></tr>
+            </table>
+          </div>
+
+          <div style="margin-bottom:18px">
+            <div style="color:#c084fc;font-weight:700;font-size:.48rem;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:4px">Demurrage — Biaya Menimbun</div>
+            <p style="margin-bottom:6px">Berdasarkan teori <b style="color:var(--text)">Silvio Gesell</b> (1916), dipuji Keynes dalam <i>General Theory</i>. Koin yang hanya ditimbun tanpa digunakan kehilangan nilai bertahap. Ini <b>memaksa velocity naik</b> tanpa menghukum kesuksesan.</p>
+            <table style="width:100%;border-collapse:collapse;font-size:.4rem">
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:#c084fc;padding:5px 8px;font-weight:600;width:120px">Siapa yang kena?</td><td style="padding:5px 8px">Hanya saldo <b>&gt; 50.000 koin</b> yang tidak bertransaksi &gt; 7 hari.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:#c084fc;padding:5px 8px;font-weight:600">Tarif</td><td style="padding:5px 8px">Hari 8-14 tidak aktif = <b>1%/hari</b>. Hari 15+ = <b>2%/hari</b>.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:#c084fc;padding:5px 8px;font-weight:600">Cara reset</td><td style="padding:5px 8px">Lakukan transaksi: transfer bank, beli/jual auction, gacha pull, beli land, atau beli di /store. Activity timestamp akan ter-update otomatis.</td></tr>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04)"><td style="color:#c084fc;padding:5px 8px;font-weight:600">Grace 7 hari</td><td style="padding:5px 8px">Satu minggu pertama tidak ada potongan, biar tidak perlu khawatir kalau kamu lagi sibuk.</td></tr>
+              <tr><td style="color:#c084fc;padding:5px 8px;font-weight:600">Hasil masuk</td><td style="padding:5px 8px">Treasury — sama seperti wealth tax, ikut redistribusi ke player saldo rendah.</td></tr>
+            </table>
+            <div style="margin-top:8px;padding:8px 10px;border-radius:6px;background:rgba(192,132,252,0.05);line-height:2">
+              <div style="color:#c084fc;font-weight:700;margin-bottom:4px">Cek status kamu:</div>
+              <div>Ketik <code style="color:var(--ac)">/lt:demurrage</code> di chat untuk preview status aktivitas dan potongan berikutnya.</div>
             </div>
           </div>
 
@@ -449,6 +682,7 @@
 <div class="dc-toast" id="dc-toast">Kode disalin!</div>
 <script>var SB_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co', SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI'</script>
 <script src="js/economy-page.js"></script>
+<script src="js/store-page.js" defer></script>
 <script src="js/page-nav.js"></script>
 <script src="js/auto-refresh.js"></script>
 </body>
