@@ -492,7 +492,7 @@
     // ━━━ 5. WEALTH TAX ━━━
     var wt = g.wealthTax;
     var aggWt = _aggFlow();
-    var wtFlowTotal    = Math.abs(aggWt.flow.wealth_tax || 0);
+    var wtFlowTotal    = Math.abs(aggWt.flow.wealth_tax || 0) + Math.abs(aggWt.flow.demurrage || 0);
     var wtDistributed  = Math.abs(aggWt.flow.tax_distribute || 0);
     // Persistensi: simpan nilai non-zero ke localStorage (TTL 48 jam)
     if (wtFlowTotal > 0 || wtDistributed > 0) {
