@@ -79,6 +79,7 @@
       .trend-ohlc-bar{font-size:.36rem;gap:3px}
       .ts-grid{grid-template-columns:1fr}
       .ts-kpi-val{font-size:.56rem}
+      .guide-grid{grid-template-columns:1fr}
     }
     @media(max-width:480px){
       .eco-grid{grid-template-columns:1fr 1fr;gap:.35rem}
@@ -98,11 +99,15 @@
       .trend-zoom span{font-size:.36rem}
       .trend-ohlc-bar{font-size:.34rem;gap:2px}
       .trend-ohlc-bar span{padding:1px 4px !important}
+      .guide-grid{grid-template-columns:1fr;gap:8px}
     }
 
     /* ════ STORE TAB — Compact, Professional ════ */
     /* 2-column grid untuk Tax+Store */
     .ts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+    /* Guide cards grid — responsive 2-col → 1-col */
+    .guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media(max-width:900px){.guide-grid{grid-template-columns:1fr}}
     .ts-col{display:flex;flex-direction:column;gap:8px;min-width:0}
     .ts-col .cd{padding:10px 12px}
     .ts-head{background:linear-gradient(180deg,var(--surface),rgba(255,255,255,0.008))}

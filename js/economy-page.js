@@ -509,16 +509,16 @@
     }
     var rangeL = { day: '24j', week: '7h', month: '30h' }[_trendRange] || '24j';
     function wtStatBox(label, val, color) {
-      return '<div style="flex:1;min-width:80px;text-align:center;padding:8px 6px;border-radius:6px;' +
+      return '<div style="text-align:center;padding:10px 4px;border-radius:6px;' +
         'background:linear-gradient(135deg,rgba(244,114,182,0.05),rgba(244,114,182,0.01));' +
-        'border:1px solid rgba(244,114,182,0.1)">' +
-        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.30rem;color:var(--mute);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">' + label + '</div>' +
-        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.58rem;font-weight:700;color:' + color + ';line-height:1">' + val + '</div>' +
+        'border:1px solid rgba(244,114,182,0.1);min-width:0">' +
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.32rem;color:var(--mute);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">' + label + '</div>' +
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.52rem;font-weight:700;color:' + color + ';line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + val + '</div>' +
         '</div>';
     }
     var treasuryVal = (wt && wt.treasury !== undefined) ? wt.treasury : 0;
     var treasuryBar =
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' +
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">' +
         wtStatBox('Treasury Saat Ini', fmtN(treasuryVal) + ' Koin', '#f472b6') +
         wtStatBox('Terkumpul ' + rangeL, wtFlowTotal > 0 ? fmtN(wtFlowTotal) : '0', 'var(--red)') +
         wtStatBox('Didistribusi ' + rangeL, wtDistributed > 0 ? fmtN(wtDistributed) : '0', 'var(--green)') +
@@ -599,7 +599,7 @@
       note('Beli sedikit → <b style="color:var(--green)">murah</b>. Borong banyak → <b style="color:var(--red)">mahal</b>. Anti-monopoli, ramah pemula, semua koin dibakar sebagai sink. Buka dengan <b style="color:var(--gold)">/store</b>.')
     ));
 
-    el.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' + cards.join('') + '</div>';
+    el.innerHTML = '<div class="guide-grid">' + cards.join('') + '</div>';
   }
 
   function renderGacha(s) {
