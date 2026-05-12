@@ -243,6 +243,8 @@
     return { flow: f, bankVol: bv, auctionVol: av, snapshots: cnt, avgGini: giniCnt > 0 ? gini / giniCnt : 0 };
   }
 
+  var _lastPriceSnapshot = null;
+
   function renderPricing(s) {
     var agg = _aggFlow();
     var n = s.n || 1, gini = s.gini || 0;
@@ -275,12 +277,88 @@
     ];
     var colors = { Land: 'var(--green)', Gacha: '#c084fc', Market: 'var(--cyan)' };
     var body = document.querySelector('#tbl-price tbody'); if (!body) return;
+
+    // ── Hitung pricing untuk snapshot sebelumnya dari _trendData ────────────
+    // Ini memberikan delta yang SELALU tampil (bukan render-to-render comparison)
+    var prev = {};
+    try {
+      if (Array.isArray(_trendData) && _trendData.length >= 2) {
+        var prevRow = _trendData[_trendData.length - 2];
+        var prevN = prevRow.player_count || 1;
+        var prevMed = prevRow.coin_median || 0;
+        var prevAvg = prevRow.coin_avg || 0;
+        var prevCT = prevRow.coin_total || 0;
+        var prevCF = prevRow.coin_flow;
+        var prevFlow = prevCF ? (typeof prevCF === 'string' ? safeParse(prevCF, {}) : prevCF) : {};
+        var prevOrg = (prevFlow.mob_kill || 0) + (prevFlow.gacha_refund || 0) + (prevFlow.pvp_refund || 0) + (prevFlow.first_sale || 0);
+        var prevIncPerHour = prevN > 0 ? (prevOrg / prevN) * 12 : 0;
+        var prevBV = prevFlow._bv || 0, prevAV = prevFlow._av || 0;
+        var prevVel = prevCT > 0 ? (prevBV + prevAV) / prevCT : 0.01;
+        var prevVMul = Math.max(0.8, Math.min(1.3, prevVel * 20));
+        var prevGini = prevFlow._gini || 0;
+        var prevGMul = prevGini > 0.5 ? 0.7 : prevGini > 0.3 ? 0.85 : 1.0;
+        var pA1 = prevIncPerHour, pA2 = prevMed > 0 ? prevMed * 0.02 : 0, pA3 = prevAvg > 0 ? prevAvg * 0.01 : 0;
+        var prevCoinBasis = Math.max(pA1, pA2, pA3, 1);
+        var prevTiers = { basic: [0.5, 1, 2], mid: [2, 4, 6], premium: [4, 8, 16], endgame: [12, 24, 48], luxury: [24, 48, 96] };
+        function pCalc(cat) {
+          var t = prevTiers[cat];
+          return [Math.round(prevCoinBasis * t[0] * prevVMul * prevGMul), Math.round(prevCoinBasis * t[1] * prevVMul * prevGMul), Math.round(prevCoinBasis * t[2] * prevVMul * prevGMul)];
+        }
+        prev['Land 10x10'] = pCalc('premium');
+        prev['Land 30x30+'] = pCalc('luxury');
+        prev['Land Extend'] = pCalc('mid');
+        prev['EQ 1x Pull'] = pCalc('basic');
+        prev['EQ 10x Pull'] = pCalc('mid');
+        prev['PT 1x Pull'] = [10, 10, 10];
+        prev['PT 10x Pull'] = [90, 90, 90];
+        prev['Auction Listing'] = pCalc('basic');
+        prev['Rare Item (AH)'] = pCalc('endgame');
+      }
+    } catch (e) { prev = {}; }
+
+    function deltaCell(curVal, prevVal, baseColor, suffix) {
+      var valStr = fmtN(curVal) + (suffix || '');
+      if (prevVal === null || prevVal === undefined || !isFinite(prevVal) || prevVal <= 0 || prevVal === curVal) {
+        return '<td style="text-align:right;color:' + baseColor + ';font-weight:600">' + valStr + '</td>';
+      }
+      var diff = curVal - prevVal;
+      var pct = (diff / prevVal) * 100;
+      if (!isFinite(pct)) {
+        return '<td style="text-align:right;color:' + baseColor + ';font-weight:600">' + valStr + '</td>';
+      }
+      var isUp = diff > 0;
+      var arrow = isUp ? '▲' : '▼';
+      var arrowColor = isUp ? '#26a69a' : '#ef5350';
+      var sign = isUp ? '+' : '';
+      var pctStr;
+      if (Math.abs(pct) < 0.1) pctStr = sign + diff;
+      else if (Math.abs(pct) >= 1000) pctStr = sign + '999%+';
+      else pctStr = sign + pct.toFixed(1) + '%';
+      return '<td style="text-align:right;color:' + baseColor + ';font-weight:600">' +
+        valStr +
+        '<span style="display:inline-block;margin-left:4px;font-size:.32rem;color:' + arrowColor + ';font-weight:500" title="Sebelumnya: ' + fmtN(prevVal) + '">' + arrow + ' ' + pctStr + '</span>' +
+        '</td>';
+    }
+
     var h = '';
     for (var i = 0; i < items.length; i++) {
       var it = items[i], cc = colors[it[1]] || 'var(--mute)', pr = it[2];
-      h += '<tr><td style="font-weight:600">' + it[0] + '</td><td style="color:' + cc + '">' + it[1] + '</td><td style="text-align:right;color:var(--dim)">' + fmtN(pr[0]) + it[4] + '</td><td style="text-align:right;color:var(--green);font-weight:700">' + fmtN(pr[1]) + it[4] + '</td><td style="text-align:right;color:var(--dim)">' + fmtN(pr[2]) + it[4] + '</td><td style="color:var(--mute);font-size:.36rem">' + it[3] + '</td></tr>';
+      var key = it[0];
+      var prevArr = prev[key];
+      var prevMin = prevArr ? prevArr[0] : null;
+      var prevIdeal = prevArr ? prevArr[1] : null;
+      var prevMax = prevArr ? prevArr[2] : null;
+      h += '<tr>' +
+        '<td style="font-weight:600">' + it[0] + '</td>' +
+        '<td style="color:' + cc + '">' + it[1] + '</td>' +
+        deltaCell(pr[0], prevMin, 'var(--dim)', it[4]) +
+        deltaCell(pr[1], prevIdeal, 'var(--green)', it[4]) +
+        deltaCell(pr[2], prevMax, 'var(--dim)', it[4]) +
+        '<td style="color:var(--mute);font-size:.36rem">' + it[3] + '</td>' +
+        '</tr>';
     }
     body.innerHTML = h;
+
     var basisEl = $('pricing-basis');
     if (basisEl) {
       var g = s.gem || {};
@@ -370,13 +448,16 @@
     // ━━━ 3. AUCTION ━━━
     var ac = g.auction;
     cards.push(buildCard('Auction', 'var(--cyan)',
-      section('Biaya & Limit') +
-      row('Listing Fee', ac.feePct + '%', 'dari harga') +
+      section('Fee Berdasarkan Tier Player') +
+      row('Pemula (<5K)', '0%', 'fee listing gratis') +
+      row('Menengah (5K-50K)', '1%', 'fee ringan') +
+      row('Premium (50K+)', '3%', 'fee penuh') +
+      section('Limit & Waktu') +
       row('Range Harga', fmtN(ac.minPrice) + ' — ' + fmtN(ac.maxPrice), '') +
       row('Durasi', ac.durationH + ' jam', '') +
       row('Max Listing', ac.maxPerPlayer + '/player', ac.maxGlobal + ' global') +
       row('First Sale Bonus', '+' + fmtN(ac.firstSaleBonus), 'sekali') +
-      note('Bid increment +' + ac.bidIncrPct + '% (min ' + fmtN(ac.minBidIncr) + ') · Anti-snipe ' + ac.antiSnipeMin + ' menit')
+      note('Fee progresif mendukung player baru. Bid increment +' + ac.bidIncrPct + '% (min ' + fmtN(ac.minBidIncr) + ') · Anti-snipe ' + ac.antiSnipeMin + ' menit')
     ));
 
     // ━━━ 4. BANK ━━━
@@ -931,10 +1012,200 @@
     warn.id = 'outlier-warn';
     warn.style.cssText = 'font-family:\'JetBrains Mono\',monospace;font-size:.42rem;background:rgba(239,83,80,0.12);border:1px solid rgba(239,83,80,0.35);border-radius:6px;padding:8px 12px;margin-bottom:8px;color:#fca5a5;display:flex;align-items:center;gap:8px;line-height:1.4';
     warn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;color:#ef5350"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-      '<span><b style="color:#ef5350">PERINGATAN:</b> ' + count + ' snapshot anomali disaring otomatis (kemungkinan disebabkan BDS duplikat yang aktif bersamaan). Grafik ditampilkan tanpa data corrupt. Harap hapus data tersebut dari Supabase tabel <b>economy_history</b> untuk membersihkan permanen.</span>' +
-      '<button onclick="this.parentNode.remove()" style="margin-left:auto;background:none;border:none;color:#ef5350;cursor:pointer;font-size:.5rem;padding:2px 6px;border-radius:4px;flex-shrink:0" title="Tutup">✕</button>';
+      '<span><b style="color:#ef5350">' + count + ' snapshot anomali</b> disaring dari grafik. Penyebab umum: BDS duplikat aktif bersamaan.</span>' +
+      '<button id="cleanup-anomaly-btn" style="background:rgba(239,83,80,0.2);border:1px solid rgba(239,83,80,0.5);color:#fca5a5;cursor:pointer;font-size:.42rem;padding:4px 10px;border-radius:4px;flex-shrink:0;font-family:inherit;margin-left:auto" title="Admin only">🔒 Bersihkan</button>' +
+      '<button id="reset-chart-btn" style="background:rgba(239,83,80,0.35);border:1px solid rgba(239,83,80,0.7);color:#fff;cursor:pointer;font-size:.42rem;padding:4px 10px;border-radius:4px;flex-shrink:0;font-family:inherit" title="Admin only — Hapus SEMUA data history">🔒 Reset Total</button>' +
+      '<button onclick="this.parentNode.remove()" style="background:none;border:none;color:#ef5350;cursor:pointer;font-size:.5rem;padding:2px 6px;border-radius:4px;flex-shrink:0" title="Tutup">✕</button>';
     var trendCard = document.getElementById('trend-card');
     if (trendCard) trendCard.insertBefore(warn, trendCard.firstChild);
+    var btn = document.getElementById('cleanup-anomaly-btn');
+    if (btn) btn.addEventListener('click', function () { _adminGate(function () { _cleanupAnomalies(btn); }); });
+    var rbtn = document.getElementById('reset-chart-btn');
+    if (rbtn) rbtn.addEventListener('click', function () { _adminGate(function () { _resetAllHistory(rbtn); }); });
+  }
+
+  // ═══ ADMIN AUTH GATE ═══
+  // Password di-hash SHA-256 supaya plain text tidak bocor di source.
+  // Session berlaku 10 menit setelah auth sukses (tersimpan di sessionStorage).
+  // Untuk ganti password: replace hash di bawah + password mentah di console:
+  //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('password_baru')).then(b => console.log(Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join('')))
+  var ADMIN_PW_HASH = '5fa5fe6c4b7d7f1d92e32db560d05afacc933fd32adc146cf92bc17745ceb21f'; // "mimiadmin"
+  var ADMIN_SESSION_MS = 10 * 60 * 1000;
+
+  async function _sha256(str) {
+    try {
+      var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(function (x) { return x.toString(16).padStart(2, '0'); }).join('');
+    } catch (e) { return null; }
+  }
+
+  function _isAdminAuthed() {
+    try {
+      var t = parseInt(sessionStorage.getItem('eco_admin_auth') || '0', 10);
+      return t > 0 && (Date.now() - t) < ADMIN_SESSION_MS;
+    } catch (e) { return false; }
+  }
+
+  async function _adminGate(callback) {
+    if (_isAdminAuthed()) { callback(); return; }
+    var pw = prompt('🔒 Admin Password\n\nMasukkan password admin untuk melanjutkan:');
+    if (pw === null || pw === '') return;
+    var h = await _sha256(pw);
+    if (h !== ADMIN_PW_HASH) {
+      alert('❌ Password salah.');
+      return;
+    }
+    try { sessionStorage.setItem('eco_admin_auth', String(Date.now())); } catch (e) { }
+    callback();
+  }
+
+  async function _resetAllHistory(btn) {
+    if (!confirm('⚠ RESET TOTAL ⚠\n\nHapus SEMUA snapshot history dari Supabase?\n\nChart akan mulai dari data baru setelah sync BDS berikutnya (~5 menit).\n\nTindakan ini PERMANEN!')) return;
+    if (!confirm('Konfirmasi sekali lagi: hapus SEMUA data chart history?')) return;
+    btn.disabled = true;
+    btn.textContent = 'Menghapus...';
+    btn.style.opacity = '0.6';
+    try {
+      var dr = await fetch(SB_URL + '/rest/v1/economy_history?id=gte.0', {
+        method: 'DELETE',
+        headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' }
+      });
+      if (!dr.ok) {
+        alert('Gagal reset: HTTP ' + dr.status);
+        btn.disabled = false; btn.textContent = 'Reset Total'; btn.style.opacity = '1';
+        return;
+      }
+      try { localStorage.removeItem(_trendCacheKey()); } catch (e) { }
+      try { localStorage.removeItem('eco_price_prev'); } catch (e) { }
+      var warnEl = document.getElementById('outlier-warn');
+      if (warnEl) warnEl.remove();
+      _outlierWarnShown = false;
+      alert('Semua data chart history berhasil dihapus.\n\nTunggu ~5 menit untuk sync BDS pertama.');
+      _trendData = []; fetchTrend();
+    } catch (e) {
+      alert('Gagal reset: ' + e);
+      btn.disabled = false; btn.textContent = 'Reset Total'; btn.style.opacity = '1';
+    }
+  }
+
+  // Deteksi anomali pakai logika IDENTIK dengan grafik:
+  // 1. Iterate semua metric yang bisa dihitung (coin_total, coin_avg, median, dsb)
+  // 2. Untuk tiap metric, hitung IQR × 5 fence
+  // 3. Row yang outlier di metric APA PUN → mark sebagai bad
+  // 4. Plus: row dengan nilai zero/duplikat dekat (<30s) → bad
+  function _detectAnomalies(data) {
+    var metrics = ['coin_total', 'coin_avg', 'coin_median', 'player_count', 'gem_total', 'gem_avg'];
+    var badIds = new Set();
+    for (var m = 0; m < metrics.length; m++) {
+      var metric = metrics[m];
+      var vals = [];
+      for (var i = 0; i < data.length; i++) {
+        var v = _computeMetric(data[i], metric);
+        if (isFinite(v) && v > 0) vals.push(v);
+      }
+      if (vals.length < 4) continue;
+      vals.sort(function (a, b) { return a - b; });
+      var q1 = vals[Math.floor(vals.length * 0.25)] || 0;
+      var q3 = vals[Math.floor(vals.length * 0.75)] || 0;
+      var iqr = q3 - q1;
+      if (iqr < 1) continue;
+      var lo = q1 - 5 * iqr, hi = q3 + 5 * iqr;
+      for (var j = 0; j < data.length; j++) {
+        var row = data[j];
+        if (row.id === null || row.id === undefined) continue;
+        var v2 = _computeMetric(row, metric);
+        if (!isFinite(v2)) continue;
+        if (v2 < lo || v2 > hi) badIds.add(row.id);
+      }
+    }
+    // Zero / incomplete rows
+    for (var k = 0; k < data.length; k++) {
+      var r2 = data[k];
+      if (r2.id === null || r2.id === undefined) continue;
+      if ((r2.coin_total || 0) === 0 || (r2.player_count || 0) === 0) badIds.add(r2.id);
+    }
+    // Dekat-dekat (<30s) — likely BDS duplikat bersamaan
+    for (var l = 1; l < data.length; l++) {
+      if (data[l].id === null || data[l].id === undefined) continue;
+      if (!data[l].ts || !data[l - 1].ts) continue;
+      var dt = new Date(data[l].ts) - new Date(data[l - 1].ts);
+      if (isFinite(dt) && dt >= 0 && dt < 30000) badIds.add(data[l].id);
+    }
+    // AGGRESSIVE: bandingkan dengan KPI saat ini (ground truth dari leaderboard_sync)
+    // Kalau coin_total/player_count row berbeda >30% dari KPI → anomali
+    // Karena economy berubah perlahan, jump >30% = BDS duplikat / corrupt
+    if (_data && _data.lb && _data.lb.summary) {
+      var now = _data.lb.summary;
+      var nowCoin = now.coin ? now.coin.total : 0;
+      var nowPlayers = now.n || 0;
+      for (var p = 0; p < data.length; p++) {
+        var rp = data[p];
+        if (rp.id === null || rp.id === undefined) continue;
+        var rc = rp.coin_total || 0, rn = rp.player_count || 0;
+        if (nowCoin > 1000 && rc > 0) {
+          var coinDiff = Math.abs(rc - nowCoin) / nowCoin;
+          if (coinDiff > 0.3) { badIds.add(rp.id); continue; }
+        }
+        if (nowPlayers > 10 && rn > 0) {
+          var playerDiff = Math.abs(rn - nowPlayers) / nowPlayers;
+          if (playerDiff > 0.3) badIds.add(rp.id);
+        }
+      }
+    }
+    return Array.from(badIds);
+  }
+
+  async function _cleanupAnomalies(btn) {
+    if (!confirm('Hapus semua snapshot anomali dari Supabase?\n\nTindakan ini PERMANEN dan tidak dapat di-undo.\n\nFilter: IQR × 5 fence (sama dengan grafik) — cek semua metric')) return;
+    btn.disabled = true;
+    btn.textContent = 'Menghapus...';
+    btn.style.opacity = '0.6';
+    var resetBtn = function () { btn.disabled = false; btn.textContent = 'Bersihkan'; btn.style.opacity = '1'; };
+    try {
+      // Pakai _trendData yang sudah di-load grafik (range aktif) supaya konsisten
+      // dengan anomali yang ditampilkan peringatan. Fallback ke fetch full kalau kosong.
+      var rows = _trendData;
+      if (!Array.isArray(rows) || rows.length < 4) {
+        var r = await fetch(SB_URL + '/rest/v1/economy_history?order=ts.asc&limit=10000', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+        if (!r.ok) { alert('Gagal fetch data: HTTP ' + r.status); resetBtn(); return; }
+        rows = await r.json();
+      }
+      if (!Array.isArray(rows) || rows.length < 4) { alert('Data tidak cukup untuk deteksi anomali (minimum 4 baris).'); resetBtn(); return; }
+
+      var badIds = _detectAnomalies(rows);
+      if (badIds.length === 0) {
+        alert('Tidak ada data anomali ditemukan dalam range aktif.\n\nCoba ganti range (1h / 24h / 7d / 30d) — anomali mungkin ada di range lain.\n\nAtau pakai file SQL di "cleanup_economy_history.sql" untuk cek seluruh tabel.');
+        resetBtn();
+        return;
+      }
+      if (!confirm('Ditemukan ' + badIds.length + ' baris anomali/duplikat dari ' + rows.length + ' total.\n\nLanjutkan hapus?')) { resetBtn(); return; }
+
+      var chunk = 50, deleted = 0, failed = 0;
+      for (var off = 0; off < badIds.length; off += chunk) {
+        var ids = badIds.slice(off, off + chunk).map(function (x) { return encodeURIComponent(x); }).join(',');
+        try {
+          var dr = await fetch(SB_URL + '/rest/v1/economy_history?id=in.(' + ids + ')', {
+            method: 'DELETE',
+            headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' }
+          });
+          if (dr.ok) deleted += badIds.slice(off, off + chunk).length;
+          else failed += badIds.slice(off, off + chunk).length;
+        } catch (e) {
+          failed += badIds.slice(off, off + chunk).length;
+        }
+      }
+      try { localStorage.removeItem(_trendCacheKey()); } catch (e) { }
+      var warnEl = document.getElementById('outlier-warn');
+      if (warnEl) warnEl.remove();
+      _outlierWarnShown = false;
+      var msg = deleted + ' baris berhasil dihapus.';
+      if (failed > 0) msg += '\n' + failed + ' baris gagal dihapus.';
+      alert(msg + '\n\nMemuat ulang grafik...');
+      _trendData = []; fetchTrend();
+    } catch (e) {
+      alert('Gagal bersihkan data: ' + e);
+      resetBtn();
+    }
   }
 
   // ═══════════════════════════════════════════════════════════

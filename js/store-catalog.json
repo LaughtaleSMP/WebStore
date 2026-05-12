@@ -34,7 +34,9 @@
       ["Granite", 64, 0.28], ["Netherrack", 64, 0.35], ["Soul Sand", 64, 0.50],
       ["Soul Soil", 64, 0.50], ["Blackstone", 64, 0.55], ["Basalt", 64, 0.55],
       ["Smooth Basalt", 64, 0.70], ["End Stone", 64, 0.60], ["Obsidian", 16, 2.50],
-      ["Packed Mud", 64, 0.40]
+      ["Packed Mud", 64, 0.40],
+      ["Ice", 32, 0.50], ["Packed Ice", 32, 0.75], ["Blue Ice", 16, 1.50],
+      ["Snow Block", 64, 0.25], ["Powder Snow", 32, 0.60]
     ],
     "wood": [
       ["Oak Log", 32, 0.45], ["Spruce Log", 32, 0.45], ["Birch Log", 32, 0.45],
@@ -131,6 +133,7 @@
       ["Oxeye Daisy", 32, 0.35], ["Cornflower", 32, 0.40], ["Lily of the Valley", 32, 0.40],
       ["Sunflower", 16, 0.55], ["Lilac", 16, 0.50], ["Rose Bush", 16, 0.50], ["Peony", 16, 0.50],
       ["Pink Petals", 16, 0.60], ["Torchflower", 16, 0.70], ["Wither Rose", 8, 1.50],
+      ["Lily Pad", 16, 0.80], ["Seagrass", 32, 0.50], ["Kelp", 32, 0.45], ["Sea Pickle", 16, 0.90],
       ["Brown Mushroom", 16, 0.40], ["Red Mushroom", 16, 0.40],
       ["Huge Brown Mushroom", 32, 0.65], ["Huge Red Mushroom", 32, 0.65],
       ["Crimson Fungus", 16, 0.55], ["Warped Fungus", 16, 0.55],
