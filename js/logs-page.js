@@ -33,41 +33,108 @@ const RARITY_COLORS={
 };
 
 function copyCode(code){
-  navigator.clipboard.writeText(code).then(()=>{
+  if(!code)return;
+  const showToast=()=>{
     const t=$('dc-toast');
+    if(!t)return;
     t.classList.add('show');
     setTimeout(()=>t.classList.remove('show'),2000);
-  }).catch(()=>{});
+  };
+  // Modern clipboard API (HTTPS / localhost only)
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(String(code)).then(showToast).catch(()=>{
+      _fallbackCopy(String(code))&&showToast();
+    });
+  }else{
+    _fallbackCopy(String(code))&&showToast();
+  }
+}
+
+function _fallbackCopy(text){
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text;
+    ta.style.position='fixed';
+    ta.style.left='-9999px';
+    ta.setAttribute('readonly','');
+    document.body.appendChild(ta);
+    ta.select();
+    const ok=document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }catch{return false;}
+}
+
+// Validasi field kode diskon — defensive untuk data corrupt
+function _sanitizeDiscCode(code,info){
+  const codeStr=String(code||'').trim();
+  if(!codeStr||codeStr.length>32)return null; // skip invalid
+  const pct=Math.max(0,Math.min(100,Math.floor(Number(info?.pct))||0));
+  const uses=Math.max(0,Math.floor(Number(info?.uses))||0);
+  const rawType=String(info?.type||'ALL').toUpperCase();
+  const type=rawType==='ALL'||rawType==='PT'||rawType==='EQ'?rawType:'ALL';
+  return {code:codeStr,pct,uses,type};
 }
 
 function renderDiscCodes(codes){
   const el=$('disc-content');
+  if(!el)return;
   const entries=Object.entries(codes||{});
   if(!entries.length){
     el.innerHTML='<div class="dc-empty">Tidak ada kode diskon aktif saat ini</div>';
     return;
   }
-  // Estimate max uses for bar (use 50 as baseline)
-  el.innerHTML='<div class="dc-grid">'+entries.map(([code,info],i)=>{
-    const pct=info.pct||0;
-    const uses=info.uses||0;
-    const type=info.type||'ALL';
-    const typeLabel=type==='ALL'?'SEMUA':type==='PT'?'PARTIKEL':'EQUIPMENT';
-    const typeCls=type.toLowerCase();
-    const barW=Math.min(100,Math.max(5,(uses/50)*100));
-    return`<div class="dc-card" style="animation:fs .3s ${i*60}ms ease both">
-      <div class="dc-top">
-        <span class="dc-code" onclick="copyCode('${esc(code).replace(/'/g,"\\'")}')"><span>${esc(code)}</span><span class="copy-hint">KLIK SALIN</span></span>
-        <span class="dc-pct">-${pct}%</span>
-      </div>
-      <div class="dc-bottom">
-        <span class="dc-type ${typeCls}">${typeLabel}</span>
-        <span class="dc-uses">${uses} penggunaan tersisa</span>
-      </div>
-      <div class="dc-bar"><div class="dc-bar-fill" style="width:${barW}%"></div></div>
-    </div>`;
-  }).join('')+'</div>';
+  // Sanitize + filter invalid entries
+  const valid=[];
+  for(let i=0;i<entries.length;i++){
+    const s=_sanitizeDiscCode(entries[i][0],entries[i][1]);
+    if(s)valid.push(s);
+  }
+  if(!valid.length){
+    el.innerHTML='<div class="dc-empty">Tidak ada kode diskon aktif saat ini</div>';
+    return;
+  }
+  // Build DOM aman tanpa innerHTML untuk onclick — pakai data attribute + delegated event
+  // Prevents XSS via code names dengan karakter spesial (', \, <, dll)
+  const out=['<div class="dc-grid">'];
+  for(let i=0;i<valid.length;i++){
+    const v=valid[i];
+    const typeLabel=v.type==='ALL'?'SEMUA':v.type==='PT'?'PARTIKEL':'EQUIPMENT';
+    const typeCls=v.type.toLowerCase();
+    const barW=Math.min(100,Math.max(5,(v.uses/50)*100));
+    const ec=esc(v.code); // double-escape via HTML entities
+    out.push(
+      '<div class="dc-card" style="animation:fs .3s '+(i*60)+'ms ease both">',
+      '<div class="dc-top">',
+      '<span class="dc-code" data-code="'+ec+'" role="button" tabindex="0">',
+      '<span>'+ec+'</span>',
+      '<span class="copy-hint">KLIK SALIN</span>',
+      '</span>',
+      '<span class="dc-pct">-'+v.pct+'%</span>',
+      '</div>',
+      '<div class="dc-bottom">',
+      '<span class="dc-type '+typeCls+'">'+typeLabel+'</span>',
+      '<span class="dc-uses">'+v.uses+' penggunaan tersisa</span>',
+      '</div>',
+      '<div class="dc-bar"><div class="dc-bar-fill" style="width:'+barW.toFixed(1)+'%"></div></div>',
+      '</div>'
+    );
+  }
+  out.push('</div>');
+  el.innerHTML=out.join('');
 }
+
+// Delegated click handler untuk kode diskon — bind sekali, bukan inline onclick
+// Mencegah XSS via inline JS string injection.
+document.addEventListener('click',function(ev){
+  const code=ev.target.closest?.('.dc-code')?.dataset?.code;
+  if(code)copyCode(code);
+});
+document.addEventListener('keydown',function(ev){
+  if(ev.key!=='Enter'&&ev.key!==' ')return;
+  const code=ev.target.closest?.('.dc-code')?.dataset?.code;
+  if(code){ev.preventDefault();copyCode(code);}
+});
 
 function renderBank(logs){
   const el=$('log-content');
@@ -194,28 +261,76 @@ function bindTabs(){
   });
 }
 
+// ═══════════════════════════════════════════════════════════
+// FETCH HELPERS — race-safe, abort-able, throttled
+// ═══════════════════════════════════════════════════════════
+let _fetchInflight=false;
+let _currentAbort=null;
+let _lastFetchOk=0;
+let _hasLoadedOnce=false;
+const MIN_FETCH_INTERVAL_MS=30000; // min 30 detik antar fetch (cegah spam)
+const FETCH_INTERVAL_MS=120000;     // base interval 2 menit
+
+function _safeParse(v,def){
+  if(v==null)return def;
+  if(typeof v!=='string')return v;
+  try{return JSON.parse(v)??def;}catch{return def;}
+}
+
 async function fetchLogs(){
-  $('log-content').innerHTML='<div class="emp loading">Memuat data...</div>';
+  // ── Race-condition guard: skip kalau sudah ada fetch in-flight ──
+  if(_fetchInflight)return;
+  // ── Min interval throttle: cegah fetch terlalu sering (visibility+interval bisa overlap) ──
+  const now=Date.now();
+  if(now-_lastFetchOk<MIN_FETCH_INTERVAL_MS)return;
+  // ── Pause kalau tab hidden ──
+  if(document.hidden)return;
+
+  _fetchInflight=true;
+  // Hanya tampilkan loading state kalau memang belum pernah load (hindari flicker pada refresh otomatis)
+  if(!_hasLoadedOnce)$('log-content').innerHTML='<div class="emp loading">Memuat data...</div>';
+  // AbortController untuk cancel kalau user navigate atau call concurrent
+  if(_currentAbort)_currentAbort.abort();
+  _currentAbort=new AbortController();
+  // Timeout 12 detik agar tidak hang di koneksi mobile lambat
+  const timeoutId=setTimeout(()=>_currentAbort?.abort(),12000);
+
   try{
     const r=await fetch(`${SB}/rest/v1/leaderboard_sync?id=eq.current&select=synced_at,bank_log,auction_log,gacha_log,topup_log,disc_codes`,
-      {headers:{apikey:SK,Authorization:`Bearer ${SK}`}});
+      {headers:{apikey:SK,Authorization:`Bearer ${SK}`},signal:_currentAbort.signal});
+    if(!r.ok)throw new Error('HTTP '+r.status);
     const d=await r.json();
     if(d&&d[0]){
       const row=d[0];
-      allData.bank=typeof row.bank_log==='string'?JSON.parse(row.bank_log||'[]'):(row.bank_log||[]);
-      allData.auction=typeof row.auction_log==='string'?JSON.parse(row.auction_log||'[]'):(row.auction_log||[]);
-      allData.gacha=typeof row.gacha_log==='string'?JSON.parse(row.gacha_log||'[]'):(row.gacha_log||[]);
-      allData.topup=typeof row.topup_log==='string'?JSON.parse(row.topup_log||'[]'):(row.topup_log||[]);
-      allData.discCodes=typeof row.disc_codes==='string'?JSON.parse(row.disc_codes||'{}'):(row.disc_codes||{});
+      // safeParse helper — silent fallback ke array kosong kalau JSON invalid
+      allData.bank=_safeParse(row.bank_log,[]);
+      allData.auction=_safeParse(row.auction_log,[]);
+      allData.gacha=_safeParse(row.gacha_log,[]);
+      allData.topup=_safeParse(row.topup_log,[]);
+      allData.discCodes=_safeParse(row.disc_codes,{});
       if(row.synced_at){
         const el=Math.round((Date.now()-new Date(row.synced_at).getTime())/60000);
         allData.syncAge=el<1?'baru saja':el+'m lalu';
       }
+      _lastFetchOk=Date.now();
+      _hasLoadedOnce=true;
+      _topItemsCache=null; // invalidate cache karena data baru
     }
-  }catch(e){console.warn('[Logs]',e)}
-  renderDiscCodes(allData.discCodes);
-  renderActive();
-  updateStats();
+  }catch(e){
+    if(e.name!=='AbortError')console.warn('[Logs]',e);
+    // Tidak update _lastFetchOk → next call akan retry sesuai interval normal
+  }finally{
+    clearTimeout(timeoutId);
+    _fetchInflight=false;
+    _currentAbort=null;
+  }
+  // Render hanya kalau ada data
+  if(_hasLoadedOnce){
+    renderDiscCodes(allData.discCodes);
+    renderActive();
+    updateStats();
+    renderTopItems();
+  }
 }
 
 function updateStats(){
@@ -224,7 +339,137 @@ function updateStats(){
   for(var i=0;i<ids.length;i++){var el=$(ids[i]);if(el){el.textContent=vals[i];el.classList.remove('sk');}}
 }
 
+// ═══════════════════════════════════════════════════════════
+// TOP ITEM AUCTION — agregasi item dari log auction
+// ═══════════════════════════════════════════════════════════
+let _topItemsCache=null;
+let _topItemsCacheTs=0;
+const _TOP_CACHE_TTL_MS=60000; // cache 1 menit (data sync max tiap 2 menit)
+const _SOLD_TYPES=new Set(['sold','offer_accepted','auction_won']);
+const _TOP_LIMIT=10;
+const _WEEK_MS=7*24*3600*1000;
+const _HALF_MS=3.5*24*3600*1000;
+
+function renderTopItems(){
+  const tbody=document.querySelector('#tbl-top-items tbody');
+  if(!tbody)return;
+
+  const logs=allData.auction;
+  // Empty/null guard
+  if(!Array.isArray(logs)||logs.length===0){
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--mute)">Belum ada transaksi auction</td></tr>';
+    return;
+  }
+
+  // Cache hit: skip re-aggregation kalau data sama & belum expired
+  const now=Date.now();
+  if(_topItemsCache&&(now-_topItemsCacheTs)<_TOP_CACHE_TTL_MS){
+    _renderTopItemsHtml(tbody,_topItemsCache.arr,_topItemsCache.totalTx);
+    return;
+  }
+
+  // Single-pass aggregation — O(N), zero filter() intermediate array
+  const agg=Object.create(null); // null-proto: lebih cepat dari Map untuk string key biasa
+  const cutoffWeek=now-_WEEK_MS;
+  const cutoffHalf=now-_HALF_MS;
+  let totalTx=0;
+
+  for(let i=0;i<logs.length;i++){
+    const h=logs[i];
+    if(!h||!_SOLD_TYPES.has(h.type))continue;
+    const ts=h.ts||0;
+    if(ts<cutoffWeek)continue;
+    const rawName=h.item;
+    if(!rawName)continue;
+    const name=String(rawName).trim();
+    if(!name||name==='?')continue;
+    const key=name.toLowerCase();
+    const price=Number(h.price)||0;
+    if(price<=0)continue; // skip price invalid
+
+    let s=agg[key];
+    if(!s){
+      s=agg[key]={name,count:0,total:0,min:price,max:price,recent:0,old:0,recentSum:0,oldSum:0};
+    }
+    s.count++;
+    s.total+=price;
+    if(price<s.min)s.min=price;
+    if(price>s.max)s.max=price;
+    if(ts>=cutoffHalf){s.recent++;s.recentSum+=price;}
+    else{s.old++;s.oldSum+=price;}
+    totalTx++;
+  }
+
+  // Bounded heap-like extraction: ambil top-K tanpa sort full array
+  // Kalau item < 50, langsung sort. Kalau lebih banyak, partial sort dengan slice.
+  const arr=[];
+  for(const k in agg)arr.push(agg[k]);
+  if(arr.length>_TOP_LIMIT){
+    // Quick partition — sort hanya N item, hemat CPU di mobile
+    arr.sort((a,b)=>b.count-a.count);
+    arr.length=_TOP_LIMIT;
+  }else{
+    arr.sort((a,b)=>b.count-a.count);
+  }
+
+  // Cache hasil agregasi
+  _topItemsCache={arr,totalTx};
+  _topItemsCacheTs=now;
+
+  _renderTopItemsHtml(tbody,arr,totalTx);
+}
+
+function _renderTopItemsHtml(tbody,arr,totalTx){
+  if(arr.length===0){
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--mute)">Tidak ada data 7 hari terakhir</td></tr>';
+    const pill=$('top-items-pill');
+    if(pill)pill.textContent='0 TX · 7 HARI';
+    return;
+  }
+  // Build HTML via array push lalu join sekali — lebih cepat dari template literal di loop
+  const out=[];
+  for(let i=0;i<arr.length;i++){
+    const it=arr[i];
+    const avg=Math.round(it.total/it.count);
+    let trendHtml='<span style="color:var(--mute)">—</span>';
+    if(it.recent>0&&it.old>0){
+      const recentAvg=it.recentSum/it.recent;
+      const oldAvg=it.oldSum/it.old;
+      const pct=((recentAvg-oldAvg)/oldAvg)*100;
+      if(pct>5)trendHtml='<span style="color:var(--green)">▲ '+pct.toFixed(0)+'%</span>';
+      else if(pct<-5)trendHtml='<span style="color:var(--red)">▼ '+Math.abs(pct).toFixed(0)+'%</span>';
+      else trendHtml='<span style="color:var(--mute)">≈ stabil</span>';
+    }else if(it.recent>0&&it.old===0){
+      trendHtml='<span style="color:var(--cyan)">★ baru</span>';
+    }
+    const rankColor=i===0?'var(--gold)':i===1?'#cbd5e1':i===2?'#cd7f32':'var(--mute)';
+    out.push('<tr><td style="color:'+rankColor+';font-weight:700">'+(i+1)+'</td><td style="font-weight:600">'+esc(it.name)+'</td><td style="text-align:right;color:var(--cyan)">'+it.count+'x</td><td style="text-align:right;color:var(--gold)">'+fmt(avg)+'</td><td style="text-align:right;color:var(--mute)">'+fmt(it.min)+'</td><td style="text-align:right;color:var(--text)">'+fmt(it.max)+'</td><td>'+trendHtml+'</td></tr>');
+  }
+  tbody.innerHTML=out.join('');
+  const pill=$('top-items-pill');
+  if(pill)pill.textContent=totalTx+' TX · 7 HARI';
+}
+
 bindTabs();
 fetchLogs();
-setInterval(fetchLogs,120000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchLogs()});
+
+// ── Auto-refresh interval — pakai variable supaya bisa di-clear/restart ──
+let _refreshTimer=setInterval(fetchLogs,FETCH_INTERVAL_MS);
+
+// ── Visibility-aware refresh: pause saat hidden, resume + fetch saat visible ──
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    if(_refreshTimer){clearInterval(_refreshTimer);_refreshTimer=null;}
+    // Abort fetch yang sedang jalan agar tidak buang bandwidth mobile
+    if(_currentAbort)_currentAbort.abort();
+  }else{
+    if(!_refreshTimer)_refreshTimer=setInterval(fetchLogs,FETCH_INTERVAL_MS);
+    fetchLogs(); // refresh segera saat tab visible lagi
+  }
+});
+
+// ── Cleanup saat page unload (cegah leak di SPA-like navigation) ──
+window.addEventListener('pagehide',()=>{
+  if(_refreshTimer){clearInterval(_refreshTimer);_refreshTimer=null;}
+  if(_currentAbort)_currentAbort.abort();
+},{once:true});

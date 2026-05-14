@@ -26,13 +26,8 @@
     src: url("../assets/fonts/nunito/Nunito-Variable.woff2") format("woff2-variations");
 }
 
-@font-face {
-    font-family: "Nunito";
-    font-style: italic;
-    font-weight: 400 900;
-    font-display: swap;
-    src: url("../assets/fonts/nunito/Nunito-Italic-Variable.woff2") format("woff2-variations");
-}
+/* [PERF] Italic font dihapus — browser auto-synthesize dari regular.
+ * Hemat 107 KB download di mobile (italic jarang dipakai). */
 
 :root {
     --green: #a855f7; /* NOTE: nama "green" adalah legacy — warnanya ungu/purple (#a855f7). Jangan ganti agar tidak break JS & CSS lain */

@@ -847,17 +847,103 @@
   }
 
   function renderDiscCodes() {
-    var el = $('disc-content'), codes = _data.disc;
+    var el = $('disc-content');
+    if (!el) return;
+    var codes = _data && _data.disc;
     var entries = Object.entries(codes || {});
     if (!entries.length) { el.innerHTML = '<div class="dc-empty">Tidak ada kode diskon aktif</div>'; return }
-    el.innerHTML = '<div class="dc-grid">' + entries.map(function (e, i) {
-      var code = e[0], info = e[1], pct = info.pct || 0, uses = info.uses || 0, type = info.type || 'ALL';
-      var typeLabel = type === 'ALL' ? 'SEMUA' : type === 'PT' ? 'PARTIKEL' : 'EQUIPMENT';
-      return '<div class="dc-card" style="animation:fs .3s ' + i * 60 + 'ms ease both"><div class="dc-top"><span class="dc-code" onclick="copyCode(\'' + esc(code).replace(/'/g, "\\'") + '\')" ><span>' + esc(code) + '</span><span class="copy-hint">KLIK SALIN</span></span><span class="dc-pct">-' + pct + '%</span></div><div class="dc-bottom"><span class="dc-type ' + type.toLowerCase() + '">' + typeLabel + '</span><span class="dc-uses">' + uses + ' sisa</span></div><div class="dc-bar"><div class="dc-bar-fill" style="width:' + Math.min(100, Math.max(5, uses / 50 * 100)) + '%"></div></div></div>';
-    }).join('') + '</div>';
+
+    // Sanitize entries — defensive untuk data corrupt
+    var valid = [];
+    for (var k = 0; k < entries.length; k++) {
+      var rawCode = String(entries[k][0] || '').trim();
+      if (!rawCode || rawCode.length > 32) continue;
+      var info = entries[k][1] || {};
+      var pct = Math.max(0, Math.min(100, Math.floor(Number(info.pct)) || 0));
+      var uses = Math.max(0, Math.floor(Number(info.uses)) || 0);
+      var rawType = String(info.type || 'ALL').toUpperCase();
+      var type = (rawType === 'ALL' || rawType === 'PT' || rawType === 'EQ') ? rawType : 'ALL';
+      valid.push({ code: rawCode, pct: pct, uses: uses, type: type });
+    }
+    if (!valid.length) { el.innerHTML = '<div class="dc-empty">Tidak ada kode diskon aktif</div>'; return }
+
+    // Build via array push + join, pakai data-attribute (anti-XSS, no inline onclick)
+    var out = ['<div class="dc-grid">'];
+    for (var i = 0; i < valid.length; i++) {
+      var v = valid[i];
+      var typeLabel = v.type === 'ALL' ? 'SEMUA' : v.type === 'PT' ? 'PARTIKEL' : 'EQUIPMENT';
+      var typeCls = v.type.toLowerCase();
+      var barW = Math.min(100, Math.max(5, v.uses / 50 * 100));
+      var ec = esc(v.code);
+      out.push(
+        '<div class="dc-card" style="animation:fs .3s ' + (i * 60) + 'ms ease both">',
+        '<div class="dc-top">',
+        '<span class="dc-code" data-code="' + ec + '" role="button" tabindex="0">',
+        '<span>' + ec + '</span>',
+        '<span class="copy-hint">KLIK SALIN</span>',
+        '</span>',
+        '<span class="dc-pct">-' + v.pct + '%</span>',
+        '</div>',
+        '<div class="dc-bottom">',
+        '<span class="dc-type ' + typeCls + '">' + typeLabel + '</span>',
+        '<span class="dc-uses">' + v.uses + ' sisa</span>',
+        '</div>',
+        '<div class="dc-bar"><div class="dc-bar-fill" style="width:' + barW.toFixed(1) + '%"></div></div>',
+        '</div>'
+      );
+    }
+    out.push('</div>');
+    el.innerHTML = out.join('');
   }
 
-  window.copyCode = function (code) { navigator.clipboard.writeText(code).then(function () { var t = $('dc-toast'); t.classList.add('show'); setTimeout(function () { t.classList.remove('show') }, 2000) }).catch(function () { }) };
+  // Delegated copy handler — bind sekali, anti-XSS via data attribute
+  if (!window._discCodeBound) {
+    window._discCodeBound = true;
+    document.addEventListener('click', function (ev) {
+      var t = ev.target.closest && ev.target.closest('.dc-code');
+      if (t && t.dataset && t.dataset.code) window.copyCode(t.dataset.code);
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Enter' && ev.key !== ' ') return;
+      var t = ev.target.closest && ev.target.closest('.dc-code');
+      if (t && t.dataset && t.dataset.code) {
+        ev.preventDefault();
+        window.copyCode(t.dataset.code);
+      }
+    });
+  }
+
+  window.copyCode = function (code) {
+    if (!code) return;
+    var showToast = function () {
+      var t = $('dc-toast');
+      if (!t) return;
+      t.classList.add('show');
+      setTimeout(function () { t.classList.remove('show') }, 2000);
+    };
+    var fallback = function (txt) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = txt;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.setAttribute('readonly', '');
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      } catch (e) { return false; }
+    };
+    var txt = String(code);
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(txt).then(showToast).catch(function () {
+        if (fallback(txt)) showToast();
+      });
+    } else {
+      if (fallback(txt)) showToast();
+    }
+  };
 
   /* ═══ Economy Trend Chart ═══ */
   var _trendData = [], _trendRange = 'day', _trendMetric = 'coin_total';

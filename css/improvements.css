@@ -39,3 +39,227 @@
 :root {
     --text-muted: #a3b8a7;
 }
+
+
+/* ════════════════════════════════════════════════════════════
+   MOBILE PERFORMANCE OPTIMIZATIONS
+   Mengurangi efek berat di hp low-end agar UI tetap smooth.
+════════════════════════════════════════════════════════════ */
+
+/* ── Mobile: kurangi blur intensity (paling mahal di GPU mobile) ── */
+@media (max-width: 768px) {
+    /* Nav: blur 32px → 12px (~3x lebih murah, hampir tidak terlihat bedanya) */
+    #main-nav {
+        backdrop-filter: blur(12px) saturate(140%) !important;
+        -webkit-backdrop-filter: blur(12px) saturate(140%) !important;
+    }
+    #main-nav.scrolled {
+        backdrop-filter: blur(14px) saturate(150%) !important;
+        -webkit-backdrop-filter: blur(14px) saturate(150%) !important;
+    }
+    /* Drawer overlay: blur 4px sudah cukup */
+    .nav-overlay {
+        backdrop-filter: blur(2px) !important;
+        -webkit-backdrop-filter: blur(2px) !important;
+    }
+    /* Dropdown menu: tanpa saturate (tidak terlihat di HP) */
+    .nav-dropdown-menu {
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+    }
+}
+
+/* ── Low-power hint: device dengan koneksi lambat / save-data on ── */
+@media (prefers-reduced-data: reduce), (prefers-reduced-motion: reduce) {
+    /* Nonaktifkan SEMUA backdrop-filter — paling mahal di mobile lawas */
+    #main-nav,
+    #main-nav.scrolled,
+    .nav-overlay,
+    .nav-dropdown-menu {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: rgba(8, 7, 14, 0.95) !important;
+    }
+    /* Nonaktifkan animasi infinite (badge shine, live dot, scan, dll) */
+    .nav-badge::before,
+    .nav-badge-dot,
+    .live-dot,
+    .nav-link-dot,
+    .of-pulse,
+    [class*="-scan-"]::before {
+        animation: none !important;
+    }
+    /* bg canvas off (sudah di-handle JS, ini failsafe) */
+    #bg-canvas { display: none !important; }
+}
+
+/* ── Sangat low-end: disable hero CTA pulse (CSS animation infinite) ── */
+@media (max-width: 480px) {
+    /* hero CTA pulse: terlalu berat di entry-level android */
+    .hero-cta,
+    .hero-connect-btn {
+        animation: none !important;
+    }
+}
+
+/* ── GPU hint: paint optimization untuk container besar ── */
+#bg-canvas {
+    /* Tell browser ini layer terpisah agar tidak repaint dengan content lain */
+    will-change: transform;
+    contain: strict;
+}
+
+
+/* ════════════════════════════════════════════════════════════
+   MOBILE LOW-END: AGGRESSIVE ANIMATION CULL
+   Matikan animasi infinite yang tidak perlu untuk hemat CPU/GPU.
+   Hanya berlaku di mobile (max-width: 768px).
+════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    /* Status orb pulse — visual flair, tidak penting untuk fungsionalitas */
+    .status-dot.is-online .orb-core,
+    .status-dot.is-offline .orb-core,
+    .orb.on .orb-ring,
+    .orb.ld .orb-c,
+    .status-ring.sr1,
+    .status-ring.sr2,
+    .status-ring.sr3 {
+        animation: none !important;
+    }
+
+    /* Latency flicker — tidak perlu di mobile */
+    .latency-num {
+        animation: none !important;
+    }
+
+    /* Live bars decoration */
+    .live-bars .lb,
+    .lb1, .lb2, .lb3, .lb4, .lb5 {
+        animation: none !important;
+    }
+
+    /* Section scan-down decorative line */
+    [class*="scan"]::before,
+    [class*="-scan"]::before {
+        animation: none !important;
+    }
+
+    /* Glow breath — radial gradient pulse */
+    [style*="glowBreath"],
+    .feat-icon-wrap::before {
+        animation: none !important;
+    }
+
+    /* Hero CTA pulse — subtle pulse animation infinite */
+    .hero-cta-glow,
+    .hero-cta-pulse {
+        animation: none !important;
+    }
+
+    /* Cosmos terminal background */
+    [class*="cosmos"] {
+        animation: none !important;
+    }
+
+    /* Order feed shimmer (skeleton tetap ON, tapi pulse dot tidak perlu) */
+    .of-pulse,
+    .of-live-dot {
+        animation: none !important;
+    }
+
+    /* Reduce box-shadow blur radius pada elemen statis (GPU-expensive) */
+    .status-main-card,
+    .qris-card,
+    .feat-card,
+    .social-card,
+    .shop-card,
+    .live-stat-card {
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    /* Disable expensive hover effects yang tidak relevan di touch */
+    .feat-card:hover,
+    .social-card:hover,
+    .shop-card:hover,
+    .live-stat-card:hover,
+    .qris-card:hover {
+        transform: none !important;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25) !important;
+    }
+}
+
+/* ── Sangat low-end: cut HEAVY effects ── */
+@media (max-width: 480px) {
+    /* Profile float — terlalu berat */
+    [class*="profile-float"],
+    .profile-img-frame {
+        animation: none !important;
+    }
+
+    /* Nav badge shine sweep — selalu running */
+    .nav-badge::before {
+        animation: none !important;
+    }
+
+    /* Live dot pulse di nav — visual flair */
+    .nav-badge-dot,
+    .nav-link-dot,
+    .live-dot,
+    .of-live-dot {
+        animation: none !important;
+    }
+}
+
+/* ── Battery saving / data saving mode ── */
+@media (prefers-reduced-data: reduce) {
+    /* Lazy backgrounds, no decorative gradients */
+    body::before,
+    body::after,
+    .pixel-lines {
+        display: none !important;
+    }
+
+    /* Stop all animations entirely */
+    *, *::before, *::after {
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+        transition-duration: 0.05s !important;
+    }
+}
+
+
+/* ════════════════════════════════════════════════════════════
+   FEAT ICONS — PAUSE WHEN OFFSCREEN (CSS-only optimization)
+   Icons di section #fitur punya banyak animasi infinite. Ini matikan
+   animasi saat icon tidak terlihat untuk hemat CPU/GPU.
+   `content-visibility: auto` + `contain-intrinsic-size` di section sudah
+   handle paint, ini fokus ke animation pause.
+════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    /* Default: pause animations on icons unless hovered (touch device = never hovered) */
+    .feat-icon-wrap .fi-svg *[style*="animation"],
+    .feat-icon-wrap .fi-svg g[style*="animation"] {
+        /* Slow down animations 5× di mobile, drastically reduces CPU */
+        animation-duration: 999s !important;
+    }
+    /* Tapi yang punya delay 0 dibiarkan jalan sekali untuk visual fading */
+    .feat-card.fade-up.visible .feat-icon-wrap .fi-svg *[style*="animation"] {
+        animation-duration: inherit !important;
+    }
+}
+
+/* Mobile sangat low-end: matikan total animasi feat-icons */
+@media (max-width: 480px) {
+    .feat-icon-wrap .fi-svg *,
+    .feat-icon-wrap .fi-svg g {
+        animation: none !important;
+    }
+}
+
+/* prefers-reduced-motion: total off */
+@media (prefers-reduced-motion: reduce) {
+    .feat-icon-wrap .fi-svg *,
+    .feat-icon-wrap .fi-svg g {
+        animation: none !important;
+    }
+}

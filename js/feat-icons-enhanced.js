@@ -460,7 +460,20 @@
     </svg>`,
   ];
 
-  /* ── Apply icons to .feat-icon elements ── */
+  /* ── Apply icons to .feat-icon elements ──
+   * [PERF] Low-end detection: jika device kelas rendah atau user prefer reduced motion,
+   * skip icon enhancement total — biarkan icon default yang lebih ringan. */
+  var isLowEnd = false;
+  try {
+    var dm = navigator.deviceMemory ?? 8;
+    var hc = navigator.hardwareConcurrency ?? 8;
+    var isMobile = window.matchMedia('(max-width: 768px), (pointer: coarse)').matches;
+    var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce), (prefers-reduced-data: reduce)').matches;
+    isLowEnd = prefersReduced || (isMobile && (dm < 4 || hc <= 4));
+  } catch (e) {}
+
+  if (isLowEnd) return; // skip total — icon default tetap muncul, tanpa animasi tambahan
+
   document.querySelectorAll('.feat-icon').forEach(function (el, i) {
     if (icons[i] !== undefined) {
       el.innerHTML = icons[i];

@@ -76,3 +76,57 @@
     background: none;
     color: inherit !important;
 }
+
+
+/* ════════════════════════════════════════════════════════════
+   GENERIC INLINE SKELETONS
+   Untuk elemen yang konten-nya datang dari JS (subtitle, tabs, dll)
+   ════════════════════════════════════════════════════════════ */
+
+/* Text placeholder — untuk subtitle/judul/timestamp */
+.skel-text {
+    display: inline-block;
+    height: 1em;
+    border-radius: 4px;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.04) 25%,
+        rgba(168, 85, 247, 0.08) 50%,
+        rgba(255, 255, 255, 0.04) 75%
+    );
+    background-size: 400px 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    color: transparent;
+    vertical-align: middle;
+    pointer-events: none;
+}
+
+/* Tab placeholder — untuk shop categories saat loading */
+.skel-tab {
+    display: inline-block;
+    width: 88px;
+    height: 32px;
+    border-radius: 6px;
+    margin-right: 6px;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.04) 25%,
+        rgba(168, 85, 247, 0.08) 50%,
+        rgba(255, 255, 255, 0.04) 75%
+    );
+    background-size: 400px 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    pointer-events: none;
+    vertical-align: middle;
+}
+.skel-tab:nth-child(2) { width: 72px; }
+.skel-tab:nth-child(3) { width: 96px; }
+
+/* Disable shimmer animation kalau user prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .skel-text, .skel-tab, .skel-val {
+        animation: none !important;
+        background: rgba(255, 255, 255, 0.04) !important;
+    }
+}
