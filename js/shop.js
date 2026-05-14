@@ -55,8 +55,8 @@
 
 /* ── Card text ── */
 .shop-card-emoji{font-size:1.6rem;line-height:1;margin:0;}
-.shop-card-name{font-family:'Press Start 2P',monospace;font-size:0.45rem;
-  color:var(--s-text);line-height:1.5;}
+.shop-card-name{font-family:'Nunito',sans-serif;font-weight:800;font-size:0.78rem;
+  color:var(--s-text);line-height:1.3;letter-spacing:-0.01em;}
 .shop-card-cat{font-size:0.72rem;color:var(--s-muted);font-weight:700;}
 .shop-card-desc{font-size:0.72rem;color:var(--s-muted);line-height:1.45;flex:1;
   display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;}
@@ -122,8 +122,8 @@
   display:flex;align-items:center;justify-content:center;}
 .shop-modal-close:hover{color:var(--s-text);border-color:var(--s-red);}
 .shop-modal-emoji{font-size:3rem;line-height:1;margin-bottom:8px;}
-.shop-modal-name{font-family:'Press Start 2P',monospace;font-size:0.72rem;
-  color:var(--s-text);line-height:1.5;margin-bottom:4px;}
+.shop-modal-name{font-family:'Nunito',sans-serif;font-weight:800;font-size:1.05rem;
+  color:var(--s-text);line-height:1.3;margin-bottom:4px;letter-spacing:-0.01em;}
 
 /* ── Modal sections ── */
 .shop-modal-sec{background:var(--s-bg3);border:1px solid var(--s-border);

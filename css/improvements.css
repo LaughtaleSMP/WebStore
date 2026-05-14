@@ -28,3 +28,14 @@
     content-visibility: auto;
     contain-intrinsic-size: 0 600px;
 }
+
+/* ── SCROLL HINT FADE ── */
+.scroll-hint {
+    transition: opacity 0.4s ease;
+}
+
+/* ── ACCESSIBILITY: Improved contrast for muted text ── */
+/* Override --text-muted for better WCAG AA compliance (4.5:1 ratio on dark bg) */
+:root {
+    --text-muted: #a3b8a7;
+}

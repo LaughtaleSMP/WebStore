@@ -265,8 +265,8 @@
       return [Math.round(coinBasis * t[0] * vMul * gMul), Math.round(coinBasis * t[1] * vMul * gMul), Math.round(coinBasis * t[2] * vMul * gMul)];
     }
     var items = [
-      ['Land 10x10', 'Land', calcC('premium'), '4-8j farming', ''],
-      ['Land 30x30+', 'Land', calcC('luxury'), '24-48j farming', ''],
+      ['Land 10x10', 'Land', calcC('premium'), '2-4j farming (First Home 1-2j)', ''],
+      ['Land 30x30+', 'Land', calcC('luxury'), '14-28j farming', ''],
       ['Land Extend', 'Land', calcC('mid'), '2-4j farming', ''],
       ['EQ 1x Pull', 'Gacha', calcC('basic'), '0.5-1j farming', ''],
       ['EQ 10x Pull', 'Gacha', calcC('mid'), '2-4j farming', ''],
@@ -417,7 +417,7 @@
     cards.push(buildCard('Mimi Land', 'var(--green)',
       section('Rate per Block²') + landRows +
       section('Contoh Harga') + exRows +
-      note('Gem diskon ' + (ld.gemDiscount||99) + '% · PPN ' + (ld.ppnPct||5) + '% (land ke-' + ((ld.ppnFreeLimit||3)+1) + '+) · Max ' + (ld.maxPerPlayer||5) + ' · Min ' + (ld.minArea||9) + ' blk²')
+      note('First Home diskon ' + (ld.firstHomeDiscPct||50) + '% (land pertama) · Gem diskon ' + (ld.gemDiscount||99) + '% · PPN ' + (ld.ppnPct||5) + '% (land ke-' + ((ld.ppnFreeLimit||3)+1) + '+) · Max ' + (ld.maxPerPlayer||5) + ' · Min ' + (ld.minArea||9) + ' blk²')
     ));
 
     // ━━━ 2. GACHA ━━━

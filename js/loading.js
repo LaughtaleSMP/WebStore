@@ -1,33 +1,43 @@
 /* ══════════════════════════════════════════════════
-   loading.js — Dismiss loading screen setelah halaman siap
+   loading.js — Loading screen controller
+   Skip on revisit, auto-dismiss after 1.75s
 ══════════════════════════════════════════════════ */
-(function () {
-  const BAR_ANIM_DURATION = 2300; // cocokkan dengan barFill (0.6s delay + 1.6s fill + sedikit buffer)
+(function() {
+  var screen = document.getElementById('loading-screen');
+  var status = document.getElementById('loading-status');
 
-  function dismissLoader() {
-    const screen = document.getElementById('loading-screen');
-    if (!screen) return;
-    screen.classList.add('fade-out');
-    // Hapus dari DOM setelah transisi selesai (0.9s sesuai CSS)
-    setTimeout(() => {
+  if (!screen) return;
+
+  // Skip loading screen jika sudah pernah dikunjungi (revisit)
+  try {
+    if (sessionStorage.getItem('ls_visited')) {
       screen.style.display = 'none';
-    }, 950);
-  }
-
-  // Tunggu animasi bar selesai, lalu dismiss
-  if (document.readyState === 'complete') {
-    setTimeout(dismissLoader, BAR_ANIM_DURATION);
-  } else {
-    window.addEventListener('load', function () {
-      setTimeout(dismissLoader, BAR_ANIM_DURATION);
-    });
-  }
-
-  // Safety fallback: paksa dismiss setelah 5 detik
-  setTimeout(function () {
-    const screen = document.getElementById('loading-screen');
-    if (screen && !screen.classList.contains('fade-out')) {
-      dismissLoader();
+      document.body.style.overflow = '';
+      return;
     }
-  }, 5000);
+    sessionStorage.setItem('ls_visited', '1');
+  } catch(e) { /* sessionStorage blocked */ }
+
+  var messages = ['MEMUAT ASET...', 'MENYAMBUNGKAN...', 'MENYIAPKAN SERVER...', 'SELAMAT DATANG!'];
+  var idx = 0;
+
+  // Cycle status messages
+  var msgInterval = setInterval(function() {
+    idx = Math.min(idx + 1, messages.length - 1);
+    if (status) status.textContent = messages[idx];
+  }, 420);
+
+  // Dismiss after ~1.75s
+  setTimeout(function() {
+    clearInterval(msgInterval);
+    if (status) status.textContent = 'SELAMAT DATANG!';
+    screen.classList.add('fade-out');
+    setTimeout(function() {
+      screen.style.display = 'none';
+      document.body.style.overflow = '';
+    }, 700);
+  }, 1750);
+
+  // Prevent scroll during loading
+  document.body.style.overflow = 'hidden';
 })();

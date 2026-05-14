@@ -15,7 +15,7 @@
     font-style: normal;
     font-weight: 400;
     font-display: swap;
-    src: url("/assets/fonts/press-start-2p/PressStart2P-Regular.woff2") format("woff2");
+    src: url("../assets/fonts/press-start-2p/PressStart2P-Regular.woff2") format("woff2");
 }
 
 @font-face {
@@ -23,7 +23,7 @@
     font-style: normal;
     font-weight: 400 900;
     font-display: swap;
-    src: url("/assets/fonts/nunito/Nunito-Variable.woff2") format("woff2-variations");
+    src: url("../assets/fonts/nunito/Nunito-Variable.woff2") format("woff2-variations");
 }
 
 @font-face {
@@ -31,7 +31,7 @@
     font-style: italic;
     font-weight: 400 900;
     font-display: swap;
-    src: url("/assets/fonts/nunito/Nunito-Italic-Variable.woff2") format("woff2-variations");
+    src: url("../assets/fonts/nunito/Nunito-Italic-Variable.woff2") format("woff2-variations");
 }
 
 :root {
@@ -102,18 +102,20 @@ a {
 }
 .section-label {
     font-family: "Press Start 2P", monospace;
-    font-size: clamp(0.45rem, 1.2vw, 0.6rem);
+    font-size: clamp(0.4rem, 1vw, 0.52rem);
     color: var(--green);
     letter-spacing: 3px;
     text-transform: uppercase;
     margin-bottom: 0.75rem;
 }
 .section-title {
-    font-family: "Press Start 2P", monospace;
-    font-size: clamp(1rem, 3vw, 1.6rem);
+    font-family: "Nunito", sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.1rem, 3vw, 1.6rem);
     color: var(--text);
     margin-bottom: 1rem;
-    line-height: 1.5;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
 }
 .section-desc {
     font-size: clamp(0.85rem, 2vw, 0.98rem);
@@ -192,4 +194,185 @@ nav.scrolled {
         0 2px 12px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(40px) saturate(200%) brightness(0.8);
     -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(0.8);
+}
+
+/* ============================================================
+   FONT SYSTEM — Hybrid Pixel + Modern
+   ─────────────────────────────────────────────────────────────
+   STRATEGI:
+   • "Press Start 2P" → HANYA untuk elemen KECIL:
+     label, badge, tag, price, nav link, stat-label, footer
+   • "Nunito" Bold/ExtraBold → untuk heading BESAR:
+     hero name, feat-name, section-title, social-name, seed-value
+   • "Nunito" Regular → body text, deskripsi
+   
+   Alasan: Press Start 2P di ukuran besar sangat berat secara
+   visual dan sulit dibaca. Nunito Bold di ukuran besar terlihat
+   tegas, modern, dan tetap readable. Press Start 2P di ukuran
+   kecil memberikan pixel accent yang khas gaming.
+============================================================ */
+
+/* ── PIXEL FONT: Label, Badge, Tag, Small UI ── */
+.section-label,
+.hero-badge,
+.hero-sub,
+.hero-ip-label,
+.hero-ip-text,
+.hero-ip-copy,
+.hero-connect-btn,
+.feat-num,
+.feat-tag,
+.rule-badge,
+.shop-tab,
+.shop-badge,
+.shop-card-price,
+.shop-btn,
+.stat-label,
+.status-text-main,
+.latency-label,
+.latency-unit,
+.refresh-btn,
+.seed-label,
+.social-cta,
+.qris-nmid-label,
+.qris-step-num,
+.nav-logo,
+.nav-links a,
+.nav-badge,
+.footer-logo,
+.footer-links a,
+.footer-social-btn,
+#toast {
+    font-family: "Press Start 2P", monospace;
+}
+
+/* ── NUNITO BOLD: Heading Besar, Nama, Value ── */
+.section-title,
+.hero-season,
+.hero-name,
+.social-name,
+.seed-value,
+.live-stat-val,
+.latency-value,
+.stat-val,
+.qris-store-name,
+.rule-num,
+.btn-primary,
+.btn-outline,
+.btn-hero {
+    font-family: "Nunito", sans-serif;
+    font-weight: 800;
+}
+.feat-name,
+.server-name-display {
+    font-weight: normal;
+}
+
+/* ── NUNITO REGULAR: Body Text, Deskripsi ── */
+.section-desc,
+.hero-tagline,
+.feat-desc,
+.rule-text,
+.notice-text,
+.social-handle,
+.social-desc,
+.shop-card-desc,
+.shop-card-cat,
+.live-stat-label,
+.last-updated,
+.seed-sub,
+.qris-step-text,
+.qris-note,
+.qris-nmid-val,
+.server-address,
+.s-tag {
+    font-family: "Nunito", sans-serif;
+    font-weight: 500;
+}
+
+/* ── Fine-tuning ukuran & spacing ── */
+.feat-name {
+    font-size: clamp(0.72rem, 1.6vw, 0.88rem);
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+}
+.feat-num {
+    font-size: 0.36rem;
+    letter-spacing: 1.5px;
+    opacity: 0.5;
+}
+.feat-tag {
+    font-size: 0.34rem;
+    letter-spacing: 1.5px;
+}
+.hero-name {
+    font-size: clamp(2.2rem, 8vw, 4.5rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+.hero-season {
+    font-size: clamp(0.9rem, 2.5vw, 1.4rem);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+.section-title {
+    font-size: clamp(1.1rem, 3vw, 1.6rem);
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+}
+.seed-value {
+    font-size: clamp(3rem, 12vw, 6rem);
+    letter-spacing: -0.03em;
+}
+.social-name {
+    font-size: clamp(0.85rem, 1.8vw, 1rem);
+    letter-spacing: -0.01em;
+}
+.stat-val {
+    font-size: clamp(1rem, 3vw, 1.5rem);
+    letter-spacing: -0.02em;
+}
+.stat-label {
+    font-size: 0.3rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+.live-stat-val {
+    font-size: clamp(0.85rem, 2vw, 1.1rem);
+}
+.server-name-display {
+    font-size: clamp(0.75rem, 1.8vw, 0.95rem);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+}
+.rule-num {
+    font-size: clamp(0.85rem, 1.8vw, 1rem);
+    opacity: 0.4;
+}
+.btn-primary,
+.btn-outline,
+.btn-hero {
+    font-size: clamp(0.72rem, 1.5vw, 0.85rem);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+.refresh-btn {
+    font-size: clamp(0.38rem, 0.9vw, 0.46rem);
+    letter-spacing: 1px;
+}
+.latency-label,
+.latency-unit {
+    font-size: 0.36rem;
+    letter-spacing: 1px;
+}
+.seed-label {
+    font-size: 0.4rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+.s-tag {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }

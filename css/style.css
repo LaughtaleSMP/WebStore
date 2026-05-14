@@ -11,7 +11,7 @@
     font-style: normal;
     font-weight: 400;
     font-display: swap;
-    src: url("/assets/fonts/press-start-2p/PressStart2P-Regular.woff2") format("woff2");
+    src: url("../assets/fonts/press-start-2p/PressStart2P-Regular.woff2") format("woff2");
 }
 
 @font-face {
@@ -19,7 +19,7 @@
     font-style: normal;
     font-weight: 400 900;
     font-display: swap;
-    src: url("/assets/fonts/nunito/Nunito-Variable.woff2") format("woff2-variations");
+    src: url("../assets/fonts/nunito/Nunito-Variable.woff2") format("woff2-variations");
 }
 
 @font-face {
@@ -27,7 +27,7 @@
     font-style: italic;
     font-weight: 400 900;
     font-display: swap;
-    src: url("/assets/fonts/nunito/Nunito-Italic-Variable.woff2") format("woff2-variations");
+    src: url("../assets/fonts/nunito/Nunito-Italic-Variable.woff2") format("woff2-variations");
 }
 
 :root {
@@ -62,7 +62,7 @@
 
     /* Fonts */
     --font-pixel: "Press Start 2P", monospace;
-    --font-heading: "Rajdhani", sans-serif;
+    --font-heading: "Nunito", sans-serif;
     --font-body: "Nunito", sans-serif;
 
     /* Radii */
@@ -617,8 +617,8 @@ section {
 
 .server-name-display {
     font-family: var(--font-heading);
-    font-size: clamp(1rem, 2.5vw, 1.3rem);
-    font-weight: 700;
+    font-size: clamp(0.8rem, 1.8vw, 0.95rem);
+    font-weight: 500;
     color: var(--text);
     margin-bottom: 0.4rem;
     letter-spacing: 0.3px;
@@ -877,8 +877,8 @@ section {
 
 .feat-name {
     font-family: var(--font-heading);
-    font-size: clamp(0.9rem, 2vw, 1.05rem);
-    font-weight: 700;
+    font-size: clamp(0.75rem, 1.6vw, 0.88rem);
+    font-weight: normal;
     color: var(--text);
     margin-bottom: 6px;
     line-height: 1.25;

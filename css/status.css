@@ -256,7 +256,8 @@
 }
 .feat-name {
   font-family: 'Press Start 2P', monospace;
-  font-size: clamp(0.55rem, 1.4vw, 0.7rem);
+  font-size: clamp(0.45rem, 1.1vw, 0.55rem);
+  font-weight: normal;
   color: var(--text);
   margin-bottom: 8px; line-height: 1.5;
 }

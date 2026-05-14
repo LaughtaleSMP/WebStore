@@ -12,6 +12,8 @@
 <meta property="og:url" content="https://laughtale.my.id">
 <meta property="og:site_name" content="Laughtale SMP">
 <meta property="og:image" content="assets/logo.jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#a855f7">
 <link rel="canonical" href="https://laughtale.my.id">
@@ -24,10 +26,6 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- FIX: shop-extra.css wajib di-load agar form, gallery, qty, tombol WA terstyle -->
-<link rel="stylesheet" href="css/shop-extra.css">
-<link rel="stylesheet" href="css/event-popup.css">
-<link rel="stylesheet" href="css/order-feed.css">
 
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/nav.css">
@@ -35,9 +33,11 @@
 <link rel="stylesheet" href="css/status.css">
 <link rel="stylesheet" href="css/skeleton.css">
 <link rel="stylesheet" href="css/sections.css">
+<link rel="stylesheet" href="css/shop-extra.css">
+<link rel="stylesheet" href="css/event-popup.css">
+<link rel="stylesheet" href="css/order-feed.css">
 <link rel="stylesheet" href="css/responsive.css">
 <link rel="stylesheet" href="css/improvements.css">
-<script src="libs/supabase.js"></script>
 
 <script type="application/ld+json">
 {
@@ -136,11 +136,17 @@
     <li><a href="#shop"><span class="nav-link-dot"></span>Shop</a></li>
     <li><a href="#komunitas"><span class="nav-link-dot"></span>Komunitas</a></li>
     <li><a href="#donasi"><span class="nav-link-dot"></span>Donasi</a></li>
-    <li><a href="status.html"><span class="nav-link-dot"></span>Leaderboard</a></li>
-    <li><a href="logs.html"><span class="nav-link-dot"></span>Logs</a></li>
-    <li><a href="monitor.html"><span class="nav-link-dot"></span>Monitor</a></li>
-    <li><a href="dokumentasi.html"><span class="nav-link-dot"></span>Docs</a></li>
-    <li><a href="admin/index.html" style="opacity:.7"><span class="nav-link-dot"></span>Admin</a></li>
+    <li class="nav-dropdown-wrap">
+      <button type="button" class="nav-dropdown-toggle" aria-expanded="false" aria-haspopup="true">
+        <span class="nav-link-dot"></span>Tools ▾
+      </button>
+      <ul class="nav-dropdown-menu" role="menu">
+        <li role="menuitem"><a href="status.html">Leaderboard</a></li>
+        <li role="menuitem"><a href="logs.html">Economy Logs</a></li>
+        <li role="menuitem"><a href="monitor.html">Server Monitor</a></li>
+        <li role="menuitem"><a href="dokumentasi.html">Dokumentasi</a></li>
+      </ul>
+    </li>
     <li>
       <span class="nav-badge">
         <span class="nav-badge-dot"></span>
@@ -215,10 +221,6 @@
       <span class="d-icon" style="border-color:rgba(192,132,252,0.25);background:rgba(192,132,252,0.08)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg></span>
       Dokumentasi ↗
     </a></li>
-    <li><a href="admin/index.html" class="drawer-link" style="color:var(--red)">
-      <span class="d-icon" style="border-color:rgba(248,113,113,0.25);background:rgba(248,113,113,0.08)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
-      Admin Login ↗
-    </a></li>
   </ul>
 
   <!-- Drawer footer: server status pill -->
@@ -260,7 +262,7 @@
       </button>
     </div>
     <!-- Direct Connect Button -->
-    <button type="button" class="hero-connect-btn" id="hero-connect-btn" onclick="heroDirectConnect()">
+    <button type="button" class="hero-connect-btn" id="hero-connect-btn">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
         <polyline points="15 3 21 3 21 9"/>
@@ -276,25 +278,9 @@
     <div class="hero-pill"><span></span><span id="hero-time-text">—</span></div>
     <div class="hero-pill"><span></span><span>Versi Terbaru</span></div>
   </div>
-  <script>
-  (function updateHeroDate() {
-    var hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-    var bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-    function pad(n) { return n < 10 ? '0' + n : n; }
-    function render() {
-      var d = new Date();
-      var dateEl = document.getElementById('hero-date-text');
-      var timeEl = document.getElementById('hero-time-text');
-      if (dateEl) dateEl.textContent = hari[d.getDay()] + ', ' + pad(d.getDate()) + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
-      if (timeEl) timeEl.textContent = pad(d.getHours()) + '.' + pad(d.getMinutes()) + ' WIB';
-    }
-    render();
-    setInterval(render, 30000); // update setiap 30 detik
-  })();
-  </script>
 
   <div class="hero-cta">
-    <a href="#komunitas" class="btn-primary btn-hero">
+    <a href="https://chat.whatsapp.com/GqSqIIYySU1Cra0JTGQpFG" target="_blank" rel="noopener noreferrer" class="btn-primary btn-hero">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       GABUNG SEKARANG
     </a>
@@ -470,7 +456,7 @@
       </div>
 
       <div class="last-updated" id="last-updated-text">Mengambil data server...</div>
-      <button type="button" class="refresh-btn" id="refresh-btn" onclick="fetchServerStatus()">↻ REFRESH STATUS</button>
+      <button type="button" class="refresh-btn" id="refresh-btn">↻ REFRESH STATUS</button>
     </div>
   </div>
 </section>
@@ -1038,7 +1024,7 @@
     <p class="section-desc fade-up">Temukan komunitas kami di berbagai platform.</p>
 
     <div class="social-grid">
-      <a href="https://chat.whatsapp.com/C2ksT3ncowT7jvkF2TNFnc" target="_blank" rel="noopener noreferrer"
+      <a href="https://chat.whatsapp.com/GqSqIIYySU1Cra0JTGQpFG" target="_blank" rel="noopener noreferrer"
          class="social-card fade-up"
          style="--social-color:#25D366; --social-bg:rgba(37,211,102,0.08); --social-border:rgba(37,211,102,0.18);">
         <div class="social-header">
@@ -1052,8 +1038,8 @@
             <div class="social-handle">Grup Utama</div>
           </div>
         </div>
-        <div class="social-desc">Pengumuman & koordinasi event.</div>
-        <span class="social-cta">JOIN GRUP <span class="social-arrow">→</span></span>
+        <div class="social-desc">Registrasi wajib di sini. Kirim format register untuk bisa masuk server.</div>
+        <span class="social-cta">REGISTER DI SINI <span class="social-arrow">→</span></span>
       </a>
 
       <a href="https://discord.gg/ekPwe4AkJy" target="_blank" rel="noopener noreferrer"
@@ -1192,6 +1178,7 @@
 <!-- ============================================================
      SCRIPTS
 ============================================================ -->
+<script src="libs/supabase.js"></script>
 <script src="js/nav.js" defer></script>
 
 <!-- Original scripts preserved -->
@@ -1220,57 +1207,12 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="js/animations.js"></script>
 <script src="js/feat-icons-enhanced.js"></script>
 
-
-
-
-  <!-- ◆ PROFILE SPARKS JS ◆ -->
-  <script>
-  // sparks removed
-  </script>
 <div id="toast" role="status" aria-live="polite">
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5dbd3a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
   <span id="toast-msg">IP berhasil disalin!</span>
 </div>
 
-<script>
-(function() {
-  const screen  = document.getElementById('loading-screen');
-  const status  = document.getElementById('loading-status');
-
-  // IMPROVEMENT: Skip loading screen jika sudah pernah dikunjungi (revisit)
-  try {
-    if (sessionStorage.getItem('ls_visited')) {
-      screen.style.display = 'none';
-      document.body.style.overflow = '';
-      return;
-    }
-    sessionStorage.setItem('ls_visited', '1');
-  } catch(e) { /* sessionStorage blocked — tampilkan loading screen normal */ }
-
-  const messages = ['MEMUAT ASET...', 'MENYAMBUNGKAN...', 'MENYIAPKAN SERVER...', 'SELAMAT DATANG!'];
-  let   idx = 0;
-
-  // Cycle status messages
-  const msgInterval = setInterval(() => {
-    idx = Math.min(idx + 1, messages.length - 1);
-    if (status) status.textContent = messages[idx];
-  }, 420);
-
-  // Dismiss after ~1.75s (bar fills in 1.4s + 0.35s delay)
-  setTimeout(() => {
-    clearInterval(msgInterval);
-    if (status) status.textContent = 'SELAMAT DATANG!';
-    screen.classList.add('fade-out');
-    setTimeout(() => {
-      screen.style.display = 'none';
-      document.body.style.overflow = '';
-    }, 700);
-  }, 1750);
-
-  // Prevent scroll during loading
-  document.body.style.overflow = 'hidden';
-})();
-</script>
+<script src="js/loading.js"></script>
 
 <script src="js/ui.js" defer></script>
 
@@ -1342,63 +1284,8 @@ window.SERVER_CONFIG = {
 </button>
 <script src="js/back-to-top.js" defer></script>
 <script src="js/typewriter.js" defer></script>
+<script src="js/hero-utils.js" defer></script>
 
-
-<script>
-/* ── Direct Connect to Minecraft Server ── */
-function heroDirectConnect() {
-  var _ip   = (window._serverIP || 'laughtale.my.id:19214').split(':');
-  var HOST  = _ip[0] || 'laughtale.my.id';
-  var PORT  = _ip[1] || '19214';
-  var btn  = document.getElementById('hero-connect-btn');
-  var hint = document.getElementById('hero-connect-hint');
-
-  /* Coba Bedrock deep link: minecraft://connect */
-  var deepLink = 'minecraft://connect?serverUrl=' + HOST + '&serverPort=' + PORT;
-
-  /* Deteksi platform */
-  var ua = navigator.userAgent.toLowerCase();
-  var isMobile = /android|iphone|ipad|ipod/.test(ua);
-  var isWin    = /windows/.test(ua);
-
-  /* Coba buka deep link */
-  var t = Date.now();
-  window.location.href = deepLink;
-
-  /* Fallback: kalau 1.5 detik tidak pindah (browser tidak support deep link) */
-  setTimeout(function() {
-    if (Date.now() - t < 2000) {
-      /* Salin IP ke clipboard sebagai fallback */
-      var ip = HOST + ':' + PORT;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(ip).then(function() {
-          showConnectHint('IP disalin! Buka Minecraft > Bermain > Server > Tambah Server', 'success');
-        });
-      } else {
-        showConnectHint('Buka Minecraft > Bermain > Server > Tambah Server > masukkan ' + ip, 'info');
-      }
-    }
-  }, 1500);
-
-  /* Feedback visual tombol */
-  if (btn) {
-    btn.classList.add('connecting');
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> CONNECTING...';
-    setTimeout(function() {
-      btn.classList.remove('connecting');
-      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> CONNECT KE SERVER';
-    }, 2500);
-  }
-}
-
-function showConnectHint(msg, type) {
-  var hint = document.getElementById('hero-connect-hint');
-  if (!hint) return;
-  hint.textContent = msg;
-  hint.className = 'hero-connect-hint show ' + (type || '');
-  setTimeout(function() { hint.className = 'hero-connect-hint'; }, 4000);
-}
-</script>
 <script src="js/supabase-sync.js" defer></script>
 <script src="js/order-feed.js" defer></script>
 <script src="js/event-popup.js" defer></script>
