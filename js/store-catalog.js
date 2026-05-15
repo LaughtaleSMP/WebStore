@@ -1,5 +1,5 @@
 window.__STORE_CATALOG__ = {
-  "version": "2026.05.11",
+  "version": "2026.05.15",
   "note": "Auto-generated. Compact format: [label, qty, baseW] per item. Price = max(1, round(baseW * basis)) * qty.",
   "maxDaily": 200,
   "maxPerPurchase": 16,
@@ -134,6 +134,7 @@ window.__STORE_CATALOG__ = {
       ["Sunflower", 16, 0.55], ["Lilac", 16, 0.50], ["Rose Bush", 16, 0.50], ["Peony", 16, 0.50],
       ["Pink Petals", 16, 0.60], ["Torchflower", 16, 0.70], ["Wither Rose", 8, 1.50],
       ["Lily Pad", 16, 0.80], ["Seagrass", 32, 0.50], ["Kelp", 32, 0.45], ["Sea Pickle", 16, 0.90],
+      ["Glow Berries", 16, 0.85], ["Sweet Berries", 16, 0.70],
       ["Brown Mushroom", 16, 0.40], ["Red Mushroom", 16, 0.40],
       ["Huge Brown Mushroom", 32, 0.65], ["Huge Red Mushroom", 32, 0.65],
       ["Crimson Fungus", 16, 0.55], ["Warped Fungus", 16, 0.55],

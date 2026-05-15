@@ -68,7 +68,13 @@
   async function fetchAll() {
     try {
       // Skip if cache is fresh and data already loaded
-      if (_data && _cFresh(CACHE_KEY)) { fetchTrend(); return; }
+      if (_data && _cFresh(CACHE_KEY)) {
+        // Render dari cache (data sudah ada)
+        renderAnalytics(); renderLogStats(); renderLogs(); renderDiscCodes(); renderTax();
+        renderTopItems();
+        fetchTrend();
+        return;
+      }
       var r = await fetch(SB_URL + '/rest/v1/leaderboard_sync?id=eq.current&select=gacha_lb,bank_log,auction_log,gacha_log,topup_log,disc_codes,synced_at', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
       var d = await r.json(); if (!d || !d[0]) return;
       var row = d[0];
@@ -79,9 +85,11 @@
         disc: safeParse(row.disc_codes, {}), synced: row.synced_at
       };
       _cSet(CACHE_KEY, _data);
+      _topItemsCache = null; // invalidate cache karena data baru
       var el = $('eco-sync');
       if (el) el.textContent = 'Sync: ' + (row.synced_at ? new Date(row.synced_at).toLocaleString('id-ID') : '—');
       renderAnalytics(); renderLogStats(); renderLogs(); renderDiscCodes(); renderTax();
+      renderTopItems();
       fetchTrend();
     } catch (e) { console.warn('[Eco]', e) }
   }
@@ -806,25 +814,63 @@
 
   function renderBank(logs) {
     var el = $('log-content'); if (!logs.length) { el.innerHTML = '<div class="emp">Belum ada log transfer</div>'; return }
-    el.innerHTML = logs.map(function (h, i) {
+    var sorted = logs.slice().sort(function (a, b) { return (b.ts || 0) - (a.ts || 0) });
+    el.innerHTML = sorted.map(function (h, i) {
       var tax = (h.tax || 0) > 0 ? ' <span class="tx">pajak ' + fmt(h.tax) + '</span>' : '';
       return '<div class="log-row" style="animation:fs .3s ' + i * 30 + 'ms ease both"><div class="log-icon sent">' + _ic.sent + '</div><div class="log-body"><div class="log-main"><span class="pn">' + esc(h.from || '?') + '</span> <span class="arrow">→</span> <span class="pn">' + esc(h.to || '?') + '</span></div><div class="log-detail">' + (h.note ? '"' + esc(h.note) + '" · ' : '') + '<span class="log-time">' + timeAgo(h.ts) + '</span></div></div><div class="log-amount coin">+' + fmt(h.amount) + ' Coin' + tax + '</div></div>';
     }).join('');
   }
 
   function renderAuction(logs) {
-    var el = $('log-content'); if (!logs.length) { el.innerHTML = '<div class="emp">Belum ada log auction</div>'; return }
-    el.innerHTML = logs.map(function (h, i) {
-      var cls = h.type === 'expired' ? 'expired' : 'sold';
-      var detail = h.type === 'expired' ? '<span class="pn">' + esc(h.seller || '?') + '</span>' : '<span class="pn">' + esc(h.seller || '?') + '</span> <span class="arrow">→</span> <span class="pn">' + esc(h.buyer || '?') + '</span>' + (h.type === 'auction_won' ? ' <span class="badge bid">Lelang</span>' : '');
-      var amt = h.type === 'expired' ? '<div class="log-amount expired">Expired</div>' : '<div class="log-amount coin">' + fmt(h.price) + ' Coin</div>';
-      return '<div class="log-row" style="animation:fs .3s ' + i * 30 + 'ms ease both"><div class="log-icon ' + cls + '">' + (_ic[cls] || '') + '</div><div class="log-body"><div class="log-main">' + esc(h.item || '?') + '</div><div class="log-detail">' + detail + ' · <span class="log-time">' + timeAgo(h.ts) + '</span></div></div>' + amt + '</div>';
+    var el = $('log-content');
+    if (!logs.length) { el.innerHTML = '<div class="emp">Belum ada log auction</div>'; return; }
+
+    // [PERF] Sort by ts desc — terbaru di atas. Slice agar tidak mutate cache.
+    var sorted = logs.slice().sort(function (a, b) { return (b.ts || 0) - (a.ts || 0) });
+
+    el.innerHTML = sorted.map(function (h, i) {
+      var t = h.type;
+      var cls, badge = '', amt;
+
+      if (t === 'expired') {
+        cls = 'expired';
+        amt = '<div class="log-amount expired">Expired</div>';
+      } else if (t === 'auction_won') {
+        cls = 'sold';
+        badge = ' <span class="badge bid">Lelang</span>';
+        amt = '<div class="log-amount coin">' + fmt(h.price) + ' Coin</div>';
+      } else if (t === 'offer_accepted') {
+        cls = 'sold';
+        badge = ' <span class="badge bid">Tawar</span>';
+        amt = '<div class="log-amount coin">' + fmt(h.price) + ' Coin</div>';
+      } else if (t === 'sold') {
+        cls = 'sold';
+        amt = '<div class="log-amount coin">' + fmt(h.price) + ' Coin</div>';
+      } else {
+        // Unknown type — tampil aman, tidak crash
+        cls = 'sold';
+        amt = h.price ? '<div class="log-amount coin">' + fmt(h.price) + ' Coin</div>' : '<div class="log-amount expired">—</div>';
+      }
+
+      var detail = (t === 'expired')
+        ? '<span class="pn">' + esc(h.seller || '?') + '</span>'
+        : '<span class="pn">' + esc(h.seller || '?') + '</span> <span class="arrow">→</span> <span class="pn">' + esc(h.buyer || '?') + '</span>' + badge;
+
+      return '<div class="log-row" style="animation:fs .3s ' + i * 30 + 'ms ease both">'
+        + '<div class="log-icon ' + cls + '">' + (_ic[cls] || '') + '</div>'
+        + '<div class="log-body">'
+        +   '<div class="log-main">' + esc(h.item || '?') + '</div>'
+        +   '<div class="log-detail">' + detail + ' · <span class="log-time">' + timeAgo(h.ts) + '</span></div>'
+        + '</div>'
+        + amt
+        + '</div>';
     }).join('');
   }
 
   function renderGachaLog(logs) {
     var el = $('log-content'); if (!logs.length) { el.innerHTML = '<div class="emp">Belum ada log gacha</div>'; return }
-    el.innerHTML = logs.map(function (h, i) {
+    var sorted = logs.slice().sort(function (a, b) { return (b.ts || 0) - (a.ts || 0) });
+    el.innerHTML = sorted.map(function (h, i) {
       var pName = h.player || h.p || '?', type = (h.type || h.t || 'EQ') === 'PT' ? 'Partikel' : 'Peralatan', typeCls = (h.type || h.t || 'EQ') === 'PT' ? 'pt' : 'eq';
       var items = h.items || [], rarity = h.r || 'COMMON', iName = h.name || h.n || '?', rarColor = RARITY_COLORS[rarity] || 'var(--dim)';
       if (items.length > 0) {
@@ -845,6 +891,105 @@
       return '<div class="log-row" style="animation:fs .3s ' + i * 30 + 'ms ease both"><div class="log-icon ' + actCls + '">' + (_ic[actCls] || '') + '</div><div class="log-body"><div class="log-main"><span class="pn admin">' + esc(h.a || 'Admin') + '</span> <span class="arrow">→</span> <span class="pn">' + esc(h.t || '?') + '</span>' + (h.o ? ' <span class="badge offline">Offline</span>' : '') + '</div><div class="log-detail">' + fmt(h.b) + ' → ' + fmt(h.f) + ' ' + cur + ' · <span class="log-time">' + timeAgo(h.ts) + '</span></div></div><div class="log-amount ' + actCls + '">' + act + fmt(h.n) + ' <span class="cur ' + curCls + '">' + cur + '</span></div></div>';
     }).join('');
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // TOP 10 ITEM AUCTION — agregasi item terlaris dari log auction
+  // Single-pass O(N), null-proto map, cache 1 menit, top-K extraction
+  // ═══════════════════════════════════════════════════════════
+  var _topItemsCache = null, _topItemsCacheTs = 0;
+  var _TOP_CACHE_TTL = 60000;
+  var _SOLD_TYPES = { sold: 1, offer_accepted: 1, auction_won: 1 };
+  var _TOP_LIMIT = 10;
+  var _TOP_WEEK_MS = 7 * 24 * 3600 * 1000;
+  var _TOP_HALF_MS = 3.5 * 24 * 3600 * 1000;
+
+  function renderTopItems() {
+    var tbody = document.querySelector('#tbl-top-items tbody');
+    if (!tbody) return;
+    var logs = _data && _data.auction;
+    if (!Array.isArray(logs) || logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--mute)">Belum ada transaksi auction</td></tr>';
+      var pill0 = $('top-items-pill'); if (pill0) pill0.textContent = '0 TX · 7 HARI';
+      return;
+    }
+
+    var now = Date.now();
+    if (_topItemsCache && (now - _topItemsCacheTs) < _TOP_CACHE_TTL) {
+      _renderTopItemsHtml(tbody, _topItemsCache.arr, _topItemsCache.totalTx);
+      return;
+    }
+
+    // Single-pass aggregation
+    var agg = Object.create(null);
+    var cutoffWeek = now - _TOP_WEEK_MS;
+    var cutoffHalf = now - _TOP_HALF_MS;
+    var totalTx = 0;
+
+    for (var i = 0; i < logs.length; i++) {
+      var h = logs[i];
+      if (!h || !_SOLD_TYPES[h.type]) continue;
+      var ts = h.ts || 0;
+      if (ts < cutoffWeek) continue;
+      var rawName = h.item;
+      if (!rawName) continue;
+      var name = String(rawName).trim();
+      if (!name || name === '?') continue;
+      var key = name.toLowerCase();
+      var price = Number(h.price) || 0;
+      if (price <= 0) continue;
+
+      var s = agg[key];
+      if (!s) {
+        s = agg[key] = { name: name, count: 0, total: 0, min: price, max: price, recent: 0, old: 0, recentSum: 0, oldSum: 0 };
+      }
+      s.count++;
+      s.total += price;
+      if (price < s.min) s.min = price;
+      if (price > s.max) s.max = price;
+      if (ts >= cutoffHalf) { s.recent++; s.recentSum += price; }
+      else { s.old++; s.oldSum += price; }
+      totalTx++;
+    }
+
+    var arr = [];
+    for (var k in agg) arr.push(agg[k]);
+    arr.sort(function (a, b) { return b.count - a.count; });
+    if (arr.length > _TOP_LIMIT) arr.length = _TOP_LIMIT;
+
+    _topItemsCache = { arr: arr, totalTx: totalTx };
+    _topItemsCacheTs = now;
+
+    _renderTopItemsHtml(tbody, arr, totalTx);
+  }
+
+  function _renderTopItemsHtml(tbody, arr, totalTx) {
+    if (arr.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--mute)">Tidak ada data 7 hari terakhir</td></tr>';
+      var pill0 = $('top-items-pill'); if (pill0) pill0.textContent = '0 TX · 7 HARI';
+      return;
+    }
+    var out = [];
+    for (var i = 0; i < arr.length; i++) {
+      var it = arr[i];
+      var avg = Math.round(it.total / it.count);
+      var trendHtml = '<span style="color:var(--mute)">—</span>';
+      if (it.recent > 0 && it.old > 0) {
+        var recentAvg = it.recentSum / it.recent;
+        var oldAvg = it.oldSum / it.old;
+        var pct = ((recentAvg - oldAvg) / oldAvg) * 100;
+        if (pct > 5) trendHtml = '<span style="color:var(--green)">▲ ' + pct.toFixed(0) + '%</span>';
+        else if (pct < -5) trendHtml = '<span style="color:var(--red)">▼ ' + Math.abs(pct).toFixed(0) + '%</span>';
+        else trendHtml = '<span style="color:var(--mute)">≈ stabil</span>';
+      } else if (it.recent > 0 && it.old === 0) {
+        trendHtml = '<span style="color:var(--cyan)">★ baru</span>';
+      }
+      var rankColor = i === 0 ? 'var(--gold)' : i === 1 ? '#cbd5e1' : i === 2 ? '#cd7f32' : 'var(--mute)';
+      out.push('<tr><td style="color:' + rankColor + ';font-weight:700">' + (i + 1) + '</td><td style="font-weight:600">' + esc(it.name) + '</td><td style="text-align:right;color:var(--cyan)">' + it.count + 'x</td><td style="text-align:right;color:var(--gold)">' + fmt(avg) + '</td><td style="text-align:right;color:var(--mute)">' + fmt(it.min) + '</td><td style="text-align:right;color:var(--text)">' + fmt(it.max) + '</td><td>' + trendHtml + '</td></tr>');
+    }
+    tbody.innerHTML = out.join('');
+    var pill = $('top-items-pill'); if (pill) pill.textContent = totalTx + ' TX · 7 HARI';
+  }
+
 
   function renderDiscCodes() {
     var el = $('disc-content');
