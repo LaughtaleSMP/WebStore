@@ -1154,33 +1154,50 @@
     return row[metric] || 0;
   }
 
-  // ── Outlier filter: remove data rows whose metric is a statistical anomaly ──
-  // Uses IQR × fence to catch BDS-duplicate spikes without touching normal variance.
+  // ── Outlier filter: remove BDS-duplicate spikes ──
+  // Uses rate-of-change between consecutive rows to detect impossible jumps
+  // (e.g. supply doubles in <60s = BDS duplicate instance).
+  // Does NOT use global IQR — that incorrectly filters legitimate growth
+  // in longer time ranges (7h/30h) where supply may have grown 20-30%.
   function _filterOutliers(data, metric, fenceFactor) {
     if (data.length < 4) return { clean: data, removed: 0 };
-    var fence = fenceFactor || 5;
-    var vals = [];
-    for (var i = 0; i < data.length; i++) {
-      var v = _computeMetric(data[i], metric);
-      if (isFinite(v) && v > 0) vals.push(v);
+    // Sort by timestamp first to ensure consecutive comparison is temporal
+    var sorted = data.slice().sort(function(a, b) {
+      return new Date(a.ts).getTime() - new Date(b.ts).getTime();
+    });
+    // Compute metric values and timestamps
+    var vals = [], ts = [];
+    for (var i = 0; i < sorted.length; i++) {
+      vals.push(_computeMetric(sorted[i], metric));
+      ts.push(new Date(sorted[i].ts).getTime());
     }
-    if (vals.length < 4) return { clean: data, removed: 0 };
-    vals.sort(function(a, b) { return a - b; });
-    var q1 = vals[Math.floor(vals.length * 0.25)];
-    var q3 = vals[Math.floor(vals.length * 0.75)];
-    var iqr = q3 - q1;
-    var lo = q1 - fence * iqr;
-    var hi = q3 + fence * iqr;
-    // Never filter if IQR is too small (flat data)
-    if (iqr < 1) return { clean: data, removed: 0 };
-    var clean = [], removed = 0;
-    for (var i = 0; i < data.length; i++) {
-      var v2 = _computeMetric(data[i], metric);
-      if (v2 >= lo && v2 <= hi) {
-        clean.push(data[i]);
-      } else {
-        removed++;
+    // Mark bad rows: impossible jumps (>50% change within <60s)
+    var bad = {};
+    for (var i = 1; i < sorted.length; i++) {
+      var dt = ts[i] - ts[i - 1]; // ms between consecutive
+      if (dt < 0) dt = 0;
+      var prev = vals[i - 1], cur = vals[i];
+      if (prev <= 0 || cur <= 0) continue;
+      var changePct = Math.abs(cur - prev) / prev;
+      // BDS duplicate: huge jump in <60 seconds
+      if (dt < 60000 && changePct > 0.5) {
+        bad[i] = true;
       }
+      // Zero/corrupt data
+      if (cur === 0 && metric === 'coin_total') {
+        bad[i] = true;
+      }
+    }
+    // Also flag rows with zero player count or coin total
+    for (var i = 0; i < sorted.length; i++) {
+      if ((sorted[i].coin_total || 0) === 0 || (sorted[i].player_count || 0) === 0) {
+        bad[i] = true;
+      }
+    }
+    var clean = [], removed = 0;
+    for (var i = 0; i < sorted.length; i++) {
+      if (bad[i]) { removed++; }
+      else { clean.push(sorted[i]); }
     }
     return { clean: clean, removed: removed };
   }
@@ -1260,7 +1277,7 @@
   // Session berlaku 10 menit setelah auth sukses (tersimpan di sessionStorage).
   // Untuk ganti password: replace hash di bawah + password mentah di console:
   //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('password_baru')).then(b => console.log(Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join('')))
-  var ADMIN_PW_HASH = '5fa5fe6c4b7d7f1d92e32db560d05afacc933fd32adc146cf92bc17745ceb21f'; // "mimiadmin"
+  var ADMIN_PW_HASH = 'bd063bb85b4fecc24e977030b7cf007b5e23d01ba622c3d6f8bff8b1856e16f8'; // "wahyu1234"
   var ADMIN_SESSION_MS = 10 * 60 * 1000;
 
   async function _sha256(str) {
@@ -1319,67 +1336,41 @@
     }
   }
 
-  // Deteksi anomali pakai logika IDENTIK dengan grafik:
-  // 1. Iterate semua metric yang bisa dihitung (coin_total, coin_avg, median, dsb)
-  // 2. Untuk tiap metric, hitung IQR × 5 fence
-  // 3. Row yang outlier di metric APA PUN → mark sebagai bad
-  // 4. Plus: row dengan nilai zero/duplikat dekat (<30s) → bad
+  // Deteksi anomali: consecutive rate-of-change + proximity check
+  // Mendeteksi BDS-duplicate spikes tanpa menghapus pertumbuhan ekonomi valid
   function _detectAnomalies(data) {
-    var metrics = ['coin_total', 'coin_avg', 'coin_median', 'player_count', 'gem_total', 'gem_avg'];
     var badIds = new Set();
-    for (var m = 0; m < metrics.length; m++) {
-      var metric = metrics[m];
-      var vals = [];
-      for (var i = 0; i < data.length; i++) {
-        var v = _computeMetric(data[i], metric);
-        if (isFinite(v) && v > 0) vals.push(v);
-      }
-      if (vals.length < 4) continue;
-      vals.sort(function (a, b) { return a - b; });
-      var q1 = vals[Math.floor(vals.length * 0.25)] || 0;
-      var q3 = vals[Math.floor(vals.length * 0.75)] || 0;
-      var iqr = q3 - q1;
-      if (iqr < 1) continue;
-      var lo = q1 - 5 * iqr, hi = q3 + 5 * iqr;
-      for (var j = 0; j < data.length; j++) {
-        var row = data[j];
-        if (row.id === null || row.id === undefined) continue;
-        var v2 = _computeMetric(row, metric);
-        if (!isFinite(v2)) continue;
-        if (v2 < lo || v2 > hi) badIds.add(row.id);
-      }
-    }
+    // Sort by timestamp
+    var sorted = data.slice().sort(function(a, b) {
+      return new Date(a.ts || 0).getTime() - new Date(b.ts || 0).getTime();
+    });
     // Zero / incomplete rows
-    for (var k = 0; k < data.length; k++) {
-      var r2 = data[k];
+    for (var k = 0; k < sorted.length; k++) {
+      var r2 = sorted[k];
       if (r2.id === null || r2.id === undefined) continue;
       if ((r2.coin_total || 0) === 0 || (r2.player_count || 0) === 0) badIds.add(r2.id);
     }
     // Dekat-dekat (<30s) — likely BDS duplikat bersamaan
-    for (var l = 1; l < data.length; l++) {
-      if (data[l].id === null || data[l].id === undefined) continue;
-      if (!data[l].ts || !data[l - 1].ts) continue;
-      var dt = new Date(data[l].ts) - new Date(data[l - 1].ts);
-      if (isFinite(dt) && dt >= 0 && dt < 30000) badIds.add(data[l].id);
+    for (var l = 1; l < sorted.length; l++) {
+      if (sorted[l].id === null || sorted[l].id === undefined) continue;
+      if (!sorted[l].ts || !sorted[l - 1].ts) continue;
+      var dt = new Date(sorted[l].ts) - new Date(sorted[l - 1].ts);
+      if (isFinite(dt) && dt >= 0 && dt < 30000) badIds.add(sorted[l].id);
     }
-    // AGGRESSIVE: bandingkan dengan KPI saat ini (ground truth dari leaderboard_sync)
-    // Kalau coin_total/player_count row berbeda >30% dari KPI → anomali
-    // Karena economy berubah perlahan, jump >30% = BDS duplikat / corrupt
-    if (_data && _data.lb && _data.lb.summary) {
-      var now = _data.lb.summary;
-      var nowCoin = now.coin ? now.coin.total : 0;
-      var nowPlayers = now.n || 0;
-      for (var p = 0; p < data.length; p++) {
-        var rp = data[p];
-        if (rp.id === null || rp.id === undefined) continue;
-        var rc = rp.coin_total || 0, rn = rp.player_count || 0;
-        if (nowCoin > 1000 && rc > 0) {
-          var coinDiff = Math.abs(rc - nowCoin) / nowCoin;
-          if (coinDiff > 0.3) { badIds.add(rp.id); continue; }
-        }
-        if (nowPlayers > 10 && rn > 0) {
-          var playerDiff = Math.abs(rn - nowPlayers) / nowPlayers;
-          if (playerDiff > 0.3) badIds.add(rp.id);
+    // Rate-of-change: huge jump (>50%) within <60s = BDS duplicate
+    var metrics = ['coin_total', 'coin_avg', 'player_count'];
+    for (var m = 0; m < metrics.length; m++) {
+      var metric = metrics[m];
+      for (var i = 1; i < sorted.length; i++) {
+        if (sorted[i].id === null || sorted[i].id === undefined) continue;
+        var dt2 = new Date(sorted[i].ts || 0).getTime() - new Date(sorted[i-1].ts || 0).getTime();
+        if (dt2 < 0) dt2 = 0;
+        var prev = _computeMetric(sorted[i-1], metric);
+        var cur = _computeMetric(sorted[i], metric);
+        if (prev <= 0 || cur <= 0) continue;
+        var changePct = Math.abs(cur - prev) / prev;
+        if (dt2 < 60000 && changePct > 0.5) {
+          badIds.add(sorted[i].id);
         }
       }
     }
@@ -1387,7 +1378,7 @@
   }
 
   async function _cleanupAnomalies(btn) {
-    if (!confirm('Hapus semua snapshot anomali dari Supabase?\n\nTindakan ini PERMANEN dan tidak dapat di-undo.\n\nFilter: IQR × 5 fence (sama dengan grafik) — cek semua metric')) return;
+    if (!confirm('Hapus semua snapshot anomali dari Supabase?\n\nTindakan ini PERMANEN dan tidak dapat di-undo.\n\nFilter: rate-of-change + proximity check — deteksi BDS-duplicate spikes')) return;
     btn.disabled = true;
     btn.textContent = 'Menghapus...';
     btn.style.opacity = '0.6';
