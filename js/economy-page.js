@@ -1094,7 +1094,7 @@
   var _trendData = [], _trendRange = 'day', _trendMetric = 'coin_total';
   var _candles = [], _hoverIdx = -1;
   var CU = '#26a69a', CD = '#ef5350';
-  var _candleW = 14, _candleGap = 4, _zoomLevel = 1;
+  var _candleW = 18, _candleGap = 5, _zoomLevel = 1;
 
   function bindTrendTabs() {
     var el = $('trend-tabs'); if (!el) return;
@@ -1111,10 +1111,15 @@
     if (metric === 'income_per_hour') {
       var cf = row.coin_flow;
       var p = typeof cf === 'string' ? safeParse(cf, null) : cf;
-      if (!p) return 0;
-      var org = (p.mob_kill || 0) + (p.gacha_refund || 0) + (p.pvp_refund || 0) + (p.first_sale || 0);
       var n = row.player_count || 1;
-      return parseFloat(((org / n) * 12).toFixed(2));
+      // Try coin_flow first
+      if (p) {
+        var org = (p.mob_kill || 0) + (p.gacha_refund || 0) + (p.pvp_refund || 0) + (p.first_sale || 0);
+        if (org > 0) return parseFloat(((org / n) * 12).toFixed(2));
+      }
+      // Fallback: derive from supply delta between snapshots
+      if (row._incomeEst !== undefined) return row._incomeEst;
+      return 0;
     }
     if (metric === 'velocity') {
       var cf3 = row.coin_flow;
@@ -1154,33 +1159,50 @@
     return row[metric] || 0;
   }
 
-  // ── Outlier filter: remove data rows whose metric is a statistical anomaly ──
-  // Uses IQR × fence to catch BDS-duplicate spikes without touching normal variance.
+  // ── Outlier filter: remove BDS-duplicate spikes ──
+  // Uses rate-of-change between consecutive rows to detect impossible jumps
+  // (e.g. supply doubles in <60s = BDS duplicate instance).
+  // Does NOT use global IQR — that incorrectly filters legitimate growth
+  // in longer time ranges (7h/30h) where supply may have grown 20-30%.
   function _filterOutliers(data, metric, fenceFactor) {
     if (data.length < 4) return { clean: data, removed: 0 };
-    var fence = fenceFactor || 5;
-    var vals = [];
-    for (var i = 0; i < data.length; i++) {
-      var v = _computeMetric(data[i], metric);
-      if (isFinite(v) && v > 0) vals.push(v);
+    // Sort by timestamp first to ensure consecutive comparison is temporal
+    var sorted = data.slice().sort(function(a, b) {
+      return new Date(a.ts).getTime() - new Date(b.ts).getTime();
+    });
+    // Compute metric values and timestamps
+    var vals = [], ts = [];
+    for (var i = 0; i < sorted.length; i++) {
+      vals.push(_computeMetric(sorted[i], metric));
+      ts.push(new Date(sorted[i].ts).getTime());
     }
-    if (vals.length < 4) return { clean: data, removed: 0 };
-    vals.sort(function(a, b) { return a - b; });
-    var q1 = vals[Math.floor(vals.length * 0.25)];
-    var q3 = vals[Math.floor(vals.length * 0.75)];
-    var iqr = q3 - q1;
-    var lo = q1 - fence * iqr;
-    var hi = q3 + fence * iqr;
-    // Never filter if IQR is too small (flat data)
-    if (iqr < 1) return { clean: data, removed: 0 };
-    var clean = [], removed = 0;
-    for (var i = 0; i < data.length; i++) {
-      var v2 = _computeMetric(data[i], metric);
-      if (v2 >= lo && v2 <= hi) {
-        clean.push(data[i]);
-      } else {
-        removed++;
+    // Mark bad rows: impossible jumps (>50% change within <60s)
+    var bad = {};
+    for (var i = 1; i < sorted.length; i++) {
+      var dt = ts[i] - ts[i - 1]; // ms between consecutive
+      if (dt < 0) dt = 0;
+      var prev = vals[i - 1], cur = vals[i];
+      if (prev <= 0 || cur <= 0) continue;
+      var changePct = Math.abs(cur - prev) / prev;
+      // BDS duplicate: huge jump in <60 seconds
+      if (dt < 60000 && changePct > 0.5) {
+        bad[i] = true;
       }
+      // Zero/corrupt data
+      if (cur === 0 && metric === 'coin_total') {
+        bad[i] = true;
+      }
+    }
+    // Also flag rows with zero player count or coin total
+    for (var i = 0; i < sorted.length; i++) {
+      if ((sorted[i].coin_total || 0) === 0 || (sorted[i].player_count || 0) === 0) {
+        bad[i] = true;
+      }
+    }
+    var clean = [], removed = 0;
+    for (var i = 0; i < sorted.length; i++) {
+      if (bad[i]) { removed++; }
+      else { clean.push(sorted[i]); }
     }
     return { clean: clean, removed: removed };
   }
@@ -1193,6 +1215,23 @@
     if (filtered.removed > 0) {
       _showOutlierWarning(filtered.removed);
     }
+    // Pre-compute income estimate from supply delta for rows without coin_flow
+    for (var i = 1; i < cleanData.length; i++) {
+      var prev = cleanData[i - 1], cur = cleanData[i];
+      var cf = cur.coin_flow;
+      var p = typeof cf === 'string' ? safeParse(cf, null) : cf;
+      var hasFlow = p && ((p.mob_kill || 0) + (p.gacha_refund || 0) + (p.pvp_refund || 0) + (p.first_sale || 0)) > 0;
+      if (!hasFlow) {
+        var dtMs = new Date(cur.ts).getTime() - new Date(prev.ts).getTime();
+        if (dtMs > 0 && dtMs < 1800000) { // only for gaps < 30min
+          var supplyDelta = (cur.coin_total || 0) - (prev.coin_total || 0);
+          var n = cur.player_count || 1;
+          // Positive supply delta = net income; extrapolate to per-hour per-player
+          var perHour = (supplyDelta / (dtMs / 3600000)) / n;
+          cur._incomeEst = parseFloat(Math.max(0, perHour).toFixed(2));
+        }
+      }
+    }
     var bms = _bucketMs(), bk = {};
     for (var i = 0; i < cleanData.length; i++) {
       var t = new Date(cleanData[i].ts).getTime(), k = Math.floor(t / bms) * bms;
@@ -1204,29 +1243,53 @@
       for (var j = 1; j < v.length; j++) { if (v[j] > hi) hi = v[j]; if (v[j] < lo) lo = v[j] }
       r.push({ t: b.t, o: v[0], c: v[v.length - 1], h: hi, l: lo, n: v.length });
     }
-    // ── Visual amplification ──
-    // Exaggerate OHLC spread so candles look more dramatic & volatile
+    // ── Range-based visual enhancement ──
+    // Make candles visually thick relative to the chart's visible range
+    // WITHOUT distorting the position (no 3.5x amplification).
+    // Also smooth transitions so consecutive candles don't "jump".
     if (r.length > 1) {
-      var allVals = []; for (var i = 0; i < r.length; i++) allVals.push(r[i].o, r[i].c, r[i].h, r[i].l);
-      allVals.sort(function(a,b){return a-b});
-      var median = allVals[Math.floor(allVals.length/2)] || 1;
-      var AMP = 3.5; // amplification factor — makes body/wicks ~3.5x more dramatic
+      // Compute the full visible range
+      var gMin = Infinity, gMax = -Infinity;
       for (var i = 0; i < r.length; i++) {
-        var mid = (r[i].o + r[i].c) / 2;
-        r[i].o = mid + (r[i].o - mid) * AMP;
-        r[i].c = mid + (r[i].c - mid) * AMP;
-        // Ensure h/l always envelop the amplified body
-        var bodyHi = Math.max(r[i].o, r[i].c), bodyLo = Math.min(r[i].o, r[i].c);
-        var wickSpread = (r[i].h - r[i].l) * AMP;
-        r[i].h = Math.max(bodyHi, mid + wickSpread / 2);
-        r[i].l = Math.min(bodyLo, mid - wickSpread / 2);
-        // Minimum body height: 0.08% of median (prevents flat doji)
-        var minBody = median * 0.0008;
-        if (Math.abs(r[i].c - r[i].o) < minBody) {
-          var dir = (i > 0 && r[i].c >= r[i-1].c) ? 1 : -1;
-          r[i].c = r[i].o + dir * minBody;
-          r[i].h = Math.max(r[i].h, Math.max(r[i].o, r[i].c) + minBody * 0.5);
-          r[i].l = Math.min(r[i].l, Math.min(r[i].o, r[i].c) - minBody * 0.5);
+        if (r[i].l < gMin) gMin = r[i].l;
+        if (r[i].h > gMax) gMax = r[i].h;
+      }
+      var gRange = gMax - gMin || 1;
+
+      // Minimum body = 4% of chart range (tall, always prominent)
+      var minBody = gRange * 0.04;
+      // Minimum wick spread = 2% of chart range
+      var minWick = gRange * 0.02;
+
+      for (var i = 0; i < r.length; i++) {
+        var c = r[i];
+        // Enforce minimum body
+        if (Math.abs(c.c - c.o) < minBody) {
+          var dir = (i > 0 && c.c >= r[i - 1].c) ? 1 : -1;
+          var mid = (c.o + c.c) / 2;
+          c.o = mid - dir * minBody / 2;
+          c.c = mid + dir * minBody / 2;
+        }
+        // Enforce minimum wick spread around body
+        var bodyHi = Math.max(c.o, c.c), bodyLo = Math.min(c.o, c.c);
+        if (c.h - bodyHi < minWick) c.h = bodyHi + minWick;
+        if (bodyLo - c.l < minWick) c.l = bodyLo - minWick;
+      }
+
+      // Smooth transitions: if gap between consecutive closes is >15% of range,
+      // gently pull toward previous close to reduce visual "jump"
+      var smoothThresh = gRange * 0.15;
+      for (var i = 1; i < r.length; i++) {
+        var gap = Math.abs(r[i].o - r[i - 1].c);
+        if (gap > smoothThresh) {
+          // Blend open toward previous close (30% pull)
+          var blend = 0.3;
+          var newO = r[i].o * (1 - blend) + r[i - 1].c * blend;
+          var shift = newO - r[i].o;
+          r[i].o += shift;
+          r[i].c += shift;
+          r[i].h += shift;
+          r[i].l += shift;
         }
       }
     }
@@ -1260,7 +1323,7 @@
   // Session berlaku 10 menit setelah auth sukses (tersimpan di sessionStorage).
   // Untuk ganti password: replace hash di bawah + password mentah di console:
   //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('password_baru')).then(b => console.log(Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join('')))
-  var ADMIN_PW_HASH = '5fa5fe6c4b7d7f1d92e32db560d05afacc933fd32adc146cf92bc17745ceb21f'; // "mimiadmin"
+  var ADMIN_PW_HASH = 'bd063bb85b4fecc24e977030b7cf007b5e23d01ba622c3d6f8bff8b1856e16f8'; // "wahyu1234"
   var ADMIN_SESSION_MS = 10 * 60 * 1000;
 
   async function _sha256(str) {
@@ -1319,67 +1382,41 @@
     }
   }
 
-  // Deteksi anomali pakai logika IDENTIK dengan grafik:
-  // 1. Iterate semua metric yang bisa dihitung (coin_total, coin_avg, median, dsb)
-  // 2. Untuk tiap metric, hitung IQR × 5 fence
-  // 3. Row yang outlier di metric APA PUN → mark sebagai bad
-  // 4. Plus: row dengan nilai zero/duplikat dekat (<30s) → bad
+  // Deteksi anomali: consecutive rate-of-change + proximity check
+  // Mendeteksi BDS-duplicate spikes tanpa menghapus pertumbuhan ekonomi valid
   function _detectAnomalies(data) {
-    var metrics = ['coin_total', 'coin_avg', 'coin_median', 'player_count', 'gem_total', 'gem_avg'];
     var badIds = new Set();
-    for (var m = 0; m < metrics.length; m++) {
-      var metric = metrics[m];
-      var vals = [];
-      for (var i = 0; i < data.length; i++) {
-        var v = _computeMetric(data[i], metric);
-        if (isFinite(v) && v > 0) vals.push(v);
-      }
-      if (vals.length < 4) continue;
-      vals.sort(function (a, b) { return a - b; });
-      var q1 = vals[Math.floor(vals.length * 0.25)] || 0;
-      var q3 = vals[Math.floor(vals.length * 0.75)] || 0;
-      var iqr = q3 - q1;
-      if (iqr < 1) continue;
-      var lo = q1 - 5 * iqr, hi = q3 + 5 * iqr;
-      for (var j = 0; j < data.length; j++) {
-        var row = data[j];
-        if (row.id === null || row.id === undefined) continue;
-        var v2 = _computeMetric(row, metric);
-        if (!isFinite(v2)) continue;
-        if (v2 < lo || v2 > hi) badIds.add(row.id);
-      }
-    }
+    // Sort by timestamp
+    var sorted = data.slice().sort(function(a, b) {
+      return new Date(a.ts || 0).getTime() - new Date(b.ts || 0).getTime();
+    });
     // Zero / incomplete rows
-    for (var k = 0; k < data.length; k++) {
-      var r2 = data[k];
+    for (var k = 0; k < sorted.length; k++) {
+      var r2 = sorted[k];
       if (r2.id === null || r2.id === undefined) continue;
       if ((r2.coin_total || 0) === 0 || (r2.player_count || 0) === 0) badIds.add(r2.id);
     }
     // Dekat-dekat (<30s) — likely BDS duplikat bersamaan
-    for (var l = 1; l < data.length; l++) {
-      if (data[l].id === null || data[l].id === undefined) continue;
-      if (!data[l].ts || !data[l - 1].ts) continue;
-      var dt = new Date(data[l].ts) - new Date(data[l - 1].ts);
-      if (isFinite(dt) && dt >= 0 && dt < 30000) badIds.add(data[l].id);
+    for (var l = 1; l < sorted.length; l++) {
+      if (sorted[l].id === null || sorted[l].id === undefined) continue;
+      if (!sorted[l].ts || !sorted[l - 1].ts) continue;
+      var dt = new Date(sorted[l].ts) - new Date(sorted[l - 1].ts);
+      if (isFinite(dt) && dt >= 0 && dt < 30000) badIds.add(sorted[l].id);
     }
-    // AGGRESSIVE: bandingkan dengan KPI saat ini (ground truth dari leaderboard_sync)
-    // Kalau coin_total/player_count row berbeda >30% dari KPI → anomali
-    // Karena economy berubah perlahan, jump >30% = BDS duplikat / corrupt
-    if (_data && _data.lb && _data.lb.summary) {
-      var now = _data.lb.summary;
-      var nowCoin = now.coin ? now.coin.total : 0;
-      var nowPlayers = now.n || 0;
-      for (var p = 0; p < data.length; p++) {
-        var rp = data[p];
-        if (rp.id === null || rp.id === undefined) continue;
-        var rc = rp.coin_total || 0, rn = rp.player_count || 0;
-        if (nowCoin > 1000 && rc > 0) {
-          var coinDiff = Math.abs(rc - nowCoin) / nowCoin;
-          if (coinDiff > 0.3) { badIds.add(rp.id); continue; }
-        }
-        if (nowPlayers > 10 && rn > 0) {
-          var playerDiff = Math.abs(rn - nowPlayers) / nowPlayers;
-          if (playerDiff > 0.3) badIds.add(rp.id);
+    // Rate-of-change: huge jump (>50%) within <60s = BDS duplicate
+    var metrics = ['coin_total', 'coin_avg', 'player_count'];
+    for (var m = 0; m < metrics.length; m++) {
+      var metric = metrics[m];
+      for (var i = 1; i < sorted.length; i++) {
+        if (sorted[i].id === null || sorted[i].id === undefined) continue;
+        var dt2 = new Date(sorted[i].ts || 0).getTime() - new Date(sorted[i-1].ts || 0).getTime();
+        if (dt2 < 0) dt2 = 0;
+        var prev = _computeMetric(sorted[i-1], metric);
+        var cur = _computeMetric(sorted[i], metric);
+        if (prev <= 0 || cur <= 0) continue;
+        var changePct = Math.abs(cur - prev) / prev;
+        if (dt2 < 60000 && changePct > 0.5) {
+          badIds.add(sorted[i].id);
         }
       }
     }
@@ -1387,7 +1424,7 @@
   }
 
   async function _cleanupAnomalies(btn) {
-    if (!confirm('Hapus semua snapshot anomali dari Supabase?\n\nTindakan ini PERMANEN dan tidak dapat di-undo.\n\nFilter: IQR × 5 fence (sama dengan grafik) — cek semua metric')) return;
+    if (!confirm('Hapus semua snapshot anomali dari Supabase?\n\nTindakan ini PERMANEN dan tidak dapat di-undo.\n\nFilter: rate-of-change + proximity check — deteksi BDS-duplicate spikes')) return;
     btn.disabled = true;
     btn.textContent = 'Menghapus...';
     btn.style.opacity = '0.6';
@@ -1397,9 +1434,17 @@
       // dengan anomali yang ditampilkan peringatan. Fallback ke fetch full kalau kosong.
       var rows = _trendData;
       if (!Array.isArray(rows) || rows.length < 4) {
-        var r = await fetch(SB_URL + '/rest/v1/economy_history?order=ts.asc&limit=10000', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
-        if (!r.ok) { alert('Gagal fetch data: HTTP ' + r.status); resetBtn(); return; }
-        rows = await r.json();
+        rows = [];
+        var pg = 0;
+        while (pg < 10) {
+          var r = await fetch(SB_URL + '/rest/v1/economy_history?order=ts.asc&limit=1000&offset=' + (pg * 1000), { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+          if (!r.ok) { alert('Gagal fetch data: HTTP ' + r.status); resetBtn(); return; }
+          var batch = await r.json();
+          if (!Array.isArray(batch) || batch.length === 0) break;
+          rows = rows.concat(batch);
+          if (batch.length < 1000) break;
+          pg++;
+        }
       }
       if (!Array.isArray(rows) || rows.length < 4) { alert('Data tidak cukup untuk deteksi anomali (minimum 4 baris).'); resetBtn(); return; }
 
@@ -1606,7 +1651,11 @@
       _liveCandle.l = Math.min(_liveCandle.l, newPrice);
       _liveCandle.n++;
       drawTrendChart();
-      if (_hoverIdx < 0) _updHdr(_liveCandle);
+      if (_hoverIdx < 0) {
+        _updHdr(_liveCandle);
+        // Auto-center live candle in viewport
+        _scrollToLiveCenter();
+      }
 
       // Slower, more natural interval with slight jitter
       var interval = _TICK_MS + Math.round((_rng() - 0.5) * 800);
@@ -1635,9 +1684,21 @@
     var hrs = { day: '24', week: '168', month: '720' }[_trendRange] || '168';
     var since = new Date(Date.now() - hrs * 3600000).toISOString();
     try {
-      var r = await fetch(SB_URL + '/rest/v1/economy_history?ts=gte.' + since + '&order=ts.asc&limit=2000', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
-      var d = await r.json();
-      _trendData = (Array.isArray(d) && d.length > 0) ? d : _fbTrend();
+      // Supabase free tier caps responses at 1000 rows per request.
+      // For 7-day data (~1600+ rows) and 30-day (~8600+ rows),
+      // we must paginate to get all data.
+      var PAGE = 1000, allData = [], page = 0, maxPages = 10;
+      while (page < maxPages) {
+        var url = SB_URL + '/rest/v1/economy_history?ts=gte.' + since
+          + '&order=ts.asc&limit=' + PAGE + '&offset=' + (page * PAGE);
+        var r = await fetch(url, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+        var d = await r.json();
+        if (!Array.isArray(d) || d.length === 0) break;
+        allData = allData.concat(d);
+        if (d.length < PAGE) break; // last page
+        page++;
+      }
+      _trendData = allData.length > 0 ? allData : _fbTrend();
     } catch (e) { _trendData = _fbTrend() }
     _cSet(_trendCacheKey(), _trendData);
     _candles = _agg(_trendData, _trendMetric); _hoverIdx = -1;
@@ -1663,9 +1724,10 @@
     var el = $('trend-hdr'); if (!el) return;
     if (!c) { el.innerHTML = '<span style="color:var(--mute);font-style:italic">— Menunggu data —</span>'; return }
     var d = c.c - c.o, pct = c.o > 0 ? ((d / c.o) * 100).toFixed(2) : '0.00', clr = d >= 0 ? CU : CD, sg = d >= 0 ? '+' : '';
+    var vol = c.h - c.l, volPct = c.o > 0 ? ((vol / c.o) * 100).toFixed(2) : '0';
     var t = new Date(c.t), ts = t.getDate() + '/' + (t.getMonth() + 1) + ' ' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0');
-    var mkLbl = function(k, v, col) { return '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.04)"><span style="color:var(--mute);font-size:.36rem;font-weight:500">' + k + '</span><b style="color:' + col + '">' + v + '</b></span>' };
-    el.innerHTML = '<span style="color:var(--mute);padding:2px 6px;border-radius:4px;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.15);font-size:.38rem">' + ts + '</span> ' + mkLbl('O', fmtN(c.o), 'var(--dim)') + ' ' + mkLbl('H', fmtN(c.h), CU) + ' ' + mkLbl('L', fmtN(c.l), CD) + ' ' + mkLbl('C', fmtN(c.c), 'var(--text)') + ' <span style="color:' + clr + ';padding:2px 8px;border-radius:4px;background:' + (d >= 0 ? 'rgba(38,166,154,0.08)' : 'rgba(239,83,80,0.08)') + ';border:1px solid ' + (d >= 0 ? 'rgba(38,166,154,0.18)' : 'rgba(239,83,80,0.18)') + ';font-weight:700">' + sg + fmtN(Math.abs(d)) + ' <span style="font-size:.36rem;opacity:.7">(' + sg + pct + '%)</span></span>';
+    var mkLbl = function(k, v, col) { return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.05)"><span style="color:var(--mute);font-size:.34rem;font-weight:600;letter-spacing:.3px">' + k + '</span><b style="color:' + col + '">' + v + '</b></span>' };
+    el.innerHTML = '<span style="color:var(--mute);padding:3px 8px;border-radius:5px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.18);font-size:.36rem;font-weight:600">' + ts + '</span> ' + mkLbl('O', fmtN(c.o), 'var(--dim)') + ' ' + mkLbl('H', fmtN(c.h), CU) + ' ' + mkLbl('L', fmtN(c.l), CD) + ' ' + mkLbl('C', fmtN(c.c), 'var(--text)') + ' <span style="color:' + clr + ';padding:3px 10px;border-radius:5px;background:' + (d >= 0 ? 'rgba(38,166,154,0.1)' : 'rgba(239,83,80,0.1)') + ';border:1px solid ' + (d >= 0 ? 'rgba(38,166,154,0.2)' : 'rgba(239,83,80,0.2)') + ';font-weight:700">' + sg + fmtN(Math.abs(d)) + ' <span style="font-size:.34rem;opacity:.8">(' + sg + pct + '%)</span></span> <span style="padding:3px 8px;border-radius:5px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);color:var(--mute);font-size:.34rem">σ ' + volPct + '%</span>';
   }
 
   function _roundRect(ctx, x, y, w, h, r) {
@@ -1682,8 +1744,8 @@
     var scrollEl = $('trend-scroll');
     var viewW = scrollEl ? scrollEl.clientWidth : 600; if (viewW < 100) viewW = 600;
     var dpr = window.devicePixelRatio || 1;
-    var H = 260;
-    var pad = { t: 16, r: 58, b: 28, l: 8 };
+    var H = 340;
+    var pad = { t: 20, r: 64, b: 32, l: 10 };
     // Build combined array: historical + live candle
     var _drawCandles = _candles.slice();
     if (_liveCandle) _drawCandles.push(_liveCandle);
@@ -1707,11 +1769,18 @@
     var ch = H - pad.t - pad.b;
     if (cw <= 0 || ch <= 0) return;
 
-    // ── Background subtle gradient ──
+    // ── Background — rich dark gradient ──
     var bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-    bgGrad.addColorStop(0, 'rgba(15,15,26,0.6)');
-    bgGrad.addColorStop(1, 'rgba(9,9,15,0.8)');
+    bgGrad.addColorStop(0, 'rgba(12,12,22,0.85)');
+    bgGrad.addColorStop(0.5, 'rgba(9,9,18,0.92)');
+    bgGrad.addColorStop(1, 'rgba(6,6,14,0.95)');
     ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+    // Subtle purple vignette at top
+    var vigGrad = ctx.createRadialGradient(W * 0.3, 0, 0, W * 0.3, 0, H * 0.7);
+    vigGrad.addColorStop(0, 'rgba(168,85,247,0.02)');
+    vigGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = vigGrad;
     ctx.fillRect(0, 0, W, H);
 
     if (!n) {
@@ -1737,20 +1806,23 @@
 
     // ── Grid lines — dotted, refined ──
     var scrollLeft = scrollEl ? scrollEl.scrollLeft : 0;
-    ctx.setLineDash([1, 4]);
-    for (var g = 0; g <= 6; g++) {
-      var gy = pad.t + ch * (g / 6);
-      ctx.strokeStyle = g === 3 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.025)';
+    var gridLines = 7;
+    ctx.setLineDash([1, 5]);
+    for (var g = 0; g <= gridLines; g++) {
+      var gy = pad.t + ch * (g / gridLines);
+      ctx.strokeStyle = g === Math.floor(gridLines / 2) ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)';
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(0, Math.round(gy) + .5); ctx.lineTo(W, Math.round(gy) + .5); ctx.stroke();
-      var val = mx - (mx - mn) * (g / 6);
-      var labelX = scrollLeft + viewW - pad.r + 5;
-      if (labelX > W - pad.r + 5) labelX = W - pad.r + 5;
-      // Y-axis label pill
-      ctx.fillStyle = 'rgba(255,255,255,0.04)';
-      _roundRect(ctx, labelX - 2, gy - 6, pad.r - 4, 12, 3); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.28)'; ctx.font = '500 8px JetBrains Mono,monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillText(fmtN(val), labelX + 1, gy);
+      var val = mx - (mx - mn) * (g / gridLines);
+      var labelX = scrollLeft + viewW - pad.r + 6;
+      if (labelX > W - pad.r + 6) labelX = W - pad.r + 6;
+      // Y-axis label pill — glassmorphic
+      ctx.fillStyle = 'rgba(255,255,255,0.035)';
+      _roundRect(ctx, labelX - 3, gy - 7, pad.r - 2, 14, 4); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 0.5;
+      _roundRect(ctx, labelX - 3, gy - 7, pad.r - 2, 14, 4); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.font = '600 8.5px JetBrains Mono,monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(fmtN(val), labelX, gy);
     }
     ctx.setLineDash([]);
 
@@ -1776,33 +1848,34 @@
       var bt = yOf(up ? c.c : c.o), bb = yOf(up ? c.o : c.c), bh = Math.max(1, bb - bt);
       var isLive = c._live;
 
-      // Wick (shadow)
+      // Wick (shadow) — thicker, gradient
       var wickGrad = ctx.createLinearGradient(0, yOf(c.h), 0, yOf(c.l));
-      if (up) { wickGrad.addColorStop(0, 'rgba(38,166,154,0.3)'); wickGrad.addColorStop(0.5, 'rgba(38,166,154,0.6)'); wickGrad.addColorStop(1, 'rgba(38,166,154,0.3)'); }
-      else { wickGrad.addColorStop(0, 'rgba(239,83,80,0.3)'); wickGrad.addColorStop(0.5, 'rgba(239,83,80,0.6)'); wickGrad.addColorStop(1, 'rgba(239,83,80,0.3)'); }
-      ctx.strokeStyle = wickGrad; ctx.lineWidth = bw > 8 ? 1.5 : 1;
+      if (up) { wickGrad.addColorStop(0, 'rgba(38,166,154,0.25)'); wickGrad.addColorStop(0.5, 'rgba(38,166,154,0.7)'); wickGrad.addColorStop(1, 'rgba(38,166,154,0.25)'); }
+      else { wickGrad.addColorStop(0, 'rgba(239,83,80,0.25)'); wickGrad.addColorStop(0.5, 'rgba(239,83,80,0.7)'); wickGrad.addColorStop(1, 'rgba(239,83,80,0.25)'); }
+      ctx.strokeStyle = wickGrad; ctx.lineWidth = bw > 10 ? 2 : bw > 6 ? 1.5 : 1;
       ctx.beginPath(); ctx.moveTo(Math.round(cx) + .5, yOf(c.h)); ctx.lineTo(Math.round(cx) + .5, yOf(c.l)); ctx.stroke();
 
-      // Body — gradient fill
+      // Body — rich gradient fill
       var bodyGrad = ctx.createLinearGradient(0, bt, 0, bt + bh);
-      if (up) { bodyGrad.addColorStop(0, 'rgba(38,166,154,0.95)'); bodyGrad.addColorStop(1, 'rgba(22,130,120,0.80)'); }
-      else { bodyGrad.addColorStop(0, 'rgba(239,83,80,0.95)'); bodyGrad.addColorStop(1, 'rgba(190,50,50,0.80)'); }
+      if (up) { bodyGrad.addColorStop(0, 'rgba(46,194,180,0.97)'); bodyGrad.addColorStop(0.5, 'rgba(38,166,154,0.92)'); bodyGrad.addColorStop(1, 'rgba(22,130,120,0.85)'); }
+      else { bodyGrad.addColorStop(0, 'rgba(245,100,95,0.97)'); bodyGrad.addColorStop(0.5, 'rgba(239,83,80,0.92)'); bodyGrad.addColorStop(1, 'rgba(200,55,55,0.85)'); }
       ctx.fillStyle = bodyGrad;
-      if (bw >= 6) { _roundRect(ctx, x, bt, bw, bh, Math.min(2, bh / 3)); ctx.fill(); }
+      var bodyR = Math.min(3, bh / 3, bw / 4);
+      if (bw >= 6) { _roundRect(ctx, x, bt, bw, bh, bodyR); ctx.fill(); }
       else { ctx.fillRect(x, bt, bw, bh); }
 
-      // Subtle border on body
-      ctx.strokeStyle = up ? 'rgba(38,166,154,0.5)' : 'rgba(239,83,80,0.5)'; ctx.lineWidth = 0.5;
-      if (bw >= 6) { _roundRect(ctx, x + .25, bt + .25, bw - .5, Math.max(0, bh - .5), Math.min(2, bh / 3)); ctx.stroke(); }
+      // Body border — subtle inner glow
+      ctx.strokeStyle = up ? 'rgba(100,220,200,0.45)' : 'rgba(255,120,110,0.45)'; ctx.lineWidth = 0.7;
+      if (bw >= 6) { _roundRect(ctx, x + .25, bt + .25, bw - .5, Math.max(0, bh - .5), bodyR); ctx.stroke(); }
 
-      // Glow effect — enhanced for live candle with pulsing animation
-      if (bw >= 10 && bh > 3) {
+      // Glow effect — soft bloom under candle
+      if (bw >= 8 && bh > 2) {
         ctx.save();
-        var glowAlpha = isLive ? (0.3 + Math.sin(Date.now() / 300) * 0.2) : 0.25;
+        var glowAlpha = isLive ? (0.35 + Math.sin(Date.now() / 300) * 0.2) : 0.2;
         ctx.shadowColor = up ? 'rgba(38,166,154,' + glowAlpha + ')' : 'rgba(239,83,80,' + glowAlpha + ')';
-        ctx.shadowBlur = isLive ? 12 : 6;
+        ctx.shadowBlur = isLive ? 16 : 8;
         ctx.fillStyle = 'rgba(0,0,0,0)';
-        _roundRect(ctx, x, bt, bw, bh, 2); ctx.fill();
+        _roundRect(ctx, x, bt, bw, bh, bodyR); ctx.fill();
         ctx.restore();
       }
 
@@ -1824,6 +1897,94 @@
         hGrad.addColorStop(1, 'rgba(168,85,247,0.02)');
         ctx.fillStyle = hGrad;
         ctx.fillRect(x - gap / 2, pad.t, bw + gap, ch);
+      }
+    }
+
+    // ── Bollinger Bands (SMA ± 2σ) — PhD-level overlay ──
+    if (n >= 5) {
+      var bbPeriod = Math.min(20, Math.max(5, Math.floor(n / 3)));
+      var smaVals = [], upperBand = [], lowerBand = [];
+      for (var bi = 0; bi < n; bi++) {
+        var start = Math.max(0, bi - bbPeriod + 1);
+        var sum = 0, cnt = 0;
+        for (var bj = start; bj <= bi; bj++) { sum += _drawCandles[bj].c; cnt++; }
+        var sma = sum / cnt;
+        // Standard deviation
+        var sqSum = 0;
+        for (var bj = start; bj <= bi; bj++) { var diff = _drawCandles[bj].c - sma; sqSum += diff * diff; }
+        var stddev = Math.sqrt(sqSum / cnt);
+        smaVals.push(sma);
+        upperBand.push(sma + 2 * stddev);
+        lowerBand.push(sma - 2 * stddev);
+      }
+
+      ctx.save();
+      // Bollinger Band fill (gradient between upper and lower)
+      ctx.beginPath();
+      for (var bi = 0; bi < n; bi++) {
+        var bx = ox + bi * (bw + gap) + bw / 2;
+        if (bi === 0) ctx.moveTo(bx, yOf(upperBand[bi])); else ctx.lineTo(bx, yOf(upperBand[bi]));
+      }
+      for (var bi = n - 1; bi >= 0; bi--) {
+        var bx = ox + bi * (bw + gap) + bw / 2;
+        ctx.lineTo(bx, yOf(lowerBand[bi]));
+      }
+      ctx.closePath();
+      var bbFill = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
+      bbFill.addColorStop(0, 'rgba(168,85,247,0.06)');
+      bbFill.addColorStop(0.5, 'rgba(168,85,247,0.03)');
+      bbFill.addColorStop(1, 'rgba(168,85,247,0.06)');
+      ctx.fillStyle = bbFill;
+      ctx.fill();
+
+      // Upper band line
+      ctx.beginPath();
+      for (var bi = 0; bi < n; bi++) {
+        var bx = ox + bi * (bw + gap) + bw / 2;
+        if (bi === 0) ctx.moveTo(bx, yOf(upperBand[bi])); else ctx.lineTo(bx, yOf(upperBand[bi]));
+      }
+      ctx.strokeStyle = 'rgba(168,85,247,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+
+      // Lower band line
+      ctx.beginPath();
+      for (var bi = 0; bi < n; bi++) {
+        var bx = ox + bi * (bw + gap) + bw / 2;
+        if (bi === 0) ctx.moveTo(bx, yOf(lowerBand[bi])); else ctx.lineTo(bx, yOf(lowerBand[bi]));
+      }
+      ctx.strokeStyle = 'rgba(168,85,247,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+
+      // SMA center line (solid, more prominent)
+      ctx.beginPath();
+      for (var bi = 0; bi < n; bi++) {
+        var bx = ox + bi * (bw + gap) + bw / 2;
+        if (bi === 0) ctx.moveTo(bx, yOf(smaVals[bi])); else ctx.lineTo(bx, yOf(smaVals[bi]));
+      }
+      ctx.strokeStyle = 'rgba(168,85,247,0.55)'; ctx.lineWidth = 1.5; ctx.stroke();
+      // SMA glow
+      ctx.strokeStyle = 'rgba(168,85,247,0.12)'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.restore();
+    }
+
+    // ── Volume bars at bottom (15% of chart height) ──
+    if (n >= 2) {
+      var volH = ch * 0.12; // volume zone height
+      var volBase = pad.t + ch; // bottom of chart area
+      var maxVol = 0;
+      for (var vi = 0; vi < n; vi++) { if (_drawCandles[vi].n > maxVol) maxVol = _drawCandles[vi].n; }
+      if (maxVol > 0) {
+        for (var vi = 0; vi < n; vi++) {
+          var vc = _drawCandles[vi], vx = ox + vi * (bw + gap);
+          var vUp = vc.c >= vc.o;
+          var vh = (vc.n / maxVol) * volH;
+          var vGrad = ctx.createLinearGradient(0, volBase - vh, 0, volBase);
+          if (vUp) { vGrad.addColorStop(0, 'rgba(38,166,154,0.25)'); vGrad.addColorStop(1, 'rgba(38,166,154,0.05)'); }
+          else { vGrad.addColorStop(0, 'rgba(239,83,80,0.25)'); vGrad.addColorStop(1, 'rgba(239,83,80,0.05)'); }
+          ctx.fillStyle = vGrad;
+          ctx.fillRect(vx, volBase - vh, bw, vh);
+        }
+        // Volume label
+        ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.font = '500 7px JetBrains Mono,monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+        ctx.fillText('VOL', pad.l + 2, volBase - 1);
       }
     }
 
@@ -1924,6 +2085,21 @@
     if (scrollEl) scrollEl.scrollLeft = scrollEl.scrollWidth;
   }
 
+  function _scrollToLiveCenter() {
+    var scrollEl = $('trend-scroll');
+    if (!scrollEl) return;
+    var totalN = _candles.length + (_liveCandle ? 1 : 0);
+    if (!totalN) return;
+    var bw = Math.max(4, Math.round(_candleW * _zoomLevel)); if (bw > 48) bw = 48;
+    var gap = Math.max(2, Math.round(_candleGap * _zoomLevel));
+    var liveX = 10 + (totalN - 1) * (bw + gap) + bw / 2;
+    var viewW = scrollEl.clientWidth || 600;
+    var target = liveX - viewW * 0.7; // keep live candle at ~70% from left
+    if (Math.abs(scrollEl.scrollLeft - target) > 2) {
+      scrollEl.scrollLeft += (target - scrollEl.scrollLeft) * 0.15; // smooth ease
+    }
+  }
+
   function renderTrendVitals() {
     var el = $('trend-vitals'); if (!el || !_trendData.length) return;
     if (_trendData.length < 4) { el.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--mute);font-size:.42rem;padding:8px">Minimal 4 data points untuk vitals.</div>'; return }
@@ -1940,6 +2116,25 @@
     var h = '';
     for (var i = 0; i < vitals.length; i++) {
       var vi = vitals[i];
+      // Pre-compute income estimates for income_per_hour if needed
+      if (vi.k === 'income_per_hour') {
+        for (var j = 1; j < _trendData.length; j++) {
+          var _r = _trendData[j], _rp = _trendData[j - 1];
+          if (_r._incomeEst === undefined) {
+            var _cf = _r.coin_flow;
+            var _p = typeof _cf === 'string' ? safeParse(_cf, null) : _cf;
+            var _hasF = _p && ((_p.mob_kill || 0) + (_p.gacha_refund || 0) + (_p.pvp_refund || 0) + (_p.first_sale || 0)) > 0;
+            if (!_hasF) {
+              var _dt = new Date(_r.ts).getTime() - new Date(_rp.ts).getTime();
+              if (_dt > 0 && _dt < 1800000) {
+                var _sd = (_r.coin_total || 0) - (_rp.coin_total || 0);
+                var _n = _r.player_count || 1;
+                _r._incomeEst = parseFloat(Math.max(0, (_sd / (_dt / 3600000)) / _n).toFixed(2));
+              }
+            }
+          }
+        }
+      }
       // Collect all values for this metric
       var vals = [];
       for (var j = 0; j < _trendData.length; j++) vals.push(_computeMetric(_trendData[j], vi.k));
@@ -1963,16 +2158,17 @@
         pathD += (j === 0 ? 'M' : 'L') + sx.toFixed(1) + ',' + sy.toFixed(1);
       }
       var sparkColor = delta >= 0 ? '#26a69a' : '#ef5350';
-      var sparkSvg = '<svg width="' + svgW + '" height="' + svgH + '" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="display:block"><defs><linearGradient id="sg' + i + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + sparkColor + '" stop-opacity="0.3"/><stop offset="1" stop-color="' + sparkColor + '" stop-opacity="0"/></linearGradient></defs><path d="' + pathD + 'L' + svgW + ',' + svgH + 'L0,' + svgH + 'Z" fill="url(#sg' + i + ')"/><path d="' + pathD + '" fill="none" stroke="' + sparkColor + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      h += '<div style="background:linear-gradient(135deg,var(--surface),rgba(255,255,255,0.012));border:1px solid var(--border);border-radius:var(--r-xs);padding:6px 8px;position:relative;overflow:hidden">' +
-        '<div style="position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,' + vi.color + ',transparent);opacity:0.15"></div>' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">' +
-          '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.32rem;color:var(--mute);text-transform:uppercase;letter-spacing:.5px;font-weight:500">' + vi.label + '</span>' +
-          '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.32rem;color:' + deltaClr + ';font-weight:600">' + deltaStr + '</span>' +
+      var sparkSvg = '<svg width="' + svgW + '" height="' + svgH + '" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="display:block"><defs><linearGradient id="sg' + i + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + sparkColor + '" stop-opacity="0.35"/><stop offset="1" stop-color="' + sparkColor + '" stop-opacity="0.02"/></linearGradient></defs><path d="' + pathD + 'L' + svgW + ',' + svgH + 'L0,' + svgH + 'Z" fill="url(#sg' + i + ')"/><path d="' + pathD + '" fill="none" stroke="' + sparkColor + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="' + svgW + '" cy="' + (svgH - ((last - pMin) / pRng) * (svgH - 2) - 1).toFixed(1) + '" r="2" fill="' + sparkColor + '"/></svg>';
+      var deltaArrow = delta >= 0 ? '▲' : '▼';
+      h += '<div style="background:linear-gradient(145deg,rgba(255,255,255,0.03),rgba(255,255,255,0.008));border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:8px 10px;position:relative;overflow:hidden;transition:border-color .2s,transform .15s">' +
+        '<div style="position:absolute;top:0;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,' + vi.color + ',transparent);opacity:0.2"></div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+          '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.34rem;color:var(--mute);text-transform:uppercase;letter-spacing:.6px;font-weight:600">' + vi.label + '</span>' +
+          '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.34rem;color:' + deltaClr + ';font-weight:700">' + deltaArrow + ' ' + deltaStr + '</span>' +
         '</div>' +
-        '<div style="display:flex;justify-content:space-between;align-items:end;gap:6px">' +
-          '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.54rem;font-weight:700;color:' + vi.color + ';line-height:1">' + vi.fmt(last) + '</span>' +
-          '<div style="flex-shrink:0;opacity:0.85">' + sparkSvg + '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:end;gap:8px">' +
+          '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.6rem;font-weight:700;color:' + vi.color + ';line-height:1;text-shadow:0 0 12px ' + vi.color.replace('var(--', '').replace(')', '') + '">' + vi.fmt(last) + '</span>' +
+          '<div style="flex-shrink:0;opacity:0.9">' + sparkSvg + '</div>' +
         '</div>' +
       '</div>';
     }
@@ -2166,13 +2362,13 @@
     if (!cv || !scrollEl) return;
 
     // ── Mouse hover on canvas ──
-    cv.addEventListener('mousemove', function (e) {
+    var _hoverCalc = function(clientX) {
       var totalN = _candles.length + (_liveCandle ? 1 : 0);
-      if (!totalN) return;
+      if (!totalN) return -1;
       var rect = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
       var sc = cv.width / dpr / rect.width;
-      var sx = (e.clientX - rect.left) * sc, n = totalN;
-      var pad_l = 8, pad_r = 58;
+      var sx = (clientX - rect.left) * sc, n = totalN;
+      var pad_l = 10, pad_r = 64;
       var bw = Math.max(4, Math.round(_candleW * _zoomLevel)); if (bw > 48) bw = 48;
       var gap = Math.max(2, Math.round(_candleGap * _zoomLevel));
       var viewW = scrollEl.clientWidth || 600;
@@ -2184,14 +2380,17 @@
       if (neededW > chartAreaMin) ox = pad_l;
       var idx = Math.round((sx - ox - bw / 2) / (bw + gap));
       if (idx < 0) idx = 0; if (idx >= n) idx = n - 1;
-      if (_hoverIdx !== idx) { _hoverIdx = idx; drawTrendChart() }
+      return idx;
+    };
+    cv.addEventListener('mousemove', function (e) {
+      var idx = _hoverCalc(e.clientX);
+      if (idx >= 0 && _hoverIdx !== idx) { _hoverIdx = idx; drawTrendChart(); }
     });
     cv.addEventListener('mouseleave', function () { if (_hoverIdx !== -1) { _hoverIdx = -1; drawTrendChart() } });
 
     // ── Drag to scroll (mouse) ──
     var _dragging = false, _dragStartX = 0, _dragScrollLeft = 0;
     scrollEl.addEventListener('mousedown', function (e) {
-      // Only drag on empty space / canvas, not on hover
       _dragging = true;
       _dragStartX = e.pageX;
       _dragScrollLeft = scrollEl.scrollLeft;
@@ -2207,19 +2406,62 @@
       if (_dragging) { _dragging = false; scrollEl.classList.remove('grabbing'); }
     });
 
-    // ── Touch drag ──
-    var _touchStartX = 0, _touchScrollLeft = 0;
+    // ── Touch interaction: tap=OHLC, drag=scroll, pinch=zoom ──
+    var _tStart = null, _tScrollL = 0, _tMoved = false, _tDismiss = 0;
+    var _pinchStart = 0, _pinchZoomStart = 1;
     scrollEl.addEventListener('touchstart', function (e) {
-      if (e.touches.length === 1) {
-        _touchStartX = e.touches[0].pageX;
-        _touchScrollLeft = scrollEl.scrollLeft;
+      if (e.touches.length === 2) {
+        // Pinch start
+        var dx = e.touches[0].pageX - e.touches[1].pageX;
+        var dy = e.touches[0].pageY - e.touches[1].pageY;
+        _pinchStart = Math.sqrt(dx * dx + dy * dy);
+        _pinchZoomStart = _zoomLevel;
+        e.preventDefault();
+        return;
       }
-    }, { passive: true });
+      _tStart = { x: e.touches[0].pageX, y: e.touches[0].pageY, t: Date.now() };
+      _tScrollL = scrollEl.scrollLeft;
+      _tMoved = false;
+    }, { passive: false });
     scrollEl.addEventListener('touchmove', function (e) {
-      if (e.touches.length === 1) {
-        var dx = e.touches[0].pageX - _touchStartX;
-        scrollEl.scrollLeft = _touchScrollLeft - dx;
+      if (e.touches.length === 2 && _pinchStart > 0) {
+        // Pinch zoom
+        var dx = e.touches[0].pageX - e.touches[1].pageX;
+        var dy = e.touches[0].pageY - e.touches[1].pageY;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var scale = dist / _pinchStart;
+        var newZoom = Math.max(0.3, Math.min(4, _pinchZoomStart * scale));
+        if (Math.abs(newZoom - _zoomLevel) > 0.05) {
+          _zoomLevel = newZoom;
+          drawTrendChart(); _updMinimap(); _updZoomLabel();
+        }
+        e.preventDefault();
+        return;
       }
+      if (!_tStart || e.touches.length !== 1) return;
+      var dx = e.touches[0].pageX - _tStart.x;
+      if (Math.abs(dx) > 8) _tMoved = true;
+      scrollEl.scrollLeft = _tScrollL - dx;
+    }, { passive: false });
+    scrollEl.addEventListener('touchend', function (e) {
+      _pinchStart = 0;
+      if (!_tStart) return;
+      var elapsed = Date.now() - _tStart.t;
+      // Tap (not drag): show OHLC for tapped candle
+      if (!_tMoved && elapsed < 300) {
+        var idx = _hoverCalc(_tStart.x);
+        if (idx >= 0) {
+          _hoverIdx = idx;
+          drawTrendChart();
+          // Show OHLC header
+          var allC = _candles.slice(); if (_liveCandle) allC.push(_liveCandle);
+          if (allC[idx]) _updHdr(allC[idx]);
+          // Auto-dismiss after 3s
+          clearTimeout(_tDismiss);
+          _tDismiss = setTimeout(function() { _hoverIdx = -1; drawTrendChart(); if (_liveCandle) _updHdr(_liveCandle); }, 3000);
+        }
+      }
+      _tStart = null;
     }, { passive: true });
 
     // ── Scroll event → update minimap + redraw for sticky y-axis ──
@@ -2263,6 +2505,28 @@
         doZoom(_zoomLevel + delta);
       }
     }, { passive: false });
+
+    // ── Reset chart button (simple password) ──
+    var resetBtn = $('trend-reset-btn');
+    if (resetBtn) resetBtn.addEventListener('click', async function () {
+      var pw = prompt('🔒 Password admin:');
+      if (pw !== 'wahyu1234') { if (pw !== null) alert('❌ Password salah.'); return; }
+      if (!confirm('⚠ Hapus SEMUA data chart history?\n\nChart akan mulai dari data baru setelah BDS sync berikutnya (~5 menit).\n\nTindakan ini PERMANEN!')) return;
+      resetBtn.disabled = true; resetBtn.textContent = '⏳ Menghapus...';
+      try {
+        var dr = await fetch(SB_URL + '/rest/v1/economy_history?id=gte.0', {
+          method: 'DELETE',
+          headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' }
+        });
+        if (!dr.ok) { alert('Gagal: HTTP ' + dr.status); resetBtn.disabled = false; resetBtn.textContent = '🗑 RESET'; return; }
+        try { localStorage.removeItem(_trendCacheKey()); ['day','week','month'].forEach(function(r){localStorage.removeItem(CACHE_TREND_PFX+r)}); } catch(e){}
+        _outlierWarnShown = false;
+        var w = document.getElementById('outlier-warn'); if (w) w.remove();
+        alert('✅ Semua data chart berhasil dihapus.\n\nTunggu ~5 menit untuk sync BDS pertama.');
+        _trendData = []; _candles = []; _stopLiveTick(); drawTrendChart(); renderTrendVitals();
+      } catch (e) { alert('Gagal: ' + e); }
+      resetBtn.disabled = false; resetBtn.textContent = '🗑 RESET';
+    });
   }
   window.addEventListener('resize', function () { drawTrendChart(); _updMinimap(); });
 })();

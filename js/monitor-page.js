@@ -216,6 +216,35 @@ function applyBDSMetrics(m){
   if(td<6000)tod='Pagi';else if(td<12000)tod='Siang';else if(td<18000)tod='Sore';else tod='Malam';
   safeSet('world-time',tod+' ('+wt+')');
   if(m.world_day!==undefined)safeSet('world-day','Hari ke-'+m.world_day);
+
+  // [ATMOSPHERE] Update suasana card berdasarkan time of day + weather
+  // Performa: cuma tambah/hapus className, zero animation overhead di JS.
+  // CSS transitions handle smooth update.
+  try{
+    var atmoCard=$('atmo-card');
+    if(atmoCard){
+      var phase=tod.toLowerCase(); // pagi/siang/sore/malam
+      var weather=String(m.weather||'clear').toLowerCase();
+      // Reset semua phase/weather class lalu set yang aktual
+      atmoCard.classList.remove('phase-pagi','phase-siang','phase-sore','phase-malam','wx-clear','wx-rain','wx-thunder','has-fog');
+      atmoCard.classList.add('phase-'+phase);
+      atmoCard.classList.add('wx-'+weather);
+      // Fog otomatis aktif saat hujan/petir atau saat malam (atmosfer mistis)
+      if(weather==='rain'||weather==='thunder'||phase==='malam')atmoCard.classList.add('has-fog');
+
+      // Badge text — kombinasi phase + weather
+      var badge=$('atmo-badge');
+      if(badge){
+        var wxLbl=weather==='thunder'?' · BADAI':weather==='rain'?' · HUJAN':'';
+        badge.textContent=tod.toUpperCase()+wxLbl;
+      }
+      var weatherEl=$('world-weather');
+      if(weatherEl){
+        var wxText=weather==='thunder'?'Petir':weather==='rain'?'Hujan':'Cerah';
+        weatherEl.textContent=wxText;
+      }
+    }
+  }catch(e){}
   safeSet('world-tick',fmtN(m.tick||0));
   safeSet('world-tps',tps.toFixed(1)+' / 20');
   radarPlayers=m.player_details||[];
