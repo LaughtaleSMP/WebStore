@@ -21,7 +21,7 @@
   };
 
   // ── localStorage cache helpers ──
-  var CACHE_KEY = 'eco_data', CACHE_TREND_PFX = 'eco_trend_', CACHE_TTL = 90000, TREND_TTL = 120000;
+  var CACHE_KEY = 'eco_data', CACHE_TREND_PFX = 'eco_trend_v3_', CACHE_TTL = 90000, TREND_TTL = 120000;
   function _trendCacheKey() { return CACHE_TREND_PFX + _trendRange; }
   function _cGet(k) { try { var r = JSON.parse(localStorage.getItem(k)); if (r && r.t && Date.now() - r.t < (k.indexOf(CACHE_TREND_PFX) === 0 ? TREND_TTL : CACHE_TTL)) return r.d; } catch (e) { } return null; }
   function _cSet(k, v) { try { localStorage.setItem(k, JSON.stringify({ t: Date.now(), d: v })); } catch (e) { } }
@@ -180,20 +180,71 @@
       }
     }
     var net = injected - sunk;
-    var rate = s.coin.total > 0 ? Math.round(net / s.coin.total * 100) : 0;
+    // [INFL-FIX] Normalize ke per-hari biar konsisten antar range (day/week/month).
+    // Sebelumnya: Math.round(net/total*100) langsung — selalu bulat ke 0 karena
+    // flow harian << stock total (rasio realistis 0.05–0.5%/hari).
+    // Window aktual dihitung dari ts data (lebih jujur dari snapshot count).
+    var hoursObs = 24;
+    if (_trendData.length >= 2) {
+      var _t0 = new Date(_trendData[0].ts || 0).getTime();
+      var _t1 = new Date(_trendData[_trendData.length - 1].ts || 0).getTime();
+      if (_t1 > _t0) hoursObs = Math.max(0.1, (_t1 - _t0) / 3600000);
+    }
+    // Supply growth (M2-style): rate uang beredar
+    var supplyGrowth = (s.coin.total > 0 && hoursObs > 0)
+      ? (net / s.coin.total) * (24 / hoursObs) * 100
+      : 0;
+    // [INFL-V2] CPI-style: harga basket berubah berapa % dari awal window.
+    // _pi di-attach oleh sync.js di setiap snapshot. Fallback ke supply growth
+    // kalau price index belum tersedia (cold start / data lama).
+    // §6.3: min sample 7 untuk trust trend. CPI variance < 0.1% dianggap degenerate
+    // (basket terlalu stabil — bukan sinyal nyata) → fallback ke M2.
+    var cpiRate = null, cpiDegenerate = false;
+    if (_trendData.length >= 2) {
+      var _piFirst = null, _piLast = null, _piTsFirst = 0, _piTsLast = 0, _piPts = 0;
+      for (var i = 0; i < _trendData.length; i++) {
+        var _cf = _trendData[i].coin_flow;
+        var _p = _cf ? (typeof _cf === 'string' ? safeParse(_cf, null) : _cf) : null;
+        if (_p && Number.isFinite(_p._pi) && _p._pi > 0) {
+          var _ts = new Date(_trendData[i].ts || 0).getTime();
+          if (_piFirst === null) { _piFirst = _p._pi; _piTsFirst = _ts; }
+          _piLast = _p._pi; _piTsLast = _ts; _piPts++;
+        }
+      }
+      // Pakai window aktual records yang punya _pi (bukan full _trendData window)
+      // supaya rate tidak terdilusi oleh historical data tanpa price index.
+      var _piHours = (_piTsLast > _piTsFirst) ? (_piTsLast - _piTsFirst) / 3600000 : 0;
+      if (_piFirst && _piLast && _piFirst > 0 && _piHours > 0.5 && _piPts >= 7) {
+        var _piDelta = Math.abs(_piLast - _piFirst) / _piFirst;
+        // Variance threshold: <0.1% across full window = basket flat, signal noise
+        if (_piDelta < 0.001) cpiDegenerate = true;
+        else cpiRate = ((_piLast - _piFirst) / _piFirst) * (24 / _piHours) * 100;
+      }
+    }
+    var dailyRate = cpiRate !== null ? cpiRate : supplyGrowth;
+    var rateLabel = cpiRate !== null ? 'CPI' : (cpiDegenerate ? 'M2 (CPI flat)' : 'M2');
+    // Annualized growth (compound)
+    var annRate = Math.sign(dailyRate) * (Math.pow(1 + Math.abs(dailyRate) / 100, 365) - 1) * 100;
     var pill = $('inf-pill');
     if (pill) {
-      var lbl = rate > 5 ? 'INFLASI' : rate < -5 ? 'DEFLASI' : 'STABIL';
-      pill.textContent = lbl + ' (' + rate + '%)';
-      pill.className = 'pill ' + (Math.abs(rate) <= 5 ? 'g' : Math.abs(rate) <= 15 ? 'y' : 'r');
+      var lbl = dailyRate > 0.5 ? 'INFLASI' : dailyRate < -0.5 ? 'DEFLASI' : 'STABIL';
+      pill.textContent = lbl + ' (' + dailyRate.toFixed(2) + '%/hari)';
+      pill.className = 'pill ' + (Math.abs(dailyRate) <= 0.5 ? 'g' : Math.abs(dailyRate) <= 2 ? 'y' : 'r');
+      var titleParts = [
+        rateLabel + ' rate · annualized: ' + (annRate >= 0 ? '+' : '') + annRate.toFixed(1) + '%/tahun',
+        'Observasi: ' + hoursObs.toFixed(1) + ' jam'
+      ];
+      if (cpiRate !== null) titleParts.push('Supply growth (M2): ' + supplyGrowth.toFixed(2) + '%/hari');
+      pill.title = titleParts.join('\n');
     }
     var rangeLabel = { day: '24j', week: '7h', month: '30h' }[_trendRange] || '24j';
     var grid = $('inf-grid');
     if (grid) {
       var wt = Math.abs(flow.wealth_tax || 0);
+      var netLabel = hasFlow ? (cpiRate !== null ? 'CPI · akurat' : (cpiDegenerate ? 'M2 · CPI flat' : 'M2 · akurat')) : 'estimasi';
       grid.innerHTML = mkStatCard('Coin Masuk', 'var(--green)', '+' + fmtN(injected), agg.snapshots + ' snap / ' + rangeLabel)
         + mkStatCard('Coin Keluar', 'var(--red)', '-' + fmtN(sunk), agg.snapshots + ' snap / ' + rangeLabel)
-        + mkStatCard('Net Flow', net >= 0 ? 'var(--gold)' : 'var(--red)', (net >= 0 ? '+' : '') + fmtN(net), hasFlow ? 'akurat' : 'estimasi')
+        + mkStatCard('Net Flow', net >= 0 ? 'var(--gold)' : 'var(--red)', (net >= 0 ? '+' : '') + fmtN(net), netLabel)
         + mkStatCard('Wealth Tax', '#c084fc', wt > 0 ? '-' + fmtN(wt) : '0', 'total ' + rangeLabel);
     }
     var fd = $('inf-flows');
@@ -1096,6 +1147,22 @@
   var CU = '#26a69a', CD = '#ef5350';
   var _candleW = 18, _candleGap = 5, _zoomLevel = 1;
 
+  // ── Performance: detect low-end device ──
+  // Only truly weak devices: ≤2GB RAM + ≤4 cores on mobile
+  var _isLowEnd = (function() {
+    var mem = navigator.deviceMemory || 8; // defaults to 8 if unsupported
+    var cores = navigator.hardwareConcurrency || 8;
+    var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    // Only flag as low-end if BOTH memory AND cores are very low on mobile
+    return isMobile && mem <= 2 && cores <= 4;
+  })();
+  // Cap DPR at 2 on mobile for moderate savings, full on desktop
+  var _isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  var _perfDPR = _isLowEnd ? 1 : Math.min(window.devicePixelRatio || 1, _isMobile ? 2 : 3);
+  var _bbCache = null, _bbCacheKey = '';
+  var _drawRAF = 0, _lastDrawT = 0;
+  var _DRAW_MIN_MS = _isLowEnd ? 80 : 16; // throttle redraws on low-end
+
   function bindTrendTabs() {
     var el = $('trend-tabs'); if (!el) return;
     el.addEventListener('click', function (e) {
@@ -1105,7 +1172,10 @@
     });
   }
 
-  function _bucketMs() { return { day: 900000, week: 7200000, month: 43200000 }[_trendRange] || 900000 }
+  // Candle bucket duration per timeframe (optimized for Supabase free tier)
+  // BDS syncs every ~5 min (288 rows/day). Each candle needs ≥5 data points for meaningful OHLC.
+  // 24h: 30 min = 48 candles × ~6 pts each  |  7d: 4 hr = 42 candles × ~48 pts  |  30d: 1 day = 30 candles × ~288 pts
+  function _bucketMs() { return { day: 1800000, week: 14400000, month: 86400000 }[_trendRange] || 1800000 }
 
   function _computeMetric(row, metric) {
     if (metric === 'income_per_hour') {
@@ -1243,54 +1313,38 @@
       for (var j = 1; j < v.length; j++) { if (v[j] > hi) hi = v[j]; if (v[j] < lo) lo = v[j] }
       r.push({ t: b.t, o: v[0], c: v[v.length - 1], h: hi, l: lo, n: v.length });
     }
-    // ── Range-based visual enhancement ──
-    // Make candles visually thick relative to the chart's visible range
-    // WITHOUT distorting the position (no 3.5x amplification).
-    // Also smooth transitions so consecutive candles don't "jump".
+    // ── Continuity enforcement ──
+    // Each candle's Open MUST equal the previous candle's Close
+    // to prevent visual gaps/disconnects in the chart.
+    for (var i = 1; i < r.length; i++) {
+      r[i].o = r[i - 1].c;
+    }
+    // ── Gentle visual enhancement (preserving continuity) ──
     if (r.length > 1) {
-      // Compute the full visible range
       var gMin = Infinity, gMax = -Infinity;
       for (var i = 0; i < r.length; i++) {
         if (r[i].l < gMin) gMin = r[i].l;
         if (r[i].h > gMax) gMax = r[i].h;
       }
       var gRange = gMax - gMin || 1;
-
-      // Minimum body = 4% of chart range (tall, always prominent)
-      var minBody = gRange * 0.04;
-      // Minimum wick spread = 2% of chart range
-      var minWick = gRange * 0.02;
+      // Small minimum body (1.5%) — just enough to be visible, not enough to break continuity
+      var minBody = gRange * 0.015;
+      // Small minimum wick (0.8%)
+      var minWick = gRange * 0.008;
 
       for (var i = 0; i < r.length; i++) {
         var c = r[i];
-        // Enforce minimum body
+        // Enforce minimum body — expand ONLY the Close side to preserve Open link
         if (Math.abs(c.c - c.o) < minBody) {
-          var dir = (i > 0 && c.c >= r[i - 1].c) ? 1 : -1;
-          var mid = (c.o + c.c) / 2;
-          c.o = mid - dir * minBody / 2;
-          c.c = mid + dir * minBody / 2;
+          var dir = c.c >= c.o ? 1 : (i > 0 && c.c >= r[i - 1].c) ? 1 : -1;
+          c.c = c.o + dir * minBody;
+          // Propagate to next candle's open to keep chain intact
+          if (i + 1 < r.length) r[i + 1].o = c.c;
         }
         // Enforce minimum wick spread around body
         var bodyHi = Math.max(c.o, c.c), bodyLo = Math.min(c.o, c.c);
         if (c.h - bodyHi < minWick) c.h = bodyHi + minWick;
         if (bodyLo - c.l < minWick) c.l = bodyLo - minWick;
-      }
-
-      // Smooth transitions: if gap between consecutive closes is >15% of range,
-      // gently pull toward previous close to reduce visual "jump"
-      var smoothThresh = gRange * 0.15;
-      for (var i = 1; i < r.length; i++) {
-        var gap = Math.abs(r[i].o - r[i - 1].c);
-        if (gap > smoothThresh) {
-          // Blend open toward previous close (30% pull)
-          var blend = 0.3;
-          var newO = r[i].o * (1 - blend) + r[i - 1].c * blend;
-          var shift = newO - r[i].o;
-          r[i].o += shift;
-          r[i].c += shift;
-          r[i].h += shift;
-          r[i].l += shift;
-        }
       }
     }
     return r;
@@ -1491,7 +1545,7 @@
   // ═══════════════════════════════════════════════════════════
   var _liveCandle = null, _liveTimer = null;
   var _mktState = null;
-  var _TICK_MS = 2800; // base ms between ticks (visible)
+  var _TICK_MS = _isLowEnd ? 5600 : 2800; // slower tick on low-end to reduce redraws
 
   // Seeded PRNG (Mulberry32) — deterministic from seed
   function _mkRng(seed) {
@@ -1632,6 +1686,7 @@
 
     // Build live candle
     _liveCandle = { t: nextT, o: last.c, h: last.c, l: last.c, c: last.c, n: 0, _live: true };
+    var _liveBucketEnd = nextT + bms; // when this live candle closes
 
     // Silently replay skipped ticks (no rendering)
     for (var i = 0; i < ticksToSkip; i++) {
@@ -1642,14 +1697,58 @@
       _liveCandle.n++;
     }
 
+    // ── Countdown helper ──
+    function _fmtCountdown(ms) {
+      if (ms <= 0) return '0s';
+      var s = Math.ceil(ms / 1000);
+      if (s < 60) return s + 's';
+      var m = Math.floor(s / 60); s = s % 60;
+      if (m < 60) return m + 'm ' + s + 's';
+      var h = Math.floor(m / 60); m = m % 60;
+      return h + 'h ' + m + 'm';
+    }
+    function _updCountdown() {
+      var now = Date.now();
+      var remain = _liveBucketEnd - now;
+      var total = bms;
+      var pct = Math.max(0, Math.min(100, ((total - remain) / total) * 100));
+      var cdLabel = $('candle-cd-label');
+      var cdBar = $('candle-cd-bar');
+      if (cdLabel) {
+        if (remain <= 0) {
+          cdLabel.textContent = 'New candle forming...';
+          cdLabel.style.color = 'var(--ac)';
+        } else {
+          cdLabel.textContent = 'Next candle: ' + _fmtCountdown(remain);
+          cdLabel.style.color = remain < 60000 ? 'var(--gold)' : 'var(--mute)';
+        }
+      }
+      if (cdBar) cdBar.style.width = pct.toFixed(1) + '%';
+    }
+
     // Now start visible ticking
     function tick() {
       if (!_liveCandle || !_mktState) return;
+
+      // ── Check if bucket time expired → transition to new candle ──
+      var now = Date.now();
+      if (now >= _liveBucketEnd) {
+        // Archive live candle as historical
+        var archived = { t: _liveCandle.t, o: _liveCandle.o, h: _liveCandle.h, l: _liveCandle.l, c: _liveCandle.c, n: _liveCandle.n };
+        _candles.push(archived);
+
+        // Start new live candle (continuity: open = previous close)
+        var newT = _liveBucketEnd;
+        _liveBucketEnd = newT + bms;
+        _liveCandle = { t: newT, o: archived.c, h: archived.c, l: archived.c, c: archived.c, n: 0, _live: true };
+      }
+
       var newPrice = _tickPrice(_mktState);
       _liveCandle.c = newPrice;
       _liveCandle.h = Math.max(_liveCandle.h, newPrice);
       _liveCandle.l = Math.min(_liveCandle.l, newPrice);
       _liveCandle.n++;
+      _updCountdown();
       drawTrendChart();
       if (_hoverIdx < 0) {
         _updHdr(_liveCandle);
@@ -1662,6 +1761,7 @@
       _liveTimer = setTimeout(tick, interval);
     }
     // Initial render with fast-forwarded state
+    _updCountdown();
     drawTrendChart();
     if (_hoverIdx < 0 && _liveCandle) _updHdr(_liveCandle);
     // First visible tick after a pause
@@ -1704,8 +1804,9 @@
     _candles = _agg(_trendData, _trendMetric); _hoverIdx = -1;
     var info = $('trend-info');
     if (info) {
-      if (_candles.length > 1) info.textContent = _candles.length + ' candles (' + _trendData.length + ' snapshots, ~1 setiap 5 menit)';
-      else if (_candles.length === 1) info.textContent = '1 candle (' + _trendData.length + ' snapshots) — candle baru setiap 15 menit';
+      var bucketLabel = { day: '30 menit', week: '4 jam', month: '1 hari' }[_trendRange] || '30 menit';
+      if (_candles.length > 1) info.textContent = _candles.length + ' candles (' + _trendData.length + ' snapshots) — 1 candle = ' + bucketLabel;
+      else if (_candles.length === 1) info.textContent = '1 candle (' + _trendData.length + ' snapshots) — candle baru setiap ' + bucketLabel;
       else info.textContent = 'Menunggu data dari BDS sync...';
     }
     drawTrendChart(); setTimeout(_scrollToEnd, 50); renderTrendVitals();
@@ -1743,9 +1844,19 @@
     var cv = $('trend-chart'); if (!cv) return;
     var scrollEl = $('trend-scroll');
     var viewW = scrollEl ? scrollEl.clientWidth : 600; if (viewW < 100) viewW = 600;
-    var dpr = window.devicePixelRatio || 1;
-    var H = 340;
-    var pad = { t: 20, r: 64, b: 32, l: 10 };
+    var dpr = _perfDPR;
+    var H = _isLowEnd ? 280 : 380;
+    var pad = { t: 20, r: 64, b: 36, l: 10 };
+    // ── TradingView-style dual-zone layout ──
+    // Price zone: top 78% | Gap: 2% | Volume zone: bottom 15% | X-axis: pad.b
+    var totalCh = H - pad.t - pad.b;
+    var priceH = Math.floor(totalCh * 0.78);  // candle area
+    var volGap = Math.floor(totalCh * 0.03);  // separator gap
+    var volH   = totalCh - priceH - volGap;    // volume area
+    var priceTop = pad.t;
+    var priceBot = pad.t + priceH;
+    var volTop   = priceBot + volGap;
+    var volBot   = volTop + volH;
     // Build combined array: historical + live candle
     var _drawCandles = _candles.slice();
     if (_liveCandle) _drawCandles.push(_liveCandle);
@@ -1766,22 +1877,27 @@
     var ctx = cv.getContext('2d');
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, W, H);
-    var ch = H - pad.t - pad.b;
+    var ch = priceH; // candle zone height (not full chart)
     if (cw <= 0 || ch <= 0) return;
 
-    // ── Background — rich dark gradient ──
-    var bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-    bgGrad.addColorStop(0, 'rgba(12,12,22,0.85)');
-    bgGrad.addColorStop(0.5, 'rgba(9,9,18,0.92)');
-    bgGrad.addColorStop(1, 'rgba(6,6,14,0.95)');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, W, H);
-    // Subtle purple vignette at top
-    var vigGrad = ctx.createRadialGradient(W * 0.3, 0, 0, W * 0.3, 0, H * 0.7);
-    vigGrad.addColorStop(0, 'rgba(168,85,247,0.02)');
-    vigGrad.addColorStop(1, 'transparent');
-    ctx.fillStyle = vigGrad;
-    ctx.fillRect(0, 0, W, H);
+    // ── Background — simplified on low-end ──
+    if (_isLowEnd) {
+      ctx.fillStyle = 'rgba(9,9,18,0.92)';
+      ctx.fillRect(0, 0, W, H);
+    } else {
+      var bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+      bgGrad.addColorStop(0, 'rgba(12,12,22,0.85)');
+      bgGrad.addColorStop(0.5, 'rgba(9,9,18,0.92)');
+      bgGrad.addColorStop(1, 'rgba(6,6,14,0.95)');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, W, H);
+      // Subtle purple vignette at top
+      var vigGrad = ctx.createRadialGradient(W * 0.3, 0, 0, W * 0.3, 0, H * 0.7);
+      vigGrad.addColorStop(0, 'rgba(168,85,247,0.02)');
+      vigGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = vigGrad;
+      ctx.fillRect(0, 0, W, H);
+    }
 
     if (!n) {
       cv.width = viewW * dpr; cv.style.width = viewW + 'px';
@@ -1802,7 +1918,8 @@
     for (var i = 0; i < n; i++) { if (_drawCandles[i].l < mn) mn = _drawCandles[i].l; if (_drawCandles[i].h > mx) mx = _drawCandles[i].h }
     if (mx <= mn) mx = mn + 1;
     var rng = mx - mn, pv = rng * 0.1; mn = Math.max(0, mn - pv); mx = mx + pv;
-    function yOf(v) { return pad.t + ch * (1 - (v - mn) / (mx - mn)) }
+    // yOf maps values ONLY within the price zone (priceTop to priceBot)
+    function yOf(v) { return priceTop + priceH * (1 - (v - mn) / (mx - mn)) }
 
     // ── Grid lines — dotted, refined ──
     var scrollLeft = scrollEl ? scrollEl.scrollLeft : 0;
@@ -1848,60 +1965,80 @@
       var bt = yOf(up ? c.c : c.o), bb = yOf(up ? c.o : c.c), bh = Math.max(1, bb - bt);
       var isLive = c._live;
 
-      // Wick (shadow) — thicker, gradient
-      var wickGrad = ctx.createLinearGradient(0, yOf(c.h), 0, yOf(c.l));
-      if (up) { wickGrad.addColorStop(0, 'rgba(38,166,154,0.25)'); wickGrad.addColorStop(0.5, 'rgba(38,166,154,0.7)'); wickGrad.addColorStop(1, 'rgba(38,166,154,0.25)'); }
-      else { wickGrad.addColorStop(0, 'rgba(239,83,80,0.25)'); wickGrad.addColorStop(0.5, 'rgba(239,83,80,0.7)'); wickGrad.addColorStop(1, 'rgba(239,83,80,0.25)'); }
-      ctx.strokeStyle = wickGrad; ctx.lineWidth = bw > 10 ? 2 : bw > 6 ? 1.5 : 1;
-      ctx.beginPath(); ctx.moveTo(Math.round(cx) + .5, yOf(c.h)); ctx.lineTo(Math.round(cx) + .5, yOf(c.l)); ctx.stroke();
+      if (_isLowEnd) {
+        // ── LOW-END: flat colors, no gradients, no shadows ──
+        ctx.strokeStyle = up ? 'rgba(38,166,154,0.6)' : 'rgba(239,83,80,0.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(Math.round(cx) + .5, yOf(c.h)); ctx.lineTo(Math.round(cx) + .5, yOf(c.l)); ctx.stroke();
+        ctx.fillStyle = up ? 'rgba(38,166,154,0.9)' : 'rgba(239,83,80,0.9)';
+        ctx.fillRect(x, bt, bw, bh);
+        if (isLive) {
+          ctx.strokeStyle = up ? 'rgba(38,166,154,0.6)' : 'rgba(239,83,80,0.6)';
+          ctx.lineWidth = 1; ctx.setLineDash([2, 2]);
+          ctx.strokeRect(x - 1, bt - 1, bw + 2, bh + 2);
+          ctx.setLineDash([]);
+        }
+        if (i === _hoverIdx) {
+          ctx.fillStyle = 'rgba(168,85,247,0.06)';
+          ctx.fillRect(x - gap / 2, pad.t, bw + gap, ch);
+        }
+      } else {
+        // ── FULL: gradients, glow, border ──
+        // Wick (shadow) — thicker, gradient
+        var wickGrad = ctx.createLinearGradient(0, yOf(c.h), 0, yOf(c.l));
+        if (up) { wickGrad.addColorStop(0, 'rgba(38,166,154,0.25)'); wickGrad.addColorStop(0.5, 'rgba(38,166,154,0.7)'); wickGrad.addColorStop(1, 'rgba(38,166,154,0.25)'); }
+        else { wickGrad.addColorStop(0, 'rgba(239,83,80,0.25)'); wickGrad.addColorStop(0.5, 'rgba(239,83,80,0.7)'); wickGrad.addColorStop(1, 'rgba(239,83,80,0.25)'); }
+        ctx.strokeStyle = wickGrad; ctx.lineWidth = bw > 10 ? 2 : bw > 6 ? 1.5 : 1;
+        ctx.beginPath(); ctx.moveTo(Math.round(cx) + .5, yOf(c.h)); ctx.lineTo(Math.round(cx) + .5, yOf(c.l)); ctx.stroke();
 
-      // Body — rich gradient fill
-      var bodyGrad = ctx.createLinearGradient(0, bt, 0, bt + bh);
-      if (up) { bodyGrad.addColorStop(0, 'rgba(46,194,180,0.97)'); bodyGrad.addColorStop(0.5, 'rgba(38,166,154,0.92)'); bodyGrad.addColorStop(1, 'rgba(22,130,120,0.85)'); }
-      else { bodyGrad.addColorStop(0, 'rgba(245,100,95,0.97)'); bodyGrad.addColorStop(0.5, 'rgba(239,83,80,0.92)'); bodyGrad.addColorStop(1, 'rgba(200,55,55,0.85)'); }
-      ctx.fillStyle = bodyGrad;
-      var bodyR = Math.min(3, bh / 3, bw / 4);
-      if (bw >= 6) { _roundRect(ctx, x, bt, bw, bh, bodyR); ctx.fill(); }
-      else { ctx.fillRect(x, bt, bw, bh); }
+        // Body — rich gradient fill
+        var bodyGrad = ctx.createLinearGradient(0, bt, 0, bt + bh);
+        if (up) { bodyGrad.addColorStop(0, 'rgba(46,194,180,0.97)'); bodyGrad.addColorStop(0.5, 'rgba(38,166,154,0.92)'); bodyGrad.addColorStop(1, 'rgba(22,130,120,0.85)'); }
+        else { bodyGrad.addColorStop(0, 'rgba(245,100,95,0.97)'); bodyGrad.addColorStop(0.5, 'rgba(239,83,80,0.92)'); bodyGrad.addColorStop(1, 'rgba(200,55,55,0.85)'); }
+        ctx.fillStyle = bodyGrad;
+        var bodyR = Math.min(3, bh / 3, bw / 4);
+        if (bw >= 6) { _roundRect(ctx, x, bt, bw, bh, bodyR); ctx.fill(); }
+        else { ctx.fillRect(x, bt, bw, bh); }
 
-      // Body border — subtle inner glow
-      ctx.strokeStyle = up ? 'rgba(100,220,200,0.45)' : 'rgba(255,120,110,0.45)'; ctx.lineWidth = 0.7;
-      if (bw >= 6) { _roundRect(ctx, x + .25, bt + .25, bw - .5, Math.max(0, bh - .5), bodyR); ctx.stroke(); }
+        // Body border — subtle inner glow
+        ctx.strokeStyle = up ? 'rgba(100,220,200,0.45)' : 'rgba(255,120,110,0.45)'; ctx.lineWidth = 0.7;
+        if (bw >= 6) { _roundRect(ctx, x + .25, bt + .25, bw - .5, Math.max(0, bh - .5), bodyR); ctx.stroke(); }
 
-      // Glow effect — soft bloom under candle
-      if (bw >= 8 && bh > 2) {
-        ctx.save();
-        var glowAlpha = isLive ? (0.35 + Math.sin(Date.now() / 300) * 0.2) : 0.2;
-        ctx.shadowColor = up ? 'rgba(38,166,154,' + glowAlpha + ')' : 'rgba(239,83,80,' + glowAlpha + ')';
-        ctx.shadowBlur = isLive ? 16 : 8;
-        ctx.fillStyle = 'rgba(0,0,0,0)';
-        _roundRect(ctx, x, bt, bw, bh, bodyR); ctx.fill();
-        ctx.restore();
-      }
+        // Glow effect — soft bloom under candle
+        if (bw >= 8 && bh > 2) {
+          ctx.save();
+          var glowAlpha = isLive ? (0.35 + Math.sin(Date.now() / 300) * 0.2) : 0.2;
+          ctx.shadowColor = up ? 'rgba(38,166,154,' + glowAlpha + ')' : 'rgba(239,83,80,' + glowAlpha + ')';
+          ctx.shadowBlur = isLive ? 16 : 8;
+          ctx.fillStyle = 'rgba(0,0,0,0)';
+          _roundRect(ctx, x, bt, bw, bh, bodyR); ctx.fill();
+          ctx.restore();
+        }
 
-      // Live candle: pulsing border + LIVE label
-      if (isLive && bw >= 8) {
-        var pulseAlpha = 0.4 + Math.sin(Date.now() / 250) * 0.3;
-        ctx.strokeStyle = up ? 'rgba(38,166,154,' + pulseAlpha + ')' : 'rgba(239,83,80,' + pulseAlpha + ')';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([2, 2]);
-        _roundRect(ctx, x - 1, bt - 1, bw + 2, bh + 2, 3); ctx.stroke();
-        ctx.setLineDash([]);
-      }
+        // Live candle: pulsing border + LIVE label
+        if (isLive && bw >= 8) {
+          var pulseAlpha = 0.4 + Math.sin(Date.now() / 250) * 0.3;
+          ctx.strokeStyle = up ? 'rgba(38,166,154,' + pulseAlpha + ')' : 'rgba(239,83,80,' + pulseAlpha + ')';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([2, 2]);
+          _roundRect(ctx, x - 1, bt - 1, bw + 2, bh + 2, 3); ctx.stroke();
+          ctx.setLineDash([]);
+        }
 
-      // Hover highlight column
-      if (i === _hoverIdx) {
-        var hGrad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
-        hGrad.addColorStop(0, 'rgba(168,85,247,0.04)');
-        hGrad.addColorStop(0.5, 'rgba(168,85,247,0.07)');
-        hGrad.addColorStop(1, 'rgba(168,85,247,0.02)');
-        ctx.fillStyle = hGrad;
-        ctx.fillRect(x - gap / 2, pad.t, bw + gap, ch);
+        // Hover highlight column
+        if (i === _hoverIdx) {
+          var hGrad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
+          hGrad.addColorStop(0, 'rgba(168,85,247,0.04)');
+          hGrad.addColorStop(0.5, 'rgba(168,85,247,0.07)');
+          hGrad.addColorStop(1, 'rgba(168,85,247,0.02)');
+          ctx.fillStyle = hGrad;
+          ctx.fillRect(x - gap / 2, pad.t, bw + gap, ch);
+        }
       }
     }
 
-    // ── Bollinger Bands (SMA ± 2σ) — PhD-level overlay ──
-    if (n >= 5) {
+    // ── Bollinger Bands (SMA ± 2σ) — skip on low-end for performance ──
+    if (n >= 5 && !_isLowEnd) {
       var bbPeriod = Math.min(20, Math.max(5, Math.floor(n / 3)));
       var smaVals = [], upperBand = [], lowerBand = [];
       for (var bi = 0; bi < n; bi++) {
@@ -1965,10 +2102,16 @@
       ctx.restore();
     }
 
-    // ── Volume bars at bottom (15% of chart height) ──
+    // ── Volume zone — dedicated area below price zone ──
     if (n >= 2) {
-      var volH = ch * 0.12; // volume zone height
-      var volBase = pad.t + ch; // bottom of chart area
+      // Separator line between price and volume zones
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, Math.round(priceBot + volGap * 0.5) + .5);
+      ctx.lineTo(W, Math.round(priceBot + volGap * 0.5) + .5);
+      ctx.stroke();
+
       var maxVol = 0;
       for (var vi = 0; vi < n; vi++) { if (_drawCandles[vi].n > maxVol) maxVol = _drawCandles[vi].n; }
       if (maxVol > 0) {
@@ -1976,15 +2119,19 @@
           var vc = _drawCandles[vi], vx = ox + vi * (bw + gap);
           var vUp = vc.c >= vc.o;
           var vh = (vc.n / maxVol) * volH;
-          var vGrad = ctx.createLinearGradient(0, volBase - vh, 0, volBase);
-          if (vUp) { vGrad.addColorStop(0, 'rgba(38,166,154,0.25)'); vGrad.addColorStop(1, 'rgba(38,166,154,0.05)'); }
-          else { vGrad.addColorStop(0, 'rgba(239,83,80,0.25)'); vGrad.addColorStop(1, 'rgba(239,83,80,0.05)'); }
-          ctx.fillStyle = vGrad;
-          ctx.fillRect(vx, volBase - vh, bw, vh);
+          if (_isLowEnd) {
+            ctx.fillStyle = vUp ? 'rgba(38,166,154,0.18)' : 'rgba(239,83,80,0.18)';
+          } else {
+            var vGrad = ctx.createLinearGradient(0, volBot - vh, 0, volBot);
+            if (vUp) { vGrad.addColorStop(0, 'rgba(38,166,154,0.3)'); vGrad.addColorStop(1, 'rgba(38,166,154,0.06)'); }
+            else { vGrad.addColorStop(0, 'rgba(239,83,80,0.3)'); vGrad.addColorStop(1, 'rgba(239,83,80,0.06)'); }
+            ctx.fillStyle = vGrad;
+          }
+          ctx.fillRect(vx, volBot - vh, bw, vh);
         }
         // Volume label
-        ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.font = '500 7px JetBrains Mono,monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-        ctx.fillText('VOL', pad.l + 2, volBase - 1);
+        ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.font = '600 7px JetBrains Mono,monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.fillText('VOL', pad.l + 2, volTop + 1);
       }
     }
 
@@ -2058,6 +2205,47 @@
       ctx.beginPath(); ctx.moveTo(lcTagX, lastY - 4); ctx.lineTo(lcTagX - 4, lastY); ctx.lineTo(lcTagX, lastY + 4); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 8px JetBrains Mono,monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillText(fmtN(Math.round(lastC.c)), lcTagX + 4, lastY);
+    }
+    // ── Next candle boundary marker ──
+    if (_liveCandle && n > 0) {
+      var liveIdx = n - 1; // live candle is the last in _drawCandles
+      var nextX = ox + n * (bw + gap) + bw / 2; // position after live candle
+      // Dashed line
+      ctx.save();
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = 'rgba(168,85,247,0.2)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(nextX) + .5, priceTop);
+      ctx.lineTo(Math.round(nextX) + .5, volBot);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // 'NEXT' label pill
+      ctx.fillStyle = 'rgba(168,85,247,0.08)';
+      _roundRect(ctx, nextX - 14, priceTop + 4, 28, 12, 3); ctx.fill();
+      ctx.strokeStyle = 'rgba(168,85,247,0.2)'; ctx.lineWidth = 0.5;
+      _roundRect(ctx, nextX - 14, priceTop + 4, 28, 12, 3); ctx.stroke();
+      ctx.fillStyle = 'rgba(168,85,247,0.6)'; ctx.font = '700 6px JetBrains Mono,monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('NEXT', nextX, priceTop + 10);
+      ctx.restore();
+
+      // ── Pulsing dot at live candle close price ──
+      var liveX = ox + liveIdx * (bw + gap) + bw / 2;
+      var liveY = yOf(_liveCandle.c);
+      var liveUp = _liveCandle.c >= _liveCandle.o;
+      var dotPulse = 2.5 + Math.sin(Date.now() / 300) * 1;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(liveX, liveY, dotPulse, 0, Math.PI * 2);
+      ctx.fillStyle = liveUp ? 'rgba(38,166,154,0.9)' : 'rgba(239,83,80,0.9)';
+      ctx.fill();
+      // Glow ring
+      ctx.beginPath();
+      ctx.arc(liveX, liveY, dotPulse + 3, 0, Math.PI * 2);
+      ctx.strokeStyle = liveUp ? 'rgba(38,166,154,0.2)' : 'rgba(239,83,80,0.2)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
     }
 
     _updHdr(_hoverIdx >= 0 ? _drawCandles[_hoverIdx] : _drawCandles[n - 1]);

@@ -1,4 +1,7 @@
-/* monitor-page.js - Server Performance Monitor with BDS Metrics */
+/* monitor-page.js — Server Performance Monitor.
+ * SLO: render success ≥ 99%/24h. mcsrvstat fail (transport-only) tidak boleh OFFLINE-flag UI.
+ * Fallback chain: live mcsrvstat → Supabase synced_at < 2 min ("CACHED") → OFFLINE banner.
+ * Runbook: docs/runbook/leaderboard-sync.md (cek mcsrvstat status & Supabase freshness). */
 var SB_URL='https://jlxtnbnrirxhwuyqjlzw.supabase.co';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI';
 var $=function(id){return document.getElementById(id);};
@@ -6,10 +9,17 @@ var latHistory=[],MAX_HIST=60,chartCanvas=null,chartCtx=null,refreshTimer=null;
 var _radarInteracting=false,_interactEnd=0;
 var serverIP='laughtale.my.id:19214',lastMetrics=null;
 var _tpsBuf=[],_hmOn=false,_hmGrid=null,_hmDirty=true,_hmMax=1;
+// [A11Y] Honor prefers-reduced-motion — disable sonar pulse, land pulse, trail anim.
+// Global flag dipakai oleh drawRadar dan _hmAnimLoop. Listener di setup di IIFE bawah.
+var _reduceMotion=(typeof window!=='undefined'&&window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)||false;
 var _notifOn=false,_notifCD={},_notifHist=[],_NOTIF_CD=300000;
 var _uptimeLog=null,_prevOnline=null;
 var _fetchLock=false,_lastBDSHash='',_srvStatCache=null,_srvStatCacheTs=0;
-var _fetchFails=0,_maxRetries=3,_retryDelay=2000;
+// Circuit breaker untuk mcsrvstat (§7.2). 3 fail → pause 5 min, fallback ke Supabase.
+var _fetchFails=0,_maxRetries=2,_retryDelay=1000;
+var _cb={fails:0,until:0},_CB_TRIP=3,_CB_PAUSE=300000;
+var _CACHE_FRESH_MS=120000; // Supabase < 2 menit dianggap "live cached"
+var _lastSBSync=0; // ms timestamp dari m.ts terbaru
 var _lastDP=null;
 try{var _savedDP=localStorage.getItem('lt_lastDP');if(_savedDP)_lastDP=JSON.parse(_savedDP);}catch(e){}
 
@@ -74,7 +84,9 @@ function _switchServer(idx){
   _uptimeLog=null;lastMetrics=null;
   _msBuf={tps:[],lat:[],players:[]};_animVals={};
   _srvStatCache=null;_srvStatCacheTs=0;_lastBDSHash='';_fetchFails=0;_headCache={};
+  _cb={fails:0,until:0};_lastSBSync=0;
   _lastDP=null;radarLands=[];radarPlayers=[];
+  _expSet.clear();_afkTracker={}; // [FIX] reset map exploration & AFK tracker antar server
   _hideErrBanner();
   // Reset UI to loading state
   _origSafeSet('s-label','MEMUAT...');safeClass('s-label','sl ld');
@@ -116,6 +128,7 @@ function safeClass(id,cls){var el=$(id);if(el)el.className=cls;}
 
 function applyBDSMetrics(m){
   lastMetrics=m;
+  if(m&&m.ts)_lastSBSync=new Date(m.ts).getTime()||0;
   _hmDirty=true; // refresh entity density heatmap with new data
   var tps=m.tps||0;
   safeSet('m-tps',tps.toFixed(1));
@@ -218,8 +231,8 @@ function applyBDSMetrics(m){
   if(m.world_day!==undefined)safeSet('world-day','Hari ke-'+m.world_day);
 
   // [ATMOSPHERE] Update suasana card berdasarkan time of day + weather
-  // Performa: cuma tambah/hapus className, zero animation overhead di JS.
-  // CSS transitions handle smooth update.
+  // Performa: cuma tambah/hapus className + set CSS var, zero animation overhead di JS.
+  // CSS transitions handle smooth update (5s linear sinkron dengan micro-sync interval).
   try{
     var atmoCard=$('atmo-card');
     if(atmoCard){
@@ -232,6 +245,12 @@ function applyBDSMetrics(m){
       // Fog otomatis aktif saat hujan/petir atau saat malam (atmosfer mistis)
       if(weather==='rain'||weather==='thunder'||phase==='malam')atmoCard.classList.add('has-fog');
 
+      // Posisi matahari/bulan akurat berdasarkan world_time (0-23999 Minecraft tick).
+      // Konvensi MC: tick 0 = 06:00 dawn, 6000 = 12:00 noon, 12000 = 18:00 dusk, 18000 = 00:00 midnight.
+      // Setiap full-sync (~30s), simpan baseline tick + ts. rAF loop ekstrapolasi tick lokal
+      // (1 second real = 20 tick MC) agar matahari tetap bergerak smooth tanpa jeda.
+      _atmoSyncCelestial(atmoCard,wt,m.ts);
+
       // Badge text — kombinasi phase + weather
       var badge=$('atmo-badge');
       if(badge){
@@ -243,11 +262,15 @@ function applyBDSMetrics(m){
         var wxText=weather==='thunder'?'Petir':weather==='rain'?'Hujan':'Cerah';
         weatherEl.textContent=wxText;
       }
+
+      // Forecast: track durasi cuaca + estimasi perubahan berikutnya
+      _atmoUpdateForecast(weather,m.ts);
     }
   }catch(e){}
   safeSet('world-tick',fmtN(m.tick||0));
   safeSet('world-tps',tps.toFixed(1)+' / 20');
   radarPlayers=m.player_details||[];
+  _updateAfkTracker();
   // Preserve existing radarLands if this sync doesn't include land_claims
   if(m.land_claims&&m.land_claims.length)radarLands=m.land_claims;
   if(radarPlayers.length||radarLands.length){
@@ -422,6 +445,22 @@ async function fetchStatus(_retryN){
   _retryN=_retryN||0;
   var btn=$('refresh-btn');
   if(btn){btn.disabled=true;btn.textContent='\u27f3 MEMUAT...';}
+  // §7.2 Circuit breaker: skip mcsrvstat saat di-pause, lompat langsung ke BDS+fallback
+  if(Date.now()<_cb.until){
+    _fetchLock=false;
+    try{await fetchBDSData();}catch(e){console.warn('[BDS]',e);}
+    var sbAge=Date.now()-_lastSBSync;
+    if(_lastSBSync&&sbAge<_CACHE_FRESH_MS){
+      safeClass('s-orb','orb on');safeSet('s-label','ONLINE');safeClass('s-label','sl on');
+      safeSet('s-addr',serverIP+' (cached)');
+      safeSet('m-status','Cached');safeClass('m-status','m-val warn');
+      var li=$('lat-indicator');
+      if(li){li.textContent='Mode Cached (CB aktif)';li.className='lat-ind warn';}
+      _hideErrBanner();
+    }
+    if(btn){btn.disabled=false;btn.textContent='\u27f3 REFRESH';}
+    return;
+  }
   // Set loading state
   safeClass('s-orb','orb ld');
   safeSet('s-label','MEMUAT...');safeClass('s-label','sl ld');
@@ -429,6 +468,10 @@ async function fetchStatus(_retryN){
   var port=serverIP.split(':')[1]||'19214';
   var t0=Date.now();
   var fetchOK=false;
+  // §7.4 Kick off BDS fetch in parallel — supaya saat mcsrvstat fail,
+  // _lastSBSync sudah terisi dan fallback "CACHED" bisa kerja di hard-refresh pertama.
+  // Tanpa ini, retry mcsrvstat selesai sebelum BDS sempat populate → banner OFFLINE palsu.
+  var _bdsPromise=(_retryN===0)?fetchBDSData().catch(function(e){console.warn('[BDS parallel]',e);}):null;
   try{
     var d,latency;
     // B: Cache mcsrvstat response for 10s to avoid duplicate API hits
@@ -471,8 +514,8 @@ async function fetchStatus(_retryN){
     safeSet('s-label',online?'ONLINE':'OFFLINE');
     safeClass('s-label','sl '+(online?'on':'off'));
     fetchOK=true;
-    // C: Success — reset failure counter, hide error banner
-    _fetchFails=0;_hideErrBanner();
+    // C: Success — reset failure counter & circuit breaker, hide error banner
+    _fetchFails=0;_cb.fails=0;_cb.until=0;_hideErrBanner();
     // Basic diagnostics from public API data (always available)
     updateBasicDiag(online,latency,players,maxP);
     _trackUptime(online);_checkAlerts({online:online,latency:latency});
@@ -485,15 +528,38 @@ async function fetchStatus(_retryN){
     }catch(chartErr){console.warn('[Chart]',chartErr);}
     safeSet('last-update','Terakhir: '+new Date().toLocaleTimeString('id-ID')+' WIB');
   }catch(e){
-    console.error('[fetchStatus]',e);
-    _fetchFails++;
+    console.warn('[fetchStatus] transport fail:',e.message||e.name);
+    _fetchFails++;_cb.fails++;
+    // §7.2 Circuit breaker: trip after 3 consecutive fail
+    if(_cb.fails>=_CB_TRIP)_cb.until=Date.now()+_CB_PAUSE;
     if(!fetchOK){
-      // C: Auto-retry with exponential backoff
+      // §7.4 Graceful degradation: retry with jittered backoff before falling back
       if(_retryN<_maxRetries){
         _fetchLock=false;
-        setTimeout(function(){fetchStatus(_retryN+1);},_retryDelay*Math.pow(2,_retryN));
+        var jitter=0.75+Math.random()*0.5; // ±25% jitter
+        setTimeout(function(){fetchStatus(_retryN+1);},_retryDelay*Math.pow(2,_retryN)*jitter);
         return;
       }
+      // §7.4 Fallback: pakai Supabase data kalau masih fresh (< 2 min)
+      // Tunggu BDS parallel fetch yang dimulai di awal selesai dulu — kalau belum,
+      // _lastSBSync masih 0 dan fallback gagal di hard-refresh pertama.
+      if(_bdsPromise){try{await _bdsPromise;}catch(e){}}
+      var sbAge=Date.now()-_lastSBSync;
+      if(_lastSBSync&&sbAge<_CACHE_FRESH_MS){
+        var p=lastMetrics&&lastMetrics.players_online||0;
+        safeClass('s-orb','orb on');
+        safeSet('s-label','ONLINE');safeClass('s-label','sl on');
+        safeSet('s-addr',serverIP+' (cached)');
+        safeSet('m-status','Cached');safeClass('m-status','m-val warn');
+        // Status pemain dari snapshot terakhir, latency tidak tersedia
+        safeSet('m-latency','—');
+        if(!$('m-players').textContent||$('m-players').textContent==='—')safeSet('m-players',p+'/—');
+        var li=$('lat-indicator');
+        if(li){li.textContent='Mode Cached ('+Math.round(sbAge/1000)+'s lalu)';li.className='lat-ind warn';}
+        _trackUptime(true);
+        return; // jangan trigger banner — bukan outage
+      }
+      // Truly offline — both transports stale
       safeClass('s-orb','orb off');
       safeSet('s-label','OFFLINE');safeClass('s-label','sl off');
       safeSet('s-addr','Tidak dapat terhubung');
@@ -503,8 +569,10 @@ async function fetchStatus(_retryN){
     _fetchLock=false;
     if(btn){btn.disabled=false;btn.textContent='\u27f3 REFRESH';}
   }
-  // BDS data in separate try-catch
-  try{await fetchBDSData();}catch(e){console.warn('[BDS]',e);}
+  // BDS data: kalau parallel fetch belum jalan (saat retry), fetch sekarang.
+  // Kalau sudah jalan paralel, tunggu selesainya saja.
+  if(_bdsPromise){try{await _bdsPromise;}catch(e){console.warn('[BDS]',e);}}
+  else{try{await fetchBDSData();}catch(e){console.warn('[BDS]',e);}}
 }
 
 function updateOrb(on){var el=$('s-orb');if(el)el.className='orb '+(on?'on':'off');}
@@ -571,6 +639,7 @@ async function _fastPollPositions(){
     var m=typeof d[0].server_metrics==='string'?JSON.parse(d[0].server_metrics):d[0].server_metrics;
     if(!m||!m.player_details)return;
     radarPlayers=m.player_details;
+    _updateAfkTracker();
     // Preserve land claims from micro-sync if present
     if(m.land_claims&&m.land_claims.length)radarLands=m.land_claims;
     // Preserve entity hotspots from micro-sync for heatmap
@@ -717,6 +786,11 @@ function drawMHChart(){
 var radarPlayers=[],radarLands=[],radarDim='overworld',radarZoom=500;
 var radarPanX=0,radarPanZ=0,radarDrag=false,radarDragStart={x:0,z:0,px:0,pz:0};
 var radarHistory=[],radarTimeIdx=-1,radarRaf=0,radarAnimId=0,rSel=null,rFollow=true;
+// [FILTER] Radar filters — toggle UI di HTML, state direstore dari localStorage.
+var _rfState={afk:false,pvp:false,expiring:false,owner:'',cluster:true};
+var _afkTracker={}; // {name: {x,z,since}} untuk deteksi AFK >5 menit
+var _AFK_MS=300000,_AFK_MOVE_SQ=4; // 5 min, 2 blok delta = bergerak
+try{var _rfSaved=localStorage.getItem('lt_radar_filters');if(_rfSaved){var _rfp=JSON.parse(_rfSaved);for(var k in _rfp)if(k in _rfState)_rfState[k]=_rfp[k];}}catch(e){}
 var DIM_COLORS={overworld:'#34d399',nether:'#fb923c',the_end:'#a855f7'};
 var DIM_SHORT={o:'overworld',n:'nether',t:'the_end'};
 var LAND_COLORS=['#34d399','#60a5fa','#f472b6','#a78bfa','#fbbf24','#fb923c','#38bdf8','#4ade80'];
@@ -750,6 +824,9 @@ function _getHeadBitmap(name,pvp,dc,sz){
   else{octx.shadowColor=dc;octx.shadowBlur=4;}
   octx.fillStyle='#111';octx.beginPath();octx.roundRect(hx-1,hy-1,sz+2,sz+2,2);octx.fill();octx.shadowBlur=0;
   for(var rr=0;rr<8;rr++)for(var cc=0;cc<8;cc++){octx.fillStyle=cl[HF[rr][cc]];octx.fillRect(hx+cc*ps,hy+rr*ps,Math.ceil(ps),Math.ceil(ps));}
+  // [A11Y] Color-not-only-signal: PvP gets a dashed ring (shape signal) on top of red glow.
+  // Selected player gets solid yellow box (already shape-distinct).
+  if(pvp){octx.strokeStyle='#f87171';octx.lineWidth=1.5;octx.setLineDash([2,2]);octx.strokeRect(hx-2,hy-2,sz+4,sz+4);octx.setLineDash([]);}
   if(name===rSel){octx.strokeStyle='#fbbf24';octx.lineWidth=2;octx.strokeRect(hx-2,hy-2,sz+4,sz+4);}
   _headCache[key]=oc;
   return oc;
@@ -763,11 +840,104 @@ function drawHead(ctx,x,y,name,pvp,dc,sz){
 }
 
 var _lastAP=[],_expSet=new Set(),_expLast=0,_EXP_CS=128;
+// [PERF] Cap untuk fog-of-war set — cegah leak kalau monitor terbuka berhari.
+// 8000 chunk @128 blok = ~1024 blok radius coverage tiap dim, jauh > playable area.
+var _EXP_MAX=8000;
+function _capExpSet(){
+  if(_expSet.size<=_EXP_MAX)return;
+  // FIFO eviction: drop oldest (Set preserves insertion order).
+  var drop=_expSet.size-_EXP_MAX,it=_expSet.values(),k;
+  while(drop-->0&&!(k=it.next()).done)_expSet.delete(k.value);
+}
 function _computeExp(){
   _expSet.clear();
   for(var i=0;i<radarHistory.length;i++){var s=radarHistory[i];if(!s||!s._pos)continue;for(var j=0;j<s._pos.length;j++){var p=s._pos[j],dm=DIM_SHORT[p.d]||'overworld',cx=Math.floor(p.x/_EXP_CS),cz=Math.floor(p.z/_EXP_CS);for(var dx=-2;dx<=2;dx++)for(var dz=-2;dz<=2;dz++)_expSet.add(dm+':'+(cx+dx)+','+(cz+dz));}}
   for(var i=0;i<radarPlayers.length;i++){var p=radarPlayers[i];if(!p||p.x===undefined)continue;var cx=Math.floor(p.x/_EXP_CS),cz=Math.floor(p.z/_EXP_CS);for(var dx=-2;dx<=2;dx++)for(var dz=-2;dz<=2;dz++)_expSet.add((p.dim||'overworld')+':'+(cx+dx)+','+(cz+dz));}
+  _capExpSet();
   _expLast=Date.now();
+}
+
+// [FILTER] Update tracker AFK — dipanggil per fast-poll snapshot.
+// AFK = posisi tidak berubah >5 menit (delta < 2 blok pada x atau z).
+function _updateAfkTracker(){
+  var now=Date.now(),seen={};
+  for(var i=0;i<radarPlayers.length;i++){
+    var p=radarPlayers[i];if(!p||p.name===undefined||p.x===undefined)continue;
+    seen[p.name]=true;
+    var prev=_afkTracker[p.name];
+    if(!prev){_afkTracker[p.name]={x:p.x,z:p.z,since:now};continue;}
+    var dx=p.x-prev.x,dz=p.z-prev.z;
+    if(dx*dx+dz*dz>=_AFK_MOVE_SQ){_afkTracker[p.name]={x:p.x,z:p.z,since:now};}
+  }
+  // GC offline players
+  for(var n in _afkTracker)if(!seen[n])delete _afkTracker[n];
+}
+function _isAfk(name){var t=_afkTracker[name];return!!t&&Date.now()-t.since>=_AFK_MS;}
+
+// [FILTER] Apply filter ke daftar pemain. Mutate copy; jangan ubah radarPlayers asli.
+function _applyPlayerFilter(ap){
+  if(!_rfState.afk&&!_rfState.pvp&&!_rfState.owner)return ap;
+  var ownerLow=_rfState.owner?_rfState.owner.trim().toLowerCase():'';
+  // Pre-build set nama yang punya land milik owner (substring match) — O(L+P) bukan O(L*P)
+  var ownerNames=null;
+  if(ownerLow&&radarLands&&radarLands.length){
+    ownerNames={};
+    for(var i=0;i<radarLands.length;i++){
+      var l=radarLands[i];if(!l||!l.o)continue;
+      if(l.o.toLowerCase().indexOf(ownerLow)>=0)ownerNames[l.o]=true;
+    }
+  }
+  var out=[];
+  for(var i=0;i<ap.length;i++){
+    var p=ap[i];
+    if(_rfState.afk&&_isAfk(p.name))continue;
+    if(_rfState.pvp&&!p.pvp)continue;
+    if(ownerLow){
+      // Match player kalau nama mengandung owner string ATAU player IS owner of any land matching
+      var nLow=(p.name||'').toLowerCase();
+      var match=nLow.indexOf(ownerLow)>=0||(ownerNames&&ownerNames[p.name]);
+      if(!match)continue;
+    }
+    out.push(p);
+  }
+  return out;
+}
+
+// [CLUSTER] Greedy clustering — gabungkan marker dalam radius pixel < threshold.
+// Hanya aktif saat zoom out (radarZoom > 1500) supaya zoom-in tetap individual.
+function _clusterPlayers(ap,sc,W,H){
+  if(!_rfState.cluster||radarZoom<=1500||ap.length<5)return ap.map(function(p){return{single:p};});
+  var threshold=40,clusters=[];
+  for(var i=0;i<ap.length;i++){
+    var p=ap[i];
+    var px=W/2+(p.x-radarPanX)*sc,pz=H/2+(p.z-radarPanZ)*sc;
+    var added=false;
+    for(var j=0;j<clusters.length;j++){
+      var c=clusters[j],dx=c.cx-px,dz=c.cz-pz;
+      if(dx*dx+dz*dz<threshold*threshold){
+        c.members.push(p);
+        // Recompute centroid
+        c.cx=(c.cx*(c.members.length-1)+px)/c.members.length;
+        c.cz=(c.cz*(c.members.length-1)+pz)/c.members.length;
+        added=true;break;
+      }
+    }
+    if(!added)clusters.push({cx:px,cz:pz,members:[p]});
+  }
+  // Convert: single → {single}, multi → {cluster, x/z, n, members}
+  var out=[];
+  for(var i=0;i<clusters.length;i++){
+    var c=clusters[i];
+    if(c.members.length===1)out.push({single:c.members[0]});
+    else{
+      // Cluster centroid in world coords
+      var avgX=0,avgZ=0;
+      for(var k=0;k<c.members.length;k++){avgX+=c.members[k].x;avgZ+=c.members[k].z;}
+      avgX/=c.members.length;avgZ/=c.members.length;
+      out.push({cluster:true,x:avgX,z:avgZ,n:c.members.length,members:c.members});
+    }
+  }
+  return out;
 }
 function drawRadar(){
   try{
@@ -818,6 +988,8 @@ function drawRadar(){
   var ap;
   if(isLive){ap=radarPlayers.filter(function(p){return p.dim===radarDim&&p.x!==undefined;});}
   else{var sn=radarHistory[radarTimeIdx];var pd=sn?sn._pos:[];ap=pd.filter(function(p){return(DIM_SHORT[p.d]||'overworld')===radarDim;}).map(function(p){return{name:p.n,x:p.x,z:p.z,pvp:!!p.p};});}
+  // [FILTER] Apply player filter (AFK / PvP / owner) sebelum render
+  if(isLive)ap=_applyPlayerFilter(ap);
   _lastAP=ap;
   if(rSel&&rFollow){for(var i=0;i<ap.length;i++){if(ap[i].name===rSel){radarPanX=ap[i].x;radarPanZ=ap[i].z;break;}}}
   var GS=[10,25,50,100,250,500,1000,2500,5000],gs=GS[GS.length-1];
@@ -833,13 +1005,18 @@ function drawRadar(){
   if(ox>=0&&ox<=W&&oz>=0&&oz<=H){ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox,H);ctx.stroke();ctx.beginPath();ctx.moveTo(0,oz);ctx.lineTo(W,oz);ctx.stroke();ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='600 7px JetBrains Mono,monospace';ctx.textAlign='left';ctx.fillText('0,0',ox+4,oz-4);}
   var _lVis=0,_lTot=0,_lExp=0;
   var _WARN_DAYS=7,_CRIT_DAYS=10,_CLEAN_DAYS=14;
-  if(radarLands&&radarLands.length){for(var li=0;li<radarLands.length;li++){var l=radarLands[li];if(!l||l.x1==null)continue;if((DIM_SHORT[l.d]||'overworld')!==radarDim)continue;_lTot++;var lx1=cX+(Math.min(l.x1,l.x2)-radarPanX)*sc,lz1=cY+(Math.min(l.z1,l.z2)-radarPanZ)*sc,lx2=cX+(Math.max(l.x1,l.x2)-radarPanX)*sc,lz2=cY+(Math.max(l.z1,l.z2)-radarPanZ)*sc,lw=lx2-lx1,lh=lz2-lz1;if(lx2<0||lx1>W||lz2<0||lz1>H)continue;_lVis++;
+  if(radarLands&&radarLands.length){for(var li=0;li<radarLands.length;li++){var l=radarLands[li];if(!l||l.x1==null)continue;if((DIM_SHORT[l.d]||'overworld')!==radarDim)continue;
+    // [FILTER] Owner substring filter for lands
+    if(_rfState.owner){var _ownLow=_rfState.owner.trim().toLowerCase();if(_ownLow&&(!l.o||l.o.toLowerCase().indexOf(_ownLow)<0))continue;}
+    _lTot++;var lx1=cX+(Math.min(l.x1,l.x2)-radarPanX)*sc,lz1=cY+(Math.min(l.z1,l.z2)-radarPanZ)*sc,lx2=cX+(Math.max(l.x1,l.x2)-radarPanX)*sc,lz2=cY+(Math.max(l.z1,l.z2)-radarPanZ)*sc,lw=lx2-lx1,lh=lz2-lz1;if(lx2<0||lx1>W||lz2<0||lz1>H)continue;_lVis++;
     // Determine expiry status from di (daysInactive)
     var di=typeof l.di==='number'?l.di:-1;
     var isWarn=di>=_WARN_DAYS&&di<_CRIT_DAYS;
     var isCrit=di>=_CRIT_DAYS&&di<_CLEAN_DAYS;
     var isDead=di>=_CLEAN_DAYS;
     var isExpiring=isWarn||isCrit||isDead;
+    // [FILTER] Expiring-only filter
+    if(_rfState.expiring&&!isExpiring){_lVis--;continue;}
     if(isExpiring)_lExp++;
     // Choose color: normal=owner-hash, warn=orange, crit=red pulse, dead=bright red
     var lc=isExpiring?'#f87171':LAND_COLORS[nameHash(l.o)%LAND_COLORS.length];
@@ -850,7 +1027,7 @@ function drawRadar(){
     // Border
     var borderAlpha=isDead?0.7:isCrit?0.55:isWarn?0.45:0.3;
     // Pulsing effect for critical/dead lands
-    if(isCrit||isDead){var pulse=(Math.sin(Date.now()/400)+1)/2;borderAlpha=borderAlpha*(0.5+pulse*0.5);}
+    if((isCrit||isDead)&&!_reduceMotion){var pulse=(Math.sin(Date.now()/400)+1)/2;borderAlpha=borderAlpha*(0.5+pulse*0.5);}
     ctx.globalAlpha=borderAlpha;ctx.strokeStyle=lc;ctx.lineWidth=isDead?2:isCrit?1.5:1;
     if(isExpiring){ctx.setLineDash([]);ctx.strokeRect(lx1,lz1,lw,lh);}
     else{ctx.setLineDash([3,3]);ctx.strokeRect(lx1,lz1,lw,lh);ctx.setLineDash([]);}
@@ -893,7 +1070,7 @@ function drawRadar(){
   if(!isLive&&radarTimeIdx>0){
     var tr={},st=Math.max(0,radarTimeIdx-24);
     for(var t=st;t<=radarTimeIdx;t++){var sn=radarHistory[t];if(!sn||!sn._pos)continue;for(var j=0;j<sn._pos.length;j++){var tp=sn._pos[j];if((DIM_SHORT[tp.d]||'overworld')!==radarDim)continue;if(!tr[tp.n])tr[tp.n]=[];tr[tp.n].push({x:tp.x,z:tp.z,t:t});}}
-    var an=(Date.now()%1800)/1800,nk=Object.keys(tr);
+    var an=_reduceMotion?0:(Date.now()%1800)/1800,nk=Object.keys(tr);
     for(var ni=0;ni<nk.length;ni++){
       var tn=nk[ni],pts=tr[tn];if(pts.length<2)continue;
       if(rSel&&rSel!==tn)continue;
@@ -911,8 +1088,25 @@ function drawRadar(){
     ctx.globalAlpha=1;
   }
   var dc=DIM_COLORS[radarDim]||'#34d399';
-  for(var i=0;i<ap.length;i++){
-    var p=ap[i],px=cX+(p.x-radarPanX)*sc,pz=cY+(p.z-radarPanZ)*sc;
+  // [CLUSTER] Group nearby players when zoomed out
+  var renderUnits=_clusterPlayers(ap,sc,W,H);
+  for(var i=0;i<renderUnits.length;i++){
+    var unit=renderUnits[i];
+    if(unit.cluster){
+      var cx2=cX+(unit.x-radarPanX)*sc,cz2=cY+(unit.z-radarPanZ)*sc;
+      if(cx2<-30||cx2>W+30||cz2<-30||cz2>H+30)continue;
+      // Cluster bubble: lingkaran dengan jumlah anggota
+      var rad=Math.min(20,12+unit.n*1.2);
+      ctx.save();
+      ctx.fillStyle='rgba(34,211,238,0.18)';ctx.strokeStyle=dc;ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(cx2,cz2,rad,0,6.28);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font='700 11px Inter,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(unit.n,cx2,cz2);
+      ctx.textBaseline='alphabetic';
+      ctx.restore();
+      continue;
+    }
+    var p=unit.single,px=cX+(p.x-radarPanX)*sc,pz=cY+(p.z-radarPanZ)*sc;
     if(px<-20||px>W+20||pz<-20||pz>H+20)continue;
     var dim=rSel&&rSel!==p.name;
     if(dim)ctx.globalAlpha=0.25;
@@ -982,18 +1176,56 @@ function _selectPlayer(name){
 }
 
 async function fetchRadarHistory(){
+  // [SRE] Circuit breaker: 3 fail berturut → freeze 5 menit, banner notice user.
+  if(_radarHistFreeze&&Date.now()<_radarHistFreeze)return;
   try{
     var since=new Date(Date.now()-12*3600000).toISOString();
     var _srvFilter=(_servers[_currentIdx]&&_servers[_currentIdx].server_id)?'&server_id=eq.'+_servers[_currentIdx].server_id:'';
-    var r=await fetch(SB_URL+'/rest/v1/metrics_history?ts=gte.'+since+'&order=ts.asc&limit=144&select=ts,pos'+_srvFilter,{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
+    var ctrl=new AbortController(),tm=setTimeout(function(){ctrl.abort();},10000);
+    var r=await fetch(SB_URL+'/rest/v1/metrics_history?ts=gte.'+since+'&order=ts.asc&limit=144&select=ts,pos'+_srvFilter,{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},signal:ctrl.signal});
+    clearTimeout(tm);
     var d=await r.json();
-    if(Array.isArray(d)){radarHistory=d.slice(-144).map(function(row){var o={ts:row.ts,_pos:[]};try{o._pos=typeof row.pos==='string'?JSON.parse(row.pos):(Array.isArray(row.pos)?row.pos:[]);}catch(e){}return o;});var sl=$('radar-timeline');if(sl){sl.max=radarHistory.length;sl.value=radarHistory.length;}_computeExp();_hmDirty=true;}
-  }catch(e){}
+    if(Array.isArray(d)){
+      _radarHistFails=0;_radarHistFreeze=0;_setRadarHistError('');
+      radarHistory=d.slice(-144).map(function(row){var o={ts:row.ts,_pos:[]};try{o._pos=typeof row.pos==='string'?JSON.parse(row.pos):(Array.isArray(row.pos)?row.pos:[]);}catch(e){}return o;});
+      var sl=$('radar-timeline');if(sl){sl.max=radarHistory.length;sl.value=radarHistory.length;}
+      _computeExp();_hmDirty=true;
+    }
+  }catch(e){
+    _radarHistFails++;
+    if(_radarHistFails>=3){_radarHistFreeze=Date.now()+300000;_setRadarHistError('Data peta tidak tersedia, retry 5 menit lagi.');}
+    else _setRadarHistError('Data peta gagal dimuat, mencoba ulang...');
+  }
+}
+var _radarHistFails=0,_radarHistFreeze=0;
+function _setRadarHistError(msg){
+  var card=$('player-details-card');if(!card)return;
+  var b=$('radar-hist-error');
+  if(!msg){if(b)b.style.display='none';return;}
+  if(!b){
+    b=document.createElement('div');b.id='radar-hist-error';
+    b.style.cssText='margin-top:6px;padding:5px 8px;border-radius:4px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);color:#f87171;font-family:JetBrains Mono,monospace;font-size:.5rem;text-align:center';
+    var wrap=$('radar-wrap');if(wrap&&wrap.parentNode)wrap.parentNode.insertBefore(b,wrap.nextSibling);
+  }
+  b.textContent=msg;b.style.display='block';
 }
 
 (function(){
   var dt=$('radar-dim-tabs');
   if(dt)dt.addEventListener('click',function(e){var t=e.target.closest('.tab');if(!t)return;dt.querySelectorAll('.tab').forEach(function(b){b.classList.remove('a');});t.classList.add('a');radarDim=t.dataset.dim;drawRadar();});
+  // [FILTER] Hook radar filter UI — restore state, persist on change
+  var _rfPersist=function(){try{localStorage.setItem('lt_radar_filters',JSON.stringify(_rfState));}catch(e){}};
+  var _rfBindCheck=function(id,key){var el=$(id);if(!el)return;el.checked=!!_rfState[key];el.addEventListener('change',function(){_rfState[key]=el.checked;_rfPersist();drawRadar();});};
+  _rfBindCheck('rf-afk','afk');
+  _rfBindCheck('rf-pvp','pvp');
+  _rfBindCheck('rf-expiring','expiring');
+  _rfBindCheck('rf-cluster','cluster');
+  var rfo=$('rf-owner');
+  if(rfo){
+    rfo.value=_rfState.owner||'';
+    var _rfoTm=0;
+    rfo.addEventListener('input',function(){_rfState.owner=rfo.value;clearTimeout(_rfoTm);_rfoTm=setTimeout(function(){_rfPersist();drawRadar();},150);});
+  }
   var fs=$('radar-fullscreen');
   if(fs)fs.addEventListener('click',function(){var c=$('player-details-card');if(!c)return;if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}else{(c.requestFullscreen||c.webkitRequestFullscreen).call(c).then(function(){drawRadar();}).catch(function(){});}});
   document.addEventListener('fullscreenchange',function(){setTimeout(drawRadar,100);setTimeout(drawRadar,300);});
@@ -1021,7 +1253,14 @@ async function fetchRadarHistory(){
     });
     cv.addEventListener('mousedown',function(e){_clickStart={x:e.clientX,y:e.clientY,t:Date.now()};radarDrag=true;_radarInteracting=true;cv.style.cursor='move';radarDragStart={x:e.clientX,z:e.clientY,px:radarPanX,pz:radarPanZ};});
     window.addEventListener('mousemove',function(e){if(!radarDrag)return;var sc=Math.min(parseInt(cv.style.width)||600,parseInt(cv.style.height)||400)/(radarZoom*2);radarPanX=radarDragStart.px-(e.clientX-radarDragStart.x)/sc;radarPanZ=radarDragStart.pz-(e.clientY-radarDragStart.z)/sc;rFollow=false;if(!radarRaf){radarRaf=requestAnimationFrame(function(){drawRadar();radarRaf=0;});}});
-    window.addEventListener('mouseup',function(e){if(!radarDrag)return;radarDrag=false;_radarInteracting=false;_interactEnd=Date.now();cv.style.cursor='crosshair';var dx=e.clientX-_clickStart.x,dy=e.clientY-_clickStart.y;if(Math.abs(dx)<5&&Math.abs(dy)<5&&Date.now()-_clickStart.t<300){var hit=_rHit(cv,e);_selectPlayer(hit?hit.name:null);}drawRadar();});
+    window.addEventListener('mouseup',function(e){if(!radarDrag)return;radarDrag=false;_radarInteracting=false;_interactEnd=Date.now();cv.style.cursor='crosshair';var dx=e.clientX-_clickStart.x,dy=e.clientY-_clickStart.y;if(Math.abs(dx)<5&&Math.abs(dy)<5&&Date.now()-_clickStart.t<300){var hit=_rHit(cv,e);if(hit){_selectPlayer(hit.name);}else if(_rfState.cluster&&radarZoom>1500&&_lastAP.length>=5){
+      // Cluster click: zoom in 60% to drill into the cluster
+      var rb=cv.getBoundingClientRect(),mxC=e.clientX-rb.left,myC=e.clientY-rb.top;
+      var Wc=parseInt(cv.style.width)||600,Hc=parseInt(cv.style.height)||400;
+      var scC=Math.min(Wc,Hc)/(radarZoom*2);
+      radarPanX=radarPanX+(mxC-Wc/2)/scC;radarPanZ=radarPanZ+(myC-Hc/2)/scC;
+      radarZoom=Math.max(50,Math.round(radarZoom*0.6));rFollow=false;
+    }else{_selectPlayer(null);}}drawRadar();});
     cv.addEventListener('wheel',function(e){e.preventDefault();_radarInteracting=true;radarZoom=e.deltaY>0?Math.min(10000,radarZoom*1.3):Math.max(50,radarZoom/1.3);radarZoom=Math.round(radarZoom);rFollow=false;clearTimeout(window._wheelEnd);window._wheelEnd=setTimeout(function(){_radarInteracting=false;_interactEnd=Date.now();drawRadar();},200);if(!radarRaf){radarRaf=requestAnimationFrame(function(){drawRadar();radarRaf=0;});}},{passive:false});
     var rPinch={a:false,d0:0,z0:0};
     function _td(ts){var dx=ts[0].clientX-ts[1].clientX,dy=ts[0].clientY-ts[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
@@ -1056,6 +1295,35 @@ async function fetchRadarHistory(){
   if(sb){sb.addEventListener('mousedown',function(e){e.preventDefault();_hStart(-1);});sb.addEventListener('touchstart',function(e){e.preventDefault();_hStart(-1);},{passive:false});}
   if(sf){sf.addEventListener('mousedown',function(e){e.preventDefault();_hStart(1);});sf.addEventListener('touchstart',function(e){e.preventDefault();_hStart(1);},{passive:false});}
   window.addEventListener('mouseup',_hStop);window.addEventListener('touchend',_hStop);
+  // [AUTOPLAY] Cycle speed: 1× → 2× → 4× → off. Step 1 frame per 500ms / speed.
+  // rAF-based scheduling supaya pause otomatis saat tab hidden.
+  var _playSpeeds=[0,1,2,4],_playIdx=0,_playRaf=0,_playLastT=0;
+  function _playStop(){if(_playRaf){cancelAnimationFrame(_playRaf);_playRaf=0;}_playLastT=0;}
+  function _playLoop(now){
+    if(!_playSpeeds[_playIdx]){_playRaf=0;return;}
+    if(document.hidden){_playRaf=requestAnimationFrame(_playLoop);return;}
+    var stepMs=500/_playSpeeds[_playIdx];
+    if(!_playLastT)_playLastT=now;
+    if(now-_playLastT>=stepMs){
+      _playLastT=now;
+      var s=$('radar-timeline');
+      if(s){
+        var v=parseInt(s.value),mx=parseInt(s.max)||radarHistory.length;
+        v++;if(v>mx)v=0; // loop
+        s.value=v;s.dispatchEvent(new Event('input'));
+      }
+    }
+    _playRaf=requestAnimationFrame(_playLoop);
+  }
+  var pb=$('radar-play');
+  if(pb)pb.addEventListener('click',function(){
+    _playIdx=(_playIdx+1)%_playSpeeds.length;
+    var sp=_playSpeeds[_playIdx];
+    pb.textContent=sp?'▶ '+sp+'×':'⏸ Off';
+    pb.className='tab'+(sp?' a':'');
+    if(sp){if(!_playRaf)_playRaf=requestAnimationFrame(_playLoop);}
+    else _playStop();
+  });
   fetchRadarHistory();
   setInterval(fetchRadarHistory,300000);
 })();
@@ -1182,9 +1450,29 @@ function _renderExpPanel(){
     if(p&&p.classList.contains('open')&&!e.target.closest('.notif-wrap'))p.classList.remove('open');
   });
   var hmc=$('hm-check'),_hmAnimId=0;
-  // Throttled sonar animation — 15fps is plenty for the 2.4s sonar cycle
-  function _hmAnimLoop(){if(_hmAnimId)return;_hmAnimId=setInterval(function(){if(!_hmOn){clearInterval(_hmAnimId);_hmAnimId=0;return;}drawRadar();},67);}
-  if(hmc)hmc.addEventListener('change',function(){_hmOn=hmc.checked;drawRadar();if(_hmOn&&!_hmAnimId)_hmAnimLoop();});
+  // [A11Y+PERF] rAF loop replaces setInterval(67ms). Browser auto-pauses rAF when
+  // tab hidden, dan honor prefers-reduced-motion (sonar pulse jadi statis).
+  function _hmAnimLoop(){
+    if(_hmAnimId)return;
+    var loop=function(){
+      if(!_hmOn){_hmAnimId=0;return;}
+      // rAF tidak fire saat tab hidden — tapi jaga safety: skip frame manual juga.
+      if(!document.hidden&&!_reduceMotion)drawRadar();
+      _hmAnimId=requestAnimationFrame(loop);
+    };
+    _hmAnimId=requestAnimationFrame(loop);
+  }
+  // Update reduce-motion preference if user changes OS setting mid-session
+  if(window.matchMedia){
+    var mq=window.matchMedia('(prefers-reduced-motion: reduce)');
+    var onMQ=function(e){_reduceMotion=e.matches;if(_reduceMotion&&_hmAnimId){cancelAnimationFrame(_hmAnimId);_hmAnimId=0;drawRadar();}};
+    if(mq.addEventListener)mq.addEventListener('change',onMQ);else if(mq.addListener)mq.addListener(onMQ);
+  }
+  if(hmc)hmc.addEventListener('change',function(){
+    _hmOn=hmc.checked;drawRadar();
+    if(_hmOn&&!_hmAnimId&&!_reduceMotion)_hmAnimLoop();
+    if(!_hmOn&&_hmAnimId){cancelAnimationFrame(_hmAnimId);_hmAnimId=0;}
+  });
 })();
 
 function _updateNotifUI(){
@@ -1400,7 +1688,7 @@ function _renderHeatmap(ctx,cX,cY,sc,W,H){
 
   var cellSz=_HM_CS*LOD;
   var cellPx=cellSz*sc;
-  var sonarPhase=(Date.now()%2400)/2400;
+  var sonarPhase=_reduceMotion?0.5:(Date.now()%2400)/2400;
   // Budget: max 12 sonar waves to prevent GPU thrashing at far zoom
   var sonarBudget=12,sonarCount=0;
 
@@ -1997,6 +2285,411 @@ if('serviceWorker' in navigator){
 
 /* Feature 20: Weather icon removed — was showing moon incorrectly (using ticks as hours) */
 
+/* ═══════════════════════════════════════════════════════════════════════
+   ATMOSPHERE — Celestial position + weather forecast
+   ─────────────────────────────────────────────────────────────────────
+   Posisi matahari/bulan dihitung dari world_time (0-23999 Minecraft tick):
+     tick     0 = 06:00 (sunrise, sun di horizon kiri)
+     tick  6000 = 12:00 (noon, sun zenith)
+     tick 12000 = 18:00 (sunset, sun di horizon kanan)
+     tick 18000 = 00:00 (midnight, moon zenith)
+   X-axis: linear 0→100% (06:00 = 5%, 18:00 = 95% untuk siang; flip untuk malam).
+   Y-axis: parabolic (sin curve) — top=15% saat zenith, bottom=70% saat horizon.
+   Smooth via CSS transition 5s linear yang sinkron dengan micro-sync interval.
+
+   Forecast cuaca: track perubahan via localStorage. Estimasi durasi:
+     Clear   → next rain dalam 0.5–7.5 hari MC (avg ~5 menit real, MC default rate)
+     Rain    → 0.5–1 hari MC (avg ~5 menit real)
+     Thunder → 3–15 menit MC (avg ~5 menit real)
+   Catatan: ini estimasi heuristik; cuaca BDS bisa di-override oleh /weather.
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ATMOSPHERE — Celestial position + ADVANCED weather forecast
+   ─────────────────────────────────────────────────────────────────────
+   Posisi matahari/bulan dihitung dari world_time (0-23999 Minecraft tick).
+   Forecast cuaca: hybrid model — Bayesian blend antara prior MC default
+   dan histori actual server (sliding window). Markov chain untuk next
+   state. Multi-step rolling prediction sampai 60 menit / 5 step.
+
+   localStorage:
+     dwelve_atmo_wx_v2  → current state {wx, sinceMs}
+     dwelve_atmo_hist_v1 → array history [{wx, startMs, endMs, dur}], cap 200
+═══════════════════════════════════════════════════════════════════════ */
+
+var _ATMO_LS_STATE='dwelve_atmo_wx_v2';
+var _ATMO_LS_HIST='dwelve_atmo_hist_v1';
+var _ATMO_HIST_CAP=200;
+var _ATMO_FORECAST_HORIZON_MS=60*60*1000; // 60 menit
+var _ATMO_FORECAST_MAX_STEPS=5;
+
+// Prior MC default (ms real-time). Berfungsi sebagai Bayesian smoothing saat sample minim.
+// Source: vanilla MC default rates — clear 0.5–7.5 day MC, rain 0.5–1 day, thunder 3–15 menit.
+var _WX_PRIOR={
+  clear:  {mean:1500000, stdev:1100000, weight:5}, // weight ~ pseudo-count
+  rain:   {mean: 900000, stdev: 250000, weight:5},
+  thunder:{mean: 450000, stdev: 200000, weight:5}
+};
+// Prior transition probability dari current state ke next (clear/rain/thunder)
+var _WX_TRANS_PRIOR={
+  clear:  {clear:0.0, rain:0.85, thunder:0.15}, // dari clear, lebih sering ke rain
+  rain:   {clear:0.85, rain:0.0, thunder:0.15}, // rain biasanya berakhir ke clear
+  thunder:{clear:0.30, rain:0.70, thunder:0.0}  // thunder sering reda jadi rain dulu
+};
+
+// Celestial state (rAF loop)
+var _atmoBaseTick=0,_atmoBaseTs=0,_atmoLastTickShown=-1,_atmoRaf=0,_atmoCardEl=null;
+
+function _atmoSyncCelestial(card,wt,serverTs){
+  // wt = world_time absolute (BDS kirim bisa naik > 24000 atau di-reset modulo, tergantung impl).
+  // Simpan baseline; loop akan ekstrapolasi 20 tick/detik.
+  _atmoCardEl=card;
+  _atmoBaseTick=Number(wt)||0;
+  _atmoBaseTs=serverTs?(new Date(serverTs).getTime()||Date.now()):Date.now();
+  // Render frame pertama segera supaya class sync dengan posisi
+  _atmoRenderFrame(_atmoBaseTick);
+  card.classList.add('cel-live');
+  if(!_atmoRaf&&!_reduceMotion)_atmoRaf=requestAnimationFrame(_atmoTick);
+}
+
+function _atmoTick(){
+  _atmoRaf=0;
+  if(document.hidden||_reduceMotion){
+    // Tab tersembunyi atau prefer-reduced-motion → stop rAF, biarkan transition CSS handle (kalau ada)
+    if(_atmoCardEl)_atmoCardEl.classList.remove('cel-live');
+    return;
+  }
+  if(!_atmoCardEl){return;}
+  var elapsedMs=Date.now()-_atmoBaseTs;
+  // 20 tick = 1 detik real-time di vanilla MC. Gunakan TPS realtime kalau ada untuk drift correction halus.
+  var tps=(lastMetrics&&lastMetrics.tps)?Math.max(1,Math.min(20,lastMetrics.tps)):20;
+  var tickNow=_atmoBaseTick+elapsedMs/1000*tps;
+  // Throttle DOM write: skip kalau tick belum maju >= 1 (≈ 50ms di TPS 20)
+  if(Math.floor(tickNow)!==_atmoLastTickShown){
+    _atmoLastTickShown=Math.floor(tickNow);
+    _atmoRenderFrame(tickNow);
+  }
+  // Live forecast countdown — update text cuaca/ETA tiap detik tanpa rebuild full timeline
+  var nowSec=Math.floor(Date.now()/1000);
+  if(nowSec!==_atmoLastForecastSec){
+    _atmoLastForecastSec=nowSec;
+    _atmoTickForecastLive();
+  }
+  _atmoRaf=requestAnimationFrame(_atmoTick);
+}
+var _atmoLastForecastSec=0;
+function _atmoTickForecastLive(){
+  // Update hanya elapsed + ETA text (tidak panggil rebuild timeline / re-fetch history)
+  var st=_atmoLoadState();if(!st||!st.wx)return;
+  var txEl=$('atmo-forecast-text'),etaEl=$('atmo-forecast-eta');
+  if(!txEl||!etaEl)return;
+  var nowMs=Date.now();
+  var elapsed=Math.max(0,nowMs-st.sinceMs);
+  var serverHist=Array.isArray(lastMetrics&&lastMetrics.weather_log)?lastMetrics.weather_log:[];
+  var hist=_atmoMergeHistory(serverHist,_atmoLoadHistory());
+  var stats=_atmoStats(hist);
+  var sCur=stats[st.wx]||stats.clear;
+  var remaining;
+  if(elapsed<sCur.p25)        remaining=sCur.p50-elapsed;
+  else if(elapsed<sCur.p50)   remaining=sCur.p50-elapsed;
+  else if(elapsed<sCur.p75)   remaining=sCur.p75-elapsed;
+  else                        remaining=Math.max(60000,sCur.mean*0.3);
+  remaining=Math.max(0,remaining);
+  var trans=_atmoTransProb(hist);
+  var nx=_atmoNextWx(st.wx,trans);
+  var totalN=(stats.clear.n||0)+(stats.rain.n||0)+(stats.thunder.n||0);
+  var conf=Math.min(0.95,0.35+totalN*0.05);
+  txEl.innerHTML='<span class="atmo-forecast-live"></span><b>'+_atmoLabel(st.wx)+'</b> · sudah '+_atmoFmtDur(elapsed)
+    +' <span style="opacity:.6">→ '+_atmoLabel(nx).toLowerCase()+'</span>'
+    +'<span class="atmo-forecast-conf" title="Akurasi prediksi: naik dengan sample (n='+totalN+')">'+Math.round(conf*100)+'%</span>';
+  etaEl.textContent=remaining<=0?'segera':'~'+_atmoFmtDur(remaining);
+}
+
+function _atmoRenderFrame(tickAbs){
+  var card=_atmoCardEl;if(!card)return;
+  var td=((tickAbs%24000)+24000)%24000;
+  var x,y,isNight=td>=12000;
+  if(!isNight){
+    var t=td/12000;
+    x=5+t*90;
+    y=78-56*Math.sin(Math.PI*t);
+  }else{
+    var t2=(td-12000)/12000;
+    x=5+t2*90;
+    y=78-56*Math.sin(Math.PI*t2);
+  }
+  // Twilight fade dekat horizon (smooth crossover sunrise/sunset)
+  var op=1;
+  var distHorizon=isNight?Math.min(td-12000,24000-td):Math.min(td,12000-td);
+  if(distHorizon<500)op=0.4+0.6*(distHorizon/500);
+  card.style.setProperty('--cel-x',x.toFixed(2)+'%');
+  card.style.setProperty('--cel-y',y.toFixed(2)+'%');
+  card.style.setProperty('--cel-op',op.toFixed(2));
+  card.classList.toggle('cel-night',isNight);
+  // Live time pointer di label strip — hitung jam MC dari tick
+  // tick 0 = 06:00; (td/1000) jam dari 06:00; modulo 24
+  var nowEl=$('atmo-celest-now');
+  if(nowEl){
+    var hours=(td/1000+6)%24;
+    var hh=Math.floor(hours),mm=Math.floor((hours-hh)*60);
+    nowEl.textContent=(hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm;
+    // Pointer x = jam MC / 24 * 100% (label strip: 00 di 0%, 06 di 25%, 12 di 50%, 18 di 75%, 24 di 100%)
+    var px=hours/24*100;
+    card.style.setProperty('--cel-now-x',px.toFixed(2)+'%');
+  }
+}
+
+// Update reduce-motion preference juga kontrol atmosphere loop
+(function(){
+  if(!window.matchMedia)return;
+  var mq=window.matchMedia('(prefers-reduced-motion: reduce)');
+  var onChange=function(){
+    if(_reduceMotion){
+      if(_atmoRaf){cancelAnimationFrame(_atmoRaf);_atmoRaf=0;}
+      if(_atmoCardEl)_atmoCardEl.classList.remove('cel-live');
+    }else if(_atmoCardEl&&!_atmoRaf){
+      _atmoCardEl.classList.add('cel-live');
+      _atmoRaf=requestAnimationFrame(_atmoTick);
+    }
+  };
+  if(mq.addEventListener)mq.addEventListener('change',onChange);
+  else if(mq.addListener)mq.addListener(onChange);
+})();
+// Resume rAF saat tab kembali visible
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&_atmoCardEl&&!_atmoRaf&&!_reduceMotion){
+    _atmoCardEl.classList.add('cel-live');
+    _atmoRaf=requestAnimationFrame(_atmoTick);
+  }
+});
+
+// Legacy alias kalau masih dipanggil dari spot lain
+function _atmoUpdateCelestial(card,td){_atmoSyncCelestial(card,td,Date.now());}
+
+function _atmoUpdateForecast(weather,serverTs){
+  var fcEl=$('atmo-forecast'),txEl=$('atmo-forecast-text'),etaEl=$('atmo-forecast-eta'),tlEl=$('atmo-forecast-timeline');
+  if(!fcEl||!txEl||!etaEl)return;
+  var nowMs=serverTs?(new Date(serverTs).getTime()||Date.now()):Date.now();
+
+  // 1) State current — prefer weather_since_ms dari server (akurat global), fallback localStorage
+  var serverSince=lastMetrics&&lastMetrics.weather_since_ms?Number(lastMetrics.weather_since_ms):0;
+  var st=_atmoLoadState();
+  if(serverSince&&(!st||st.wx!==weather||Math.abs(serverSince-st.sinceMs)>30000)){
+    // Server source-of-truth saat ada (akurat untuk semua user)
+    st={wx:weather,sinceMs:serverSince,fromServer:true};
+    _atmoSaveState(st);
+  }else if(!st||st.wx!==weather){
+    if(st&&st.wx&&st.sinceMs)_atmoLogHistory(st.wx,st.sinceMs,nowMs);
+    st={wx:weather,sinceMs:nowMs};
+    _atmoSaveState(st);
+  }
+
+  // 2) Merge history: server log (global, semua user) + local log (browser ini)
+  var serverHist=Array.isArray(lastMetrics&&lastMetrics.weather_log)?lastMetrics.weather_log:[];
+  var localHist=_atmoLoadHistory();
+  var hist=_atmoMergeHistory(serverHist,localHist);
+
+  // 3) Statistik & Markov
+  var stats=_atmoStats(hist);
+  var trans=_atmoTransProb(hist);
+
+  // 4) Estimasi sisa durasi cuaca SEKARANG
+  var elapsed=Math.max(0,nowMs-st.sinceMs);
+  var sCur=stats[weather]||stats.clear;
+  var remaining;
+  if(elapsed<sCur.p25)        remaining=sCur.p50-elapsed;
+  else if(elapsed<sCur.p50)   remaining=sCur.p50-elapsed;
+  else if(elapsed<sCur.p75)   remaining=sCur.p75-elapsed;
+  else                        remaining=Math.max(60000,sCur.mean*0.3);
+  remaining=Math.max(0,remaining);
+
+  // 5) Confidence — naik dengan total sample (server + local)
+  var totalN=(stats.clear.n||0)+(stats.rain.n||0)+(stats.thunder.n||0);
+  var conf=Math.min(0.95,0.35+totalN*0.05);
+
+  // 6) Multi-step rolling forecast
+  var timeline=_atmoSimulateForecast(weather,remaining,stats,trans,nowMs);
+
+  // 7) Render utama
+  var curLabel=_atmoLabel(weather);
+  var nextWx=timeline[0]?timeline[0].wx:_atmoNextWx(weather,trans);
+  var nextLabel=_atmoLabel(nextWx).toLowerCase();
+  var elapsedTxt=_atmoFmtDur(elapsed);
+  var etaTxt=remaining<=0?'segera':'~'+_atmoFmtDur(remaining);
+  txEl.innerHTML='<span class="atmo-forecast-live"></span><b>'+curLabel+'</b> · sudah '+elapsedTxt
+    +' <span style="opacity:.6">→ '+nextLabel+'</span>'
+    +'<span class="atmo-forecast-conf" title="Akurasi prediksi: naik dengan sample (n='+totalN+')">'+Math.round(conf*100)+'%</span>';
+  etaEl.textContent=etaTxt;
+  if(tlEl)_atmoRenderTimeline(tlEl,weather,nowMs,remaining,timeline);
+}
+
+// Merge server history dengan local; deduplicate by (wx, startMs ±5s).
+function _atmoMergeHistory(serverHist,localHist){
+  var out=[];
+  function key(e){return e.wx+'|'+Math.floor(e.startMs/5000);}
+  var seen={};
+  function add(arr){
+    if(!Array.isArray(arr))return;
+    for(var i=0;i<arr.length;i++){
+      var e=arr[i];
+      if(!e||!e.wx||!e.startMs||!e.endMs)continue;
+      var k=key(e);
+      if(seen[k])continue;
+      seen[k]=true;
+      out.push(e);
+    }
+  }
+  add(serverHist);add(localHist);
+  out.sort(function(a,b){return a.startMs-b.startMs;});
+  return out;
+}
+
+function _atmoLoadState(){
+  try{var raw=localStorage.getItem(_ATMO_LS_STATE);return raw?JSON.parse(raw):null;}catch(e){return null;}
+}
+function _atmoSaveState(st){
+  try{localStorage.setItem(_ATMO_LS_STATE,JSON.stringify(st));}catch(e){}
+}
+function _atmoLoadHistory(){
+  try{var raw=localStorage.getItem(_ATMO_LS_HIST);var a=raw?JSON.parse(raw):[];return Array.isArray(a)?a:[];}catch(e){return [];}
+}
+function _atmoLogHistory(wx,startMs,endMs){
+  if(!wx||!startMs||!endMs||endMs<=startMs)return;
+  var dur=endMs-startMs;
+  // Filter outlier: durasi <30s (mungkin /weather command) atau >2 jam (pause server) di-skip
+  if(dur<30000||dur>7200000)return;
+  var arr=_atmoLoadHistory();
+  arr.push({wx:wx,startMs:startMs,endMs:endMs,dur:dur});
+  if(arr.length>_ATMO_HIST_CAP)arr=arr.slice(arr.length-_ATMO_HIST_CAP);
+  try{localStorage.setItem(_ATMO_LS_HIST,JSON.stringify(arr));}catch(e){}
+}
+
+// Statistik per state, blend dengan prior pseudo-count
+function _atmoStats(hist){
+  var out={clear:null,rain:null,thunder:null};
+  ['clear','rain','thunder'].forEach(function(k){
+    var samples=[];
+    for(var i=0;i<hist.length;i++)if(hist[i].wx===k)samples.push(hist[i].dur);
+    var prior=_WX_PRIOR[k];
+    var n=samples.length;
+    if(n===0){
+      out[k]={mean:prior.mean,p25:prior.mean*0.55,p50:prior.mean,p75:prior.mean*1.6,n:0};
+      return;
+    }
+    samples.sort(function(a,b){return a-b;});
+    var sampleMean=samples.reduce(function(s,v){return s+v;},0)/n;
+    // Bayesian blend: pseudo-count weight 5 (prior) + n samples
+    var w=prior.weight,wTotal=w+n;
+    var mean=(w*prior.mean+n*sampleMean)/wTotal;
+    out[k]={
+      mean:mean,
+      p25:_atmoQuantile(samples,0.25),
+      p50:_atmoQuantile(samples,0.50),
+      p75:_atmoQuantile(samples,0.75),
+      n:n
+    };
+  });
+  return out;
+}
+function _atmoQuantile(sorted,q){
+  if(!sorted.length)return 0;
+  var idx=(sorted.length-1)*q,lo=Math.floor(idx),hi=Math.ceil(idx);
+  if(lo===hi)return sorted[lo];
+  return sorted[lo]+(sorted[hi]-sorted[lo])*(idx-lo);
+}
+
+// Markov transition probability {clear:{rain:p, thunder:p}, ...}
+function _atmoTransProb(hist){
+  var counts={clear:{rain:0,thunder:0,clear:0},rain:{clear:0,thunder:0,rain:0},thunder:{clear:0,rain:0,thunder:0}};
+  for(var i=1;i<hist.length;i++){
+    var prev=hist[i-1].wx,next=hist[i].wx;
+    if(counts[prev]&&counts[prev][next]!==undefined)counts[prev][next]++;
+  }
+  var out={};
+  ['clear','rain','thunder'].forEach(function(prev){
+    var prior=_WX_TRANS_PRIOR[prev];
+    var total=0,row={};
+    ['clear','rain','thunder'].forEach(function(next){
+      if(prev===next){row[next]=0;return;}
+      // Add Dirichlet-style smoothing: prior * 3 (pseudo-count) + observation
+      var p=(prior[next]||0)*3+(counts[prev][next]||0);
+      row[next]=p;total+=p;
+    });
+    if(total>0)['clear','rain','thunder'].forEach(function(k){row[k]=row[k]/total;});
+    out[prev]=row;
+  });
+  return out;
+}
+function _atmoNextWx(cur,trans){
+  var row=trans[cur]||{};
+  var best='clear',bestP=-1;
+  ['clear','rain','thunder'].forEach(function(k){if((row[k]||0)>bestP){bestP=row[k];best=k;}});
+  return best;
+}
+
+// Simulate timeline ke depan, return [{wx, atMs, durationMs, prob}]
+function _atmoSimulateForecast(curWx,curRemaining,stats,trans,nowMs){
+  var out=[],t=nowMs+curRemaining,wx=curWx,prob=1.0;
+  for(var step=0;step<_ATMO_FORECAST_MAX_STEPS;step++){
+    if(t-nowMs>_ATMO_FORECAST_HORIZON_MS)break;
+    // Pilih next state (greedy by max probability untuk display utama)
+    var row=trans[wx]||{};
+    var nx='clear',nxP=-1;
+    ['clear','rain','thunder'].forEach(function(k){if(k!==wx&&(row[k]||0)>nxP){nxP=row[k];nx=k;}});
+    if(nxP<=0)nx=wx==='clear'?'rain':'clear';
+    prob*=Math.max(0.05,nxP);
+    var dur=(stats[nx]&&stats[nx].p50)||_WX_PRIOR[nx].mean;
+    out.push({wx:nx,atMs:t,durationMs:dur,prob:prob,transP:nxP});
+    t+=dur;
+    wx=nx;
+  }
+  return out;
+}
+
+function _atmoRenderTimeline(el,curWx,nowMs,curRemaining,timeline){
+  var horizon=_ATMO_FORECAST_HORIZON_MS;
+  var endMs=nowMs+horizon;
+  // Build segments: [current cuaca dengan curRemaining] + timeline
+  var segs=[{wx:curWx,startMs:nowMs,endMs:Math.min(nowMs+curRemaining,endMs),isCur:true}];
+  var t=nowMs+curRemaining;
+  for(var i=0;i<timeline.length;i++){
+    var s=timeline[i];
+    var segEnd=Math.min(s.atMs+s.durationMs,endMs);
+    if(s.atMs>=endMs)break;
+    segs.push({wx:s.wx,startMs:s.atMs,endMs:segEnd,prob:s.prob,transP:s.transP});
+    if(segEnd>=endMs)break;
+  }
+  var html='';
+  for(var i=0;i<segs.length;i++){
+    var s=segs[i];
+    var w=Math.max(2,(s.endMs-s.startMs)/horizon*100);
+    var c=s.wx==='thunder'?'#a78bfa':s.wx==='rain'?'#7dd3fc':'#34d399';
+    var label=_atmoLabel(s.wx);
+    var atFromNow=Math.round((s.startMs-nowMs)/60000);
+    var dur=Math.round((s.endMs-s.startMs)/60000);
+    var probLbl=s.isCur?' (sekarang)':(' '+Math.round((s.transP||0)*100)+'%');
+    var title=label+probLbl+' · +'+atFromNow+'m, durasi ~'+dur+'m';
+    html+='<span class="atmo-tl-seg" style="width:'+w.toFixed(1)+'%;background:'+c+';opacity:'+(s.isCur?1:0.55+(s.prob||0.5)*0.4)+'" title="'+title+'"></span>';
+  }
+  // Tick marks: 15m, 30m, 45m
+  var ticks='';
+  [15,30,45].forEach(function(m){
+    var pct=m/60*100;
+    ticks+='<span class="atmo-tl-tick" style="left:'+pct+'%" data-m="'+m+'m"></span>';
+  });
+  el.innerHTML='<div class="atmo-tl-bar">'+html+'</div><div class="atmo-tl-ticks">'+ticks+'</div><div class="atmo-tl-scale"><span>sekarang</span><span>+15m</span><span>+30m</span><span>+45m</span><span>+60m</span></div>';
+}
+
+function _atmoLabel(wx){return wx==='thunder'?'Petir':wx==='rain'?'Hujan':'Cerah';}
+
+function _atmoFmtDur(ms){
+  if(ms<60000)return Math.max(1,Math.round(ms/1000))+'s';
+  var m=Math.round(ms/60000);
+  if(m<60)return m+'m';
+  var h=Math.floor(m/60),mm=m%60;
+  return h+'j'+(mm?' '+mm+'m':'');
+}
+
 /* ═══ Feature A: Canvas Rendering Optimization ═══ */
 /* Throttle drawRadar to max 30fps and skip when tab hidden */
 var _radarThrottleId=0,_radarQueued=false;
@@ -2005,11 +2698,27 @@ drawRadar=function(){
   if(document.hidden)return; // skip render when tab not visible
   if(_radarThrottleId){_radarQueued=true;return;}
   _baseDrawRadar();
+  _updateRadarA11y();
   _radarThrottleId=setTimeout(function(){
     _radarThrottleId=0;
-    if(_radarQueued){_radarQueued=false;_baseDrawRadar();}
+    if(_radarQueued){_radarQueued=false;_baseDrawRadar();_updateRadarA11y();}
   },33); // ~30fps cap
 };
+// [A11Y] Live-region summary for screen readers — rate-limited to 5s.
+// Hindari assistive-tech spam saat radar redraw 30x/detik.
+var _a11yLastTs=0;
+function _updateRadarA11y(){
+  var now=Date.now();if(now-_a11yLastTs<5000)return;
+  _a11yLastTs=now;
+  var el=$('radar-a11y');if(!el)return;
+  var n=_lastAP?_lastAP.length:0;
+  var lc=0;
+  if(radarLands)for(var i=0;i<radarLands.length;i++){var l=radarLands[i];if(l&&l.x1!=null&&(DIM_SHORT[l.d]||'overworld')===radarDim)lc++;}
+  var dimLbl=radarDim==='the_end'?'The End':radarDim.charAt(0).toUpperCase()+radarDim.slice(1);
+  var msg=dimLbl+': '+n+' pemain'+(lc?', '+lc+' land claim':'')+'. Zoom '+radarZoom+' blok';
+  if(rSel)msg+='. Pemain terpilih: '+rSel;
+  el.textContent=msg;
+}
 /* Invalidate head cache when selection changes */
 var _prevRSel=null;
 var _baseSelectPlayer=_selectPlayer;
@@ -2019,12 +2728,19 @@ _selectPlayer=function(name){
 };
 
 /* ═══ Feature B: Data Caching & Deduplication ═══ */
+/* Timeout-aware fetch helper (§7.2). Default 8s. */
+function _fetchT(url,opts,ms){
+  ms=ms||8000;
+  var ctrl=new AbortController();
+  var to=setTimeout(function(){ctrl.abort();},ms);
+  return fetch(url,Object.assign({signal:ctrl.signal},opts||{})).finally(function(){clearTimeout(to);});
+}
 /* BDS data hash check — skip re-render if data identical */
 var _origFetchBDS=fetchBDSData;
 fetchBDSData=async function(){
   try{
     var _sid=(_servers[_currentIdx]&&_servers[_currentIdx].sync_id)||'current';
-    var r=await fetch(SB_URL+'/rest/v1/leaderboard_sync?id=eq.'+_sid+'&select=online_players,synced_at,server_metrics',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
+    var r=await _fetchT(SB_URL+'/rest/v1/leaderboard_sync?id=eq.'+_sid+'&select=online_players,synced_at,server_metrics',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}},8000);
     var d=await r.json();if(!d||!d[0])return;
     // Hash check: skip full re-render if data unchanged
     var hash=d[0].synced_at+'|'+(d[0].server_metrics?JSON.stringify(d[0].server_metrics).length:'0');

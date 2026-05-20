@@ -364,6 +364,12 @@
             <div class="trend-minimap" id="trend-minimap"><div class="trend-minimap-thumb" id="trend-minimap-thumb"></div></div>
           </div>
           <div class="trend-toolbar">
+            <div id="candle-countdown" style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:.38rem;color:var(--mute)">
+              <span id="candle-cd-label">Next candle: —</span>
+              <div style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.04);min-width:60px;max-width:140px;overflow:hidden;border:1px solid rgba(255,255,255,0.03)">
+                <div id="candle-cd-bar" style="height:100%;border-radius:2px;width:0%;background:linear-gradient(90deg,rgba(168,85,247,0.6),rgba(34,211,238,0.5));transition:width 1s linear;box-shadow:0 0 6px rgba(168,85,247,0.2)"></div>
+              </div>
+            </div>
             <button id="trend-reset-btn" style="font-family:'JetBrains Mono',monospace;font-size:.36rem;font-weight:700;padding:5px 12px;border-radius:6px;background:rgba(239,83,80,0.08);border:1px solid rgba(239,83,80,0.2);color:#ef5350;cursor:pointer;transition:all .2s;letter-spacing:.3px" title="Hapus semua data chart">🗑 RESET</button>
             <div class="trend-zoom">
               <button id="trend-zoom-out" title="Zoom Out">−</button>
@@ -728,7 +734,7 @@
 </div>
 <div class="dc-toast" id="dc-toast">Kode disalin!</div>
 <script>var SB_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co', SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI'</script>
-<script src="js/economy-page.js?v=20260519"></script>
+<script src="js/economy-page.js?v=20260519f"></script>
 <script src="js/store-page.js" defer></script>
 <script src="js/page-nav.js"></script>
 <script src="js/auto-refresh.js"></script>

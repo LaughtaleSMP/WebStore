@@ -1,5 +1,5 @@
 /* Service Worker — Laughtale SMP Monitor */
-var CACHE='lt-monitor-v1';
+var CACHE='lt-monitor-v3';
 var ASSETS=[
   'monitor.html',
   'js/monitor-page.js',
