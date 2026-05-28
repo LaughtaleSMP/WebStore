@@ -251,6 +251,8 @@
   gap: 3px;
   white-space: nowrap;
   line-height: 1;
+  height: 18px;
+  box-sizing: border-box;
 }
 .lc-src svg { width: 8px; height: 8px; opacity: .8; }
 .lc-src-game {
@@ -268,7 +270,11 @@
 .lc-msg-body {
   flex: 1;
   min-width: 0;
-  line-height: 1.3;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0;
+  line-height: 18px;
   overflow: hidden;
 }
 .lc-msg-name {
@@ -277,6 +283,7 @@
   font-weight: 700;
   color: rgba(255,255,255,.85);
   margin-right: 4px;
+  white-space: nowrap;
 }
 .lc-msg-text {
   font-size: .38rem;
@@ -292,6 +299,7 @@
   white-space: nowrap;
   opacity: .45;
   margin-left: auto;
+  line-height: 18px;
 }
 
 /* ── System Messages (join/leave) ── */
