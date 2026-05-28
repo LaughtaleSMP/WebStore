@@ -293,6 +293,35 @@
   opacity: .6;
 }
 
+/* ── System Messages (join/leave) ── */
+.lc-msg-sys {
+  justify-content: flex-start;
+  align-items: center;
+  background: transparent !important;
+  padding: 2px 6px !important;
+  gap: 6px !important;
+  opacity: .65;
+}
+.lc-msg-sys:hover { opacity: .85; background: transparent !important; }
+.lc-sys-icon {
+  flex-shrink: 0;
+  width: 12px; height: 12px;
+}
+.lc-sys-icon svg { width: 100%; height: 100%; }
+.lc-sys-join { color: var(--green, #26a69a); }
+.lc-sys-leave { color: var(--red, #ef5350); }
+.lc-sys-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .4rem;
+  color: var(--mute);
+  font-style: italic;
+}
+.lc-sys-text b {
+  color: rgba(255,255,255,.55);
+  font-weight: 600;
+  font-style: normal;
+}
+
 /* ── Input Area ── */
 .lc-input-wrap {
   display: flex;

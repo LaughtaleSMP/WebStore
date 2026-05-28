@@ -415,6 +415,32 @@
   // ══════════════════════════════════════════
   var SVG_GAME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4"/><circle cx="15" cy="11" r=".5" fill="currentColor"/><circle cx="17" cy="13" r=".5" fill="currentColor"/></svg>';
   var SVG_WEB  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>';
+  var SVG_JOIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>';
+  var SVG_LEAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+
+  function _buildMsg(m) {
+    var el = document.createElement('div');
+
+    // System message (join/leave)
+    if (m.source === 'system') {
+      el.className = 'lc-msg lc-msg-sys';
+      var isJoin = (m.message || '').indexOf('bergabung') >= 0;
+      el.innerHTML =
+        '<span class="lc-sys-icon ' + (isJoin ? 'lc-sys-join' : 'lc-sys-leave') + '">' + (isJoin ? SVG_JOIN : SVG_LEAVE) + '</span>' +
+        '<span class="lc-sys-text"><b>' + _esc(m.player_name || '?') + '</b> ' + _esc(m.message || '') + '</span>' +
+        '<span class="lc-msg-time">' + _time(m.created_at) + '</span>';
+      return el;
+    }
+
+    // Normal chat message
+    el.className = 'lc-msg';
+    var g = m.source === 'game';
+    el.innerHTML =
+      '<span class="lc-src ' + (g ? 'lc-src-game' : 'lc-src-web') + '">' + (g ? SVG_GAME : SVG_WEB) + (g ? 'GAME' : 'WEB') + '</span>' +
+      '<div class="lc-msg-body"><span class="lc-msg-name">' + _esc(m.player_name || '?') + '</span><span class="lc-msg-text">' + _esc(m.message || '') + '</span></div>' +
+      '<span class="lc-msg-time">' + _time(m.created_at) + '</span>';
+    return el;
+  }
 
   function _renderAll() {
     msgList.innerHTML = '';
@@ -433,17 +459,6 @@
     for (var i = 0; i < rows.length; i++) frag.appendChild(_buildMsg(rows[i]));
     msgList.appendChild(frag);
     while (msgList.children.length > MAX_MSG) msgList.removeChild(msgList.firstChild);
-  }
-
-  function _buildMsg(m) {
-    var el = document.createElement('div');
-    el.className = 'lc-msg';
-    var g = m.source === 'game';
-    el.innerHTML =
-      '<span class="lc-src ' + (g ? 'lc-src-game' : 'lc-src-web') + '">' + (g ? SVG_GAME : SVG_WEB) + (g ? 'GAME' : 'WEB') + '</span>' +
-      '<div class="lc-msg-body"><span class="lc-msg-name">' + _esc(m.player_name || '?') + '</span><span class="lc-msg-text">' + _esc(m.message || '') + '</span></div>' +
-      '<span class="lc-msg-time">' + _time(m.created_at) + '</span>';
-    return el;
   }
 
   function _scroll() { setTimeout(function () { msgList.scrollTop = msgList.scrollHeight; }, 50); }
