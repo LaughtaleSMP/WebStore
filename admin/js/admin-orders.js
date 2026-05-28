@@ -442,7 +442,11 @@ const _TOPUP_ADMIN_KEY = 'laughtale-topup';
 async function _autoTopupGem(order) {
   const itemName = (order.item_name || '').toLowerCase();
   const itemCat  = (order.item_category || '').toLowerCase();
-  const isGem    = itemName.includes('gem') || itemCat.includes('gem');
+  const itemId   = parseInt(order.item_id) || 0;
+  // Deteksi gem: cek nama, kategori, ATAU item_id=8 (GEM_ITEM_ID dari shop-config)
+  const isGem    = itemName.includes('gem') || itemCat.includes('gem')
+                || itemCat.includes('currency') || itemId === 8;
+  console.log(`[AutoTopup] Check: name="${order.item_name}" cat="${order.item_category}" id=${itemId} → isGem=${isGem}`);
   if (!isGem) return;
 
   // [Audit #4] Sanitize player name — match server-side regex (sync_topup.js:214)

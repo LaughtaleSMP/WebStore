@@ -111,6 +111,7 @@ window.SHOP_CONFIG = {
             price: 600,
             canBuyMultiple: true,
             maxQuantity: 500,
+            needsUsername: true,
             badge: "PREMIUM",
             badgeColor: "diamond",
             features: ["Gacha Partikel & Equipment", "Beli KillFX & Cosmetic", "Rp600 per Gem"],

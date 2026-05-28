@@ -143,7 +143,7 @@ $('topup-form').addEventListener('submit', async function (e) {
   const note = $('note').value.trim();
 
   if (!name) { toast('Nama player wajib diisi', false); return; }
-  if (/["\\n]/.test(name)) { toast('Nama mengandung karakter tidak valid', false); return; }
+  if (/["\\]/.test(name) || name.includes('\n')) { toast('Nama mengandung karakter tidak valid', false); return; }
   if (!amount || amount < 1) { toast('Jumlah minimal 1', false); return; }
   if (amount > 100000) { toast('Jumlah maksimal 100.000', false); return; }
 
@@ -156,8 +156,8 @@ $('topup-form').addEventListener('submit', async function (e) {
       amount: amount,
       currency: currency,
       status: 'pending',
-      admin_key: adminName,
-      admin_note: note || '',
+      admin_key: 'laughtale-topup',
+      admin_note: (note ? note + ' ' : '') + '[' + adminName + ']',
     };
     const r = await fetch(EP, {
       method: 'POST',
@@ -197,7 +197,10 @@ async function fetchHistory() {
       const cur = h.currency === 'coin' ? 'Koin' : 'Gem';
       const curCls = h.currency === 'coin' ? 'coin' : 'gem';
       const ago = timeAgo(h.created_at);
-      const admin = h.admin_key ? ' \u00b7 oleh ' + esc(h.admin_key) : '';
+      // Extract admin name from note bracket tag [Name], fallback to admin_key
+      const noteAdminMatch = (h.admin_note || '').match(/\[([^\]]+)\]$/);
+      const adminLabel = noteAdminMatch ? noteAdminMatch[1] : (h.admin_key && h.admin_key !== 'laughtale-topup' ? h.admin_key : '');
+      const admin = adminLabel ? ' \u00b7 oleh ' + esc(adminLabel) : '';
       return '<div class="h-row" style="animation:fs .25s ' + (i * 30) + 'ms ease both">' +
         '<div class="h-status ' + stCls + '">' + stLabel + '</div>' +
         '<div class="h-body">' +

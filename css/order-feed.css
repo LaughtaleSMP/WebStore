@@ -188,7 +188,7 @@
   text-align: right;
   font-weight: 700;
   color: #f4c430;
-  font-size: 0.66rem;
+  font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: visible;
@@ -196,7 +196,7 @@
 .of-col-status { text-align: right; }
 .of-col-time {
   text-align: right;
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   color: var(--text-muted, #666);
   font-variant-numeric: tabular-nums;
 }
@@ -286,25 +286,26 @@
 ══════════════════════════════════════════════════ */
 @media(max-width:768px) {
   .of-header { gap: 0.5rem; }
-  .of-table { font-size: 0.65rem; }
+  .of-table { font-size: 0.62rem; }
   .of-table thead th { font-size: 0.28rem; padding: 0.3rem 0.25rem; }
   .of-row td { padding: 0.3rem 0.25rem; }
   .of-col-id { width: 72px; font-size: 0.30rem !important; overflow: visible; white-space: nowrap; }
   .of-col-user { max-width: 50px; font-size: 0.62rem !important; }
   .of-col-item { font-size: 0.62rem !important; }
-  .of-col-price { font-size: 0.58rem !important; white-space: nowrap !important; overflow: visible !important; }
+  .of-col-price { font-size: 0.62rem !important; white-space: nowrap !important; overflow: visible !important; }
   .of-col-status { white-space: nowrap; }
-  .of-col-time { font-size: 0.52rem !important; white-space: nowrap; }
+  .of-col-time { font-size: 0.58rem !important; white-space: nowrap; }
   .of-badge { font-size: 0.45rem; padding: 1px 2px; }
 }
 
 @media(max-width:480px) {
   .of-table-wrap { border-radius: 6px; }
-  .of-table { font-size: 0.6rem; }
+  .of-table { font-size: 0.58rem; }
   .of-col-time { display: none; }
   .of-table thead th:last-child { display: none; }
   .of-col-id { width: 64px; overflow: visible; white-space: nowrap; }
-  .of-col-user { max-width: 45px; }
-  .of-col-price { font-size: 0.56rem !important; white-space: nowrap !important; overflow: visible !important; }
+  .of-col-user { max-width: 45px; font-size: 0.58rem !important; }
+  .of-col-item { font-size: 0.58rem !important; }
+  .of-col-price { font-size: 0.58rem !important; white-space: nowrap !important; overflow: visible !important; }
   .of-col-status { white-space: nowrap; }
 }
