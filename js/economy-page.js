@@ -2656,11 +2656,12 @@
     });
 
     // ── Touch interaction: tap=OHLC, drag=scroll, pinch=zoom ──
-    // NOTE: _hoverCalc expects clientX (viewport-relative), NOT pageX.
-    // pageX includes page scroll offset, causing wrong candle on scrolled pages.
-    // We store both: pageX for drag-scroll math, clientX for tap-to-select.
+    // FIX: Use changedTouches from touchend for accurate tap position.
+    // touchstart.clientX is stale — finger drifts during touch.
     var _tStart = null, _tScrollL = 0, _tMoved = false, _tDismiss = 0;
+    var _tLastCX = 0; // track latest clientX during move for fallback
     var _pinchStart = 0, _pinchZoomStart = 1;
+    var TOUCH_MOVE_THRESH = 15; // px — must move >15px to count as drag (was 8)
     scrollEl.addEventListener('touchstart', function (e) {
       if (e.touches.length === 2) {
         // Pinch start
@@ -2672,11 +2673,12 @@
         return;
       }
       _tStart = {
-        x: e.touches[0].pageX,       // pageX — for drag scroll distance
-        cx: e.touches[0].clientX,     // clientX — for _hoverCalc (viewport-relative)
+        x: e.touches[0].pageX,
+        cx: e.touches[0].clientX,
         y: e.touches[0].pageY,
         t: Date.now()
       };
+      _tLastCX = e.touches[0].clientX;
       _tScrollL = scrollEl.scrollLeft;
       _tMoved = false;
     }, { passive: false });
@@ -2697,7 +2699,8 @@
       }
       if (!_tStart || e.touches.length !== 1) return;
       var dx = e.touches[0].pageX - _tStart.x;
-      if (Math.abs(dx) > 8) _tMoved = true;
+      _tLastCX = e.touches[0].clientX; // track latest position
+      if (Math.abs(dx) > TOUCH_MOVE_THRESH) _tMoved = true;
       scrollEl.scrollLeft = _tScrollL - dx;
     }, { passive: false });
     scrollEl.addEventListener('touchend', function (e) {
@@ -2705,10 +2708,15 @@
       if (!_tStart) return;
       var elapsed = Date.now() - _tStart.t;
       // Tap (not drag): show OHLC for tapped candle
-      // Use _tStart.cx (clientX) instead of _tStart.x (pageX)
-      // because _hoverCalc does clientX - rect.left where rect is viewport-relative
-      if (!_tMoved && elapsed < 300) {
-        var idx = _hoverCalc(_tStart.cx);
+      if (!_tMoved && elapsed < 400) {
+        // Use changedTouches for accurate end position (finger may drift)
+        var tapCX = _tStart.cx; // fallback
+        if (e.changedTouches && e.changedTouches.length) {
+          tapCX = e.changedTouches[0].clientX;
+        } else if (_tLastCX) {
+          tapCX = _tLastCX;
+        }
+        var idx = _hoverCalc(tapCX);
         if (idx >= 0) {
           _hoverIdx = idx;
           drawTrendChart();
