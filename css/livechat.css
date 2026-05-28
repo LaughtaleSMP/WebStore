@@ -162,13 +162,13 @@
 
 /* ── Messages ── */
 .lc-messages {
-  height: 340px;
+  height: 300px;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px 12px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   scrollbar-width: thin;
   scrollbar-color: rgba(168,85,247,.12) transparent;
   position: relative;
@@ -223,12 +223,13 @@
 /* ── Message Row ── */
 .lc-msg {
   display: flex;
-  align-items: flex-start;
+  flex-flow: row nowrap;
+  align-items: center;
   gap: 8px;
   padding: 6px 10px;
   border-radius: 6px;
   transition: background .15s;
-  animation: lcMsgIn .3s ease;
+  animation: lcMsgIn .25s ease;
 }
 .lc-msg:hover { background: rgba(255,255,255,.02); }
 @keyframes lcMsgIn {
@@ -239,87 +240,92 @@
 /* Source Badge */
 .lc-src {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .36rem;
+  font-size: .32rem;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 3px 6px;
   border-radius: 4px;
   flex-shrink: 0;
-  letter-spacing: .8px;
-  margin-top: 1px;
+  letter-spacing: .6px;
+  margin-top: 2px;
   display: inline-flex;
   align-items: center;
   gap: 3px;
   white-space: nowrap;
+  line-height: 1;
 }
-.lc-src svg { width: 8px; height: 8px; opacity: .7; }
+.lc-src svg { width: 9px; height: 9px; opacity: .8; }
 .lc-src-game {
   color: var(--green);
-  background: rgba(52,211,153,.06);
-  border: 1px solid rgba(52,211,153,.1);
+  background: rgba(52,211,153,.08);
+  border: 1px solid rgba(52,211,153,.15);
 }
 .lc-src-web {
   color: var(--ac);
-  background: rgba(168,85,247,.06);
-  border: 1px solid rgba(168,85,247,.1);
+  background: rgba(168,85,247,.08);
+  border: 1px solid rgba(168,85,247,.15);
 }
 
 /* Message Content */
 .lc-msg-body {
   flex: 1;
   min-width: 0;
-  line-height: 1.5;
+  line-height: 1.45;
   overflow: hidden;
 }
 .lc-msg-name {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .48rem;
+  font-size: .44rem;
   font-weight: 700;
-  color: var(--text);
-  margin-right: 6px;
+  color: rgba(255,255,255,.85);
+  margin-right: 5px;
 }
 .lc-msg-text {
-  font-size: .56rem;
+  font-size: .46rem;
   color: var(--dim);
   word-break: break-word;
   overflow-wrap: anywhere;
+  line-height: 1.4;
 }
 .lc-msg-time {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .34rem;
+  font-size: .3rem;
   color: var(--mute);
   flex-shrink: 0;
-  margin-top: 3px;
   white-space: nowrap;
-  opacity: .6;
+  opacity: .5;
+  margin-left: auto;
 }
 
 /* ── System Messages (join/leave) ── */
 .lc-msg-sys {
-  justify-content: flex-start;
-  align-items: center;
   background: transparent !important;
-  padding: 2px 6px !important;
+  padding: 2px 10px !important;
   gap: 6px !important;
-  opacity: .65;
+  opacity: .5;
 }
-.lc-msg-sys:hover { opacity: .85; background: transparent !important; }
+.lc-msg-sys:hover { opacity: .7; background: transparent !important; }
 .lc-sys-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   width: 12px; height: 12px;
 }
-.lc-sys-icon svg { width: 100%; height: 100%; }
+.lc-sys-icon svg { width: 12px; height: 12px; display: block; }
 .lc-sys-join { color: var(--green, #26a69a); }
 .lc-sys-leave { color: var(--red, #ef5350); }
+.lc-sys-death { color: #ef5350; opacity: .8; }
 .lc-sys-text {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .4rem;
+  font-size: .36rem;
   color: var(--mute);
-  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .lc-sys-text b {
   color: rgba(255,255,255,.55);
   font-weight: 600;
-  font-style: normal;
 }
 
 /* ── Input Area ── */
@@ -376,7 +382,7 @@
 .lc-login-form {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 .lc-login-row {
   display: flex;
@@ -386,56 +392,61 @@
   border: 1px solid var(--border);
   border-radius: var(--r-xs);
   padding-left: 10px;
-  height: 36px;
-  transition: border-color .2s;
+  height: 40px;
+  transition: border-color .25s, box-shadow .25s;
 }
-.lc-login-row:focus-within { border-color: var(--ac); }
+.lc-login-row:focus-within {
+  border-color: rgba(168,85,247,.4);
+  box-shadow: 0 0 0 2px rgba(168,85,247,.08);
+}
 .lc-login-icon {
-  width: 13px; height: 13px;
+  width: 14px; height: 14px;
   color: var(--mute); opacity: .5;
   flex-shrink: 0;
 }
 .lc-login-input {
   flex: 1;
   font-family: 'JetBrains Mono', monospace;
-  font-size: .5rem;
+  font-size: .46rem;
   background: transparent;
   border: none;
   color: var(--text);
-  padding: 0 8px;
+  padding: 0 10px;
   outline: none;
   height: 100%;
   min-width: 0;
   -webkit-appearance: none;
 }
-.lc-login-input::placeholder { color: var(--mute); opacity: .6; }
+.lc-login-input::placeholder { color: var(--mute); opacity: .5; }
 .lc-login-btn {
   width: 100%;
   font-family: 'JetBrains Mono', monospace;
-  font-size: .45rem; font-weight: 700;
-  padding: 8px;
+  font-size: .42rem; font-weight: 700;
+  padding: 0;
   border-radius: var(--r-xs);
-  border: 1px solid rgba(168,85,247,.25);
-  background: rgba(168,85,247,.1);
-  color: var(--ac);
+  border: none;
+  background: linear-gradient(135deg, rgba(168,85,247,.2), rgba(139,92,246,.3));
+  color: #e0d0ff;
   cursor: pointer;
-  transition: all .2s;
+  transition: all .25s;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  letter-spacing: .8px;
+  gap: 6px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   -webkit-tap-highlight-color: transparent;
-  min-height: 36px;
+  height: 40px;
 }
 .lc-login-btn:hover {
-  background: rgba(168,85,247,.18);
-  border-color: rgba(168,85,247,.4);
+  background: linear-gradient(135deg, rgba(168,85,247,.3), rgba(139,92,246,.45));
+  box-shadow: 0 2px 12px rgba(168,85,247,.15);
 }
-.lc-login-btn:disabled { opacity: .4; cursor: not-allowed; }
+.lc-login-btn:active { transform: scale(.98); }
+.lc-login-btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
 .lc-login-error {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .42rem;
+  font-size: .38rem;
   color: var(--red);
   background: rgba(248,113,113,.06);
   border: 1px solid rgba(248,113,113,.12);
@@ -445,17 +456,18 @@
 }
 .lc-switch-link {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .38rem;
+  font-size: .36rem;
   color: var(--mute);
   text-align: center;
-  margin-top: 2px;
+  padding-top: 2px;
 }
 .lc-switch-link a {
   color: var(--ac);
   text-decoration: none;
   font-weight: 700;
+  transition: color .2s;
 }
-.lc-switch-link a:hover { text-decoration: underline; }
+.lc-switch-link a:hover { color: #c084fc; text-decoration: underline; }
 
 /* Authenticated State */
 .lc-authed-wrap {
@@ -716,54 +728,52 @@ body.light .lc-messages::after {
     padding: 10px 12px;
     min-height: 44px;
   }
-  .lc-header-orb {
-    width: 28px; height: 28px;
-    border-radius: 6px;
-  }
+  .lc-header-orb { width: 28px; height: 28px; border-radius: 6px; }
   .lc-header-orb svg { width: 12px; height: 12px; }
-  .lc-header-title { font-size: .48rem; letter-spacing: 1px; }
-  .lc-header-sub { font-size: .34rem; }
-  .lc-header-badge { font-size: .36rem; padding: 2px 6px; }
+  .lc-header-title { font-size: .46rem; letter-spacing: 1px; }
+  .lc-header-sub { font-size: .32rem; }
+  .lc-header-badge { font-size: .34rem; padding: 2px 6px; }
 
   .lc-messages {
-    height: 240px;
-    padding: 6px 8px;
-    gap: 1px;
+    height: 220px;
+    padding: 8px 10px;
+    gap: 0;
   }
-  .lc-messages::after { height: 16px; }
+  .lc-messages::after { height: 14px; }
 
-  .lc-empty-icon { width: 40px; height: 40px; }
-  .lc-empty-text { font-size: .48rem; }
-  .lc-empty-sub { font-size: .38rem; }
+  .lc-empty-icon { width: 36px; height: 36px; }
+  .lc-empty-text { font-size: .44rem; }
+  .lc-empty-sub { font-size: .36rem; }
 
-  .lc-msg {
-    gap: 6px;
-    padding: 5px 6px;
-    border-radius: 5px;
-  }
-  .lc-src { font-size: .34rem; padding: 2px 5px; gap: 2px; }
-  .lc-src svg { width: 7px; height: 7px; }
-  .lc-msg-name { font-size: .44rem; }
-  .lc-msg-text { font-size: .52rem; }
-  .lc-msg-time { font-size: .32rem; }
+  .lc-msg { gap: 6px; padding: 5px 6px; border-radius: 5px; }
+  .lc-src { font-size: .3rem; padding: 2px 5px; gap: 2px; }
+  .lc-src svg { width: 8px; height: 8px; }
+  .lc-msg-name { font-size: .4rem; }
+  .lc-msg-text { font-size: .42rem; }
+  .lc-msg-time { font-size: .28rem; }
+
+  .lc-sys-text { font-size: .3rem; }
+  .lc-sys-icon { width: 8px; height: 8px; }
 
   /* Input area */
-  .lc-input-wrap {
-    gap: 6px;
-    padding: 8px 10px;
-  }
+  .lc-input-wrap { gap: 8px; padding: 10px 12px; }
+  .lc-login-form { gap: 8px; }
+  .lc-login-row { height: 38px; }
+  .lc-login-btn { height: 38px; font-size: .4rem; }
+  .lc-login-input { font-size: .42rem; }
+  .lc-switch-link { font-size: .34rem; }
   .lc-auth-gate { padding: 8px 10px; }
-  .lc-auth-title { font-size: .44rem; }
-  .lc-auth-sub { font-size: .34rem; }
-  .lc-code-display { font-size: 1.3rem; letter-spacing: 6px; padding: 10px 12px; }
-  .lc-code-hint { font-size: .36rem; }
-  .lc-authed-wrap { height: 38px; }
-  .lc-msg-wrap { height: 38px; }
-  .lc-send-btn { width: 44px; } /* larger touch target on mobile */
+  .lc-auth-title { font-size: .42rem; }
+  .lc-auth-sub { font-size: .32rem; }
+  .lc-code-display { font-size: 1.2rem; letter-spacing: 6px; padding: 10px 12px; }
+  .lc-code-hint { font-size: .34rem; }
+  .lc-authed-wrap { height: 36px; }
+  .lc-msg-wrap { height: 36px; }
+  .lc-send-btn { width: 44px; }
 
   .lc-footer { padding: 4px 10px 6px; }
-  .lc-status { font-size: .34rem; }
-  .lc-rate-notice { font-size: .34rem; }
+  .lc-status { font-size: .32rem; }
+  .lc-rate-notice { font-size: .32rem; }
 }
 
 /* ══════════════════════════════════════════════════════════════

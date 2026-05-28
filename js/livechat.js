@@ -417,16 +417,30 @@
   var SVG_WEB  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>';
   var SVG_JOIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>';
   var SVG_LEAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+  var SVG_DEATH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="10" r="8"/><circle cx="9" cy="9" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.5" fill="currentColor" stroke="none"/><path d="M8 14h8"/><path d="M10 14v3M14 14v3M12 14v3"/></svg>';
+
+  function _getSysType(msg) {
+    if (!msg) return 'death';
+    if (msg.indexOf('bergabung') >= 0) return 'join';
+    if (msg.indexOf('meninggalkan') >= 0) return 'leave';
+    return 'death';
+  }
+  var _SYS_CFG = {
+    join:  { svg: SVG_JOIN,  cls: 'lc-sys-join' },
+    leave: { svg: SVG_LEAVE, cls: 'lc-sys-leave' },
+    death: { svg: SVG_DEATH, cls: 'lc-sys-death' }
+  };
 
   function _buildMsg(m) {
     var el = document.createElement('div');
 
-    // System message (join/leave)
+    // System message (join/leave/death)
     if (m.source === 'system') {
       el.className = 'lc-msg lc-msg-sys';
-      var isJoin = (m.message || '').indexOf('bergabung') >= 0;
+      var t = _getSysType(m.message);
+      var cfg = _SYS_CFG[t];
       el.innerHTML =
-        '<span class="lc-sys-icon ' + (isJoin ? 'lc-sys-join' : 'lc-sys-leave') + '">' + (isJoin ? SVG_JOIN : SVG_LEAVE) + '</span>' +
+        '<span class="lc-sys-icon ' + cfg.cls + '">' + cfg.svg + '</span>' +
         '<span class="lc-sys-text"><b>' + _esc(m.player_name || '?') + '</b> ' + _esc(m.message || '') + '</span>' +
         '<span class="lc-msg-time">' + _time(m.created_at) + '</span>';
       return el;
