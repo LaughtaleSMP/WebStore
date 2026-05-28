@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Season Reset — LaughTale Admin</title>
+  <link rel="icon" href="../favicon.ico">
+  <style>
+    :root {
+      --bg: #0d0e1a; --panel: #161827; --border: #2a2d44;
+      --text: #f5f5f5; --muted: #888; --accent: #5b7ff4;
+      --danger: #ef4444; --warn: #f59e0b; --ok: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 24px; line-height: 1.5; }
+    .container { max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; margin-bottom: 8px; }
+    .subtitle { color: var(--muted); margin-bottom: 24px; font-size: 0.9rem; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .panel h2 { font-size: 1rem; margin-bottom: 12px; }
+    .table-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .table-row:last-child { border-bottom: 0; }
+    .table-row label { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; }
+    .table-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+    .table-row label:has(input:disabled) { cursor: not-allowed; opacity: 0.5; }
+    .table-row .name { font-weight: 500; }
+    .table-row .desc { color: var(--muted); font-size: 0.82rem; margin-top: 2px; display: block; }
+    .table-row .count { color: var(--muted); font-size: 0.82rem; font-variant-numeric: tabular-nums; min-width: 90px; text-align: right; }
+    .table-row .count.high { color: var(--warn); font-weight: 600; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; vertical-align: middle; margin-left: 6px; }
+    .badge-warn { background: rgba(245, 158, 11, 0.18); color: var(--warn); }
+    .badge-danger { background: rgba(239, 68, 68, 0.18); color: var(--danger); }
+    .badge-safe { background: rgba(34, 197, 94, 0.16); color: var(--ok); }
+    button { font-family: inherit; font-size: 0.9rem; font-weight: 600; padding: 10px 18px; border-radius: 8px; border: 0; cursor: pointer; transition: opacity 0.2s; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover:not(:disabled) { background: #dc2626; }
+    .btn-secondary { background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    #log { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: 'Courier New', monospace; font-size: 0.78rem; max-height: 360px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+    #log .ok { color: var(--ok); }
+    #log .err { color: var(--danger); }
+    #log .info { color: var(--muted); }
+    .warn-banner { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; }
+    .warn-banner strong { color: var(--danger); }
+    .info-banner { background: rgba(91,127,244,0.08); border: 1px solid rgba(91,127,244,0.25); padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; color: var(--muted); }
+    .info-banner strong { color: var(--text); }
+    .auth-gate { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 32px; text-align: center; max-width: 400px; margin: 80px auto; }
+    .auth-gate input { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: rgba(0,0,0,0.3); color: var(--text); font-size: 0.9rem; margin-top: 12px; margin-bottom: 16px; font-family: inherit; }
+    .auth-gate button { width: 100%; }
+    .back-link { color: var(--muted); font-size: 0.85rem; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+    .back-link:hover { color: var(--accent); }
+    .summary { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+    .summary-card { flex: 1 1 180px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+    .summary-card .label { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+    .summary-card .value { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .summary-card .value.ok { color: var(--ok); }
+    .summary-card .value.warn { color: var(--warn); }
+    .summary-card .value.danger { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="./index.html" class="back-link">← Kembali ke Admin Panel</a>
+
+    <div id="gate" class="auth-gate">
+      <h2 style="margin-bottom: 8px;">🔒 Admin Authentication</h2>
+      <p class="subtitle">Tool ini menghapus data permanen. Konfirmasi password admin.</p>
+      <input type="password" id="pw-input" placeholder="Password admin" autocomplete="current-password">
+      <button class="btn-danger" id="auth-btn">Buka Tool</button>
+    </div>
+
+    <div id="main-ui" style="display: none;">
+      <h1>🗑 Season Reset Tool</h1>
+      <p class="subtitle">Reset data Supabase saat membuka season baru. Data BDS (gem, particle, pity) <strong>TIDAK</strong> tersentuh tool ini — pakai <code>/scriptevent gacha:bulk_export</code>.</p>
+
+      <div class="summary">
+        <div class="summary-card">
+          <div class="label">Total Rows DB</div>
+          <div class="value" id="sum-total">…</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Tabel Terpilih</div>
+          <div class="value" id="sum-selected">0</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Akan Di-hapus</div>
+          <div class="value danger" id="sum-delete">0</div>
+        </div>
+      </div>
+
+      <div class="warn-banner">
+        ⚠ <strong>PERMANEN!</strong> Tabel yang di-checklist akan dihapus seluruhnya.
+        Data SAFE auto re-populate via sync BDS (~5 menit). Data PERMANEN hilang
+        permanen kalau tidak di-backup.
+      </div>
+
+      <div class="info-banner">
+        <strong>Iron rule compliance:</strong> Tool ini hanya DELETE, tidak menulis
+        ke <code>leaderboard_sync</code>. Sync writer tetap eksklusif dari pack BDS.
+        Pastikan <code>OFFLINE_MODE = false</code> di pack supaya sync re-populate
+        tabel SAFE setelah reset.
+      </div>
+
+      <div class="panel">
+        <h2>Pilih Tabel yang Akan Di-Reset</h2>
+        <div id="table-list"></div>
+        <div class="actions">
+          <button class="btn-secondary" id="check-safe">Centang Semua SAFE</button>
+          <button class="btn-secondary" id="check-none">Hapus Centang</button>
+          <button class="btn-secondary" id="refresh-counts">🔄 Refresh Count</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Eksekusi</h2>
+        <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 12px;">
+          Klik tombol untuk DELETE batch ke semua tabel terpilih.
+          Konfirmasi 2× sebelum delete dijalankan.
+        </p>
+        <button class="btn-danger" id="execute-btn" disabled>🗑 Eksekusi Reset (0 tabel)</button>
+        <div id="log" style="margin-top: 16px; display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Konfigurasi Supabase ──
+    // Anon key publik (sama seperti yang dipakai di js/economy-page.js).
+    // RLS policy untuk DELETE sudah di-set untuk economy_history, metrics_history,
+    // weather_history, topup_queue (lihat migration history).
+    const SB_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
+    const SB_KEY = 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq';
+
+    // ── Daftar tabel yang bisa di-reset ──
+    // tier 'safe'   = boleh reset (akan auto-repopulate via sync BDS)
+    // tier 'warn'   = boleh reset tapi data history hilang permanen
+    //
+    // 'filter' = primary key column yang dipakai untuk match-all DELETE.
+    // Supabase REST DELETE tidak menerima blank filter — wajib spesifik kolom.
+    const TABLES = [
+      { id: 'economy_history',  tier: 'safe', filter: 'id=gte.0',                    label: 'Economy History',  desc: 'Snapshot ekonomi (gem, koin, flow). Auto-repopulate via sync BDS ~5 menit.' },
+      { id: 'metrics_history',  tier: 'safe', filter: 'id=gte.0',                    label: 'Metrics History',  desc: 'TPS, online players, server metrics. Auto-repopulate via sync BDS.' },
+      { id: 'weather_history',  tier: 'warn', filter: 'id=gte.0',                    label: 'Weather History',  desc: 'Log weather event server. Tidak gameplay-critical, history hilang permanen.' },
+      { id: 'topup_queue',      tier: 'warn', filter: 'status=in.(done,failed)',     label: 'Topup Queue (done/failed)', desc: 'Riwayat topup admin. Filter aman: hanya hapus done/failed, pending tetap.' },
+    ];
+
+    // ── Auth gate (sama hash dengan economy-page.js) ──
+    const ADMIN_HASH = 'bd063bb85b4fecc24e977030b7cf007b5e23d01ba622c3d6f8bff8b1856e16f8'; // "wahyu1234"
+
+    document.getElementById('auth-btn').addEventListener('click', async () => {
+      const pw = document.getElementById('pw-input').value;
+      if (!pw) { alert('Masukkan password.'); return; }
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+      const h = Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2,'0')).join('');
+      if (h !== ADMIN_HASH) { alert('❌ Password salah.'); return; }
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('main-ui').style.display = 'block';
+      renderTables();
+      refreshCounts();
+    });
+
+    document.getElementById('pw-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('auth-btn').click();
+    });
+
+    // ── Render checklist ──
+    function renderTables() {
+      const html = TABLES.map(t => {
+        const badge = t.tier === 'safe' ? '<span class="badge badge-safe">SAFE</span>'
+                    : '<span class="badge badge-warn">PERMANEN</span>';
+        const checked = t.tier === 'safe' ? 'checked' : '';
+        return `
+          <div class="table-row">
+            <label>
+              <input type="checkbox" data-table="${t.id}" ${checked}>
+              <div>
+                <div class="name">${t.label} ${badge}</div>
+                <span class="desc">${t.desc}</span>
+              </div>
+            </label>
+            <span class="count" id="count-${t.id}">…</span>
+          </div>`;
+      }).join('');
+      document.getElementById('table-list').innerHTML = html;
+      document.querySelectorAll('input[data-table]').forEach(cb => {
+        cb.addEventListener('change', updateSummary);
+      });
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const n = document.querySelectorAll('input[data-table]:checked').length;
+      const btn = document.getElementById('execute-btn');
+      btn.disabled = n === 0;
+      btn.textContent = `🗑 Eksekusi Reset (${n} tabel)`;
+      document.getElementById('sum-selected').textContent = n;
+
+      // Hitung total row yang akan dihapus
+      let willDelete = 0;
+      document.querySelectorAll('input[data-table]:checked').forEach(cb => {
+        const id = cb.dataset.table;
+        const countEl = document.getElementById('count-' + id);
+        const countText = countEl?.textContent || '';
+        const num = parseInt(countText.replace(/[^\d]/g, ''), 10);
+        if (Number.isFinite(num)) willDelete += num;
+      });
+      const sumDel = document.getElementById('sum-delete');
+      sumDel.textContent = willDelete.toLocaleString('id-ID');
+      sumDel.className = 'value ' + (willDelete > 5000 ? 'danger' : willDelete > 0 ? 'warn' : '');
+    }
+
+    document.getElementById('check-safe').addEventListener('click', () => {
+      document.querySelectorAll('input[data-table]').forEach(cb => {
+        cb.checked = TABLES.find(t => t.id === cb.dataset.table)?.tier === 'safe';
+      });
+      updateSummary();
+    });
+
+    document.getElementById('check-none').addEventListener('click', () => {
+      document.querySelectorAll('input[data-table]').forEach(cb => cb.checked = false);
+      updateSummary();
+    });
+
+    document.getElementById('refresh-counts').addEventListener('click', refreshCounts);
+
+    // ── Count rows per tabel (HEAD request, count exact) ──
+    async function refreshCounts() {
+      let total = 0;
+      for (const t of TABLES) {
+        const el = document.getElementById('count-' + t.id);
+        if (!el) continue;
+        el.textContent = '…';
+        el.className = 'count';
+        try {
+          const r = await fetch(`${SB_URL}/rest/v1/${t.id}?select=*&limit=1`, {
+            method: 'HEAD',
+            headers: {
+              apikey: SB_KEY,
+              Authorization: 'Bearer ' + SB_KEY,
+              Prefer: 'count=exact',
+              Range: '0-0',
+            },
+          });
+          const cr = r.headers.get('content-range');
+          const num = cr ? parseInt(cr.split('/').pop(), 10) : NaN;
+          if (Number.isFinite(num)) {
+            el.textContent = num.toLocaleString('id-ID') + ' rows';
+            if (num > 5000) el.classList.add('high');
+            total += num;
+          } else {
+            el.textContent = '? rows';
+          }
+        } catch (e) {
+          el.textContent = '— err';
+        }
+      }
+      document.getElementById('sum-total').textContent = total.toLocaleString('id-ID');
+      updateSummary();
+    }
+
+    // ── Eksekusi delete ──
+    document.getElementById('execute-btn').addEventListener('click', async () => {
+      const checked = [...document.querySelectorAll('input[data-table]:checked')]
+        .map(cb => cb.dataset.table);
+      if (!checked.length) return;
+
+      const labelList = checked.map(id => TABLES.find(t => t.id === id)?.label || id).join(', ');
+      if (!confirm(`⚠ Reset ${checked.length} tabel?\n\n${labelList}\n\nData akan dihapus permanen.`)) return;
+      if (!confirm(`Konfirmasi terakhir: lanjutkan delete?`)) return;
+
+      const btn = document.getElementById('execute-btn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Memproses...';
+      const log = document.getElementById('log');
+      log.style.display = 'block';
+      log.innerHTML = '';
+
+      const writeLog = (msg, cls) => {
+        const ts = new Date().toLocaleTimeString('id-ID');
+        const span = document.createElement('span');
+        span.className = cls || 'info';
+        span.textContent = `[${ts}] ${msg}\n`;
+        log.appendChild(span);
+        log.scrollTop = log.scrollHeight;
+      };
+
+      writeLog(`Memulai reset ${checked.length} tabel...`, 'info');
+
+      let successCount = 0, errCount = 0, totalDeleted = 0;
+      for (const tableId of checked) {
+        const tableMeta = TABLES.find(t => t.id === tableId);
+        if (!tableMeta) continue;
+        try {
+          writeLog(`→ DELETE ${tableId}...`, 'info');
+          const r = await fetch(`${SB_URL}/rest/v1/${tableId}?${tableMeta.filter}`, {
+            method: 'DELETE',
+            headers: {
+              apikey: SB_KEY,
+              Authorization: 'Bearer ' + SB_KEY,
+              'Content-Type': 'application/json',
+              Prefer: 'count=exact',
+            },
+          });
+          if (!r.ok) {
+            let body = '';
+            try { body = await r.text(); } catch {}
+            writeLog(`  ✗ HTTP ${r.status} ${r.statusText} ${body ? '— ' + body.substring(0, 200) : ''}`, 'err');
+            errCount++;
+            continue;
+          }
+          const cr = r.headers.get('content-range');
+          const removed = cr ? parseInt(cr.split('/').pop(), 10) : 0;
+          totalDeleted += Number.isFinite(removed) ? removed : 0;
+          writeLog(`  ✓ ${removed.toLocaleString('id-ID')} rows deleted`, 'ok');
+          successCount++;
+        } catch (e) {
+          writeLog(`  ✗ Error: ${e?.message || e}`, 'err');
+          errCount++;
+        }
+      }
+
+      writeLog('───────────────────────────', 'info');
+      writeLog(`Selesai. Sukses: ${successCount} tabel | Total ${totalDeleted.toLocaleString('id-ID')} rows dihapus | Error: ${errCount}`, errCount > 0 ? 'err' : 'ok');
+      writeLog('Tip: tunggu ~5 menit untuk sync BDS pertama mengisi tabel SAFE.', 'info');
+
+      btn.disabled = false;
+      updateSummary();
+      refreshCounts();
+    });
+  </script>
+</body>
+</html>

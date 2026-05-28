@@ -1,9 +1,16 @@
 /* ═══════════════════════════════════════════════════════════
    admin-finance.js  —  Finance Dashboard V2
    Laughtale SMP Admin Panel
+   FIX: Semua akses DB via _getSb() untuk null-safety
+   FIX: player_snapshots references dibersihkan (deprecated)
    ═══════════════════════════════════════════════════════════ */
 
 (function () {
+
+  /* ── Supabase safety wrapper (konsisten dgn admin-shop / admin-orders) ── */
+  function _getSb() {
+    return window._adminSb || null;
+  }
 
   /* ── Private Helpers ── */
   function _fmt(n) {
@@ -47,6 +54,7 @@
   var _countdownTimer    = null;
   var _nextUpdateTime    = null;
   var _lastPlayerData    = [];
+  var _editingTxId       = null; // null = tambah baru, string = edit ID
   var PLAYER_INTERVAL_MS = 5 * 60 * 1000; // 5 menit
 
   /* ── Internal: Toast ── */
@@ -148,23 +156,10 @@
      1B. PLAYER AUTO-UPDATE TIMER — dengan real countdown
      ══════════════════════════════════════════════════════════ */
   function _startPlayerAutoUpdate() {
-    _stopPlayerAutoUpdate();
-    _nextUpdateTime = Date.now() + PLAYER_INTERVAL_MS;
-
-    // Auto-record setiap 5 menit
-    _playerTimer = setInterval(function () {
-      console.log('[Finance] Auto-update grafik pemain — ' + new Date().toLocaleTimeString('id-ID'));
-      window.financeV2RecordPlayer();
-      _nextUpdateTime = Date.now() + PLAYER_INTERVAL_MS;
-    }, PLAYER_INTERVAL_MS);
-
-    // Countdown setiap detik
-    _countdownTimer = setInterval(function () {
-      _updateCountdownLabel();
-    }, 1000);
-
-    _updateCountdownLabel();
-    console.log('[Finance] Auto-update grafik pemain aktif (setiap 5 menit)');
+    // [DEPRECATED] Player snapshots system removed — duplikat dengan
+    // metrics_history.online_players. Stub jadi no-op untuk hindari
+    // timer 5-menit yang invalid setelah tabel di-drop.
+    return;
   }
 
   function _stopPlayerAutoUpdate() {
@@ -202,13 +197,15 @@
     period = period || (document.getElementById('fv2-period') && document.getElementById('fv2-period').value) || 'month';
     var range = _periodRange(period);
 
-    var q = sb.from('finance_transactions').select('type,amount');
+    var _sb = _getSb();
+    if (!_sb) { _finShowTableError(); return; }
+    var q = _sb.from('finance_transactions').select('type,amount');
     if (range.from) q = q.gte('created_at', range.from);
     var result = await q;
 
     var prevResult = { data: [] };
     if (range.prevFrom) {
-      var pq = sb.from('finance_transactions').select('type,amount')
+      var pq = _sb.from('finance_transactions').select('type,amount')
         .gte('created_at', range.prevFrom);
       if (range.prevTo) pq = pq.lt('created_at', range.prevTo);
       prevResult = await pq;
@@ -274,7 +271,9 @@
     if (typeof Chart === 'undefined') return;
 
     var range = _periodRange(period);
-    var q = sb.from('finance_transactions').select('type,amount,category,created_at');
+    var _sb = _getSb();
+    if (!_sb) return;
+    var q = _sb.from('finance_transactions').select('type,amount,category,created_at');
     if (range.from) q = q.gte('created_at', range.from);
     q = q.order('created_at', { ascending: true });
     var result = await q;
@@ -495,16 +494,8 @@
      3B. PLAYER ONLINE CHART — IMPROVED
      ══════════════════════════════════════════════════════════ */
   async function _loadPlayerData() {
-    _fetchLivePlayerCount();
-    var result = await sb
-      .from('player_snapshots')
-      .select('player_count, max_players, recorded_at')
-      .order('recorded_at', { ascending: true })
-      .limit(60);
-    if (result.error) { _buildPlayerChart([]); return; }
-    _lastPlayerData = result.data || [];
-    _buildPlayerChart(_lastPlayerData);
-    _updateCountdownLabel();
+    // [DEPRECATED] player_snapshots tabel di-drop. Stub no-op.
+    return;
   }
 
   /* ── Live player count fetch ── */
@@ -966,84 +957,18 @@
       });
   }
 
-  /* ── Record player snapshot ── */
-  window.financeV2RecordPlayer = async function () {
-    var btn = document.querySelector('.fv2-player-record-btn');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML =
-        '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="animation:spin .8s linear infinite">' +
-          '<path d="M21 12a9 9 0 1 1-2.12-5.86"/>' +
-        '</svg> Mencatat…';
-      if (!document.getElementById('fv2-spin-kf')) {
-        var ks = document.createElement('style');
-        ks.id = 'fv2-spin-kf';
-        ks.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
-        document.head.appendChild(ks);
-      }
-    }
-
-    var ip    = _getServerIp();
-    var parts = ip.split(':');
-    var host  = parts[0];
-    var port  = parts[1] || '19214';
-    var dotEl = document.getElementById('fv2-player-dot');
-    var numEl = document.getElementById('fv2-player-num');
-    var lblEl = document.getElementById('fv2-player-label');
-    var maxEl = document.getElementById('fv2-player-max-info');
-
-    try {
-      var r    = await fetch('https://api.mcsrvstat.us/bedrock/3/' + host + ':' + port, { signal: AbortSignal.timeout(8000) });
-      var data = await r.json();
-      var playerCount = data.online ? (data.players ? (data.players.online || 0) : 0) : 0;
-      var maxPlayers  = data.online ? (data.players ? (data.players.max   || 0) : 0) : 0;
-
-      if (dotEl) { dotEl.className = data.online ? 'fv2-player-dot online' : 'fv2-player-dot offline'; }
-      if (numEl) {
-        numEl.textContent = playerCount;
-        numEl.className = 'fv2-player-big-num ' + (data.online ? 'online-color' : 'offline-color');
-      }
-      if (lblEl) { lblEl.textContent = data.online ? 'pemain online sekarang' : 'Server offline'; }
-      if (maxEl) { maxEl.textContent = data.online && maxPlayers ? '/ ' + maxPlayers + ' maks' : ''; }
-
-      var ins = await sb.from('player_snapshots').insert([{
-        player_count: playerCount,
-        max_players:  maxPlayers,
-        recorded_at:  new Date().toISOString(),
-      }]);
-
-      if (ins.error) {
-        _finToast('Gagal simpan snapshot — jalankan Setup DB terlebih dahulu.', 'error');
-      } else {
-        _finToast('✅ Snapshot: ' + playerCount + ' pemain online', 'success');
-        var result = await sb
-          .from('player_snapshots')
-          .select('player_count, max_players, recorded_at')
-          .order('recorded_at', { ascending: true })
-          .limit(60);
-        if (!result.error) {
-          _lastPlayerData = result.data || [];
-          _buildPlayerChart(_lastPlayerData);
-          var curEl = document.getElementById('fv2-pmini-current');
-          if (curEl) curEl.textContent = playerCount;
-        }
-      }
-    } catch (e) {
-      if (dotEl) { dotEl.className = 'fv2-player-dot offline'; }
-      if (numEl) { numEl.textContent = '—'; numEl.className = 'fv2-player-big-num offline-color'; }
-      if (lblEl) { lblEl.textContent = 'Gagal terhubung ke server'; }
-      _finToast('Gagal: ' + (e.message || 'timeout'), 'error');
-    }
-
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML =
-        '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">' +
-          '<polyline points="23 4 23 10 17 10"/>' +
-          '<path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>' +
-        '</svg> Catat';
+  /* ── Record player snapshot (DEPRECATED) ──
+   * Player snapshots system removed. Stub jadi no-op untuk handle stale call.
+   * Note: admin-finance-v2.js load setelah file ini & override stub ini juga.
+   */
+  window.financeV2RecordPlayer = function () {
+    if (typeof window.showAdminToast === 'function') {
+      window.showAdminToast('Fitur Player Online dipindah ke /monitor.html', 'success');
     }
   };
+  /* [REMOVED] Legacy __unreachable_legacy_record code yang mereferensi
+   * player_snapshots sudah dihapus. Tabel player_snapshots di-drop.
+   * Lihat admin-finance-v2.js untuk live player status (API only). */
 
   /* ══════════════════════════════════════════════════════════
      4. TRANSACTION LIST (with pagination)
@@ -1057,7 +982,9 @@
     var searchF = ((document.getElementById('fv2-search')      || {}).value || '').trim();
     var fromF   = (document.getElementById('fv2-from')         || {}).value || '';
     var toF     = (document.getElementById('fv2-to')           || {}).value || '';
-    var q = sb.from('finance_transactions').select('*').order('created_at', { ascending: false }).limit(500);
+    var _sb = _getSb();
+    if (!_sb) { container.innerHTML = '<div class="empty-state" style="color:#f87171">Supabase belum siap</div>'; return; }
+    var q = _sb.from('finance_transactions').select('*').order('created_at', { ascending: false }).limit(500);
     if (typeF) q = q.eq('type', typeF);
     if (catF)  q = q.eq('category', catF);
     if (fromF) q = q.gte('created_at', fromF + 'T00:00:00');
@@ -1107,7 +1034,10 @@
         '<td><span class="fv2-type-badge ' + cls + '">' + icon + ' ' + lbl + '</span></td>' +
         '<td><span class="fv2-cat-badge">' + _esc(r.category || '—') + '</span></td>' +
         '<td style="color:' + (isOut ? 'var(--red)' : 'var(--green)') + '">' + (isOut ? '− ' : '+ ') + _fmt(r.amount) + '</td>' +
-        '<td><button class="fv2-del-btn" onclick="financeV2Delete(\'' + r.id + '\')" title="Hapus">✕</button></td>' +
+        '<td style="white-space:nowrap">' +
+          '<button class="fv2-edit-btn" onclick="financeV2Edit(\'' + r.id + '\')" title="Edit" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;padding:2px 5px;opacity:.7;transition:opacity .15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.7">✎</button>' +
+          '<button class="fv2-del-btn" onclick="financeV2Delete(\'' + r.id + '\')" title="Hapus">✕</button>' +
+        '</td>' +
         '</tr>';
     }).join('');
 
@@ -1152,28 +1082,69 @@
   window.financeV2PgNext = function () { var tp = Math.ceil(_allRows.length / _pgSize); if (_pgCurrent < tp) { _pgCurrent++; _renderPage(); } };
 
   /* ══════════════════════════════════════════════════════════
-     5. SHOW FORM MODAL
+     5. SHOW FORM MODAL (tambah baru)
      ══════════════════════════════════════════════════════════ */
+  var _catOptions = { income:['shop','sponsorship','event','misc'], expense:['server','operational','plugin','content','misc'], donation:['donation'], transfer:['bank','ewallet','misc'], adjustment:['correction','misc'] };
+  var _catLabels  = { shop:'Toko', sponsorship:'Sponsorship', event:'Event', misc:'Lainnya', server:'Server', operational:'Operasional', plugin:'Plugin/Tools', content:'Konten', bank:'Bank', ewallet:'E-Wallet', donation:'Donasi', correction:'Koreksi' };
+
   window.financeV2ShowForm = function (type) {
+    _editingTxId = null; // reset edit mode
     var modal = document.getElementById('fv2-modal');
     var titleEl = document.getElementById('fv2-modal-title');
     var typeInput = document.getElementById('fv2-form-type');
     var catSel = document.getElementById('fv2-form-cat');
     var titles = { income:'Tambah Pemasukan', expense:'Tambah Pengeluaran', donation:'Catat Donasi', transfer:'Catat Transfer', adjustment:'Penyesuaian Saldo' };
-    var catOptions = { income:['shop','sponsorship','event','misc'], expense:['server','operational','plugin','content','misc'], donation:['donation'], transfer:['bank','ewallet','misc'], adjustment:['correction','misc'] };
-    var catLabels = { shop:'Toko', sponsorship:'Sponsorship', event:'Event', misc:'Lainnya', server:'Server', operational:'Operasional', plugin:'Plugin/Tools', content:'Konten', bank:'Bank', ewallet:'E-Wallet', donation:'Donasi', correction:'Koreksi' };
     titleEl.textContent = titles[type] || 'Tambah Transaksi';
     typeInput.value = type;
-    catSel.innerHTML = (catOptions[type] || ['misc']).map(function (c) { return '<option value="' + c + '">' + (catLabels[c] || c) + '</option>'; }).join('');
+    catSel.innerHTML = (_catOptions[type] || ['misc']).map(function (c) { return '<option value="' + c + '">' + (_catLabels[c] || c) + '</option>'; }).join('');
     ['fv2-form-amount','fv2-form-note','fv2-form-ref','fv2-form-date'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = (id === 'fv2-form-date') ? _today() : ''; });
     var refLabel = document.getElementById('fv2-ref-label');
     if (refLabel) refLabel.textContent = type === 'donation' ? 'Nama Donatur' : type === 'income' ? 'ID Order (opsional)' : 'Referensi (opsional)';
+    var submitBtn = document.getElementById('fv2-submit-btn');
+    if (submitBtn) submitBtn.textContent = 'Simpan Transaksi';
     modal.style.display = 'flex';
     setTimeout(function () { modal.classList.add('open'); }, 10);
     var amtEl = document.getElementById('fv2-form-amount'); if (amtEl) amtEl.focus();
   };
 
+  /* ── 5B. EDIT EXISTING TRANSACTION ── */
+  window.financeV2Edit = async function (id) {
+    var _sb = _getSb();
+    if (!_sb) { _finToast('Supabase belum siap', 'error'); return; }
+    var { data: tx, error } = await _sb.from('finance_transactions').select('*').eq('id', id).maybeSingle();
+    if (error || !tx) { _finToast('Gagal memuat transaksi: ' + (error ? error.message : 'tidak ditemukan'), 'error'); return; }
+
+    _editingTxId = id;
+    var modal    = document.getElementById('fv2-modal');
+    var titleEl  = document.getElementById('fv2-modal-title');
+    var typeInput = document.getElementById('fv2-form-type');
+    var catSel   = document.getElementById('fv2-form-cat');
+    var editTitles = { income:'Edit Pemasukan', expense:'Edit Pengeluaran', donation:'Edit Donasi', transfer:'Edit Transfer', adjustment:'Edit Penyesuaian' };
+
+    titleEl.textContent = editTitles[tx.type] || 'Edit Transaksi';
+    typeInput.value = tx.type;
+    catSel.innerHTML = (_catOptions[tx.type] || ['misc']).map(function (c) {
+      return '<option value="' + c + '"' + (c === tx.category ? ' selected' : '') + '>' + (_catLabels[c] || c) + '</option>';
+    }).join('');
+
+    var amtEl  = document.getElementById('fv2-form-amount'); if (amtEl)  amtEl.value  = tx.amount;
+    var noteEl = document.getElementById('fv2-form-note');   if (noteEl) noteEl.value = tx.note || '';
+    var refEl  = document.getElementById('fv2-form-ref');    if (refEl)  refEl.value  = tx.reference || '';
+    var dateEl = document.getElementById('fv2-form-date');   if (dateEl) dateEl.value = tx.created_at ? tx.created_at.split('T')[0] : _today();
+
+    var refLabel = document.getElementById('fv2-ref-label');
+    if (refLabel) refLabel.textContent = tx.type === 'donation' ? 'Nama Donatur' : tx.type === 'income' ? 'ID Order (opsional)' : 'Referensi (opsional)';
+
+    var submitBtn = document.getElementById('fv2-submit-btn');
+    if (submitBtn) submitBtn.textContent = 'Perbarui Transaksi';
+
+    modal.style.display = 'flex';
+    setTimeout(function () { modal.classList.add('open'); }, 10);
+    if (amtEl) amtEl.focus();
+  };
+
   window.financeV2CloseModal = function () {
+    _editingTxId = null;
     var modal = document.getElementById('fv2-modal');
     modal.classList.remove('open');
     setTimeout(function () { modal.style.display = 'none'; }, 280);
@@ -1192,12 +1163,27 @@
     var dateVal = document.getElementById('fv2-form-date').value;
     if (!amount || amount <= 0) { _finToast('Nominal harus diisi dan lebih dari 0', 'error'); return; }
     var adminName = (document.getElementById('topbar-email') || {}).textContent || 'admin';
-    btn.disabled = true; btn.textContent = 'Menyimpan...';
-    var payload = { type: type, category: cat, amount: amount, note: note || null, reference: ref || null, recorded_by: adminName, created_at: dateVal ? dateVal + 'T' + new Date().toTimeString().slice(0, 8) : _nowTs() };
-    var result = await sb.from('finance_transactions').insert([payload]);
-    btn.disabled = false; btn.textContent = 'Simpan Transaksi';
+    var isEdit = !!_editingTxId;
+    btn.disabled = true; btn.textContent = isEdit ? 'Memperbarui...' : 'Menyimpan...';
+
+    var _sb = _getSb();
+    if (!_sb) { btn.disabled = false; btn.textContent = isEdit ? 'Perbarui Transaksi' : 'Simpan Transaksi'; _finToast('Supabase belum siap', 'error'); return; }
+
+    var result;
+    if (isEdit) {
+      /* UPDATE mode */
+      var updates = { type: type, category: cat, amount: amount, note: note || null, reference: ref || null };
+      if (dateVal) updates.created_at = dateVal + 'T' + new Date().toTimeString().slice(0, 8);
+      result = await _sb.from('finance_transactions').update(updates).eq('id', _editingTxId);
+    } else {
+      /* INSERT mode */
+      var payload = { type: type, category: cat, amount: amount, note: note || null, reference: ref || null, recorded_by: adminName, created_at: dateVal ? dateVal + 'T' + new Date().toTimeString().slice(0, 8) : _nowTs() };
+      result = await _sb.from('finance_transactions').insert([payload]);
+    }
+
+    btn.disabled = false; btn.textContent = isEdit ? 'Perbarui Transaksi' : 'Simpan Transaksi';
     if (result.error) { _finToast('Gagal: ' + result.error.message, 'error'); return; }
-    _finToast('Transaksi berhasil dicatat ✓', 'success');
+    _finToast(isEdit ? 'Transaksi berhasil diperbarui ✓' : 'Transaksi berhasil dicatat ✓', 'success');
     window.financeV2CloseModal();
     var period = (document.getElementById('fv2-period') || {}).value || 'month';
     await Promise.all([window.financeV2LoadSummary(period), window.financeV2LoadList(), _loadCharts(period)]);
@@ -1207,13 +1193,59 @@
      7. DELETE
      ══════════════════════════════════════════════════════════ */
   window.financeV2Delete = async function (id) {
-    if (!confirm('Hapus transaksi ini?')) return;
-    var result = await sb.from('finance_transactions').delete().eq('id', id);
+    /* RBAC: moderator tidak boleh hapus transaksi keuangan */
+    var role = (window.currentRole && window.currentRole.role) || 'admin';
+    if (role === 'moderator') {
+      _finToast('Moderator tidak memiliki akses untuk menghapus transaksi.', 'error');
+      return;
+    }
+
+    /* Custom confirm dialog (konsisten dengan admin-orders.js) */
+    function _doDelete() { _executeFinanceDelete(id); }
+    if (typeof window.showMgrConfirm === 'function') {
+      window.showMgrConfirm({
+        title: 'Hapus Transaksi',
+        message: 'Yakin ingin menghapus transaksi ini?<br><small style="color:var(--text-faint)">Jika terkait order, status order akan dikembalikan ke pending.</small>',
+        confirmText: 'Hapus',
+        danger: true,
+        onConfirm: _doDelete,
+      });
+    } else {
+      if (!confirm('Hapus transaksi ini?')) return;
+      _doDelete();
+    }
+  };
+
+  /* ── Internal: execute delete (dipanggil setelah konfirmasi) ── */
+  async function _executeFinanceDelete(id) {
+
+    /* Cek apakah transaksi ini terkait order → sync balik ke toko */
+    var _sb = _getSb();
+    if (!_sb) { _finToast('Supabase belum siap', 'error'); return; }
+    var { data: tx } = await _sb.from('finance_transactions').select('reference,amount').eq('id', id).maybeSingle();
+    var linkedOrderId = null;
+    if (tx && tx.reference && tx.reference.startsWith('order:')) {
+      linkedOrderId = tx.reference.replace('order:', '');
+    }
+
+    var result = await _sb.from('finance_transactions').delete().eq('id', id);
     if (result.error) { _finToast('Gagal hapus: ' + result.error.message, 'error'); return; }
-    _finToast('Dihapus.', 'success');
+
+    /* Keuangan → Toko: revert order status karena revenue record dihapus */
+    if (linkedOrderId) {
+      try {
+        await _sb.from('orders').update({ status: 'pending', completed_at: null, completed_by_name: null }).eq('id', linkedOrderId);
+        _finToast('Dihapus. Order ' + linkedOrderId + ' dikembalikan ke status pending.', 'success');
+      } catch (e) {
+        _finToast('Dihapus, tapi gagal update order: ' + e.message, 'error');
+      }
+    } else {
+      _finToast('Dihapus.', 'success');
+    }
+
     var period = (document.getElementById('fv2-period') || {}).value || 'month';
     await Promise.all([window.financeV2LoadSummary(period), window.financeV2LoadList(), _loadCharts(period)]);
-  };
+  }
 
   /* ══════════════════════════════════════════════════════════
      8. REALTIME
@@ -1221,7 +1253,9 @@
   function _finSubscribeRealtime() {
     if (_finSub) return;
     try {
-      _finSub = sb.channel('finance-rt-v2')
+      var _sb = _getSb();
+      if (!_sb) return;
+      _finSub = _sb.channel('finance-rt-v2')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_transactions' }, function () {
           var period = (document.getElementById('fv2-period') || {}).value || 'month';
           Promise.all([window.financeV2LoadSummary(period), window.financeV2LoadList(), _loadCharts(period)]);
@@ -1237,7 +1271,9 @@
     var container = document.getElementById('fv2-cashflow');
     if (!container) return;
     container.innerHTML = '<div class="empty-state">Memuat...</div>';
-    var result = await sb.from('finance_transactions').select('type,amount,created_at').order('created_at', { ascending: true });
+    var _sb = _getSb();
+    if (!_sb) { container.innerHTML = '<div class="empty-state" style="color:#f87171">Supabase belum siap</div>'; return; }
+    var result = await _sb.from('finance_transactions').select('type,amount,created_at').order('created_at', { ascending: true });
     if (result.error) { container.innerHTML = '<div class="empty-state" style="color:#f87171">' + _esc(result.error.message) + '</div>'; return; }
     if (!result.data || !result.data.length) { container.innerHTML = '<div class="empty-state">Belum ada data.</div>'; return; }
     var months = {};
@@ -1301,8 +1337,23 @@
 
     _finToast('Menyiapkan laporan Excel...', 'success');
 
-    var result = await sb.from('finance_transactions')
-      .select('*').order('created_at', { ascending: false });
+    var _sb = _getSb();
+    if (!_sb) { _finToast('Supabase belum siap', 'error'); return; }
+
+    /* Ambil filter aktif dari UI (sama dengan financeV2LoadList) */
+    var typeF   = (document.getElementById('fv2-filter-type') || {}).value || '';
+    var catF    = (document.getElementById('fv2-filter-cat')  || {}).value || '';
+    var searchF = ((document.getElementById('fv2-search')     || {}).value || '').trim();
+    var fromF   = (document.getElementById('fv2-from')        || {}).value || '';
+    var toF     = (document.getElementById('fv2-to')          || {}).value || '';
+
+    var q = _sb.from('finance_transactions').select('*').order('created_at', { ascending: false });
+    if (typeF) q = q.eq('type', typeF);
+    if (catF)  q = q.eq('category', catF);
+    if (fromF) q = q.gte('created_at', fromF + 'T00:00:00');
+    if (toF)   q = q.lte('created_at', toF   + 'T23:59:59');
+
+    var result = await q;
 
     if (result.error || !result.data) {
       _finToast('Gagal export: ' + (result.error ? result.error.message : 'data kosong'), 'error');
@@ -1310,6 +1361,16 @@
     }
 
     var rows = result.data;
+
+    /* Apply client-side search filter (sama seperti load list) */
+    if (searchF) {
+      var kw = searchF.toLowerCase();
+      rows = rows.filter(function (r) {
+        return (r.note || '').toLowerCase().includes(kw) || (r.reference || '').toLowerCase().includes(kw) ||
+               (r.category || '').toLowerCase().includes(kw) || (r.recorded_by || '').toLowerCase().includes(kw);
+      });
+    }
+
     var now  = new Date();
 
     var TYPE_LABEL = { income:'Pemasukan', expense:'Pengeluaran', donation:'Donasi', transfer:'Transfer', adjustment:'Penyesuaian' };
@@ -1499,15 +1560,6 @@
       ');',
       'CREATE INDEX IF NOT EXISTS idx_ft_created ON finance_transactions(created_at DESC);',
       'CREATE INDEX IF NOT EXISTS idx_ft_type    ON finance_transactions(type);',
-      '',
-      '-- Tabel snapshot pemain online',
-      'CREATE TABLE IF NOT EXISTS player_snapshots (',
-      '  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),',
-      '  player_count integer NOT NULL DEFAULT 0,',
-      '  max_players  integer NOT NULL DEFAULT 0,',
-      '  recorded_at  timestamptz NOT NULL DEFAULT now()',
-      ');',
-      'CREATE INDEX IF NOT EXISTS idx_ps_recorded ON player_snapshots(recorded_at DESC);',
     ].join('\n');
     var box = document.getElementById('fv2-sql-box');
     if (box) { box.style.display = 'block'; document.getElementById('fv2-sql-code').textContent = sql; }

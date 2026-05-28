@@ -68,7 +68,7 @@
       '</div>',
     '</div>',
 
-    /* ── Charts Row B: Bar + Player ── */
+    /* ── Charts Row B: Bar (player card removed — duplikat dengan metrics_history) ── */
     '<div class="fv2-charts-row-b">',
       '<div class="fv2-bar-card">',
         '<div class="fv2-chart-title">Top Kategori Pemasukan</div>',
@@ -76,42 +76,26 @@
         '<div style="height:160px;position:relative"><canvas id="fv2-bar-chart"></canvas></div>',
         '<div id="fv2-mini-bars" style="margin-top:14px"></div>',
       '</div>',
-      '<div class="fv2-player-card">',
-        '<div class="fv2-chart-header">',
-          '<div class="fv2-chart-header-text">',
-            '<div class="fv2-chart-title">Pemain Online</div>',
-            '<div class="fv2-chart-sub">Riwayat 60 snapshot terakhir</div>',
-          '</div>',
-          '<button class="fv2-player-record-btn"',
-            ' onclick="if(typeof window.financeV2RecordPlayer===\'function\')window.financeV2RecordPlayer()">',
-            '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">',
-              '<circle cx="12" cy="12" r="10"/>',
-              '<line x1="12" y1="8" x2="12" y2="16"/>',
-              '<line x1="8" y1="12" x2="16" y2="12"/>',
-            '</svg>',
-            'Catat',
-          '</button>',
-        '</div>',
-        '<div class="fv2-player-stat">',
-          '<div class="fv2-player-dot" id="fv2-player-dot"></div>',
-          '<div>',
-            '<div class="fv2-player-num" id="fv2-player-num">—</div>',
-            '<div class="fv2-player-label" id="fv2-player-label">Memuat status server...</div>',
-          '</div>',
-        '</div>',
-        '<div style="height:120px;position:relative"><canvas id="fv2-player-chart"></canvas></div>',
-        '<div style="font-size:10.5px;color:var(--text-faint);margin-top:8px" id="fv2-player-next-update"></div>',
-      '</div>',
     '</div>',
 
     /* ── Tabs ── */
     '<div class="fv2-tabs" style="margin-top:22px">',
       '<button class="fv2-tab active" data-tab="transactions"',
-        ' onclick="window._fv2Tab(\'transactions\',this)">📋 Transaksi</button>',
+        ' onclick="window._fv2Tab(\'transactions\',this)">',
+        '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+        ' Transaksi</button>',
+      '<button class="fv2-tab" data-tab="revenue"',
+        ' onclick="window._fv2Tab(\'revenue\',this)">',
+        '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>',
+        ' Revenue Produk</button>',
       '<button class="fv2-tab" data-tab="cashflow"',
-        ' onclick="window._fv2Tab(\'cashflow\',this)">📊 Cashflow Bulanan</button>',
+        ' onclick="window._fv2Tab(\'cashflow\',this)">',
+        '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+        ' Cashflow Bulanan</button>',
       '<button class="fv2-tab" data-tab="setup"',
-        ' onclick="window._fv2Tab(\'setup\',this)">🛠 Setup DB</button>',
+        ' onclick="window._fv2Tab(\'setup\',this)">',
+        '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+        ' Setup DB</button>',
     '</div>',
 
     /* ════ TAB: Transaksi ════ */
@@ -190,6 +174,25 @@
       '</div>',
     '</div>',
 
+    /* ════ TAB: Revenue Produk ════ */
+    '<div class="fv2-tab-panel" id="fv2-panel-revenue">',
+      '<div style="margin-top:14px">',
+        '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">',
+          '<div>',
+            '<div style="font-size:14px;font-weight:700;color:var(--text)">Ranking Revenue per Produk</div>',
+            '<div style="font-size:12px;color:var(--text-faint);margin-top:2px">Data dari semua pesanan selesai</div>',
+          '</div>',
+          '<select id="fv2-rev-period" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 10px;font-size:12px;outline:none;font-family:inherit" onchange="if(typeof window._fv2LoadRevenue===\'function\')window._fv2LoadRevenue()">',
+            '<option value="all">Semua Waktu</option>',
+            '<option value="month" selected>Bulan Ini</option>',
+            '<option value="week">7 Hari Terakhir</option>',
+            '<option value="today">Hari Ini</option>',
+          '</select>',
+        '</div>',
+        '<div id="fv2-rev-table" style="margin-top:10px"><div class="empty-state">Memuat data revenue...</div></div>',
+      '</div>',
+    '</div>',
+
     '<div class="fv2-tab-panel" id="fv2-panel-cashflow">',
       '<div style="margin-top:14px" id="fv2-cashflow"><div class="empty-state">Memuat cashflow bulanan...</div></div>',
     '</div>',
@@ -199,7 +202,7 @@
         '<div class="card-header"><div class="card-title">Setup Tabel Database</div></div>',
         '<div style="padding:16px">',
           '<p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.65">',
-            'Jika tabel <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11.5px">finance_transactions</code> atau <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11.5px">player_snapshots</code> belum ada, jalankan SQL berikut di Supabase SQL Editor.',
+            'Jika tabel <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:11.5px">finance_transactions</code> belum ada, jalankan SQL berikut di Supabase SQL Editor.',
           '</p>',
           '<button class="save-btn" onclick="if(typeof window.financeV2SetupDB===\'function\')window.financeV2SetupDB()">Lihat SQL Setup</button>',
           '<div id="fv2-sql-box" style="display:none;margin-top:16px">',
@@ -260,6 +263,9 @@
     if (panel) panel.classList.add('active');
     if (tab === 'cashflow' && typeof window.financeV2LoadCashflow === 'function') {
       window.financeV2LoadCashflow();
+    }
+    if (tab === 'revenue' && typeof window._fv2LoadRevenue === 'function') {
+      window._fv2LoadRevenue();
     }
   };
 
@@ -323,6 +329,118 @@
       }
     }, 200);
   });
+
+  /* ════════════════════════════════════════════════════════════════
+     Revenue per Product — loads from orders (status=selesai)
+  ════════════════════════════════════════════════════════════════ */
+  window._fv2LoadRevenue = async function () {
+    var tableEl = document.getElementById('fv2-rev-table');
+    if (!tableEl) return;
+    tableEl.innerHTML = '<div class="empty-state">Memuat data revenue...</div>';
+
+    var sb = window._adminSb;
+    if (!sb) { tableEl.innerHTML = '<div class="empty-state">Supabase belum siap.</div>'; return; }
+
+    var periodEl = document.getElementById('fv2-rev-period');
+    var period = periodEl ? periodEl.value : 'month';
+
+    var query = sb.from('orders').select('item_name,qty,total_price,created_at').eq('status', 'selesai');
+
+    // Date filter
+    var now = new Date();
+    if (period === 'today') {
+      var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      query = query.gte('created_at', todayStart);
+    } else if (period === 'week') {
+      var weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString();
+      query = query.gte('created_at', weekAgo);
+    } else if (period === 'month') {
+      var monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      query = query.gte('created_at', monthStart);
+    }
+    // 'all' = no date filter
+
+    var { data: orders, error } = await query;
+    if (error) { tableEl.innerHTML = '<div class="empty-state">Gagal memuat: ' + error.message + '</div>'; return; }
+    if (!orders || orders.length === 0) { tableEl.innerHTML = '<div class="empty-state">Belum ada pesanan selesai di periode ini.</div>'; return; }
+
+    // Aggregate
+    var map = {};
+    orders.forEach(function (o) {
+      var name = o.item_name || 'Unknown';
+      if (!map[name]) map[name] = { revenue: 0, qty: 0, count: 0 };
+      map[name].revenue += Number(o.total_price) || 0;
+      map[name].qty += Number(o.qty) || 1;
+      map[name].count++;
+    });
+
+    var list = Object.keys(map).map(function (name) {
+      return { name: name, revenue: map[name].revenue, qty: map[name].qty, count: map[name].count };
+    });
+    list.sort(function (a, b) { return b.revenue - a.revenue; });
+
+    var maxRev = list[0] ? list[0].revenue : 1;
+    var totalRev = list.reduce(function (s, i) { return s + i.revenue; }, 0);
+    var totalQty = list.reduce(function (s, i) { return s + i.qty; }, 0);
+
+    var fmt = function (n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); };
+
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px">';
+    html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px">';
+    html += '<div style="font-size:11px;color:var(--text-faint);margin-bottom:4px">Total Revenue</div>';
+    html += '<div style="font-size:18px;font-weight:700;color:#34d399">' + fmt(totalRev) + '</div>';
+    html += '</div>';
+    html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px">';
+    html += '<div style="font-size:11px;color:var(--text-faint);margin-bottom:4px">Total Terjual</div>';
+    html += '<div style="font-size:18px;font-weight:700;color:var(--accent)">' + totalQty + ' item</div>';
+    html += '</div>';
+    html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px">';
+    html += '<div style="font-size:11px;color:var(--text-faint);margin-bottom:4px">Produk Unik</div>';
+    html += '<div style="font-size:18px;font-weight:700;color:var(--text)">' + list.length + '</div>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">';
+    html += '<thead><tr style="border-bottom:2px solid var(--border);text-align:left">';
+    html += '<th style="padding:10px 8px;color:var(--text-faint);font-size:11px;font-weight:600">#</th>';
+    html += '<th style="padding:10px 8px;color:var(--text-faint);font-size:11px;font-weight:600">Produk</th>';
+    html += '<th style="padding:10px 8px;color:var(--text-faint);font-size:11px;font-weight:600;text-align:right">Revenue</th>';
+    html += '<th style="padding:10px 8px;color:var(--text-faint);font-size:11px;font-weight:600;text-align:center">Terjual</th>';
+    html += '<th style="padding:10px 8px;color:var(--text-faint);font-size:11px;font-weight:600;text-align:right">Rata-rata</th>';
+    html += '<th style="padding:10px 8px;color:var(--text-faint);font-size:11px;font-weight:600;min-width:120px">Proporsi</th>';
+    html += '</tr></thead><tbody>';
+
+    list.forEach(function (item, i) {
+      var pct = totalRev > 0 ? ((item.revenue / totalRev) * 100).toFixed(1) : '0';
+      var barW = maxRev > 0 ? Math.round((item.revenue / maxRev) * 100) : 0;
+      var avg = item.count > 0 ? Math.round(item.revenue / item.count) : 0;
+
+      var medal = '';
+      if (i === 0) medal = '<span style="color:#fbbf24;font-weight:700">1</span>';
+      else if (i === 1) medal = '<span style="color:#94a3b8;font-weight:700">2</span>';
+      else if (i === 2) medal = '<span style="color:#d97706;font-weight:700">3</span>';
+      else medal = '<span style="color:var(--text-faint)">' + (i + 1) + '</span>';
+
+      html += '<tr style="border-bottom:1px solid var(--border)">';
+      html += '<td style="padding:10px 8px">' + medal + '</td>';
+      html += '<td style="padding:10px 8px;font-weight:600;color:var(--text)">' + item.name + '</td>';
+      html += '<td style="padding:10px 8px;text-align:right;font-weight:600;color:#34d399">' + fmt(item.revenue) + '</td>';
+      html += '<td style="padding:10px 8px;text-align:center;color:var(--text-muted)">' + item.qty + 'x <span style="font-size:11px;color:var(--text-faint)">(' + item.count + ' order)</span></td>';
+      html += '<td style="padding:10px 8px;text-align:right;color:var(--text-muted)">' + fmt(avg) + '</td>';
+      html += '<td style="padding:10px 8px">';
+      html += '<div style="display:flex;align-items:center;gap:6px">';
+      html += '<div style="flex:1;background:var(--surface);border-radius:4px;height:6px;overflow:hidden">';
+      html += '<div style="width:' + barW + '%;height:100%;background:linear-gradient(90deg,#a855f7,#7c3aed);border-radius:4px;transition:width .3s"></div>';
+      html += '</div>';
+      html += '<span style="font-size:11px;color:var(--text-faint);min-width:36px;text-align:right">' + pct + '%</span>';
+      html += '</div></td>';
+      html += '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    tableEl.innerHTML = html;
+  };
+
 })();
 
 /* ════════════════════════════════════════════════════════════════
@@ -390,25 +508,14 @@
       .catch(function () { return null; });
   }
 
-  /* ── Fetch 60 snapshot terakhir (6 jam) ── */
+  /* ── Fetch snapshot (DEPRECATED — tabel player_snapshots di-drop) ──
+   * Stub: return array kosong. Kartu player tetap berfungsi via
+   * fetchLivePlayers() dari API mcsrvstat. Chart hanya tampil jika
+   * ada data snapshot, jadi ini efektif menonaktifkan chart historis
+   * tanpa merusak UI lainnya.
+   */
   function loadPlayerSnapshots() {
-    var sb = getSb();
-    if (!sb) return Promise.resolve([]);
-    var since = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
-    return sb
-      .from('player_snapshots')
-      .select('player_count, recorded_at')
-      .gte('recorded_at', since)
-      .order('recorded_at', { ascending: true })
-      .limit(60)
-      .then(function (res) {
-        if (res.error) {
-          console.warn('[fv2-player] loadSnapshots:', res.error.message);
-          return [];
-        }
-        return res.data || [];
-      })
-      .catch(function () { return []; });
+    return Promise.resolve([]);
   }
 
   /* ── Destroy chart lama ── */
@@ -594,77 +701,21 @@
       .finally(function () { _running = false; });
   }
 
-  /* ── Expose refresh ── */
-  window._fv2PlayerRefresh = refreshPlayerCard;
-
-  /* ── Tombol Catat ── */
+  /* ── Tombol Catat (DEPRECATED) ──
+   * Player snapshots system removed — duplikat dengan metrics_history.online_players.
+   * Stub jadi no-op untuk handle stale onclick yang mungkin masih ada di session lama.
+   */
   window.financeV2RecordPlayer = function () {
-    var btn = document.querySelector('.fv2-player-record-btn');
-
-    function resetBtn() {
-      if (!btn) return;
-      btn.disabled = false;
-      btn.innerHTML =
-        '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">' +
-        '<polyline points="23 4 23 10 17 10"/>' +
-        '<path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>' +
-        '</svg> Catat';
+    if (typeof window.showAdminToast === 'function') {
+      window.showAdminToast('Fitur Player Online dipindah ke /monitor.html', 'success');
     }
-
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML =
-        '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"' +
-        ' style="animation:fv2spin .8s linear infinite">' +
-        '<path d="M21 12a9 9 0 1 1-2.12-5.86"/>' +
-        '</svg> Mencatat…';
-    }
-
-    if (!document.getElementById('fv2-spin-kf')) {
-      var ks = document.createElement('style');
-      ks.id = 'fv2-spin-kf';
-      ks.textContent = '@keyframes fv2spin{to{transform:rotate(360deg)}}';
-      document.head.appendChild(ks);
-    }
-
-    var sb = getSb();
-    if (!sb) {
-      if (typeof window.showAdminToast === 'function') window.showAdminToast('Supabase client belum siap', 'error');
-      resetBtn();
-      return;
-    }
-
-    fetchLivePlayers()
-      .then(function (live) {
-        if (live === null) throw new Error('Gagal ambil data server Bedrock');
-
-        return sb
-          .from('player_snapshots')
-          .insert({ player_count: live })
-          .then(function (res) {
-            if (res.error) throw new Error(res.error.message);
-            return live;
-          });
-      })
-      .then(function (live) {
-        if (typeof window.showAdminToast === 'function') {
-          window.showAdminToast('✅ Snapshot: ' + live + ' pemain online', 'success');
-        }
-
-        if (btn) {
-          btn.textContent = '✓ ' + live + ' pemain';
-          setTimeout(resetBtn, 2500);
-        }
-
-        setTimeout(function () { refreshPlayerCard(); }, 300);
-      })
-      .catch(function (e) {
-        if (typeof window.showAdminToast === 'function') {
-          window.showAdminToast('Gagal catat: ' + e.message, 'error');
-        }
-        resetBtn();
-      });
   };
+
+  /* ── _fv2PlayerRefresh stub (DEPRECATED) ── */
+  window._fv2PlayerRefresh = function () { /* no-op */ };
+
+  /* Original financeV2RecordPlayer body removed (player_snapshots tabel di-drop).
+   * Stub di atas handle stale onclick. */
 
   /* ── Auto-init ── */
   function tryAutoInit() {

@@ -102,11 +102,11 @@
   table-layout: fixed;
 }
 
-/* Lebar kolom — ID diperlebar, item ambil sisa */
-.of-col-id     { width: 52px; }
+/* Lebar kolom — ID diperlebar agar LT-XXXX terbaca, item ambil sisa */
+.of-col-id     { width: 82px; }
 .of-col-user   { width: 62px; }
 .of-col-item   { width: auto; }
-.of-col-price  { width: 52px; }
+.of-col-price  { width: 70px; }
 .of-col-status { width: 54px; }
 .of-col-time   { width: 30px; }
 
@@ -277,4 +277,31 @@
 .of-cta-btn:hover {
   background: rgba(168,85,247,0.22);
   transform: translateY(-1px);
+}
+
+/* ══════════════════════════════════════════════════
+   ORDER FEED — Responsive
+══════════════════════════════════════════════════ */
+@media(max-width:768px) {
+  .of-header { gap: 0.5rem; }
+  .of-table { font-size: 0.65rem; }
+  .of-table thead th { font-size: 0.28rem; padding: 0.3rem 0.25rem; }
+  .of-row td { padding: 0.3rem 0.25rem; }
+  .of-col-id { width: 72px; font-size: 0.30rem !important; overflow: visible; white-space: nowrap; }
+  .of-col-user { width: 55px; font-size: 0.62rem !important; }
+  .of-col-item { font-size: 0.62rem !important; }
+  .of-col-price { width: 48px; font-size: 0.58rem !important; }
+  .of-col-status { width: 48px; }
+  .of-col-time { width: 26px; font-size: 0.52rem !important; }
+  .of-badge { font-size: 0.45rem; padding: 1px 2px; }
+}
+
+@media(max-width:480px) {
+  .of-table-wrap { border-radius: 6px; }
+  .of-table { font-size: 0.6rem; }
+  .of-col-time { display: none; }
+  .of-table thead th:last-child { display: none; }
+  .of-col-id { width: 64px; overflow: visible; white-space: nowrap; }
+  .of-col-user { width: 50px; }
+  .of-col-status { width: 42px; }
 }

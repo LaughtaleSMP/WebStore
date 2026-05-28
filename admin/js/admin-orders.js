@@ -244,12 +244,25 @@ window.ordersInitBadge = async function () {
     .select('id', { count: 'exact', head: true })
     .eq('status', 'pending');
   const badge = document.getElementById('orders-badge');
-  if (!badge) return;
-  badge.textContent    = count || 0;
-  badge.style.display  = count > 0 ? 'inline-flex' : 'none';
+  if (badge) {
+    badge.textContent    = count || 0;
+    badge.style.display  = count > 0 ? 'inline-flex' : 'none';
+  }
+
+  /* Sync topbar notif bell */
+  const topBadge = document.getElementById('topbar-notif-badge');
+  if (topBadge) {
+    topBadge.textContent   = count || 0;
+    topBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+  }
 
   /* Juga inisialisasi notifikasi */
   _initNotifications();
+
+  /* Auto-load dashboard jika aktif */
+  if (document.getElementById('sec-dashboard')?.classList.contains('active') && typeof window.dashboardLoad === 'function') {
+    window.dashboardLoad();
+  }
 };
 
 /* ─────────────────────────────────────────────────────
@@ -301,7 +314,7 @@ window.ordersLoad = async function () {
     return `
     <div class="order-card" id="ocard-${escHtml(o.id)}" style="${_minutesSince(o.created_at) >= ORDER_TIMEOUT_MINUTES ? 'border-color:rgba(248,113,113,.35)' : ''}">
       <div class="order-card-head">
-        <span class="order-id-badge">#${escHtml(String(o.id).slice(-4).toUpperCase())}</span>
+        <span class="order-id-badge">LT-${escHtml(String(o.id).replace(/-/g,'').slice(-6).toUpperCase())}</span>
         <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
           ${_overdueTag(o)}
           <span class="order-time">${escHtml(new Date(o.created_at).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}))}</span>
@@ -325,6 +338,26 @@ window.ordersLoad = async function () {
       </div>
     </div>`;
   }).join('');
+
+  /* ── Batch Mark Done button (tampil jika ≥ 2 pending) ── */
+  if (data.length >= 2) {
+    const batchWrap = document.createElement('div');
+    batchWrap.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:10px';
+    batchWrap.innerHTML = `
+      <button id="btn-batch-done" style="
+        background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);
+        color:#34d399;border-radius:8px;padding:7px 14px;font-size:12px;
+        font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;
+        transition:background .15s"
+        onmouseover="this.style.background='rgba(52,211,153,.22)'"
+        onmouseout="this.style.background='rgba(52,211,153,.12)'"
+        onclick="orderBatchDone()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <polyline points="20 6 9 17 4 12"/></svg>
+        Selesaikan Semua (${data.length})
+      </button>`;
+    container.insertBefore(batchWrap, container.firstChild);
+  }
 
   await _loadTodayStats();
 };
@@ -399,6 +432,56 @@ function _syncAllOrdersIfActive() {
 }
 
 /* ─────────────────────────────────────────────────────
+   AUTO-TOPUP GEM — Bridge WebStore → Minecraft Server
+   Ketika order Gem di-mark selesai, otomatis insert ke
+   topup_queue. Server poll queue tiap 30s → gem masuk
+   saat player online.
+───────────────────────────────────────────────────── */
+const _TOPUP_ADMIN_KEY = 'laughtale-topup';
+
+async function _autoTopupGem(order) {
+  const itemName = (order.item_name || '').toLowerCase();
+  const itemCat  = (order.item_category || '').toLowerCase();
+  const isGem    = itemName.includes('gem') || itemCat.includes('gem');
+  if (!isGem) return;
+
+  const playerName = (order.username || '').trim();
+  if (!playerName || playerName === 'Anonim') {
+    showToast('⚠️ Gem tidak bisa auto-topup: username Minecraft kosong.', 'error');
+    return;
+  }
+
+  const amount = parseInt(order.qty) || 0;
+  if (amount <= 0) {
+    showToast('⚠️ Gem tidak bisa auto-topup: jumlah = 0.', 'error');
+    return;
+  }
+
+  const sb = getSb();
+  if (!sb) return;
+
+  try {
+    const orderId = order.id || '?';
+    const shortId = 'LT-' + String(orderId).replace(/-/g, '').slice(-6).toUpperCase();
+
+    const { error } = await sb.from('topup_queue').insert({
+      player_name: playerName,
+      amount,
+      currency:    'gem',
+      status:      'pending',
+      admin_key:   _TOPUP_ADMIN_KEY,
+      admin_note:  `Auto dari order ${shortId}: ${order.item_name || '?'} ×${amount}`,
+    });
+
+    if (error) throw error;
+    showToast(`💎 ${amount} Gem → ${playerName} (otomatis terkirim saat online)`, 'success');
+  } catch (e) {
+    console.error('[Orders] Auto-topup gem gagal:', e);
+    showToast(`⚠️ Gagal auto-topup ${amount} Gem ke ${playerName}. Kirim manual di tab Topup.`, 'error');
+  }
+}
+
+/* ─────────────────────────────────────────────────────
    MARK DONE
 ───────────────────────────────────────────────────── */
 window.orderMarkDone = async function (id) {
@@ -438,12 +521,57 @@ window.orderMarkDone = async function (id) {
     admin_wa:      adminPhone  || o.wa_admin_number || '?',
   });
 
+  /* Auto-topup Gem ke server jika order ini adalah pembelian gem */
+  await _autoTopupGem(o);
+
   const card = document.getElementById(`ocard-${id}`);
   if (card) card.remove();
-  showToast('✅ Order selesai & dicatat ke keuangan!', 'success');
+  showToast('Order selesai & dicatat ke keuangan!', 'success');
   ordersLoad();
   _syncAllOrdersIfActive();
   _refreshFinanceIfActive();
+};
+
+/* ─────────────────────────────────────────────────────
+   BATCH MARK DONE — selesaikan semua pending sekaligus
+───────────────────────────────────────────────────── */
+window.orderBatchDone = async function () {
+  const sb = getSb();
+  if (!sb) return;
+
+  const { data: pending } = await sb.from('orders')
+    .select('id').eq('status', 'pending');
+  if (!pending || !pending.length) {
+    showToast('Tidak ada pesanan pending.', 'error');
+    return;
+  }
+
+  const count = pending.length;
+
+  function _doBatch() {
+    const btn = document.getElementById('btn-batch-done');
+    if (btn) { btn.disabled = true; btn.textContent = 'Memproses...'; }
+
+    (async function () {
+      let done = 0;
+      for (const order of pending) {
+        try {
+          await window.orderMarkDone(order.id);
+          done++;
+        } catch (e) {
+          console.warn('[BatchDone] Gagal:', order.id, e);
+        }
+      }
+      showToast(`${done}/${count} order berhasil diselesaikan!`, 'success');
+    })();
+  }
+
+  _confirm({
+    title:       'Selesaikan Semua Pesanan?',
+    message:     `<strong>${count} pesanan pending</strong> akan ditandai selesai dan dicatat ke keuangan. Lanjutkan?`,
+    confirmText: `Ya, Selesaikan ${count} Pesanan`,
+    danger:      false,
+  }, _doBatch);
 };
 
 /* ─────────────────────────────────────────────────────
@@ -458,19 +586,36 @@ window.orderDelete = async function (id) {
   const sb = getSb();
   if (!sb) return;
 
-  /* Ambil nama item untuk konfirmasi */
-  const { data: o } = await sb.from('orders').select('item_name,username').eq('id', id).maybeSingle();
+  /* Ambil data order untuk konfirmasi + stock restore */
+  const { data: o } = await sb.from('orders').select('item_name,username,qty,status').eq('id', id).maybeSingle();
   const itemLabel   = escHtml(o?.item_name || 'order ini');
   const userLabel   = escHtml(o?.username  || '');
 
   _confirm({
     title:       'Hapus Pesanan?',
     message:     `Pesanan <strong>${itemLabel}</strong>${userLabel ? ` dari <strong>${userLabel}</strong>` : ''} akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.`,
-    confirmText: '🗑️ Ya, Hapus Pesanan',
+    confirmText: 'Ya, Hapus Pesanan',
     danger:      true,
   }, async () => {
     const { error } = await sb.from('orders').delete().eq('id', id);
     if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
+
+    /* Restore stock jika order masih pending */
+    if (o && o.status === 'pending' && o.item_name && (o.qty || 1) > 0) {
+      try {
+        const { data: shopItem } = await sb.from('shop_items')
+          .select('id,stock').eq('name', o.item_name).maybeSingle();
+        if (shopItem && shopItem.stock !== null && shopItem.stock !== undefined) {
+          await sb.from('shop_items').update({ stock: shopItem.stock + (o.qty || 1) }).eq('id', shopItem.id);
+        }
+      } catch (e) { console.warn('[Orders] Stock restore failed:', e); }
+    }
+
+    /* Hapus finance record terkait jika order sudah selesai */
+    if (o && o.status === 'selesai') {
+      try { await sb.from('finance_transactions').delete().eq('reference', 'order:' + id); }
+      catch (e) { console.warn('[Orders] Finance cleanup failed:', e); }
+    }
 
     window.logAdminActivity?.('order_delete', 'order', id, {
       item: o?.item_name || '?',
@@ -483,7 +628,7 @@ window.orderDelete = async function (id) {
       card.style.opacity = '0'; card.style.transform = 'translateX(16px)';
       setTimeout(() => card.remove(), 280);
     }
-    showToast('🗑️ Pesanan dihapus', 'success');
+    showToast('Pesanan dihapus' + (o?.status === 'pending' ? ' (stok dikembalikan)' : ''), 'success');
     ordersLoad();
     _syncAllOrdersIfActive();
   });
@@ -535,9 +680,27 @@ window.oeditSave = async function () {
   if (btn) { btn.disabled = false; btn.textContent = 'Simpan Perubahan'; }
   if (error) { showToast('Gagal simpan: ' + error.message, 'error'); return; }
 
-  /* Finance + Activity Log */
+  /* ── Finance Sync (Toko → Keuangan) ── */
+  const ref = 'order:' + id;
   if (status === 'selesai' && prevStatus !== 'selesai') {
+    // Baru jadi selesai → record finance
     await _recordFinanceTx({ ...prevOrder, item_name: itemName, total_price, completed_at: completedAt, completed_by_name: completedBy });
+    // Auto-topup Gem jika item gem & status baru jadi selesai
+    await _autoTopupGem({ ...prevOrder, item_name: itemName, username, qty, id });
+  } else if (status !== 'selesai' && prevStatus === 'selesai') {
+    // Status berubah DARI selesai → hapus record finance terkait
+    await sb.from('finance_transactions').delete().eq('reference', ref);
+  } else if (status === 'selesai' && prevStatus === 'selesai') {
+    // Tetap selesai tapi harga/item berubah → update finance record
+    const prevPrice = Number(prevOrder?.total_price || 0);
+    if (total_price !== prevPrice || itemName !== prevOrder?.item_name) {
+      const category = (itemName || '').toLowerCase().includes('gem') ? 'gem' : 'shop';
+      await sb.from('finance_transactions').update({
+        amount: total_price,
+        note: 'Order: ' + (itemName || '?'),
+        category,
+      }).eq('reference', ref);
+    }
   }
 
   window.logAdminActivity?.('order_edit', 'order', id, {
@@ -551,9 +714,9 @@ window.oeditSave = async function () {
   oeditClose();
   ordersLoad();
   _syncAllOrdersIfActive();
-  if (status === 'selesai' && prevStatus !== 'selesai') _refreshFinanceIfActive();
+  _refreshFinanceIfActive();
 
-  const label = { selesai:'✅ Selesai', refund:'💸 Refund', cancelled:'❌ Cancelled' }[status] || '✅ Tersimpan';
+  const label = { selesai:'Selesai', refund:'Refund', cancelled:'Cancelled' }[status] || 'Tersimpan';
   showToast(`Order diupdate — ${label}`, 'success');
 };
 
@@ -598,7 +761,7 @@ window.allOrdersLoad = async function () {
 
   const rowsHtml = rows.map(o => `
     <tr>
-      <td style="padding:8px 10px"><span class="order-id-badge">#${escHtml(String(o.id).slice(-4).toUpperCase())}</span></td>
+      <td style="padding:8px 10px"><span class="order-id-badge">LT-${escHtml(String(o.id).replace(/-/g,'').slice(-6).toUpperCase())}</span></td>
       <td style="padding:8px 10px;font-size:11.5px;color:var(--text-muted)">${escHtml(new Date(o.created_at).toLocaleString('id-ID',{dateStyle:'short',timeStyle:'short'}))}</td>
       <td style="padding:8px 10px;font-size:12.5px">${escHtml(o.item_name || '—')}</td>
       <td style="padding:8px 10px;text-align:center">${escHtml(String(o.qty || 1))}</td>
@@ -727,7 +890,7 @@ window.allOrdersExport = async function () {
   rows.forEach((o, i) => {
     const row = ws.addRow({
       no:                  i + 1,
-      id:                  '#' + String(o.id).slice(-4).toUpperCase(),
+      id:                  'LT-' + String(o.id).replace(/-/g,'').slice(-6).toUpperCase(),
       created_at:          fmtDate(o.created_at),
       item:                o.item_name || '—',
       qty:                 o.qty || 1,

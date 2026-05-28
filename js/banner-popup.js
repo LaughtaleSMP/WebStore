@@ -1,8 +1,8 @@
 /* ════════════════════════════════════════════════════════════════
-   banner-popup.js — Popup Banner Halaman Utama
+   banner-popup.js — Popup Banner Halaman Utama (Multi-image)
    Membaca site_config key='banner_popup' dari Supabase
-   dan menampilkan modal popup kepada pengunjung.
-   
+   Supports carousel with multiple images + nav dots
+
    Cara pakai: tambahkan di index.html (SETELAH supabase client init):
    <script src="js/banner-popup.js" defer></script>
 ════════════════════════════════════════════════════════════════ */
@@ -35,7 +35,17 @@
         let cfg;
         try { cfg = JSON.parse(data.value); } catch (e) { return; }
 
-        if (!cfg.active || !cfg.image_url) return;
+        if (!cfg.active) return;
+
+        // Resolve image list: new images[] or legacy image_url
+        // Each entry: {url, link?}
+        let imgList = [];
+        if (cfg.images && cfg.images.length > 0) {
+          imgList = cfg.images.map(i => typeof i === 'string' ? { url: i } : { url: i.url, link: i.link || '' }).filter(i => i.url);
+        } else if (cfg.image_url) {
+          imgList = [{ url: cfg.image_url, link: cfg.btn_url || '' }];
+        }
+        if (imgList.length === 0) return;
 
         if (cfg.show_once !== false) {
           const shown = sessionStorage.getItem(STORAGE_KEY);
@@ -43,14 +53,14 @@
         }
 
         const delay = Math.max(0, (cfg.delay ?? 1)) * 1000;
-        setTimeout(() => showPopup(cfg), delay);
+        setTimeout(() => showPopup(cfg, imgList), delay);
 
       } catch (e) { /* diam-diam abaikan */ }
     });
   }
 
   /* ── Render popup ── */
-  function showPopup(cfg) {
+  function showPopup(cfg, imgList) {
     if (document.getElementById('banner-popup-overlay')) return;
 
     if (cfg.show_once !== false) {
@@ -65,6 +75,9 @@
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-label', cfg.title || 'Pengumuman');
     overlay.className = 'bp-overlay';
+
+    const multi = imgList.length > 1;
+    let currentIdx = 0;
 
     const titleHtml = cfg.title
       ? `<div class="bp-title">${escHtml(cfg.title)}</div>`
@@ -83,13 +96,27 @@
          </div>`
       : '';
 
+    const dotsHtml = multi
+      ? `<div class="bp-dots">${imgList.map((_, i) =>
+          `<button class="bp-dot${i === 0 ? ' active' : ''}" data-i="${i}" aria-label="Gambar ${i+1}"></button>`
+        ).join('')}</div>`
+      : '';
+
+    const navHtml = multi
+      ? `<button class="bp-nav bp-nav-prev" aria-label="Sebelumnya"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+         <button class="bp-nav bp-nav-next" aria-label="Selanjutnya"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></button>`
+      : '';
+
     overlay.innerHTML = `
       <div class="bp-backdrop"></div>
       <div class="bp-modal" role="document">
         <div class="bp-img-wrap">
-          <img src="${escHtml(cfg.image_url)}" alt="${escHtml(cfg.title || 'Banner')}"
-            class="bp-img" loading="lazy"
+          ${navHtml}
+          ${imgList[0].link ? `<a href="${escHtml(imgList[0].link)}" target="_blank" rel="noopener" id="bp-img-link" style="display:block;line-height:0">` : '<div id="bp-img-link" style="display:block;line-height:0">'}
+          <img src="${escHtml(imgList[0].url)}" alt="${escHtml(cfg.title || 'Banner')}" class="bp-img" loading="lazy"
             onerror="this.closest('.bp-modal').style.display='none'">
+          ${imgList[0].link ? '</a>' : '</div>'}
+          ${dotsHtml}
         </div>
         ${titleHtml}
         ${btnHtml}
@@ -104,19 +131,54 @@
 
     document.body.appendChild(overlay);
 
+    // Carousel logic
+    if (multi) {
+      const img = overlay.querySelector('.bp-img');
+      const imgLink = overlay.querySelector('#bp-img-link');
+      const dots = overlay.querySelectorAll('.bp-dot');
+      const goTo = (idx) => {
+        currentIdx = ((idx % imgList.length) + imgList.length) % imgList.length;
+        const cur = imgList[currentIdx];
+        img.src = cur.url;
+        // Update link
+        if (imgLink) {
+          if (cur.link) {
+            if (imgLink.tagName === 'A') { imgLink.href = cur.link; }
+            else {
+              const a = document.createElement('a'); a.id = 'bp-img-link';
+              a.href = cur.link; a.target = '_blank'; a.rel = 'noopener';
+              a.style.cssText = 'display:block;line-height:0';
+              imgLink.replaceWith(a); a.appendChild(img);
+            }
+          } else if (imgLink.tagName === 'A') {
+            const d = document.createElement('div'); d.id = 'bp-img-link';
+            d.style.cssText = 'display:block;line-height:0';
+            imgLink.replaceWith(d); d.appendChild(img);
+          }
+        }
+        dots.forEach((d, i) => d.classList.toggle('active', i === currentIdx));
+      };
+      overlay.querySelector('.bp-nav-prev')?.addEventListener('click', e => { e.stopPropagation(); goTo(currentIdx - 1); });
+      overlay.querySelector('.bp-nav-next')?.addEventListener('click', e => { e.stopPropagation(); goTo(currentIdx + 1); });
+      dots.forEach(d => d.addEventListener('click', e => { e.stopPropagation(); goTo(parseInt(d.dataset.i)); }));
+
+      // Auto-slide every 5s
+      let autoTimer = setInterval(() => goTo(currentIdx + 1), 5000);
+      overlay.addEventListener('mouseenter', () => clearInterval(autoTimer));
+      overlay.addEventListener('mouseleave', () => { autoTimer = setInterval(() => goTo(currentIdx + 1), 5000); });
+      overlay._autoTimer = autoTimer;
+    }
+
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        overlay.classList.add('bp-visible');
-      });
+      requestAnimationFrame(() => { overlay.classList.add('bp-visible'); });
     });
 
     overlay.querySelector('.bp-backdrop').addEventListener('click', closePopup);
 
     function onKey(e) {
-      if (e.key === 'Escape') {
-        closePopup();
-        document.removeEventListener('keydown', onKey);
-      }
+      if (e.key === 'Escape') { closePopup(); document.removeEventListener('keydown', onKey); }
+      if (multi && e.key === 'ArrowLeft') overlay.querySelector('.bp-nav-prev')?.click();
+      if (multi && e.key === 'ArrowRight') overlay.querySelector('.bp-nav-next')?.click();
     }
     document.addEventListener('keydown', onKey);
 
@@ -128,6 +190,7 @@
   function closePopup() {
     const overlay = document.getElementById('banner-popup-overlay');
     if (!overlay) return;
+    if (overlay._autoTimer) clearInterval(overlay._autoTimer);
     overlay.classList.remove('bp-visible');
     overlay.classList.add('bp-closing');
     setTimeout(() => { overlay.remove(); }, 320);
@@ -293,6 +356,31 @@
       @media (prefers-reduced-motion: reduce) {
         .bp-overlay, .bp-modal { transition: none !important; }
       }
+
+      /* ── Carousel nav ── */
+      .bp-nav {
+        position:absolute; top:50%; transform:translateY(-50%); z-index:10;
+        width:32px; height:32px; border-radius:50%; border:1px solid rgba(255,255,255,.2);
+        background:rgba(0,0,0,.5); color:#fff; cursor:pointer;
+        display:flex; align-items:center; justify-content:center;
+        transition:background .15s, border-color .15s;
+        opacity:.7;
+      }
+      .bp-nav:hover { opacity:1; background:rgba(168,85,247,.5); border-color:rgba(168,85,247,.6); }
+      .bp-nav-prev { left:8px; }
+      .bp-nav-next { right:8px; }
+      .bp-dots {
+        position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
+        display:flex; gap:6px; z-index:10;
+      }
+      .bp-dot {
+        width:8px; height:8px; border-radius:50%; border:1px solid rgba(255,255,255,.4);
+        background:rgba(255,255,255,.15); cursor:pointer; padding:0;
+        transition:background .15s, border-color .15s, transform .15s;
+      }
+      .bp-dot.active { background:#a855f7; border-color:#a855f7; transform:scale(1.25); }
+      .bp-dot:hover { background:rgba(255,255,255,.4); }
+      .bp-img-wrap { position:relative; }
     `;
     document.head.appendChild(s);
   }

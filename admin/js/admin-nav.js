@@ -7,24 +7,28 @@ function showSection(name, el) {
   if (el)  el.classList.add('active');
 
   const labels = {
+    'dashboard':        'Dashboard',
     'server':           'Info Server',
     'maintenance':      'Maintenance',
-    'motd':             'MOTD / Pengumuman',
     'season':           'Season & World',
     'admins-wa':        'Admin WhatsApp',
+    'banner':           'Banner Popup',
     'server-status':    'Server Status Config',
     'shop':             'Shop Items',
     'wa-template':      'Format Pesan WA',
     'orders':           'Pesanan Masuk',
     'all-orders':       'Semua Pesanan',
-    'finance':          'Laporan Keuangan',
-    'finance-v2':       'Manajemen Keuangan',
+    'finance-v2':       'Keuangan',
     'access-requests':  'Permintaan Akses',
     'manage-admins':    'Manajemen Admin',
     'activity-log':     'Log Aktivitas',
-    'gem-topup':         'Topup Gem / Koin',
+    'gem-topup':        'Topup Gem / Koin',
   };
   document.getElementById('topbar-section').textContent = labels[name] || name;
+
+  if (name === 'dashboard' && typeof window.dashboardLoad === 'function') {
+    window.dashboardLoad();
+  }
 
   if (name === 'access-requests' && typeof window.loadAccessRequests === 'function') {
     window.loadAccessRequests();
@@ -71,7 +75,7 @@ window._ordersInitNotifBar = function () {
   btn.id        = 'orders-notif-btn';
   btn.className = 'btn-ghost';
   btn.style.cssText = 'font-size:11.5px;padding:5px 10px;display:inline-flex;align-items:center;gap:4px;margin-left:4px';
-  btn.textContent = '🔔 Aktifkan Notifikasi';
+  btn.textContent = 'Aktifkan Notifikasi';
   btn.onclick     = () => {
     if (typeof window._ordersRequestNotif === 'function') window._ordersRequestNotif();
   };

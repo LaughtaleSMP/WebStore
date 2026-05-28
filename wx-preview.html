@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#060a10">
+<title>WX Preview — Atmosphere Test Bench</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#060a10;font-family:'JetBrains Mono',ui-monospace,monospace;color:#cbd5e1}
+canvas{display:block;width:100vw;height:100vh}
+.hud{position:fixed;top:14px;left:14px;right:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;z-index:10;pointer-events:none}
+.hud > *{pointer-events:auto}
+.btn{background:rgba(15,23,42,.72);border:1px solid rgba(255,255,255,.10);color:#e2e8f0;padding:7px 12px;border-radius:6px;font:600 11px/1 'JetBrains Mono',monospace;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:background .15s ease,border-color .15s ease}
+.btn:hover{background:rgba(30,41,59,.85);border-color:rgba(255,255,255,.18)}
+.btn.active{background:rgba(99,102,241,.25);border-color:rgba(165,180,252,.45);color:#fff}
+.group{display:flex;gap:0;border:1px solid rgba(255,255,255,.10);border-radius:6px;overflow:hidden;background:rgba(15,23,42,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.group .btn{border:none;border-radius:0;border-right:1px solid rgba(255,255,255,.06);background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
+.group .btn:last-child{border-right:none}
+.slider{display:flex;align-items:center;gap:8px;padding:6px 12px;background:rgba(15,23,42,.62);border:1px solid rgba(255,255,255,.10);border-radius:6px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:#94a3b8}
+.slider input{width:120px;accent-color:#a78bfa}
+.slider b{color:#e2e8f0;min-width:32px;text-align:right;font-variant-numeric:tabular-nums}
+.info{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.30);font-size:11px;letter-spacing:.1em;pointer-events:none;white-space:nowrap;background:rgba(6,10,16,.55);padding:6px 14px;border-radius:6px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.back{position:fixed;top:14px;right:14px;z-index:11}
+@media(max-width:520px){
+  .slider input{width:90px}
+  .hud{gap:6px}
+  .btn{padding:6px 9px;font-size:10px}
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="hud">
+  <div class="group" role="group" aria-label="Mode cuaca">
+    <button class="btn" data-mode="clear">Cerah</button>
+    <button class="btn active" data-mode="rain">Hujan</button>
+    <button class="btn" data-mode="thunder">Petir</button>
+  </div>
+  <div class="slider">
+    <span>INTENSITAS</span>
+    <input type="range" id="int" min="0.1" max="1" step="0.05" value="0.6" aria-label="Intensitas cuaca">
+    <b id="intLbl">0.60</b>
+  </div>
+  <div class="slider" id="hint" style="font-size:9.5px;color:#7dd3fc">tap layar = picu petir · geser = arah</div>
+</div>
+
+<a href="monitor.html" class="btn back">← Monitor</a>
+
+<div class="info" id="info">Mode: HUJAN · klik area canvas untuk interaksi</div>
+
+<script src="js/atmo-canvas.js"></script>
+<script>
+(function(){
+  var canvas = document.getElementById('c');
+  var fx = window.AtmoCanvas(canvas);
+  var btns = document.querySelectorAll('.btn[data-mode]');
+  var slider = document.getElementById('int');
+  var intLbl = document.getElementById('intLbl');
+  var info = document.getElementById('info');
+  var hint = document.getElementById('hint');
+  var mode = 'rain';
+
+  function applyMode(m){
+    mode = m;
+    btns.forEach(function(b){ b.classList.toggle('active', b.dataset.mode === m); });
+    fx.setMode(m);
+    info.textContent = 'Mode: ' + m.toUpperCase() + (m === 'thunder' ? ' · tap canvas untuk picu petir' : m === 'rain' ? ' · tap untuk cycle intensitas' : ' · cuaca cerah');
+    hint.style.display = m === 'thunder' ? '' : 'none';
+  }
+  btns.forEach(function(b){ b.addEventListener('click', function(){ applyMode(b.dataset.mode); }); });
+
+  slider.addEventListener('input', function(){
+    var v = parseFloat(slider.value);
+    fx.setIntensity(v);
+    intLbl.textContent = v.toFixed(2);
+  });
+
+  // Canvas interactions
+  // Rain mode: tap → cycle intensitas (0.3 → 0.6 → 1.0)
+  // Thunder mode: tap → picu petir di posisi tap; geser → bias arah auto-bolt
+  var rainCycle = [0.3, 0.6, 1.0];
+  var rainIdx = 1;
+  canvas.addEventListener('click', function(e){
+    var rect = canvas.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    if(mode === 'thunder'){
+      fx.triggerBolt(x);
+    } else if(mode === 'rain'){
+      rainIdx = (rainIdx + 1) % rainCycle.length;
+      slider.value = rainCycle[rainIdx];
+      slider.dispatchEvent(new Event('input'));
+    }
+  });
+  canvas.addEventListener('pointermove', function(e){
+    if(mode !== 'thunder') return;
+    var rect = canvas.getBoundingClientRect();
+    fx.setPointer(e.clientX - rect.left);
+  });
+  canvas.addEventListener('pointerleave', function(){ fx.setPointer(null); });
+
+  // Init
+  fx.setIntensity(parseFloat(slider.value));
+  applyMode('rain');
+
+  // Keyboard shortcut: 1=clear, 2=rain, 3=thunder, space=trigger bolt
+  document.addEventListener('keydown', function(e){
+    if(e.key === '1') applyMode('clear');
+    else if(e.key === '2') applyMode('rain');
+    else if(e.key === '3') applyMode('thunder');
+    else if(e.key === ' ' && mode === 'thunder'){ e.preventDefault(); fx.triggerBolt(); }
+  });
+})();
+</script>
+</body>
+</html>

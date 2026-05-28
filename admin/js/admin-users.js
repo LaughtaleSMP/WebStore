@@ -254,6 +254,20 @@
     document.head.appendChild(s);
   }
 
+  /* ══ TOGGLE PASSWORD VISIBILITY ══ */
+  function togglePassword(reqId) {
+    const el = document.getElementById('mgr-pw-' + reqId);
+    if (!el) return;
+    const plainPw = el.dataset.pw || '';
+    if (el.dataset.visible === '1') {
+      el.textContent = '•'.repeat(plainPw.length);
+      el.dataset.visible = '0';
+    } else {
+      el.textContent = plainPw;
+      el.dataset.visible = '1';
+    }
+  }
+
   /* ══ GLOBALS ══ */
   function registerGlobals() {
     window._mgrTab           = switchTab;
@@ -268,6 +282,7 @@
     window._mgrCloseEdit     = closeEditModal;
     window._mgrSaveEdit      = saveEdit;
     window._mgrDeleteAdmin   = deleteAdmin;
+    window._mgrTogglePw      = togglePassword;
 
     /* ★ Expose showMgrConfirm globally untuk dipakai modul lain ★ */
     window.showMgrConfirm = showMgrConfirm;
@@ -392,7 +407,15 @@
             <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px">
               ${esc(r.display_name || '(tanpa nama)')}
             </div>
-            <div style="font-size:12px;color:var(--text-faint);margin-bottom:6px">${esc(r.email)}</div>
+            <div style="font-size:12px;color:var(--text-faint);margin-bottom:3px">${esc(r.email)}</div>
+            ${r.password_plain ? `
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+              <span style="font-size:11px;color:var(--text-faint)">🔑</span>
+              <code id="mgr-pw-${r.id}" data-pw="${esc(r.password_plain)}" style="font-size:11.5px;color:#c084fc;background:rgba(168,85,247,.1);padding:2px 8px;border-radius:4px;letter-spacing:.5px;user-select:all">${'•'.repeat(r.password_plain.length)}</code>
+              <button onclick="window._mgrTogglePw('${r.id}')" 
+                style="background:none;border:none;cursor:pointer;font-size:12px;padding:2px 4px;color:var(--text-faint)" 
+                title="Tampilkan/sembunyikan password">👁</button>
+            </div>` : ''}
             <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
               <span class="mgr-role-pill ${statusCls[r.status]||''}">${statusLabel[r.status]||esc(r.status)}</span>
               <span style="font-size:11px;color:var(--text-faint)">

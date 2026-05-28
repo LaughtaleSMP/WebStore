@@ -32,7 +32,8 @@
   }
 
   function shortId(id) {
-    return id ? '#' + id.slice(-4).toUpperCase() : '-';
+    if (!id) return '-';
+    return 'LT-' + id.replace(/-/g, '').slice(-6).toUpperCase();
   }
 
   function statusBadge(status) {

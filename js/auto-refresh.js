@@ -1,91 +1,111 @@
 /* ══════════════════════════════════════════════════════════════
-   auto-refresh.js — Universal auto-refresh for all dashboard pages
+   auto-refresh.js — Smart auto-update for all dashboard pages
 
-   FEATURES:
-   - Auto-clear localStorage cache & force re-fetch on interval
-   - Auto-reload entire page every 30 min to pick up code changes
-   - Works on mobile without manual hard refresh
-   - Version-based reload: if PAGE_VERSION changes, force reload
+   STRATEGY:
+   - Cek Service Worker update saat tab kembali aktif
+   - Jika ada SW baru → langsung activate + reload 1x
+   - Version-based reload: bump PAGE_VERSION → force reload on all clients
+   - Tidak lagi hard reload setiap 30 menit (bikin UX buruk)
+   - Tetap clear data cache saat kembali dari background > 5 menit
 
    USAGE:
      <script src="js/auto-refresh.js"></script>
      (put AFTER the page's own script)
-
-   COST:
-   - Memory: 2 timers (setInterval)
-   - CPU: negligible (1 check per second for countdown)
-   - Network: 0 extra requests (only triggers existing fetch logic)
    ══════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
 
   // ── Config ──
-  var PAGE_VERSION = '2026.05.07a';       // bump this to force reload on all clients
-  var AUTO_RELOAD_MS = 30 * 60 * 1000;    // full page reload every 30 min
+  var PAGE_VERSION = '2026.05.24a';       // bump this to force reload on all clients
   var VER_KEY = '_page_ver';
-  var RELOAD_KEY = '_last_reload';
+  var SW_CHECK_INTERVAL = 5 * 60 * 1000;  // cek SW update tiap 5 menit
 
   // ── Version check: force reload if code was updated ──
   try {
     var savedVer = localStorage.getItem(VER_KEY);
     if (savedVer && savedVer !== PAGE_VERSION) {
-      // Version changed — clear all caches and force reload
-      var keys = [];
-      for (var i = 0; i < localStorage.length; i++) {
-        var k = localStorage.key(i);
-        if (k && (k.indexOf('eco_') === 0 || k.indexOf('mon_') === 0)) keys.push(k);
-      }
-      for (var j = 0; j < keys.length; j++) localStorage.removeItem(keys[j]);
+      // Version changed — clear data caches and force reload
+      _clearDataCaches();
       localStorage.setItem(VER_KEY, PAGE_VERSION);
-      location.reload();
+      // Jika ada SW, unregister dulu agar cache lama terhapus
+      _forceSwUpdate(function () { location.reload(); });
       return;
     }
     localStorage.setItem(VER_KEY, PAGE_VERSION);
   } catch (e) {}
 
-  // ── Auto page reload every 30 min ──
-  // On mobile, users can't hard-refresh, so we auto-reload to pick up
-  // any code changes deployed to the hosting.
-  try {
-    var lastReload = parseInt(localStorage.getItem(RELOAD_KEY)) || 0;
-    var sinceReload = Date.now() - lastReload;
-    var nextReload = Math.max(60000, AUTO_RELOAD_MS - sinceReload); // at least 1 min
+  // ── Service Worker update checker ──
+  // Cek berkala apakah ada SW baru. Jika ada, langsung aktifkan dan reload.
+  function _checkSwUpdate() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      navigator.serviceWorker.getRegistration().then(function (reg) {
+        if (!reg) return;
+        reg.update().then(function () {
+          // Jika ada waiting worker, kirim skip_waiting
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        }).catch(function () {});
 
-    setTimeout(function () {
-      try { localStorage.setItem(RELOAD_KEY, String(Date.now())); } catch (e) {}
-      // Clear data caches before reload so fresh data is fetched
-      try {
-        for (var i = localStorage.length - 1; i >= 0; i--) {
-          var k = localStorage.key(i);
-          if (k && (k.indexOf('eco_') === 0 || k.indexOf('mon_') === 0)) localStorage.removeItem(k);
-        }
-      } catch (e) {}
-      location.reload();
-    }, nextReload);
+        // Listen untuk controllerchange = SW baru aktif
+        var reloading = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          if (reloading) return;
+          reloading = true;
+          _clearDataCaches();
+          location.reload();
+        });
+      });
+    } catch (e) {}
+  }
 
-    // Mark this reload
-    if (!lastReload) {
-      try { localStorage.setItem(RELOAD_KEY, String(Date.now())); } catch (e) {}
-    }
-  } catch (e) {}
+  // Cek SW update saat load dan berkala
+  _checkSwUpdate();
+  setInterval(_checkSwUpdate, SW_CHECK_INTERVAL);
 
-  // ── visibilitychange: force fresh data when returning to tab ──
-  // (handles mobile tab switching / screen lock)
+  // ── visibilitychange: cek update + fresh data saat kembali ke tab ──
   var _lastVisible = Date.now();
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') {
       var away = Date.now() - _lastVisible;
-      // If away > 5 min, clear cache so next fetch gets fresh data
+      // Kembali dari background > 5 menit → clear data cache + cek SW update
       if (away > 300000) {
-        try {
-          for (var i = localStorage.length - 1; i >= 0; i--) {
-            var k = localStorage.key(i);
-            if (k && (k.indexOf('eco_') === 0 || k.indexOf('mon_') === 0)) localStorage.removeItem(k);
-          }
-        } catch (e) {}
+        _clearDataCaches();
+        _checkSwUpdate();
       }
     } else {
       _lastVisible = Date.now();
     }
   });
+
+  // ── Helper: clear data caches (localStorage eco_*/mon_*) ──
+  function _clearDataCaches() {
+    try {
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var k = localStorage.key(i);
+        if (k && (k.indexOf('eco_') === 0 || k.indexOf('mon_') === 0)) localStorage.removeItem(k);
+      }
+    } catch (e) {}
+  }
+
+  // ── Helper: force SW update + callback ──
+  function _forceSwUpdate(callback) {
+    if (!('serviceWorker' in navigator)) { callback(); return; }
+    try {
+      navigator.serviceWorker.getRegistration().then(function (reg) {
+        if (!reg) { callback(); return; }
+        // Hapus semua cache lama
+        caches.keys().then(function (keys) {
+          return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+        }).then(function () {
+          // Update SW
+          reg.update().then(function () {
+            if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            callback();
+          }).catch(function () { callback(); });
+        }).catch(function () { callback(); });
+      }).catch(function () { callback(); });
+    } catch (e) { callback(); }
+  }
 })();

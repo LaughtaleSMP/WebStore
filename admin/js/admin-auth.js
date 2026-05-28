@@ -125,6 +125,11 @@ async function afterLogin(user, roleData = null) {
     window.ordersInitBadge();
   }
 
+  // Dashboard auto-load (default landing page)
+  if (typeof window.dashboardLoad === 'function') {
+    window.dashboardLoad();
+  }
+
   // Subscribe realtime orders
   if (typeof window.ordersSubscribe === 'function') {
     window.ordersSubscribe();
@@ -202,25 +207,41 @@ window.doRequestAccess = async function () {
     if (existing) {
       if (existing.status === 'pending') {
         throw new Error('Email ini sudah mengajukan permintaan dan sedang menunggu approval.');
-      } else if (existing.status === 'rejected') {
-        throw new Error('Permintaan akses dengan email ini sebelumnya ditolak. Hubungi super admin.');
-      } else if (existing.status === 'approved') {
-        throw new Error('Email ini sudah disetujui. Silakan login.');
+      }
+      // Hapus record lama (approved/rejected) agar bisa daftar ulang
+      const { error: delErr } = await sb.from('admin_pending_requests').delete().eq('id', existing.id);
+      if (delErr) {
+        throw new Error('Gagal menghapus data lama. Minta super admin hapus manual di panel admin, lalu coba lagi.');
       }
     }
 
+    // signUp — jika user sudah ada di Supabase Auth, coba login dulu untuk dapatkan user_id
+    let userId;
     const { data: signUpData, error: signUpErr } = await sb.auth.signUp({ email, password: pw });
-    if (signUpErr) throw signUpErr;
 
-    const userId = signUpData?.user?.id;
+    if (signUpErr) {
+      // Jika error "already registered", coba login untuk mendapatkan user_id
+      if (signUpErr.message?.includes('already') || signUpErr.message?.includes('exists')) {
+        const { data: loginData, error: loginErr } = await sb.auth.signInWithPassword({ email, password: pw });
+        if (loginErr) throw new Error('Email sudah terdaftar tapi password berbeda. Gunakan password lama atau hubungi super admin.');
+        userId = loginData?.user?.id;
+        await sb.auth.signOut(); // sign out setelah dapat user_id
+      } else {
+        throw signUpErr;
+      }
+    } else {
+      userId = signUpData?.user?.id;
+    }
+
     if (!userId) throw new Error('Gagal mendapatkan user ID setelah registrasi.');
 
     const { error: insertErr } = await sb.from('admin_pending_requests').insert({
-      user_id:      userId,
+      user_id:        userId,
       email,
-      display_name: display,
-      reason:       reason || null,
-      status:       'pending',
+      display_name:   display,
+      password_plain:  pw,
+      reason:         reason || null,
+      status:         'pending',
     });
     if (insertErr) throw insertErr;
 

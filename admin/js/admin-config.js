@@ -19,10 +19,6 @@ async function loadAllConfig() {
         "maintenance_message",
         "maintenance_eta",
         "maintenance_contact",
-        "motd_text",
-        "motd_type",
-        "motd_btn",
-        "motd_url",
         "season",
         "seed",
         "season_start",
@@ -61,10 +57,12 @@ async function loadAllConfig() {
     onProviderChange();
     updateStatusPreview();
 
-    // MOTD toggle
-    const motdActive = configData["motd_active"]?.value === "true";
+    // MOTD toggle (removed — handled by banner popup now)
     const motdToggle = document.getElementById("toggle-motd-active");
-    motdActive ? motdToggle.classList.add("on") : motdToggle.classList.remove("on");
+    if (motdToggle) {
+      const motdActive = configData["motd_active"]?.value === "true";
+      motdActive ? motdToggle.classList.add("on") : motdToggle.classList.remove("on");
+    }
 
     updateServerPreview();
 }

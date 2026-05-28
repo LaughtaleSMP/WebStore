@@ -16,7 +16,10 @@
     let shopMeta = {}; // {title, subtitle, admins, gemAdmins} dari shop_config
     let editingId = null; // id item yang sedang di-edit (null = tambah baru)
     let dirty = false;
+    let formImages = []; // current images array for the item being edited
+    let formAssignedAdmins = []; // per-item admin assignment [{name,number},...]
     let dirtyMeta = false;
+    let storageBucketOk = false; // apakah bucket shop-images sudah siap
 
     function getSb() {
         return window._adminSb;
@@ -267,6 +270,49 @@
             <input id="ef-max-qty" type="number" min="1" placeholder="99">
           </div>
 
+          <!-- Admin yang handle item ini -->
+          <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+            <label style="font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:6px;margin-bottom:4px"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0"><path d="M17 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2z"/><path d="M12 18h.01"/></svg> Admin yang Handle</label>
+            <div style="font-size:11px;color:var(--text-faint);margin-bottom:10px">
+              Centang admin yang akan menerima order item ini. Jika lebih dari satu, sistem akan acak otomatis.<br>
+              Kosongkan = pakai admin global (dari tab General).
+            </div>
+            <div id="ef-assigned-admins" style="display:flex;flex-direction:column;gap:6px"></div>
+          </div>
+
+          <!-- Foto Item -->
+          <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+            <label style="font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:6px;margin-bottom:10px"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto Item</label>
+            <div id="ef-images-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>
+            <div id="ef-img-drop"
+              style="border:2px dashed var(--border2);border-radius:10px;padding:20px 16px;
+                     text-align:center;cursor:pointer;transition:border-color .2s,background .2s;
+                     background:var(--surface2)"
+              onclick="document.getElementById('ef-img-file').click()"
+              ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-muted)'"
+              ondragleave="this.style.borderColor='var(--border2)';this.style.background='var(--surface2)'"
+              ondrop="window._shopImgDrop(event)">
+              <div style="margin-bottom:6px;opacity:.4"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+              <div style="font-size:12px;color:var(--text-muted)">Klik atau drag & drop gambar</div>
+              <div style="font-size:11px;color:var(--text-faint);margin-top:3px">JPG / PNG / WebP / GIF, maks 32 MB per file</div>
+              <input type="file" id="ef-img-file" accept="image/*,.gif" multiple style="display:none"
+                onchange="window._shopImgUpload(this.files);this.value=''">
+            </div>
+            <div id="ef-img-progress" style="display:none;margin-top:8px">
+              <div style="background:var(--surface3);border-radius:20px;height:5px;overflow:hidden">
+                <div id="ef-img-bar" style="height:100%;background:var(--accent);width:0%;transition:width .3s;border-radius:20px"></div>
+              </div>
+              <div id="ef-img-status" style="font-size:11px;color:var(--text-muted);margin-top:4px">Mengupload…</div>
+            </div>
+            <div class="field" style="margin-top:8px">
+              <label style="font-size:11px">Atau tambah URL gambar langsung</label>
+              <div style="display:flex;gap:6px">
+                <input id="ef-img-url" type="url" placeholder="https://…" style="flex:1">
+                <button class="btn-ghost" style="font-size:11px;white-space:nowrap" onclick="window._shopImgAddUrl()">+ Tambah</button>
+              </div>
+            </div>
+          </div>
+
         </div>
         <div class="scfg-modal-footer">
           <button class="btn-ghost" onclick="window._shopCloseForm()">Batal</button>
@@ -387,6 +433,18 @@
         window._shopAddAdmin = addAdminRow;
         window._shopRemoveAdmin = removeAdminRow;
         window._shopAdminChange = adminChange;
+        window._shopImgUpload = imgUploadFile;
+        window._shopImgDrop = imgHandleDrop;
+        window._shopImgAddUrl = imgAddUrl;
+        window._shopImgRemove = imgRemove;
+        window._shopImgMove = imgMove;
+        window._shopRetryStorage = async function() {
+            const sb = getSb();
+            if (!sb) { toast('Supabase belum siap.', 'error'); return; }
+            toast('Mengecek ulang storage…');
+            await checkStorageBucket(sb);
+            if (storageBucketOk) toast('Storage siap! ✅ Bucket shop-images ditemukan.');
+        };
     }
 
     /* ════════════════════════════════════════════
@@ -434,8 +492,85 @@
         dirtyMeta = false;
         updateMetaBtn();
 
+        /* ── Cek apakah bucket storage sudah siap ── */
+        await checkStorageBucket(sb);
+
         loadEl.style.display = "none";
         switchTab("items", document.querySelector('.scfg-tab[data-tab="items"]'));
+    }
+
+    /* ════════════════════════════════════════════
+     CHECK STORAGE BUCKET — auto-detect apakah 'shop-images' sudah ada
+  ════════════════════════════════════════════ */
+    async function checkStorageBucket(sb) {
+        try {
+            const { data, error } = await sb.storage.from('shop-images').list('', { limit: 1 });
+            if (error) {
+                const msg = (error.message || '').toLowerCase();
+                if (msg.includes('bucket') || msg.includes('not found') || msg.includes('does not exist')) {
+                    storageBucketOk = false;
+                    showStorageWarning();
+                    return;
+                }
+                // Policy error = bucket exists tapi policy belum di-set
+                if (msg.includes('policy') || msg.includes('permission') || msg.includes('denied') || msg.includes('security')) {
+                    storageBucketOk = false;
+                    showStoragePolicyWarning();
+                    return;
+                }
+            }
+            storageBucketOk = true;
+            hideStorageWarning();
+        } catch (e) {
+            storageBucketOk = false;
+            showStorageWarning();
+        }
+    }
+
+    function showStorageWarning() {
+        hideStorageWarning();
+        const banner = document.createElement('div');
+        banner.id = 'shop-storage-warning';
+        banner.style.cssText = 'background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12.5px;color:#fca5a5;line-height:1.7;';
+        banner.innerHTML = `
+            <div style="display:flex;align-items:flex-start;gap:10px">
+                <span style="font-size:1.3rem;flex-shrink:0">⚠️</span>
+                <div>
+                    <strong style="color:#f87171;font-size:13px">Storage Belum Siap — Upload Foto Tidak Akan Berfungsi</strong><br>
+                    Bucket <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px">shop-images</code> belum dibuat di Supabase Storage.<br>
+                    <strong>Cara fix:</strong><br>
+                    1. Buka <a href="https://supabase.com/dashboard/project/jlxtnbnrirxhwuyqjlzw/sql/new" target="_blank" style="color:#4a8fff;text-decoration:underline">Supabase SQL Editor</a><br>
+                    2. Paste dan jalankan isi file <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px">supabase-setup.sql</code><br>
+                    3. Atau buat manual: Storage → New Bucket → nama <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px">shop-images</code> → centang <strong>Public</strong><br>
+                    <button onclick="window._shopRetryStorage()" style="margin-top:8px;padding:5px 14px;border-radius:7px;border:1px solid rgba(74,143,255,0.3);background:rgba(74,143,255,0.1);color:#4a8fff;font-size:12px;font-weight:600;cursor:pointer">🔄 Cek Ulang</button>
+                </div>
+            </div>`;
+        const tabItems = document.getElementById('shop-tab-items');
+        if (tabItems) tabItems.prepend(banner);
+    }
+
+    function showStoragePolicyWarning() {
+        hideStorageWarning();
+        const banner = document.createElement('div');
+        banner.id = 'shop-storage-warning';
+        banner.style.cssText = 'background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12.5px;color:#fbbf24;line-height:1.7;';
+        banner.innerHTML = `
+            <div style="display:flex;align-items:flex-start;gap:10px">
+                <span style="font-size:1.3rem;flex-shrink:0">🔒</span>
+                <div>
+                    <strong style="color:#fbbf24;font-size:13px">RLS Policy Belum Lengkap</strong><br>
+                    Bucket <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px">shop-images</code> ada, tapi policy upload belum diatur.<br>
+                    <strong>Cara fix:</strong> Jalankan file <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px">supabase-setup.sql</code> di <a href="https://supabase.com/dashboard/project/jlxtnbnrirxhwuyqjlzw/sql/new" target="_blank" style="color:#4a8fff;text-decoration:underline">SQL Editor</a><br>
+                    <button onclick="window._shopRetryStorage()" style="margin-top:8px;padding:5px 14px;border-radius:7px;border:1px solid rgba(74,143,255,0.3);background:rgba(74,143,255,0.1);color:#4a8fff;font-size:12px;font-weight:600;cursor:pointer">🔄 Cek Ulang</button>
+                </div>
+            </div>`;
+        const tabItems = document.getElementById('shop-tab-items');
+        if (tabItems) tabItems.prepend(banner);
+    }
+
+    function hideStorageWarning() {
+        const el = document.getElementById('shop-storage-warning');
+        if (el) el.remove();
     }
 
     /* ════════════════════════════════════════════
@@ -504,9 +639,18 @@
                 const activeTag =
                     item.active === false ? `<span style="color:var(--text-faint)">👁 Tersembunyi</span>` : "";
 
+                const thumbUrl = Array.isArray(item.images) && item.images[0];
+                const imgCount = Array.isArray(item.images) ? item.images.length : 0;
+                const thumbHtml = thumbUrl
+                    ? `<div style="position:relative;width:44px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0;border:1px solid var(--border);background:var(--surface3)">
+                         <img src="${esc(thumbUrl)}" alt="" style="width:100%;height:100%;object-fit:cover">
+                         ${imgCount > 1 ? `<div style="position:absolute;bottom:1px;right:1px;background:rgba(0,0,0,.7);color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:4px;line-height:1.2">${imgCount}</div>` : ''}
+                       </div>`
+                    : `<div class="scfg-item-emoji">${esc(item.emoji || "🛒")}</div>`;
+
                 return `
         <div class="scfg-item-row${item.active === false ? " inactive" : ""}" id="srow-${item.id}">
-          <div class="scfg-item-emoji">${esc(item.emoji || "🛒")}</div>
+          ${thumbHtml}
           <div class="scfg-item-info">
             <div class="scfg-item-name">${esc(item.name || "(tanpa nama)")}</div>
             <div class="scfg-item-meta">
@@ -609,6 +753,10 @@
         setToggle("ef-needs-username", item.needs_username !== false);
         setToggle("ef-can-multi", item.can_buy_multiple !== false);
         document.getElementById("ef-max-qty").value = item.max_quantity || "";
+        formImages = Array.isArray(item.images) ? [...item.images] : [];
+        formAssignedAdmins = Array.isArray(item.assigned_admins) ? [...item.assigned_admins] : [];
+        renderFormImages();
+        renderAssignedAdmins();
         toggleMaxQty();
         openModal();
     }
@@ -625,8 +773,10 @@
             "ef-desc",
             "ef-features",
             "ef-max-qty",
+            "ef-img-url",
         ].forEach(id => {
-            document.getElementById(id).value = "";
+            const el = document.getElementById(id);
+            if (el) el.value = "";
         });
         document.getElementById("ef-badge-color").value = "";
         document.getElementById("ef-stock").value = "Tersedia";
@@ -634,6 +784,10 @@
         setToggle("ef-requires-design", false);
         setToggle("ef-needs-username", true);
         setToggle("ef-can-multi", true);
+        formImages = [];
+        formAssignedAdmins = [];
+        renderFormImages();
+        renderAssignedAdmins();
         toggleMaxQty();
     }
 
@@ -656,10 +810,32 @@
             return;
         }
 
+        /* Cek duplikat nama (hanya saat tambah baru) */
+        if (editingId === null) {
+            const { data: dup } = await sb
+                .from("shop_items")
+                .select("id")
+                .ilike("name", name)
+                .maybeSingle();
+            if (dup) {
+                toast("Item dengan nama \"" + name + "\" sudah ada.", "error");
+                return;
+            }
+        }
+
         const canMulti = document.getElementById("ef-can-multi").classList.contains("on");
 
-        /* Tentukan id: edit = id lama, tambah baru = max(id)+1 */
-        const newId = editingId !== null ? editingId : items.length ? Math.max(...items.map(i => i.id || 0)) + 1 : 1;
+        /* Tentukan id: edit = id lama, tambah baru = DB max(id)+1 untuk hindari race condition */
+        let newId = editingId;
+        if (editingId === null) {
+            const { data: maxRow } = await sb
+                .from("shop_items")
+                .select("id")
+                .order("id", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            newId = (maxRow && maxRow.id ? maxRow.id : 0) + 1;
+        }
 
         const row = {
             id: newId,
@@ -683,7 +859,8 @@
             needs_username: document.getElementById("ef-needs-username").classList.contains("on"),
             can_buy_multiple: canMulti,
             max_quantity: canMulti ? Number(document.getElementById("ef-max-qty").value) || 99 : 1,
-            images: editingId !== null ? items.find(i => i.id === editingId)?.images || [] : [],
+            images: formImages.length ? formImages : [],
+            assigned_admins: formAssignedAdmins.length ? formAssignedAdmins : [],
         };
 
         const saveBtn = document.getElementById("ef-save-btn");
@@ -700,6 +877,24 @@
             return;
         }
 
+        /* Audit trail: log perubahan harga & item baru */
+        if (editingId !== null) {
+            const prevItem = items.find(i => i.id === editingId);
+            if (prevItem && prevItem.price !== row.price) {
+                window.logAdminActivity?.('shop_price_change', 'shop_item', row.id, {
+                    item: row.name,
+                    old_price: 'Rp ' + Number(prevItem.price || 0).toLocaleString('id-ID'),
+                    new_price: 'Rp ' + Number(row.price).toLocaleString('id-ID'),
+                });
+            }
+        } else {
+            window.logAdminActivity?.('shop_item_create', 'shop_item', row.id, {
+                item: row.name,
+                price: 'Rp ' + Number(row.price).toLocaleString('id-ID'),
+                category: row.category,
+            });
+        }
+
         /* Update local state */
         if (editingId !== null) {
             const idx = items.findIndex(i => i.id === editingId);
@@ -712,26 +907,43 @@
 
         closeForm();
         renderItemList();
-        toast(editingId !== null ? "Item berhasil diperbarui ✅" : "Item baru berhasil ditambahkan ✅");
+        toast(editingId !== null ? "Item berhasil diperbarui" : "Item baru berhasil ditambahkan");
     }
 
     /* ── Hapus item dari Supabase ── */
     async function deleteItem(id) {
         const item = items.find(i => i.id === id);
-        if (!confirm(`Hapus item "${item?.name}"?\nTindakan ini tidak bisa dibatalkan.`)) return;
-        const sb = getSb();
-        if (!sb) {
-            toast("Supabase belum siap.", "error");
-            return;
+        const itemName = item ? item.name : 'item';
+
+        function _doDelete() {
+            const sb = getSb();
+            if (!sb) {
+                toast("Supabase belum siap.", "error");
+                return;
+            }
+            sb.from("shop_items").delete().eq("id", id).then(function (res) {
+                if (res.error) {
+                    toast("Gagal hapus: " + res.error.message, "error");
+                    return;
+                }
+                items = items.filter(i => i.id !== id);
+                renderItemList();
+                toast("Item \"" + itemName + "\" dihapus.");
+            });
         }
-        const { error } = await sb.from("shop_items").delete().eq("id", id);
-        if (error) {
-            toast("Gagal hapus: " + error.message, "error");
-            return;
+
+        if (typeof window.showMgrConfirm === 'function') {
+            window.showMgrConfirm({
+                title: 'Hapus Item',
+                message: 'Yakin ingin menghapus <strong>' + escHtml(itemName) + '</strong>?<br><small style="color:var(--text-faint)">Tindakan ini tidak bisa dibatalkan.</small>',
+                confirmText: 'Hapus',
+                danger: true,
+                onConfirm: _doDelete,
+            });
+        } else {
+            if (!confirm('Hapus item "' + itemName + '"?\nTindakan ini tidak bisa dibatalkan.')) return;
+            _doDelete();
         }
-        items = items.filter(i => i.id !== id);
-        renderItemList();
-        toast("Item dihapus.");
     }
 
     /* ── Pindah urutan sort_order ── */
@@ -835,6 +1047,56 @@
     }
 
     /* ════════════════════════════════════════════
+     PER-ITEM ADMIN ASSIGNMENT — checkbox list
+  ════════════════════════════════════════════ */
+    function _getAllAdminsFlat() {
+        const all = [];
+        const seen = new Set();
+        for (const a of [...(shopMeta.admins || []), ...(shopMeta.gemAdmins || [])]) {
+            const num = (a.number || "").replace(/\D/g, "");
+            if (!num || seen.has(num)) continue;
+            seen.add(num);
+            all.push({ name: a.name || "", number: num });
+        }
+        return all;
+    }
+
+    function renderAssignedAdmins() {
+        const el = document.getElementById("ef-assigned-admins");
+        if (!el) return;
+        const allAdmins = _getAllAdminsFlat();
+        if (!allAdmins.length) {
+            el.innerHTML = '<div style="font-size:12px;color:var(--text-faint);padding:4px 0">Belum ada admin WA di tab General.</div>';
+            return;
+        }
+        el.innerHTML = allAdmins.map((a, i) => {
+            const isOn = formAssignedAdmins.some(fa => (fa.number || "").replace(/\D/g, "") === a.number);
+            return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;
+                border:1px solid ${isOn ? 'var(--accent)' : 'var(--border)'};
+                background:${isOn ? 'rgba(168,85,247,0.06)' : 'var(--surface2)'};
+                cursor:pointer;transition:all .15s;font-size:13px;color:var(--text)">
+              <input type="checkbox" ${isOn ? 'checked' : ''} onchange="window._shopToggleItemAdmin(${i})"
+                style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer">
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:600;font-size:12px">${esc(a.name || 'Admin')}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${esc(a.number)}</div>
+              </div>
+              ${isOn ? '<svg width="16" height="16" fill="none" stroke="var(--accent)" stroke-width="2.5" viewBox="0 0 24 24" style="flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
+            </label>`;
+        }).join("");
+    }
+
+    window._shopToggleItemAdmin = function(idx) {
+        const allAdmins = _getAllAdminsFlat();
+        const admin = allAdmins[idx];
+        if (!admin) return;
+        const eIdx = formAssignedAdmins.findIndex(fa => (fa.number || "").replace(/\D/g, "") === admin.number);
+        if (eIdx >= 0) formAssignedAdmins.splice(eIdx, 1);
+        else formAssignedAdmins.push({ name: admin.name, number: admin.number });
+        renderAssignedAdmins();
+    };
+
+    /* ════════════════════════════════════════════
      HELPERS
   ════════════════════════════════════════════ */
     function openModal() {
@@ -846,6 +1108,7 @@
     function closeForm() {
         document.getElementById("scfg-backdrop").classList.remove("open");
         document.getElementById("scfg-modal").classList.remove("open");
+        formImages = [];
         editingId = null;
     }
 
@@ -869,6 +1132,9 @@
     }
 
     function toast(msg, type = "success") {
+        if (typeof window.showAdminToast === "function") {
+            window.showAdminToast(msg, type); return;
+        }
         const el = document.createElement("div");
         el.className = "toast-item toast-" + type;
         el.textContent = msg;
@@ -878,4 +1144,275 @@
             setTimeout(() => el.remove(), 3200);
         }
     }
+
+    /* ════════════════════════════════════════════
+     IMAGE MANAGEMENT — upload to Supabase Storage
+     Bucket: 'shop-images' (public)
+  ════════════════════════════════════════════ */
+
+    function renderFormImages() {
+        const el = document.getElementById("ef-images-list");
+        if (!el) return;
+        if (!formImages.length) {
+            el.innerHTML = '<div style="font-size:12px;color:var(--text-faint);padding:4px 0">Belum ada foto.</div>';
+            return;
+        }
+        el.innerHTML = formImages.map((url, i) => `
+          <div style="position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;
+                      border:1px solid var(--border);flex-shrink:0;background:var(--surface3)">
+            <img src="${esc(url)}" alt="img ${i+1}" style="width:100%;height:100%;object-fit:cover">
+            <div style="position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;
+                        background:linear-gradient(rgba(0,0,0,.6),transparent);padding:2px 3px">
+              ${i > 0 ? `<button onclick="window._shopImgMove(${i},-1)" style="background:none;border:none;color:#fff;font-size:11px;cursor:pointer;padding:1px 3px" title="Geser kiri">◀</button>` : '<span></span>'}
+              ${i < formImages.length-1 ? `<button onclick="window._shopImgMove(${i},1)" style="background:none;border:none;color:#fff;font-size:11px;cursor:pointer;padding:1px 3px" title="Geser kanan">▶</button>` : '<span></span>'}
+            </div>
+            <button onclick="window._shopImgRemove(${i})"
+              style="position:absolute;bottom:3px;right:3px;background:rgba(239,68,68,.85);
+                     border:none;border-radius:4px;color:#fff;font-size:10px;font-weight:700;
+                     padding:2px 5px;cursor:pointer" title="Hapus">✕</button>
+            ${i === 0 ? '<div style="position:absolute;bottom:3px;left:3px;background:rgba(79,125,240,.85);border-radius:3px;padding:1px 5px;font-size:9px;color:#fff;font-weight:700">UTAMA</div>' : ''}
+          </div>
+        `).join("");
+    }
+
+    function imgRemove(idx) {
+        formImages.splice(idx, 1);
+        renderFormImages();
+    }
+
+    function imgMove(idx, dir) {
+        const newIdx = idx + dir;
+        if (newIdx < 0 || newIdx >= formImages.length) return;
+        [formImages[idx], formImages[newIdx]] = [formImages[newIdx], formImages[idx]];
+        renderFormImages();
+    }
+
+    function imgAddUrl() {
+        const inp = document.getElementById("ef-img-url");
+        const url = (inp?.value || "").trim();
+        if (!url) { toast("URL kosong.", "error"); return; }
+        if (!url.startsWith("http")) { toast("URL harus diawali http:// atau https://", "error"); return; }
+        formImages.push(url);
+        renderFormImages();
+        inp.value = "";
+        toast("Foto ditambahkan ✅");
+    }
+
+    /* ════════════════════════════════════════════
+     IMAGE UPLOAD — via Supabase Storage bucket 'shop-images' (public)
+     Includes client-side compress/resize (Canvas API) sebelum upload.
+     Target: max 1200px, JPEG/WebP quality 0.82, ~500KB max.
+  ════════════════════════════════════════════ */
+
+    var IMG_MAX_SIDE = 1200;     // max width/height px
+    var IMG_QUALITY  = 0.82;     // JPEG/WebP quality
+    var IMG_SKIP_BELOW = 200 * 1024; // skip compress jika < 200KB
+
+    /**
+     * Compress & resize gambar via Canvas API.
+     * @param {File} file — file gambar asli
+     * @returns {Promise<{blob: Blob, ext: string, originalSize: number, compressedSize: number}>}
+     */
+    function _compressImage(file) {
+        return new Promise(function (resolve, reject) {
+            /* Skip non-raster formats */
+            if (file.type === 'image/svg+xml' || file.type === 'image/gif') {
+                resolve({ blob: file, ext: file.name.split('.').pop() || 'gif', originalSize: file.size, compressedSize: file.size, skipped: true });
+                return;
+            }
+            /* Skip jika sudah kecil */
+            if (file.size <= IMG_SKIP_BELOW) {
+                resolve({ blob: file, ext: file.name.split('.').pop() || 'jpg', originalSize: file.size, compressedSize: file.size, skipped: true });
+                return;
+            }
+
+            var img = new Image();
+            var url = URL.createObjectURL(file);
+
+            img.onload = function () {
+                URL.revokeObjectURL(url);
+
+                var w = img.naturalWidth;
+                var h = img.naturalHeight;
+
+                /* Hitung dimensi baru (maintain aspect ratio) */
+                if (w > IMG_MAX_SIDE || h > IMG_MAX_SIDE) {
+                    if (w >= h) {
+                        h = Math.round(h * (IMG_MAX_SIDE / w));
+                        w = IMG_MAX_SIDE;
+                    } else {
+                        w = Math.round(w * (IMG_MAX_SIDE / h));
+                        h = IMG_MAX_SIDE;
+                    }
+                }
+
+                var canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                var ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, 0, 0, w, h);
+
+                /* Prefer WebP, fallback JPEG */
+                var outputType = 'image/webp';
+                var ext = 'webp';
+                if (!canvas.toDataURL('image/webp').startsWith('data:image/webp')) {
+                    outputType = 'image/jpeg';
+                    ext = 'jpg';
+                }
+
+                canvas.toBlob(function (blob) {
+                    if (!blob) {
+                        reject(new Error('Canvas toBlob gagal'));
+                        return;
+                    }
+                    resolve({
+                        blob: blob,
+                        ext: ext,
+                        originalSize: file.size,
+                        compressedSize: blob.size,
+                        skipped: false,
+                    });
+                }, outputType, IMG_QUALITY);
+            };
+
+            img.onerror = function () {
+                URL.revokeObjectURL(url);
+                reject(new Error('Gagal membaca gambar: ' + file.name));
+            };
+
+            img.src = url;
+        });
+    }
+
+    function _fmtBytes(b) {
+        if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+        if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
+        return b + ' B';
+    }
+
+    async function imgUploadFile(fileOrFiles) {
+        // Support single file or FileList (multi-file)
+        const files = fileOrFiles instanceof FileList ? [...fileOrFiles] : [fileOrFiles];
+        if (!files.length || !files[0]) return;
+
+        const sb = getSb();
+        if (!sb) { toast("Supabase belum siap.", "error"); return; }
+
+        const prog = document.getElementById("ef-img-progress");
+        const bar  = document.getElementById("ef-img-bar");
+        const stat = document.getElementById("ef-img-status");
+
+        prog.style.display = "block";
+        const total = files.length;
+        let done = 0;
+
+        for (const file of files) {
+            if (file.size > 32 * 1024 * 1024) {
+                toast(`${file.name}: terlalu besar (maks 32 MB)`, "error");
+                continue;
+            }
+            if (!file.type.startsWith("image/")) {
+                toast(`${file.name}: bukan file gambar`, "error");
+                continue;
+            }
+
+            /* ── Step 1: Compress/resize ── */
+            stat.textContent = total > 1
+                ? `Kompres ${done + 1}/${total}: ${file.name}…`
+                : `Kompres: ${file.name}…`;
+            bar.style.width = `${Math.round((done / total) * 100)}%`;
+
+            let compressed;
+            try {
+                compressed = await _compressImage(file);
+            } catch (e) {
+                toast(`Gagal kompres ${file.name}: ${e.message}`, "error");
+                continue;
+            }
+
+            var sizeInfo = compressed.skipped
+                ? ''
+                : ` (${_fmtBytes(compressed.originalSize)} → ${_fmtBytes(compressed.compressedSize)})`;
+
+            /* ── Step 2: Upload ── */
+            stat.textContent = total > 1
+                ? `Upload ${done + 1}/${total}: ${file.name}${sizeInfo}…`
+                : `Upload: ${file.name}${sizeInfo}…`;
+
+            try {
+                const fileName = `shop_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${compressed.ext}`;
+
+                const { error: uploadError } = await sb.storage
+                    .from("shop-images")
+                    .upload(fileName, compressed.blob, { cacheControl: '3600', contentType: compressed.blob.type });
+
+                if (uploadError) {
+                    const errMsg = (uploadError.message || '').toLowerCase();
+                    if (errMsg.includes('bucket') || errMsg.includes('not found') || errMsg.includes('does not exist')) {
+                        toast('Bucket "shop-images" belum ada! Jalankan supabase-setup.sql di SQL Editor, atau buat manual: Storage → New Bucket → "shop-images" → Public.', "error");
+                        storageBucketOk = false;
+                        showStorageWarning();
+                        break;
+                    }
+                    if (errMsg.includes('policy') || errMsg.includes('security') || errMsg.includes('permission') || errMsg.includes('denied') || errMsg.includes('row-level')) {
+                        toast('Upload ditolak RLS policy. Jalankan supabase-setup.sql untuk menambah policy upload.', "error");
+                        storageBucketOk = false;
+                        showStoragePolicyWarning();
+                        break;
+                    }
+                    if (errMsg.includes('duplicate') || errMsg.includes('already exists')) {
+                        // Retry dengan nama baru
+                        const retryName = `shop_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${compressed.ext}`;
+                        const { error: retryErr } = await sb.storage
+                            .from("shop-images")
+                            .upload(retryName, compressed.blob, { cacheControl: '3600', contentType: compressed.blob.type });
+                        if (retryErr) {
+                            toast(`Upload gagal (${file.name}): ${retryErr.message}`, "error");
+                            continue;
+                        }
+                        const { data: retryUrl } = sb.storage.from("shop-images").getPublicUrl(retryName);
+                        if (retryUrl?.publicUrl) {
+                            formImages.push(retryUrl.publicUrl);
+                            renderFormImages();
+                            done++;
+                        }
+                        continue;
+                    }
+                    toast(`Upload gagal (${file.name}): ${uploadError.message}`, "error");
+                    continue;
+                }
+
+                const { data: urlData } = sb.storage.from("shop-images").getPublicUrl(fileName);
+                const publicUrl = urlData?.publicUrl;
+
+                if (publicUrl) {
+                    formImages.push(publicUrl);
+                    renderFormImages();
+                    done++;
+                } else {
+                    toast(`Gagal mendapat URL publik: ${file.name}`, "error");
+                }
+            } catch (e) {
+                toast(`Error upload ${file.name}: ${e.message}`, "error");
+            }
+        }
+
+        bar.style.width = "100%";
+        stat.textContent = done > 0
+            ? `${done} foto berhasil diupload!`
+            : "Tidak ada foto yang berhasil diupload.";
+        setTimeout(() => { prog.style.display = "none"; }, 2000);
+        if (done > 0) toast(`${done} foto diupload (auto-compressed)`);
+    }
+
+    function imgHandleDrop(event) {
+        event.preventDefault();
+        const zone = document.getElementById("ef-img-drop");
+        if (zone) { zone.style.borderColor = "var(--border2)"; zone.style.background = "var(--surface2)"; }
+        const files = event.dataTransfer?.files;
+        if (files && files.length) imgUploadFile(files);
+    }
+
 })();

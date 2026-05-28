@@ -897,7 +897,9 @@
                 : "";
         return `<div class="shop-card${sold ? " shop-sold-out" : ""}" data-category="${item.category}">
     ${badgeHtml(item, "position:absolute;top:12px;right:12px;z-index:2;")}
-    ${animThumbHtml(item)}
+    ${(item.images && item.images[0])
+      ? `<img src="${item.images[0]}" alt="${item.name}" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#111827;border-radius:14px 14px 0 0">`
+      : animThumbHtml(item)}
     <div class="shop-card-name">${item.name}</div>
     <div class="shop-card-cat">${item.category}</div>
     <div class="shop-card-desc">${item.description}</div>

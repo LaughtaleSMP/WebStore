@@ -49,24 +49,36 @@
     .holder-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .holder-label{font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mute);margin-bottom:4px;letter-spacing:.5px}
 
-    /* ═══ Premium Trend Chart ═══ */
-    .trend-ohlc-bar{font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);margin-bottom:6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center;min-height:24px}
-    .trend-info-line{font-family:'JetBrains Mono',monospace;font-size:.34rem;color:var(--mute);margin-bottom:6px;letter-spacing:.3px}
-    .trend-canvas-wrap{position:relative;width:100%;margin-bottom:6px;border-radius:var(--r-sm);overflow:hidden;border:1px solid rgba(255,255,255,0.04);box-shadow:inset 0 1px 4px rgba(0,0,0,0.3),0 0 0 1px rgba(168,85,247,0.04)}
+    /* ═══ Premium Trend Chart — v2 ═══ */
+    .trend-ohlc-bar{font-family:'JetBrains Mono',monospace;font-size:.44rem;color:var(--dim);margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-height:28px}
+    .trend-info-line{font-family:'JetBrains Mono',monospace;font-size:.36rem;color:var(--mute);margin-bottom:8px;letter-spacing:.3px}
+    .trend-canvas-wrap{position:relative;width:100%;margin-bottom:8px;border-radius:12px;overflow:hidden;
+      border:1px solid rgba(255,255,255,0.06);
+      box-shadow:inset 0 2px 12px rgba(0,0,0,0.5),0 0 0 1px rgba(168,85,247,0.06),0 8px 32px rgba(0,0,0,0.3);
+      background:linear-gradient(180deg,rgba(15,15,26,0.7) 0%,rgba(9,9,15,0.9) 100%)}
     #trend-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab;user-select:none;position:relative}
     #trend-scroll::-webkit-scrollbar{display:none}
     #trend-scroll.grabbing{cursor:grabbing}
     #trend-scroll canvas{display:block}
-    .trend-minimap{height:4px;border-radius:2px;background:rgba(255,255,255,0.04);margin-top:0;position:relative;overflow:hidden;border-top:1px solid rgba(255,255,255,0.03)}
-    .trend-minimap-thumb{height:100%;border-radius:2px;background:linear-gradient(90deg,rgba(168,85,247,0.35),rgba(34,211,238,0.3));position:absolute;transition:left .12s ease,width .12s ease}
-    .trend-toolbar{display:flex;align-items:center;gap:6px;margin-bottom:8px}
-    .trend-zoom{display:flex;align-items:center;gap:3px;margin-left:auto;padding:2px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)}
-    .trend-zoom button{font-family:'JetBrains Mono',monospace;font-size:.36rem;font-weight:600;padding:4px 10px;border-radius:4px;background:transparent;border:1px solid transparent;color:var(--mute);cursor:pointer;transition:all .2s;line-height:1}
-    .trend-zoom button:hover{color:var(--text);border-color:var(--border2);background:rgba(255,255,255,.05)}
-    .trend-zoom button:active{background:rgba(168,85,247,0.1);color:var(--ac)}
-    .trend-zoom span{font-family:'JetBrains Mono',monospace;font-size:.34rem;color:var(--dim);min-width:36px;text-align:center;padding:0 4px}
+    .trend-minimap{height:6px;border-radius:3px;background:rgba(255,255,255,0.035);margin-top:0;position:relative;overflow:hidden;
+      border-top:1px solid rgba(255,255,255,0.04);box-shadow:inset 0 1px 3px rgba(0,0,0,0.3)}
+    .trend-minimap-thumb{height:100%;border-radius:3px;
+      background:linear-gradient(90deg,rgba(168,85,247,0.45),rgba(34,211,238,0.4));
+      position:absolute;transition:left .15s ease,width .15s ease;
+      box-shadow:0 0 6px rgba(168,85,247,0.25)}
+    .trend-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+    .trend-zoom{display:flex;align-items:center;gap:4px;margin-left:auto;padding:3px;border-radius:8px;
+      background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);
+      backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+    .trend-zoom button{font-family:'JetBrains Mono',monospace;font-size:.38rem;font-weight:700;padding:5px 12px;border-radius:6px;
+      background:transparent;border:1px solid transparent;color:var(--mute);cursor:pointer;
+      transition:all .2s ease;line-height:1;letter-spacing:.3px}
+    .trend-zoom button:hover{color:var(--text);border-color:rgba(168,85,247,0.25);background:rgba(168,85,247,.06)}
+    .trend-zoom button:active{background:rgba(168,85,247,0.15);color:var(--ac);transform:scale(0.95)}
+    .trend-zoom span{font-family:'JetBrains Mono',monospace;font-size:.36rem;color:var(--dim);min-width:40px;text-align:center;padding:0 6px;
+      border-left:1px solid rgba(255,255,255,0.04);border-right:1px solid rgba(255,255,255,0.04)}
     .trend-metric-bar .tab{font-size:.42rem;padding:4px 10px;transition:all .2s}
-    .trend-metric-bar .tab.a{box-shadow:0 0 8px rgba(168,85,247,0.1)}
+    .trend-metric-bar .tab.a{box-shadow:0 0 10px rgba(168,85,247,0.12)}
     #health-content{font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);line-height:1.7}
     .ptbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
     @keyframes fs{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -76,7 +88,7 @@
       .eco-val{font-size:.8rem}
       .mod-tab{font-size:.42rem;padding:5px 10px}
       .trend-metric-bar .tab{font-size:.38rem;padding:3px 8px}
-      .trend-ohlc-bar{font-size:.36rem;gap:3px}
+      .trend-ohlc-bar{font-size:.38rem;gap:4px}
       .ts-grid{grid-template-columns:1fr}
       .ts-kpi-val{font-size:.56rem}
       .guide-grid{grid-template-columns:1fr}
@@ -97,8 +109,8 @@
       .sec-title{font-size:.42rem !important}
       .trend-zoom button{padding:5px 10px;font-size:.38rem}
       .trend-zoom span{font-size:.36rem}
-      .trend-ohlc-bar{font-size:.34rem;gap:2px}
-      .trend-ohlc-bar span{padding:1px 4px !important}
+      .trend-ohlc-bar{font-size:.36rem;gap:3px}
+      .trend-ohlc-bar span{padding:2px 5px !important}
       .guide-grid{grid-template-columns:1fr;gap:8px}
     }
 
@@ -352,6 +364,13 @@
             <div class="trend-minimap" id="trend-minimap"><div class="trend-minimap-thumb" id="trend-minimap-thumb"></div></div>
           </div>
           <div class="trend-toolbar">
+            <div id="candle-countdown" style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:.38rem;color:var(--mute)">
+              <span id="candle-cd-label">Next candle: —</span>
+              <div style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.04);min-width:60px;max-width:140px;overflow:hidden;border:1px solid rgba(255,255,255,0.03)">
+                <div id="candle-cd-bar" style="height:100%;border-radius:2px;width:0%;background:linear-gradient(90deg,rgba(168,85,247,0.6),rgba(34,211,238,0.5));transition:width 1s linear;box-shadow:0 0 6px rgba(168,85,247,0.2)"></div>
+              </div>
+            </div>
+            <button id="trend-reset-btn" style="font-family:'JetBrains Mono',monospace;font-size:.36rem;font-weight:700;padding:5px 12px;border-radius:6px;background:rgba(239,83,80,0.08);border:1px solid rgba(239,83,80,0.2);color:#ef5350;cursor:pointer;transition:all .2s;letter-spacing:.3px" title="Hapus semua data chart">🗑 RESET</button>
             <div class="trend-zoom">
               <button id="trend-zoom-out" title="Zoom Out">−</button>
               <span id="trend-zoom-label">100%</span>
@@ -715,7 +734,7 @@
 </div>
 <div class="dc-toast" id="dc-toast">Kode disalin!</div>
 <script>var SB_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co', SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI'</script>
-<script src="js/economy-page.js"></script>
+<script src="js/economy-page.js?v=20260519f"></script>
 <script src="js/store-page.js" defer></script>
 <script src="js/page-nav.js"></script>
 <script src="js/auto-refresh.js"></script>

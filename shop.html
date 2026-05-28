@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Laughtale Store — Beli Item Premium</title>
+  <meta name="description" content="Toko item premium Laughtale SMP. Custom nametag, title, rank, dan bundle eksklusif.">
+  <meta name="theme-color" content="#a855f7">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="alternate icon" href="assets/favicon.svg">
+  <link rel="apple-touch-icon" href="assets/logo.jpeg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- [PERF] Preload font utama untuk mobile, hindari FOIT -->
+  <link rel="preload" href="assets/fonts/nunito/Nunito-Variable.woff2" as="font" type="font/woff2" crossorigin>
+
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/order-feed.css">
+  <style>
+/* ══════════════════════════════════════════════
+   SHOP PAGE — Premium Dark Design
+══════════════════════════════════════════════ */
+:root {
+  --sp-purple: #a855f7;
+  --sp-purple-l: #c084fc;
+  --sp-purple-d: #7c3aed;
+  --sp-gold: #f4c430;
+  --sp-green: #17dd62;
+  --sp-red: #ff3a3a;
+  --sp-bg: #0d1117;
+  --sp-bg2: #111827;
+  --sp-bg3: #161f2e;
+  --sp-border: rgba(255,255,255,0.08);
+  --sp-text: #e8eaf0;
+  --sp-muted: #8892a4;
+}
+body { background: var(--sp-bg); color: var(--sp-text); font-family:'Nunito',sans-serif; margin:0; }
+
+/* ── Header ── */
+.sp-header {
+  padding: clamp(70px,10vw,110px) clamp(1rem,4vw,2.5rem) 1.5rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.sp-header::before {
+  content:''; position:absolute; inset:0;
+  background: radial-gradient(ellipse 60% 80% at 50% 20%, rgba(168,85,247,0.08), transparent 70%);
+  pointer-events: none;
+}
+.sp-back {
+  position: absolute; top: 20px; left: clamp(1rem,4vw,2.5rem);
+  color: var(--sp-muted); font-size: 0.85rem; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: color .15s; font-family:'Nunito',sans-serif;
+}
+.sp-back:hover { color: var(--sp-purple-l); }
+.sp-title {
+  font-family:'Nunito',sans-serif; font-weight:800;
+  font-size: clamp(1.5rem,4vw,2.2rem);
+  color: var(--sp-text); margin-bottom: 0.4rem;
+  letter-spacing: -0.02em; position: relative;
+}
+.sp-subtitle {
+  font-size: clamp(0.82rem,2vw,0.95rem);
+  color: var(--sp-muted); max-width: 560px; margin: 0 auto 1rem;
+  line-height: 1.6; font-family:'Nunito',sans-serif;
+}
+
+/* ── Toolbar ── */
+.sp-toolbar {
+  max-width: 1160px; margin: 0 auto 1.5rem; padding: 0 clamp(1rem,4vw,2.5rem);
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+}
+.sp-search {
+  flex:1; min-width:180px; background:var(--sp-bg2);
+  border:1px solid var(--sp-border); border-radius:10px;
+  padding:10px 14px; color:var(--sp-text); font-size:0.88rem;
+  font-family:'Nunito',sans-serif; outline:none;
+  transition: border-color .15s;
+}
+.sp-search:focus { border-color: var(--sp-purple); }
+.sp-search::placeholder { color: var(--sp-muted); opacity:.7; }
+.sp-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+.sp-tab {
+  font-family:'Press Start 2P',monospace; font-size:0.42rem;
+  padding:8px 14px; border-radius:8px;
+  border:1px solid var(--sp-border); background:transparent;
+  color:var(--sp-muted); cursor:pointer; transition:all .15s;
+  letter-spacing:.04em;
+}
+.sp-tab:hover { color:var(--sp-text); border-color:var(--sp-purple); }
+.sp-tab.active {
+  background:rgba(168,85,247,0.12); border-color:rgba(168,85,247,0.45);
+  color:var(--sp-purple);
+}
+
+/* ── Grid — Desktop 4col, Tablet 3col, Mobile 2col ── */
+.sp-grid {
+  max-width:1160px; margin:0 auto; padding:0 clamp(0.75rem,3vw,2.5rem) 2rem;
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:14px;
+}
+.sp-empty {
+  grid-column:1/-1; text-align:center; padding:4rem 1rem;
+  color:var(--sp-muted); font-size:0.95rem;
+}
+
+/* ── Card ── */
+.sp-card {
+  position:relative; background:var(--sp-bg3);
+  border:1px solid var(--sp-border); border-radius:14px;
+  overflow:hidden; display:flex; flex-direction:column;
+  transition: border-color .2s, transform .2s, box-shadow .2s;
+}
+.sp-card:hover {
+  border-color:rgba(168,85,247,0.4); transform:translateY(-3px);
+  box-shadow:0 10px 28px rgba(0,0,0,0.5), 0 0 0 1px rgba(168,85,247,0.12);
+}
+.sp-card.sold { opacity:.5; filter:grayscale(30%); pointer-events:none; }
+
+/* Card image */
+.sp-card-img {
+  width:100%; aspect-ratio:4/3; object-fit:cover;
+  background:var(--sp-bg2); display:block;
+}
+.sp-card-img-placeholder {
+  width:100%; aspect-ratio:4/3; display:flex;
+  align-items:center; justify-content:center;
+  background:var(--sp-bg2); font-size:2.5rem;
+}
+
+/* Card body */
+.sp-card-body { padding:12px 14px; flex:1; display:flex; flex-direction:column; }
+.sp-card-badge {
+  font-family:'Press Start 2P',monospace; font-size:0.35rem;
+  padding:3px 7px; border-radius:4px; width:fit-content;
+  letter-spacing:.06em;
+  position:absolute; top:10px; right:10px; z-index:2;
+}
+.sp-card-name {
+  font-family:'Nunito',sans-serif; font-weight:800;
+  font-size:0.92rem; color:var(--sp-text); line-height:1.3;
+  margin-bottom:3px;
+}
+.sp-card-cat { font-size:0.7rem; color:var(--sp-muted); font-weight:600; margin-bottom:4px; }
+.sp-card-desc {
+  font-size:0.78rem; color:var(--sp-muted); line-height:1.5;
+  flex:1; display:-webkit-box; -webkit-line-clamp:2;
+  -webkit-box-orient:vertical; overflow:hidden;
+}
+.sp-card-footer {
+  padding:10px 14px; border-top:1px solid var(--sp-border);
+  display:flex; align-items:center; justify-content:space-between; gap:6px;
+}
+.sp-card-price {
+  font-family:'Nunito',sans-serif; font-weight:800; font-size:0.82rem;
+  color:var(--sp-gold); font-variant-numeric:tabular-nums;
+  display:flex; align-items:center; gap:5px; flex-wrap:wrap;
+}
+.sp-card-price-orig {
+  font-size:0.72rem; color:#ff5a5a; text-decoration:line-through;
+  font-weight:600; opacity:.75;
+}
+.sp-card-btn {
+  font-family:'Press Start 2P',monospace; font-size:0.38rem;
+  padding:7px 12px; border-radius:7px; border:none; cursor:pointer;
+  background:var(--sp-purple); color:#fff; transition:all .15s;
+  letter-spacing:.04em;
+}
+.sp-card-btn:hover { background:var(--sp-purple-l); transform:translateY(-1px); }
+
+/* ── Modal ── */
+.sp-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.78);
+  z-index:9999; display:none; align-items:center; justify-content:center;
+  padding:1rem; opacity:0; transition:opacity .25s;
+  backdrop-filter:blur(6px);
+}
+.sp-overlay.open { display:flex; opacity:1; }
+.sp-modal {
+  background:var(--sp-bg2); border:1px solid rgba(255,255,255,0.1);
+  border-radius:18px; max-width:560px; width:100%; max-height:90vh;
+  overflow-y:auto; position:relative; padding:0;
+}
+.sp-modal-close {
+  position:absolute; top:14px; right:14px; background:var(--sp-bg3);
+  border:1px solid var(--sp-border); border-radius:8px; width:34px; height:34px;
+  color:var(--sp-muted); cursor:pointer; font-size:.9rem;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .15s; z-index:3;
+}
+.sp-modal-close:hover { color:var(--sp-text); border-color:var(--sp-red); }
+
+/* Modal gallery */
+.sp-gallery { position:relative; background:#080c12; }
+.sp-gallery img, .sp-gallery video { width:100%; display:block; max-height:360px; object-fit:contain; }
+.sp-gallery-nav {
+  position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+  display:flex; gap:6px;
+}
+.sp-gallery-dot {
+  width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.3);
+  cursor:pointer; transition:all .15s; border:none;
+}
+.sp-gallery-dot.active { background:var(--sp-purple); transform:scale(1.3); }
+.sp-gallery-arrow {
+  position:absolute; top:50%; transform:translateY(-50%);
+  background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.15);
+  color:#fff; border-radius:8px; width:36px; height:36px;
+  font-size:1.1rem; cursor:pointer; display:flex;
+  align-items:center; justify-content:center; transition:all .15s;
+}
+.sp-gallery-arrow:hover { background:var(--sp-purple); border-color:var(--sp-purple); }
+.sp-gallery-arrow.left { left:10px; }
+.sp-gallery-arrow.right { right:10px; }
+
+/* Modal body */
+.sp-modal-body { padding: clamp(1.2rem,4vw,2rem); }
+.sp-modal-emoji { font-size:2.5rem; margin-bottom:8px; }
+.sp-modal-name {
+  font-family:'Nunito',sans-serif; font-weight:800;
+  font-size:1.1rem; color:var(--sp-text); margin-bottom:4px;
+}
+.sp-modal-sec {
+  background:var(--sp-bg3); border:1px solid var(--sp-border);
+  border-radius:10px; padding:12px 16px; margin-top:12px;
+}
+.sp-modal-label {
+  font-family:'Press Start 2P',monospace; font-size:.42rem;
+  color:var(--sp-muted); margin-bottom:7px; letter-spacing:.1em;
+}
+.sp-modal-text { font-size:.84rem; color:var(--sp-muted); line-height:1.65; }
+.sp-modal-feat { list-style:none; padding:0; margin:0; }
+.sp-modal-feat li {
+  font-size:.82rem; color:var(--sp-green); font-weight:700;
+  padding:3px 0 3px 16px; position:relative;
+}
+.sp-modal-feat li::before { content:'▸'; position:absolute; left:0; opacity:.7; }
+
+/* WA button */
+.sp-wa-btn {
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  width:100%; padding:14px; border-radius:10px; border:none;
+  background:linear-gradient(135deg,#25D366,#128C7E); color:#fff;
+  font-family:'Press Start 2P',monospace; font-size:.55rem;
+  cursor:pointer; transition:all .15s; margin-top:16px;
+}
+.sp-wa-btn:hover { opacity:.9; transform:translateY(-2px); }
+
+/* Payment method buttons */
+.sp-pay-opt {
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:10px 14px; border-radius:10px;
+  border:2px solid rgba(200,200,200,0.3); background:#fff;
+  cursor:pointer; transition:all .15s;
+  box-shadow:0 1px 4px rgba(0,0,0,0.08);
+}
+.sp-pay-opt img { height:18px; display:block; }
+.sp-pay-opt:hover { border-color:rgba(168,85,247,0.5); box-shadow:0 2px 8px rgba(168,85,247,0.2); transform:translateY(-1px); }
+.sp-pay-opt.active { border-color:#a855f7; background:#fff; box-shadow:0 0 0 3px rgba(168,85,247,0.25); }
+
+/* Form inputs */
+.sp-input {
+  width:100%; box-sizing:border-box; background:var(--sp-bg3);
+  border:1px solid var(--sp-border); border-radius:8px; color:var(--sp-text);
+  font-family:'Nunito',sans-serif; font-size:.88rem; padding:10px 12px;
+  outline:none; transition:border-color .15s; margin-top:6px;
+}
+.sp-input:focus { border-color:var(--sp-purple); }
+.sp-input::placeholder { color:var(--sp-muted); opacity:.7; }
+
+/* ── Order Feed override: scope to shop page ── */
+#order-feed {
+  max-width:1160px; margin:0 auto;
+  padding: 0 clamp(0.75rem,3vw,2.5rem) 2rem;
+}
+#order-feed .container { max-width:100%; padding:0; }
+
+/* Footer */
+.sp-footer {
+  text-align:center; padding:2rem 1rem 3rem;
+  color:var(--sp-muted); font-size:.78rem;
+  border-top:1px solid var(--sp-border);
+  font-family:'Nunito',sans-serif;
+}
+.sp-footer a { color:var(--sp-purple-l); text-decoration:none; }
+.sp-footer a:hover { text-decoration:underline; }
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE — Progressive breakpoints
+══════════════════════════════════════════════ */
+
+/* Large desktop (>1160px) — 4 columns, default */
+
+/* Medium desktop / Tablet landscape (769-1100px) — 3 columns */
+@media(max-width:1100px) {
+  .sp-grid { grid-template-columns: repeat(3, 1fr); gap:12px; }
+}
+
+/* Tablet portrait (601-768px) — 2 columns, comfortable */
+@media(max-width:768px) {
+  .sp-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 0 0.75rem 1.5rem;
+  }
+  .sp-toolbar {
+    padding: 0 0.75rem;
+    gap: 8px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sp-search { min-width: unset; width: 100%; }
+  .sp-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+  .sp-tabs::-webkit-scrollbar { display: none; }
+  .sp-tab { flex-shrink: 0; }
+  .sp-header { padding-top: 60px; padding-bottom: 1rem; }
+  .sp-card-img, .sp-card-img-placeholder { aspect-ratio: 1/1; }
+  .sp-card-body { padding: 10px 12px; }
+  .sp-card-name { font-size: 0.82rem; }
+  .sp-card-cat { font-size: 0.65rem; margin-bottom: 2px; }
+  .sp-card-desc { font-size: 0.72rem; -webkit-line-clamp: 2; }
+  .sp-card-footer { padding: 8px 12px; }
+  .sp-card-price { font-size: 0.75rem; }
+  .sp-card-price-orig { font-size: 0.65rem; }
+  .sp-card-btn { font-size: 0.35rem; padding: 7px 10px; }
+  .sp-card-badge { font-size: 0.32rem; padding: 2px 6px; top: 7px; right: 7px; }
+  .sp-tab { font-size: 0.38rem; padding: 7px 12px; }
+  .sp-search { padding: 9px 12px; font-size: 0.85rem; }
+  #order-feed { padding: 0 0.75rem 1.5rem; }
+
+  /* Modal */
+  .sp-modal { max-width: 92vw; border-radius: 14px; max-height: 88vh; }
+  .sp-modal-body { padding: 1.2rem; }
+  .sp-gallery img, .sp-gallery video { max-height: 280px; }
+
+  /* Track order */
+  .sp-track-modal { padding: 20px; }
+  .sp-track-btn { bottom: 16px; right: 16px; font-size: 0.72rem; padding: 10px 14px; }
+}
+
+/* Mobile (401-600px) — 2 columns, compact */
+@media(max-width:600px) {
+  .sp-grid { gap: 8px; padding: 0 0.6rem 1.5rem; }
+  .sp-toolbar { padding: 0 0.6rem; }
+  .sp-card-body { padding: 8px 10px; }
+  .sp-card-name { font-size: 0.78rem; }
+  .sp-card-desc { -webkit-line-clamp: 1; font-size: 0.7rem; }
+  .sp-card-footer { padding: 7px 10px; }
+  .sp-card-price { font-size: 0.72rem; }
+  .sp-card-btn { font-size: 0.32rem; padding: 6px 8px; }
+  .sp-gallery-arrow { width: 30px; height: 30px; font-size: 0.9rem; }
+  .sp-wa-btn { font-size: 0.48rem; padding: 12px; }
+
+  /* Confirm overlay */
+  .sp-confirm-box { padding: 22px 18px; }
+  .sp-confirm-detail { padding: 10px 12px; font-size: 0.75rem; }
+
+  /* Track order timeline compact */
+  .sp-track-step { min-width: 56px; }
+  .sp-track-dot { width: 24px; height: 24px; font-size: 10px; }
+  .sp-track-line { width: 28px; }
+  .sp-track-label { font-size: 0.55rem; }
+}
+
+/* Small phone (<400px) — 2 columns, tightest */
+@media(max-width:400px) {
+  .sp-grid { gap: 6px; padding: 0 0.4rem 1.5rem; }
+  .sp-toolbar { padding: 0 0.4rem; }
+  .sp-header { padding-top: 50px; }
+  .sp-back { top: 14px; left: 0.5rem; font-size: 0.78rem; }
+  .sp-card { border-radius: 10px; }
+  .sp-card-name { font-size: 0.72rem; }
+  .sp-card-body { padding: 6px 8px; }
+  .sp-card-footer { padding: 6px 8px; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .sp-card-btn { width: 100%; text-align: center; }
+  .sp-card-badge { font-size: 0.28rem; padding: 2px 4px; top: 5px; right: 5px; }
+  #order-feed { padding: 0 0.4rem 1rem; }
+
+  /* Modal full-screen on very small devices */
+  .sp-overlay { padding: 0.5rem; }
+  .sp-modal { max-width: 100%; border-radius: 12px; max-height: 92vh; }
+  .sp-modal-close { top: 10px; right: 10px; width: 30px; height: 30px; }
+  .sp-modal-body { padding: 1rem; }
+  .sp-modal-name { font-size: 0.95rem; }
+  .sp-gallery img, .sp-gallery video { max-height: 220px; }
+  .sp-gallery-arrow { width: 26px; height: 26px; font-size: 0.8rem; }
+  .sp-gallery-arrow.left { left: 6px; }
+  .sp-gallery-arrow.right { right: 6px; }
+
+  /* Payment methods: grid 3 per row */
+  .sp-pay-grid { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 6px !important; }
+  .sp-pay-opt { padding: 8px 6px; }
+  .sp-pay-opt img { height: 14px; }
+
+  /* Track button compact */
+  .sp-track-btn { bottom: 12px; right: 12px; padding: 8px 12px; font-size: 0.7rem; border-radius: 10px; }
+}
+
+/* Very small (<340px) — single column fallback */
+@media(max-width:340px) {
+  .sp-grid { grid-template-columns: 1fr; }
+  .sp-card-img, .sp-card-img-placeholder { aspect-ratio: 16/9; }
+}
+
+/* Landscape phone: keep 3 columns */
+@media(max-height:500px) and (orientation:landscape) {
+  .sp-grid { grid-template-columns: repeat(3, 1fr); }
+  .sp-header { padding-top: 40px; padding-bottom: 0.5rem; }
+  .sp-modal { max-height: 95vh; }
+  .sp-gallery img, .sp-gallery video { max-height: 200px; }
+}
+
+/* Safe area for notch / bottom bar */
+@supports(padding-bottom: env(safe-area-inset-bottom)) {
+  .sp-footer { padding-bottom: calc(2rem + env(safe-area-inset-bottom)); }
+  .sp-track-btn { bottom: calc(20px + env(safe-area-inset-bottom)); }
+}
+
+/* Skeleton loading */
+.sp-skel {
+  background: linear-gradient(90deg, var(--sp-bg3) 25%, var(--sp-bg2) 50%, var(--sp-bg3) 75%);
+  background-size: 200% 100%;
+  animation: spSkelShimmer 1.5s infinite;
+  border-radius: 14px;
+  min-height: 220px;
+}
+@keyframes spSkelShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Order Confirmation Overlay ── */
+.sp-confirm-overlay {
+  position:fixed; inset:0; z-index:10001;
+  background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
+  display:flex; align-items:center; justify-content:center;
+  padding:16px; opacity:0; transition:opacity .25s;
+}
+.sp-confirm-overlay.show { opacity:1; }
+.sp-confirm-box {
+  background:var(--sp-bg2); border:1px solid var(--sp-border);
+  border-radius:18px; width:100%; max-width:400px; padding:28px 24px;
+  text-align:center; transform:scale(.92) translateY(16px);
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1), opacity .25s;
+  opacity:0;
+}
+.sp-confirm-overlay.show .sp-confirm-box { transform:scale(1) translateY(0); opacity:1; }
+.sp-confirm-check {
+  width:56px; height:56px; border-radius:50%; margin:0 auto 14px;
+  background:rgba(23,221,98,0.12); border:2px solid rgba(23,221,98,0.3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:24px; animation:spPop .4s ease .15s both;
+}
+@keyframes spPop { 0%{transform:scale(0)} 60%{transform:scale(1.15)} 100%{transform:scale(1)} }
+.sp-confirm-id {
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--sp-bg3); border:1px solid var(--sp-border);
+  border-radius:8px; padding:8px 14px; margin:10px 0;
+  font-family:'Nunito',sans-serif; font-weight:800;
+  font-size:1rem; letter-spacing:1px; color:var(--sp-purple-l);
+  user-select:all;
+}
+.sp-confirm-id button {
+  background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.3);
+  border-radius:6px; color:var(--sp-purple-l); font-size:.7rem;
+  padding:4px 10px; cursor:pointer; font-family:'Nunito',sans-serif;
+  transition:all .15s;
+}
+.sp-confirm-id button:hover { background:rgba(168,85,247,0.25); }
+.sp-confirm-detail {
+  background:var(--sp-bg); border:1px solid var(--sp-border);
+  border-radius:10px; padding:12px 16px; margin:14px 0;
+  text-align:left; font-size:.78rem; color:var(--sp-muted); line-height:1.8;
+}
+.sp-confirm-detail strong { color:var(--sp-text); }
+.sp-confirm-close {
+  margin-top:8px; padding:10px 28px; border-radius:10px;
+  background:var(--sp-purple); border:none; color:#fff;
+  font-weight:700; font-size:.85rem; cursor:pointer;
+  font-family:'Nunito',sans-serif; transition:all .15s;
+}
+.sp-confirm-close:hover { background:var(--sp-purple-d); transform:translateY(-1px); }
+
+/* ── Order Status Tracker ── */
+.sp-track-btn {
+  position:fixed; bottom:20px; right:20px; z-index:9998;
+  display:flex; align-items:center; gap:6px;
+  padding:12px 18px; border-radius:12px;
+  background:var(--sp-bg2); border:1px solid var(--sp-border);
+  color:var(--sp-muted); font-size:.78rem; font-weight:700;
+  cursor:pointer; font-family:'Nunito',sans-serif;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4); transition:all .2s;
+}
+.sp-track-btn:hover { border-color:var(--sp-purple); color:var(--sp-purple-l); transform:translateY(-2px); box-shadow:0 6px 24px rgba(168,85,247,0.15); }
+.sp-track-overlay {
+  position:fixed; inset:0; z-index:10000;
+  background:rgba(0,0,0,0.7); backdrop-filter:blur(6px);
+  display:none; align-items:center; justify-content:center; padding:16px;
+}
+.sp-track-overlay.open { display:flex; }
+.sp-track-modal {
+  background:var(--sp-bg2); border:1px solid var(--sp-border);
+  border-radius:18px; width:100%; max-width:420px; padding:24px;
+  animation:spSlideUp .25s ease;
+}
+@keyframes spSlideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+.sp-track-input {
+  width:100%; box-sizing:border-box; background:var(--sp-bg3);
+  border:1px solid var(--sp-border); border-radius:10px; color:var(--sp-text);
+  font-family:'Nunito',sans-serif; font-size:.9rem; font-weight:700;
+  padding:12px 14px; outline:none; letter-spacing:1px; text-transform:uppercase;
+  transition:border-color .15s;
+}
+.sp-track-input:focus { border-color:var(--sp-purple); }
+.sp-track-submit {
+  width:100%; padding:11px; margin-top:10px; border-radius:10px;
+  background:var(--sp-purple); border:none; color:#fff;
+  font-weight:700; font-size:.85rem; cursor:pointer;
+  font-family:'Nunito',sans-serif; transition:all .15s;
+}
+.sp-track-submit:hover { background:var(--sp-purple-d); }
+.sp-track-submit:disabled { opacity:.5; cursor:not-allowed; }
+.sp-track-result {
+  margin-top:16px; background:var(--sp-bg); border:1px solid var(--sp-border);
+  border-radius:12px; padding:16px; display:none;
+}
+.sp-track-timeline {
+  display:flex; align-items:center; justify-content:center; gap:0;
+  margin:14px 0 10px; position:relative;
+}
+.sp-track-step {
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  position:relative; z-index:1; min-width:70px;
+}
+.sp-track-dot {
+  width:28px; height:28px; border-radius:50%;
+  border:2px solid var(--sp-border); background:var(--sp-bg3);
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; color:var(--sp-muted); transition:all .3s;
+}
+.sp-track-dot.done { background:rgba(23,221,98,0.15); border-color:#17dd62; color:#17dd62; }
+.sp-track-dot.current { background:rgba(168,85,247,0.15); border-color:#a855f7; color:#a855f7; animation:spPulse 1.5s ease infinite; }
+@keyframes spPulse { 0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,0.3)} 50%{box-shadow:0 0 0 6px rgba(168,85,247,0)} }
+.sp-track-line {
+  width:40px; height:2px; background:var(--sp-border); flex-shrink:0;
+}
+.sp-track-line.done { background:#17dd62; }
+.sp-track-label { font-size:.62rem; color:var(--sp-muted); font-weight:600; text-transform:uppercase; letter-spacing:.3px; }
+  </style>
+</head>
+<body>
+  <div class="pixel-lines"></div>
+
+  <!-- Header -->
+  <header class="sp-header">
+    <a href="index.html" class="sp-back">← Kembali</a>
+    <div class="sp-title" id="sp-title">Laughtale Store</div>
+    <div class="sp-subtitle" id="sp-subtitle">Item premium untuk pengalaman bermain yang lebih seru di Laughtale SMP</div>
+  </header>
+
+  <!-- Toolbar -->
+  <div class="sp-toolbar">
+    <input class="sp-search" id="sp-search" placeholder="🔍 Cari item…" type="search">
+    <div class="sp-tabs" id="sp-tabs"></div>
+  </div>
+
+  <!-- Grid -->
+  <div class="sp-grid" id="sp-grid">
+    <div class="sp-skel"></div>
+    <div class="sp-skel"></div>
+    <div class="sp-skel"></div>
+    <div class="sp-skel"></div>
+  </div>
+
+  <!-- Order Feed (Transaksi Terbaru) -->
+  <section id="order-feed">
+    <div class="container">
+      <div class="of-header">
+        <div class="of-header-left">
+          <span class="of-live-pill">
+            <span class="of-live-dot"></span>LIVE
+          </span>
+          <h2 class="section-label no-dot" style="margin:0;font-size:clamp(0.42rem,1vw,0.55rem)">TRANSAKSI TERBARU</h2>
+          <span class="of-counter" id="of-counter"></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="of-last-updated" id="of-last-updated"></span>
+          <button class="of-refresh-btn" id="of-refresh-btn">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="of-layout">
+        <div class="of-table-wrap">
+          <table class="of-table">
+            <thead>
+              <tr>
+                <th class="of-col-id">ID</th>
+                <th class="of-col-user">NAMA</th>
+                <th class="of-col-item">ITEM</th>
+                <th class="of-col-price">HARGA</th>
+                <th class="of-col-status">STATUS</th>
+                <th class="of-col-time">WAKTU</th>
+              </tr>
+            </thead>
+            <tbody id="of-feed-list"></tbody>
+          </table>
+        </div>
+
+      <div class="of-empty" id="of-empty">
+        <div class="of-empty-icon">🛒</div>
+        <p>Belum ada transaksi.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Track Order Button (Fixed) -->
+  <button class="sp-track-btn" onclick="window._spTrackOpen()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    Cek Status Order
+  </button>
+
+  <!-- Track Order Modal -->
+  <div class="sp-track-overlay" id="sp-track-overlay" onclick="if(event.target===this)window._spTrackClose()">
+    <div class="sp-track-modal">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:1rem;font-weight:800;color:var(--sp-text)">Cek Status Order</div>
+        <button onclick="window._spTrackClose()" style="background:none;border:none;color:var(--sp-muted);cursor:pointer;font-size:18px;padding:4px">✕</button>
+      </div>
+      <div style="font-size:.78rem;color:var(--sp-muted);margin-bottom:12px">Masukkan Order ID yang kamu terima saat checkout.</div>
+      <input class="sp-track-input" id="sp-track-id" placeholder="Contoh: LT-Q8K1AB" maxlength="12" onkeydown="if(event.key==='Enter')window._spTrackSearch()">
+      <button class="sp-track-submit" id="sp-track-btn-search" onclick="window._spTrackSearch()">Cek Sekarang</button>
+      <div class="sp-track-result" id="sp-track-result"></div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="sp-overlay" id="sp-overlay">
+    <div class="sp-modal" id="sp-modal"></div>
+  </div>
+
+  <!-- Footer -->
+  <div class="sp-footer">
+    &copy; 2024–2026 <a href="index.html">Laughtale SMP</a> — Semua hak dilindungi.
+  </div>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/shop-page.js"></script>
+  <script src="js/order-feed.js"></script>
+</body>
+</html>

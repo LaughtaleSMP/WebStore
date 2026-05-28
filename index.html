@@ -36,9 +36,9 @@
 <link rel="stylesheet" href="css/status.css">
 <link rel="stylesheet" href="css/skeleton.css">
 <link rel="stylesheet" href="css/sections.css">
-<link rel="stylesheet" href="css/shop-extra.css">
+
 <link rel="stylesheet" href="css/event-popup.css">
-<link rel="stylesheet" href="css/order-feed.css">
+
 <link rel="stylesheet" href="css/responsive.css">
 <link rel="stylesheet" href="css/improvements.css">
 
@@ -136,7 +136,7 @@
     <li><a href="#status"><span class="nav-link-dot"></span>Status</a></li>
     <li><a href="#fitur"><span class="nav-link-dot"></span>Fitur</a></li>
     <li><a href="#peraturan"><span class="nav-link-dot"></span>Rules</a></li>
-    <li><a href="#shop"><span class="nav-link-dot"></span>Shop</a></li>
+    <li><a href="shop.html"><span class="nav-link-dot"></span>Shop</a></li>
     <li><a href="#komunitas"><span class="nav-link-dot"></span>Komunitas</a></li>
     <li><a href="#donasi"><span class="nav-link-dot"></span>Donasi</a></li>
     <li class="nav-dropdown-wrap">
@@ -205,9 +205,9 @@
 
     <div class="nav-drawer-divider"></div>
 
-    <li><a href="#shop" class="drawer-link">
+    <li><a href="shop.html" class="drawer-link">
       <span class="d-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>
-      Shop
+      Shop ↗
     </a></li>
     <li><a href="#komunitas" class="drawer-link">
       <span class="d-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
@@ -964,74 +964,9 @@
   </div>
 </section>
 
-<!-- ============================================================
-     SHOP
-============================================================ -->
-<section id="shop" class="shop-section">
-  <div class="container">
-    <h2 class="section-label fade-up">LAUGHTALE STORE</h2>
-    <span class="section-rule"></span>
-    <p class="section-desc fade-up" id="shop-section-subtitle"><span class="skel-text" style="width:280px;max-width:80%;display:inline-block">&nbsp;</span></p>
-    <div id="shop-tabs" class="shop-tabs fade-up">
-      <span class="skel-tab"></span>
-      <span class="skel-tab"></span>
-      <span class="skel-tab"></span>
-    </div>
-    <div id="shop-grid" class="shop-grid"></div>
-  </div>
-</section>
 
-<!-- ORDER FEED -->
-<section id="order-feed">
-  <div class="container">
-    <div class="of-header">
-      <div class="of-header-left">
-        <span class="of-live-pill">
-          <span class="of-live-dot"></span>LIVE
-        </span>
-        <h2 class="section-label no-dot" style="margin:0;font-size:clamp(0.42rem,1vw,0.55rem)">TRANSAKSI TERBARU</h2>
-        <span class="of-counter" id="of-counter"><span class="skel-text" style="width:40px;display:inline-block">&nbsp;</span></span>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span class="of-last-updated" id="of-last-updated"><span class="skel-text" style="width:90px;display:inline-block">&nbsp;</span></span>
-        <button class="of-refresh-btn" id="of-refresh-btn">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
-          Refresh
-        </button>
-      </div>
-    </div>
 
-    <div class="of-layout">
-      <div class="of-table-wrap">
-        <table class="of-table">
-          <thead>
-            <tr>
-              <th class="of-col-id">ID</th>
-              <th class="of-col-user">NAMA</th>
-              <th class="of-col-item">ITEM</th>
-              <th class="of-col-price">HARGA</th>
-              <th class="of-col-status">STATUS</th>
-              <th class="of-col-time">WAKTU</th>
-            </tr>
-          </thead>
-          <tbody id="of-feed-list"></tbody>
-        </table>
-      </div>
 
-    <div class="of-empty" id="of-empty">
-      <div class="of-empty-icon">🛒</div>
-      <p>Belum ada transaksi yang ditampilkan.</p>
-    </div>
-
-    <div class="of-cta-wrap">
-      <p>Tertarik? Kunjungi toko kami dan temukan item eksklusif.</p>
-      <a href="#shop" class="of-cta-btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-        BUKA TOKO
-      </a>
-    </div>
-  </div>
-</section>
 
 <!-- ============================================================
      KOMUNITAS
@@ -1186,7 +1121,7 @@
     <a href="#fitur">Fitur</a>
     <a href="#peraturan">Peraturan</a>
     <a href="#seed">Seed</a>
-    <a href="#shop">Shop</a>
+    <a href="shop.html">Shop</a>
     <a href="#komunitas">Komunitas</a>
     <a href="#donasi">Donasi</a>
   </div>
@@ -1211,26 +1146,7 @@
 
 <!-- Original scripts preserved -->
 <script src="js/server-status.js" defer></script>
-<!-- FIX: Define SHOP_CONFIG placeholder agar shop.js tidak ReferenceError -->
-<script>
-window.SHOP_CONFIG = window.SHOP_CONFIG || {
-  title: 'Laughtale Store', subtitle: '', categories: ['Semua'],
-  admins: [], gemAdmins: [], items: []
-};
-document.addEventListener('DOMContentLoaded', function() {
-  if (typeof window.shopBuildCard === 'function') {
-    window.buildCard = window.shopBuildCard;
-  }
-});
-</script>
-<script src="js/shop-supabase.js" defer></script>
-<script src="js/shop-config.js" defer charset="utf-8"
-  onerror="console.warn('shop-config.js gagal dimuat')"></script>
-<script src="js/shop.js" defer charset="utf-8"
-  onerror="(function(){
-    var grid = document.getElementById('shop-grid');
-    if (grid) grid.innerHTML = '<div class=\'shop-empty\'><div class=\'shop-empty-icon\'>🛒</div><h3>TOKO TIDAK TERSEDIA</h3><p>Gagal memuat data produk. Periksa koneksi internet lalu refresh halaman.</p></div>';
-  })()"></script>
+
 <script src="js/particles.js" defer></script>
 <script src="js/animations.js" defer></script>
 <script src="js/feat-icons-enhanced.js" defer></script>
@@ -1315,7 +1231,7 @@ window.SERVER_CONFIG = {
 <script src="js/hero-utils.js" defer></script>
 
 <script src="js/supabase-sync.js" defer></script>
-<script src="js/order-feed.js" defer></script>
+
 <script src="js/event-popup.js" defer></script>
 <script src="js/banner-popup.js" defer></script>
 </body>
