@@ -445,7 +445,8 @@ async function _autoTopupGem(order) {
   const isGem    = itemName.includes('gem') || itemCat.includes('gem');
   if (!isGem) return;
 
-  const playerName = (order.username || '').trim();
+  // [Audit #4] Sanitize player name — match server-side regex (sync_topup.js:214)
+  const playerName = (order.username || '').trim().replace(/["\\\n]/g, '');
   if (!playerName || playerName === 'Anonim') {
     showToast('⚠️ Gem tidak bisa auto-topup: username Minecraft kosong.', 'error');
     return;
@@ -457,12 +458,29 @@ async function _autoTopupGem(order) {
     return;
   }
 
+  // [Audit #5] Amount cap — server rejects > 100,000 (sync_topup.js:202)
+  if (amount > 100000) {
+    showToast(`⚠️ Auto-topup dibatasi max 100.000 gem per order. Qty saat ini: ${amount.toLocaleString('id-ID')}. Kirim manual di tab Topup.`, 'error');
+    return;
+  }
+
   const sb = getSb();
   if (!sb) return;
 
   try {
     const orderId = order.id || '?';
     const shortId = 'LT-' + String(orderId).replace(/-/g, '').slice(-6).toUpperCase();
+    const noteTag = `order:${orderId}`;
+
+    // [Audit #1] Idempotency check — cegah duplikat topup dari double-click
+    const { data: existing } = await sb.from('topup_queue')
+      .select('id')
+      .like('admin_note', `%${noteTag}%`)
+      .limit(1);
+    if (existing && existing.length > 0) {
+      console.log(`[Orders] Auto-topup skipped — already exists for order ${orderId}`);
+      return; // silent skip, topup sudah pernah dikirim
+    }
 
     const { error } = await sb.from('topup_queue').insert({
       player_name: playerName,
@@ -470,7 +488,7 @@ async function _autoTopupGem(order) {
       currency:    'gem',
       status:      'pending',
       admin_key:   _TOPUP_ADMIN_KEY,
-      admin_note:  `Auto dari order ${shortId}: ${order.item_name || '?'} ×${amount}`,
+      admin_note:  `Auto dari ${shortId}: ${order.item_name || '?'} ×${amount} (${noteTag})`,
     });
 
     if (error) throw error;

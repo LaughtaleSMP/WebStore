@@ -99,16 +99,16 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.72rem;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
-/* Lebar kolom — ID diperlebar agar LT-XXXX terbaca, item ambil sisa */
+/* Lebar kolom — gunakan max-width agar kolom bisa menyusut/membesar sesuai konten */
 .of-col-id     { width: 82px; }
-.of-col-user   { width: 62px; }
-.of-col-item   { width: auto; }
-.of-col-price  { width: 70px; }
-.of-col-status { width: 54px; }
-.of-col-time   { width: 30px; }
+.of-col-user   { max-width: 72px; }
+.of-col-item   { /* auto – ambil sisa */ }
+.of-col-price  { white-space: nowrap; }
+.of-col-status { white-space: nowrap; }
+.of-col-time   { white-space: nowrap; }
 
 .of-table thead tr {
   border-bottom: 1px solid rgba(255,255,255,0.07);
@@ -190,6 +190,8 @@
   color: #f4c430;
   font-size: 0.66rem;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: visible;
 }
 .of-col-status { text-align: right; }
 .of-col-time {
@@ -288,11 +290,11 @@
   .of-table thead th { font-size: 0.28rem; padding: 0.3rem 0.25rem; }
   .of-row td { padding: 0.3rem 0.25rem; }
   .of-col-id { width: 72px; font-size: 0.30rem !important; overflow: visible; white-space: nowrap; }
-  .of-col-user { width: 55px; font-size: 0.62rem !important; }
+  .of-col-user { max-width: 50px; font-size: 0.62rem !important; }
   .of-col-item { font-size: 0.62rem !important; }
-  .of-col-price { width: 48px; font-size: 0.58rem !important; }
-  .of-col-status { width: 48px; }
-  .of-col-time { width: 26px; font-size: 0.52rem !important; }
+  .of-col-price { font-size: 0.58rem !important; white-space: nowrap !important; overflow: visible !important; }
+  .of-col-status { white-space: nowrap; }
+  .of-col-time { font-size: 0.52rem !important; white-space: nowrap; }
   .of-badge { font-size: 0.45rem; padding: 1px 2px; }
 }
 
@@ -302,6 +304,7 @@
   .of-col-time { display: none; }
   .of-table thead th:last-child { display: none; }
   .of-col-id { width: 64px; overflow: visible; white-space: nowrap; }
-  .of-col-user { width: 50px; }
-  .of-col-status { width: 42px; }
+  .of-col-user { max-width: 45px; }
+  .of-col-price { font-size: 0.56rem !important; white-space: nowrap !important; overflow: visible !important; }
+  .of-col-status { white-space: nowrap; }
 }
