@@ -105,7 +105,7 @@
 /* Lebar kolom — gunakan max-width agar kolom bisa menyusut/membesar sesuai konten */
 .of-col-id     { width: 82px; }
 .of-col-user   { max-width: 72px; }
-.of-col-item   { /* auto – ambil sisa */ }
+/* .of-col-item — auto, ambil sisa */
 .of-col-price  { white-space: nowrap; }
 .of-col-status { white-space: nowrap; }
 .of-col-time   { white-space: nowrap; }
