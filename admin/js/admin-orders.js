@@ -492,7 +492,7 @@ async function _autoTopupGem(order) {
       currency:    'gem',
       status:      'pending',
       admin_key:   _TOPUP_ADMIN_KEY,
-      admin_note:  `Auto dari ${shortId}: ${order.item_name || '?'} ×${amount} (${noteTag})`,
+      admin_note:  `Auto dari ${shortId}: ${order.item_name || '?'} ×${amount} (${noteTag}) [${_getAdminName()}]`,
     });
 
     if (error) throw error;
@@ -772,7 +772,51 @@ window.allOrdersLoad = async function () {
     (o.wa_admin_name || '').toLowerCase().includes(searchVal)
   );
 
-  const STATUS_MAP = { pending:'⏳ Pending', selesai:'✅ Selesai', refund:'💸 Refund', cancelled:'❌ Cancelled' };
+  // ── Lookup gem delivery status from topup_queue ──
+  let _topupMap = {};
+  try {
+    const { data: tqData } = await sb.from('topup_queue')
+      .select('admin_note,status,result_msg')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (tqData) {
+      tqData.forEach(function (t) {
+        var m = (t.admin_note || '').match(/\(order:([a-f0-9-]+)\)/);
+        if (m) _topupMap[m[1]] = { status: t.status, result_msg: t.result_msg || '' };
+      });
+    }
+  } catch (e) { /* silent */ }
+
+  var _ds = {
+    gem: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M2 9h20"/></svg>',
+    box: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>',
+    hr: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+    no: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="vertical-align:-1px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+  };
+  function _dlvBadge(o) {
+    var n = (o.item_name || '').toLowerCase();
+    var c = (o.item_category || '').toLowerCase();
+    var iid = parseInt(o.item_id) || 0;
+    var isGem = n.includes('gem') || c.includes('gem') || c.includes('currency') || iid === 8;
+    if (!isGem || o.status !== 'selesai') return '<span style="color:var(--text-faint);font-size:11px">&mdash;</span>';
+    var t = _topupMap[o.id];
+    if (!t) return '<span style="color:var(--text-faint);font-size:11px">&mdash;</span>';
+    if (t.status === 'done') {
+      return t.result_msg.includes('(online)')
+        ? '<span style="background:rgba(45,212,191,.12);color:#2dd4bf;border:1px solid rgba(45,212,191,.25);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600">' + _ds.gem + ' Masuk</span>'
+        : '<span style="background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.2);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600">' + _ds.box + ' Antri</span>';
+    }
+    if (t.status === 'failed') return '<span style="background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600">' + _ds.no + ' Gagal</span>';
+    return '<span style="background:rgba(250,204,21,.08);color:#facc15;border:1px solid rgba(250,204,21,.2);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;animation:pulse 2s infinite">' + _ds.hr + ' Proses</span>';
+  }
+
+  var _stSvg = {
+    pending: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+    selesai: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="vertical-align:-1px"><polyline points="20 6 9 17 4 12"/></svg>',
+    refund: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>',
+    cancelled: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="vertical-align:-1px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+  };
+  const STATUS_MAP = { pending: _stSvg.pending + ' Pending', selesai: _stSvg.selesai + ' Selesai', refund: _stSvg.refund + ' Refund', cancelled: _stSvg.cancelled + ' Cancelled' };
   const STATUS_CLS = { pending:'color:#f6ad55', selesai:'color:#4ade80', refund:'color:#fc8181', cancelled:'color:#a0aec0' };
   const canDel = _canDelete();
 
@@ -793,6 +837,7 @@ window.allOrdersLoad = async function () {
       <td style="padding:8px 10px;font-size:11.5px;color:var(--text-muted)">${escHtml(o.wa_admin_number || '—')}</td>
       <td style="padding:8px 10px;font-weight:600;color:#4ade80">Rp ${Number(o.total_price || 0).toLocaleString('id-ID')}</td>
       <td style="padding:8px 10px;font-size:12px;${STATUS_CLS[o.status] || ''}">${STATUS_MAP[o.status] || escHtml(o.status || '—')}</td>
+      <td style="padding:8px 10px">${_dlvBadge(o)}</td>
       <td style="padding:8px 10px;white-space:nowrap">
         <button class="btn-edit" onclick="oeditOpen('${escHtml(String(o.id))}')">✏️</button>
         ${canDel
@@ -820,7 +865,7 @@ window.allOrdersLoad = async function () {
       <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:780px;">
         <thead style="background:var(--surface2)">
           <tr>
-            ${['ID','WAKTU','ITEM','QTY','USERNAME','ADMIN WA','EMAIL ADMIN','NO WA ADMIN','TOTAL','STATUS','AKSI'].map(h =>
+            ${['ID','WAKTU','ITEM','QTY','USERNAME','ADMIN WA','EMAIL ADMIN','NO WA ADMIN','TOTAL','STATUS','DELIVERY','AKSI'].map(h =>
               `<th style="padding:9px 10px;text-align:left;font-size:10.5px;color:var(--text-faint);border-bottom:1px solid var(--border);font-weight:700;letter-spacing:.4px">${h}</th>`
             ).join('')}
           </tr>

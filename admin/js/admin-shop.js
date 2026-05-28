@@ -438,6 +438,7 @@
         window._shopImgAddUrl = imgAddUrl;
         window._shopImgRemove = imgRemove;
         window._shopImgMove = imgMove;
+        window._shopImgTitle = imgTitle;
         window._shopRetryStorage = async function() {
             const sb = getSb();
             if (!sb) { toast('Supabase belum siap.', 'error'); return; }
@@ -639,7 +640,7 @@
                 const activeTag =
                     item.active === false ? `<span style="color:var(--text-faint)">👁 Tersembunyi</span>` : "";
 
-                const thumbUrl = Array.isArray(item.images) && item.images[0];
+                const thumbUrl = Array.isArray(item.images) && item.images[0] && (typeof item.images[0] === 'string' ? item.images[0] : item.images[0].url);
                 const imgCount = Array.isArray(item.images) ? item.images.length : 0;
                 const thumbHtml = thumbUrl
                     ? `<div style="position:relative;width:44px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0;border:1px solid var(--border);background:var(--surface3)">
@@ -753,7 +754,10 @@
         setToggle("ef-needs-username", item.needs_username !== false);
         setToggle("ef-can-multi", item.can_buy_multiple !== false);
         document.getElementById("ef-max-qty").value = item.max_quantity || "";
-        formImages = Array.isArray(item.images) ? [...item.images] : [];
+        formImages = Array.isArray(item.images) ? item.images.map(function(img) {
+            if (typeof img === 'string') return { url: img, title: '' };
+            return { url: img.url || '', title: img.title || '' };
+        }) : [];
         formAssignedAdmins = Array.isArray(item.assigned_admins) ? [...item.assigned_admins] : [];
         renderFormImages();
         renderAssignedAdmins();
@@ -859,7 +863,7 @@
             needs_username: document.getElementById("ef-needs-username").classList.contains("on"),
             can_buy_multiple: canMulti,
             max_quantity: canMulti ? Number(document.getElementById("ef-max-qty").value) || 99 : 1,
-            images: formImages.length ? formImages : [],
+            images: formImages.length ? formImages.map(function(img) { return { url: img.url, title: img.title || '' }; }) : [],
             assigned_admins: formAssignedAdmins.length ? formAssignedAdmins : [],
         };
 
@@ -1157,22 +1161,22 @@
             el.innerHTML = '<div style="font-size:12px;color:var(--text-faint);padding:4px 0">Belum ada foto.</div>';
             return;
         }
-        el.innerHTML = formImages.map((url, i) => `
-          <div style="position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;
-                      border:1px solid var(--border);flex-shrink:0;background:var(--surface3)">
-            <img src="${esc(url)}" alt="img ${i+1}" style="width:100%;height:100%;object-fit:cover">
-            <div style="position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;
-                        background:linear-gradient(rgba(0,0,0,.6),transparent);padding:2px 3px">
-              ${i > 0 ? `<button onclick="window._shopImgMove(${i},-1)" style="background:none;border:none;color:#fff;font-size:11px;cursor:pointer;padding:1px 3px" title="Geser kiri">◀</button>` : '<span></span>'}
-              ${i < formImages.length-1 ? `<button onclick="window._shopImgMove(${i},1)" style="background:none;border:none;color:#fff;font-size:11px;cursor:pointer;padding:1px 3px" title="Geser kanan">▶</button>` : '<span></span>'}
-            </div>
-            <button onclick="window._shopImgRemove(${i})"
-              style="position:absolute;bottom:3px;right:3px;background:rgba(239,68,68,.85);
-                     border:none;border-radius:4px;color:#fff;font-size:10px;font-weight:700;
-                     padding:2px 5px;cursor:pointer" title="Hapus">✕</button>
-            ${i === 0 ? '<div style="position:absolute;bottom:3px;left:3px;background:rgba(79,125,240,.85);border-radius:3px;padding:1px 5px;font-size:9px;color:#fff;font-weight:700">UTAMA</div>' : ''}
-          </div>
-        `).join("");
+        el.innerHTML = formImages.map(function(img, i) {
+          var u = typeof img === 'string' ? img : (img.url || '');
+          var t = typeof img === 'string' ? '' : (img.title || '');
+          return '<div style="display:flex;flex-direction:column;gap:4px;width:100px;flex-shrink:0">' +
+            '<div style="position:relative;width:100px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--surface3)">' +
+            '<img src="' + esc(u) + '" alt="img ' + (i+1) + '" style="width:100%;height:100%;object-fit:cover">' +
+            '<div style="position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;background:linear-gradient(rgba(0,0,0,.6),transparent);padding:2px 3px">' +
+            (i > 0 ? '<button onclick="window._shopImgMove(' + i + ',-1)" style="background:none;border:none;color:#fff;font-size:11px;cursor:pointer;padding:1px 3px" title="Geser kiri">&#9664;</button>' : '<span></span>') +
+            (i < formImages.length-1 ? '<button onclick="window._shopImgMove(' + i + ',1)" style="background:none;border:none;color:#fff;font-size:11px;cursor:pointer;padding:1px 3px" title="Geser kanan">&#9654;</button>' : '<span></span>') +
+            '</div>' +
+            '<button onclick="window._shopImgRemove(' + i + ')" style="position:absolute;bottom:3px;right:3px;background:rgba(239,68,68,.85);border:none;border-radius:4px;color:#fff;font-size:10px;font-weight:700;padding:2px 5px;cursor:pointer" title="Hapus">&#10005;</button>' +
+            (i === 0 ? '<div style="position:absolute;bottom:3px;left:3px;background:rgba(79,125,240,.85);border-radius:3px;padding:1px 5px;font-size:9px;color:#fff;font-weight:700">UTAMA</div>' : '') +
+            '</div>' +
+            '<input type="text" value="' + esc(t) + '" placeholder="Judul foto..." oninput="window._shopImgTitle(' + i + ',this.value)" style="width:100%;padding:3px 6px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:10px;outline:none;font-family:inherit">' +
+            '</div>';
+        }).join("");
     }
 
     function imgRemove(idx) {
@@ -1187,12 +1191,18 @@
         renderFormImages();
     }
 
+    function imgTitle(idx, val) {
+        if (formImages[idx]) {
+            if (typeof formImages[idx] === 'string') formImages[idx] = { url: formImages[idx], title: val };
+            else formImages[idx].title = val;
+        }
+    }
     function imgAddUrl() {
         const inp = document.getElementById("ef-img-url");
         const url = (inp?.value || "").trim();
         if (!url) { toast("URL kosong.", "error"); return; }
         if (!url.startsWith("http")) { toast("URL harus diawali http:// atau https://", "error"); return; }
-        formImages.push(url);
+        formImages.push({ url: url, title: '' });
         renderFormImages();
         inp.value = "";
         toast("Foto ditambahkan ✅");
@@ -1374,7 +1384,7 @@
                         }
                         const { data: retryUrl } = sb.storage.from("shop-images").getPublicUrl(retryName);
                         if (retryUrl?.publicUrl) {
-                            formImages.push(retryUrl.publicUrl);
+                            formImages.push({ url: retryUrl.publicUrl, title: '' });
                             renderFormImages();
                             done++;
                         }
@@ -1388,7 +1398,7 @@
                 const publicUrl = urlData?.publicUrl;
 
                 if (publicUrl) {
-                    formImages.push(publicUrl);
+                    formImages.push({ url: publicUrl, title: '' });
                     renderFormImages();
                     done++;
                 } else {

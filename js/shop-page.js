@@ -29,6 +29,8 @@
   function esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+  function _imgUrl(img) { return typeof img === 'string' ? img : (img && img.url ? img.url : ''); }
+  function _imgTitle(img) { return typeof img === 'string' ? '' : (img && img.title ? img.title : ''); }
   function fmtPrice(p) {
     if (p === 0) return '<span style="color:#17dd62">GRATIS</span>';
     return 'Rp\u00a0' + p.toLocaleString('id-ID');
@@ -172,7 +174,7 @@
 
     grid.innerHTML = items.map(item => {
       const sold = item.stock === 'Habis';
-      const imgSrc = item.images?.[0];
+      const imgSrc = _imgUrl(item.images?.[0]);
       const bc = BC[item.badgeColor] || BC[''];
       const badgeHtml = item.badge
         ? `<span class="sp-card-badge" style="background:${bc.bg};border:1px solid ${bc.bd};color:${bc.cl}">${esc(item.badge)}</span>`
@@ -803,9 +805,11 @@
   /* ── Gallery ── */
   function buildGallery(imgs) {
     return `<div class="sp-gallery" id="sp-gallery">
-      ${imgs.map((url, i) => {
+      ${imgs.map((img, i) => {
+        const url = _imgUrl(img);
+        const title = _imgTitle(img);
         const isGif = url.toLowerCase().endsWith('.gif');
-        return `<img src="${esc(url)}" alt="Foto ${i+1}" style="display:${i===0?'block':'none'}" data-idx="${i}" ${isGif ? '' : 'loading="lazy"'}>`;
+        return `<div style="display:${i===0?'block':'none'}" data-idx="${i}"><img src="${esc(url)}" alt="${esc(title || 'Foto '+(i+1))}" ${isGif ? '' : 'loading="lazy"'} style="width:100%;display:block">${title ? `<div style="text-align:center;padding:6px 10px;font-size:.72rem;color:var(--sp-muted);font-weight:600;background:var(--sp-bg2)">${esc(title)}</div>` : ''}</div>`;
       }).join('')}
       ${imgs.length > 1 ? `
         <button class="sp-gallery-arrow left" onclick="window._spSlide(-1)">‹</button>
@@ -824,21 +828,22 @@
   window._spSlide = function(dir) {
     const gallery = document.getElementById('sp-gallery');
     if (!gallery) return;
-    const imgs = gallery.querySelectorAll('img');
-    if (!imgs.length) return;
-    modalSlide = (modalSlide + dir + imgs.length) % imgs.length;
-    showSlide(gallery, imgs);
+    const slides = gallery.querySelectorAll('[data-idx]');
+    if (!slides.length) return;
+    modalSlide = (modalSlide + dir + slides.length) % slides.length;
+    showSlide(gallery, slides);
   };
 
   window._spGo = function(idx) {
     const gallery = document.getElementById('sp-gallery');
     if (!gallery) return;
     modalSlide = idx;
-    showSlide(gallery, gallery.querySelectorAll('img'));
+    showSlide(gallery, gallery.querySelectorAll('[data-idx]'));
   };
 
-  function showSlide(gallery, imgs) {
-    imgs.forEach((img, i) => img.style.display = i === modalSlide ? 'block' : 'none');
+  function showSlide(gallery, allSlides) {
+    const slides = gallery.querySelectorAll('[data-idx]');
+    slides.forEach((s, i) => s.style.display = i === modalSlide ? 'block' : 'none');
     gallery.querySelectorAll('.sp-gallery-dot').forEach((d, i) => d.classList.toggle('active', i === modalSlide));
   }
 
