@@ -228,15 +228,42 @@ async function fetchHistory() {
       else if (st === 'pending') dInfo = _iSvg.hr + ' Menunggu server (~30 dtk)';
       else if (st === 'failed') dInfo = rm ? esc(rm) : 'Gagal diproses';
       else if (st === 'done') dInfo = _iSvg.ok + ' Berhasil diproses';
+      var cancelBtn = '';
+      if (st === 'pending') {
+        cancelBtn = '<button class="h-cancel" onclick="cancelTopup(' + h.id + ')" title="Batalkan topup ini">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+          'CANCEL</button>';
+      }
       return '<div class="h-row" style="animation:fs .25s ' + (i * 30) + 'ms ease both">' +
         '<div class="h-status ' + stCls + '">' + stLabel + '</div>' +
         '<div class="h-body">' +
         '<div class="h-main"><span class="h-name">' + esc(h.player_name || '?') + '</span> <span class="h-amount ' + curCls + '">+' + fmt(h.amount) + ' ' + cur + '</span></div>' +
         '<div class="h-detail">' + dInfo + ' \u00b7 ' + ago + admin + '</div>' +
+        cancelBtn +
         '</div></div>';
     }).join('');
   } catch (ex) {
     el.innerHTML = '<div class="emp">Error: ' + esc(ex.message) + '</div>';
+  }
+}
+
+// ── Cancel topup ──
+async function cancelTopup(id) {
+  if (!confirm('Batalkan topup ini? Entry akan dihapus dari antrian.')) return;
+  try {
+    const res = await fetch(EP + '?id=eq.' + id, {
+      method: 'DELETE',
+      headers: authHeaders({ 'Prefer': 'return=minimal' })
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      toast('Gagal cancel: ' + errText, false);
+      return;
+    }
+    toast('Topup dibatalkan');
+    fetchHistory();
+  } catch (ex) {
+    toast('Error: ' + ex.message, false);
   }
 }
 

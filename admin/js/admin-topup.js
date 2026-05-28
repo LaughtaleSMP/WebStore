@@ -126,6 +126,7 @@ async function _gtLoadHistory() {
           <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">CATATAN</th>
           <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">WAKTU</th>
           <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">DELIVERY</th>
+          <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:center">AKSI</th>
         </tr></thead>
         <tbody>${data.map(r => _gtRow(r)).join('')}</tbody>
       </table></div>`;
@@ -172,6 +173,10 @@ function _gtRow(r) {
   }) : '—';
   const note = r.admin_note || '';
 
+  const cancelHtml = st === 'pending'
+    ? `<button onclick="window._gtCancel(${r.id})" style="font-family:inherit;font-size:10px;font-weight:600;padding:3px 10px;border-radius:5px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.06);color:var(--red);cursor:pointer;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:3px" onmouseover="this.style.background='rgba(248,113,113,.18)'" onmouseout="this.style.background='rgba(248,113,113,.06)'">${_s.no} Cancel</button>`
+    : '<span style="color:var(--text-faint);font-size:11px">&mdash;</span>';
+
   return `<tr style="border-bottom:1px solid var(--border)">
     <td style="padding:9px 10px">${stHtml}</td>
     <td style="padding:9px 10px;font-weight:500">${escHtml(r.player_name)}</td>
@@ -179,6 +184,7 @@ function _gtRow(r) {
     <td style="padding:9px 10px;color:var(--text-faint);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(note)}</td>
     <td style="padding:9px 10px;color:var(--text-muted);font-size:12px;white-space:nowrap">${time}</td>
     <td style="padding:9px 10px;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${deliveryHtml}</td>
+    <td style="padding:9px 10px;text-align:center">${cancelHtml}</td>
   </tr>`;
 }
 
@@ -215,3 +221,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 2000);
 });
+// ── Cancel topup entry ──
+window._gtCancel = async function(id) {
+  const doCancel = async () => {
+    try {
+      const { error } = await sb.from(GT_TABLE).delete().eq('id', id);
+      if (error) {
+        showAdminToast('Gagal cancel: ' + error.message, 'error');
+        return;
+      }
+      showAdminToast('Topup dibatalkan');
+      _gtFetchHistory();
+    } catch (ex) {
+      showAdminToast('Error: ' + ex.message, 'error');
+    }
+  };
+  if (typeof window.showMgrConfirm === 'function') {
+    window.showMgrConfirm({
+      title: 'Cancel Topup',
+      message: 'Batalkan topup ini? Entry akan dihapus dari antrian.',
+      confirmText: 'Cancel Topup',
+      danger: true,
+      onConfirm: doCancel,
+    });
+  } else {
+    if (!confirm('Batalkan topup ini?')) return;
+    doCancel();
+  }
+};
