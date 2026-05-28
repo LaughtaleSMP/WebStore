@@ -37,6 +37,45 @@ async function doLogin() {
   }
 }
 
+// ── Handle Forgot Password (Supabase built-in recovery) ────
+async function doForgotPassword() {
+  const email  = document.getElementById('login-email').value.trim();
+  const msgEl  = document.getElementById('forgot-msg');
+  const msgTxt = document.getElementById('forgot-msg-text');
+  const btn    = document.getElementById('forgot-btn');
+
+  msgEl.style.display = 'none';
+
+  if (!email) {
+    msgEl.className = 'alert alert-error';
+    msgTxt.textContent = 'Masukkan email di field di atas terlebih dahulu.';
+    msgEl.style.display = 'flex';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Mengirim...';
+
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname,
+    });
+
+    if (error) throw error;
+
+    msgEl.className = 'alert alert-success';
+    msgTxt.textContent = `Link reset password telah dikirim ke ${email}. Cek inbox/spam.`;
+    msgEl.style.display = 'flex';
+  } catch (e) {
+    msgEl.className = 'alert alert-error';
+    msgTxt.textContent = e.message || 'Gagal mengirim email reset. Coba lagi.';
+    msgEl.style.display = 'flex';
+  }
+
+  btn.textContent = 'Lupa password?';
+  btn.disabled = false;
+}
+
 async function afterLogin(user, roleData = null) {
   if (!roleData) {
     const { data, error } = await sb

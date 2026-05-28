@@ -338,6 +338,18 @@ a:hover { text-decoration: underline; text-underline-offset: 2px; }
 }
 .auth-switch button:hover { opacity: .7; }
 
+/* ── Forgot password link ── */
+.auth-forgot-btn {
+  background: none; border: none;
+  color: var(--accent); font-size: 12px;
+  font-weight: 500; cursor: pointer;
+  padding: 0; font-family: var(--font);
+  opacity: 0.7;
+  transition: opacity var(--t-fast);
+}
+.auth-forgot-btn:hover { opacity: 1; }
+.auth-forgot-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
 /* ── Request cards ── */
 .req-card {
   background: var(--surface2); border: 1px solid var(--border);

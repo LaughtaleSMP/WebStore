@@ -251,6 +251,18 @@
             </svg>
             Masuk ke Panel
           </button>
+
+          <!-- Forgot password -->
+          <div id="forgot-msg" class="alert" style="display:none; margin-top:12px">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+            </svg>
+            <span id="forgot-msg-text"></span>
+          </div>
+          <div style="text-align:right; margin-top:10px">
+            <button class="auth-forgot-btn" onclick="doForgotPassword()" id="forgot-btn">Lupa password?</button>
+          </div>
+
           <div class="auth-switch">Belum punya akses? <button onclick="switchAuthTab('register')">Daftar sekarang</button></div>
         </div>
       </div>
@@ -839,59 +851,6 @@
             </div>
           </div>
 
-          <!-- Player card — data-enhanced="1" mencegah admin-finance.js memodifikasi DOM -->
-          <div class="fv2-player-card" data-enhanced="1">
-            <div class="fv2-chart-header">
-              <div class="fv2-chart-header-text">
-                <div class="fv2-chart-title">Player Online</div>
-                <div class="fv2-chart-sub">Riwayat jumlah pemain di server</div>
-              </div>
-              <button class="fv2-player-record-btn" onclick="financeV2RecordPlayer()">
-                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                  <polyline points="23 4 23 10 17 10"/>
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                </svg>
-                Catat
-              </button>
-            </div>
-
-            <!-- Status row -->
-            <div class="fv2-player-stat" id="fv2-player-stat" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(74,143,255,0.05);border:1px solid rgba(74,143,255,0.1);border-radius:9px;margin-bottom:8px;">
-              <div class="fv2-player-dot" id="fv2-player-dot"></div>
-              <div style="flex:1">
-                <div style="font-size:1.35rem;font-weight:800;color:var(--text-main);letter-spacing:-0.8px;line-height:1;font-variant-numeric:tabular-nums" id="fv2-player-num">—</div>
-                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px" id="fv2-player-label">Memuat status server…</div>
-              </div>
-            </div>
-
-            <!-- ═══ MINI STATS — FIXED: langsung di HTML ═══ -->
-            <div class="fv2-player-mini-stats">
-              <div class="fv2-pmini-card">
-                <div class="fv2-pmini-val" id="fv2-pmini-current">—</div>
-                <div class="fv2-pmini-label">Sekarang</div>
-              </div>
-              <div class="fv2-pmini-card">
-                <div class="fv2-pmini-val" id="fv2-pmini-peak" style="color:#fbbf24">—</div>
-                <div class="fv2-pmini-label">Tertinggi</div>
-              </div>
-              <div class="fv2-pmini-card">
-                <div class="fv2-pmini-val" id="fv2-pmini-avg" style="color:#a78bfa">—</div>
-                <div class="fv2-pmini-label">Rata-rata</div>
-              </div>
-              <div class="fv2-pmini-card">
-                <div class="fv2-pmini-val" id="fv2-pmini-count" style="color:#34d399">—</div>
-                <div class="fv2-pmini-label">Rekaman</div>
-              </div>
-            </div>
-
-            <!-- Chart canvas -->
-            <div style="position:relative;width:100%;height:120px">
-              <canvas id="fv2-player-chart"></canvas>
-            </div>
-
-            <!-- Next update label -->
-            <div style="font-size:10px;color:var(--text-faint);margin-top:6px;font-variant-numeric:tabular-nums" id="fv2-player-next-update"></div>
-          </div>
         </div>
 
         <!-- Action buttons -->

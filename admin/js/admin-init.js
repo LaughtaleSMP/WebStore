@@ -185,13 +185,170 @@ window.toast = toast;
   window._idleStopTracking  = function () { isLoggedIn = false; clearTimeout(idleTimer); };
 })();
 
+// ==================== PASSWORD RECOVERY HANDLER ====================
+let _isRecoveryMode = false;
+
+// ── Early URL detection: check hash BEFORE Supabase processes it ──
+// Supabase implicit flow appends #access_token=...&type=recovery to the redirect URL
+(function _detectRecoveryFromUrl() {
+  try {
+    const hash = window.location.hash;
+    const params = new URLSearchParams(window.location.search);
+    // Check URL hash (implicit flow): #type=recovery or #...&type=recovery
+    if (hash && hash.includes('type=recovery')) {
+      _isRecoveryMode = true;
+      return;
+    }
+    // Check URL search params (PKCE flow): ?code=...
+    // PKCE recovery also has the code verifier stored with /PASSWORD_RECOVERY suffix
+    if (params.has('code')) {
+      const codeVerifier = localStorage.getItem(
+        `sb-jlxtnbnrirxhwuyqjlzw-auth-token-code-verifier`
+      );
+      if (codeVerifier && codeVerifier.includes('PASSWORD_RECOVERY')) {
+        _isRecoveryMode = true;
+      }
+    }
+  } catch { }
+})();
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    _isRecoveryMode = true;
+    _showRecoveryModal();
+  }
+});
+
+function _showRecoveryModal() {
+  // Hide auth screen login form, show recovery overlay
+  const existing = document.getElementById('recovery-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'recovery-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:99999;
+    background:rgba(7,10,14,0.95);backdrop-filter:blur(12px);
+    display:flex;align-items:center;justify-content:center;padding:1.5rem;
+  `;
+  overlay.innerHTML = `
+    <div style="background:var(--surface,#0c1017);border:1px solid rgba(74,143,255,0.2);border-radius:16px;
+                padding:2rem;max-width:400px;width:100%;font-family:'Inter',sans-serif;">
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem;">🔐</div>
+        <h3 style="font-size:1.1rem;font-weight:700;color:#eef1f7;margin-bottom:0.3rem;">Reset Password</h3>
+        <p style="font-size:12.5px;color:#5a6478;line-height:1.6;">Masukkan password baru untuk akun admin kamu.</p>
+      </div>
+      <div id="recovery-alert" class="alert alert-error" style="display:none;margin-bottom:12px;">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="recovery-alert-msg"></span>
+      </div>
+      <div style="margin-bottom:13px;">
+        <label style="display:block;font-size:10.5px;font-weight:600;color:#5a6478;
+                      letter-spacing:0.4px;text-transform:uppercase;margin-bottom:5px;">Password Baru</label>
+        <input id="recovery-pw" type="password" placeholder="Minimal 6 karakter"
+               style="width:100%;background:#111820;border:1px solid rgba(255,255,255,0.09);
+                      border-radius:9px;padding:9.5px 12px;color:#eef1f7;font-size:13.5px;
+                      font-family:'Inter',sans-serif;outline:none;" />
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="display:block;font-size:10.5px;font-weight:600;color:#5a6478;
+                      letter-spacing:0.4px;text-transform:uppercase;margin-bottom:5px;">Konfirmasi Password</label>
+        <input id="recovery-pw2" type="password" placeholder="Ulangi password baru"
+               style="width:100%;background:#111820;border:1px solid rgba(255,255,255,0.09);
+                      border-radius:9px;padding:9.5px 12px;color:#eef1f7;font-size:13.5px;
+                      font-family:'Inter',sans-serif;outline:none;" />
+      </div>
+      <button id="recovery-submit-btn" onclick="doResetPassword()"
+              style="width:100%;padding:10.5px;background:#4a8fff;color:#fff;border:none;
+                     border-radius:9px;font-size:13.5px;font-weight:600;cursor:pointer;
+                     font-family:'Inter',sans-serif;transition:background .16s;">
+        Simpan Password Baru
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Focus first input
+  setTimeout(() => {
+    const inp = document.getElementById('recovery-pw');
+    if (inp) inp.focus();
+  }, 100);
+
+  // Enter key support
+  overlay.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doResetPassword();
+  });
+}
+
+async function doResetPassword() {
+  const pw  = document.getElementById('recovery-pw').value;
+  const pw2 = document.getElementById('recovery-pw2').value;
+  const btn = document.getElementById('recovery-submit-btn');
+  const alertEl  = document.getElementById('recovery-alert');
+  const alertMsg = document.getElementById('recovery-alert-msg');
+
+  alertEl.style.display = 'none';
+
+  if (!pw || pw.length < 6) {
+    alertEl.className = 'alert alert-error';
+    alertMsg.textContent = 'Password minimal 6 karakter.';
+    alertEl.style.display = 'flex';
+    return;
+  }
+  if (pw !== pw2) {
+    alertEl.className = 'alert alert-error';
+    alertMsg.textContent = 'Konfirmasi password tidak cocok.';
+    alertEl.style.display = 'flex';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+
+  try {
+    const { error } = await sb.auth.updateUser({ password: pw });
+    if (error) throw error;
+
+    // Success — remove overlay, show toast, reload to login fresh
+    const overlay = document.getElementById('recovery-overlay');
+    if (overlay) {
+      overlay.innerHTML = `
+        <div style="background:#0c1017;border:1px solid rgba(52,211,153,0.25);border-radius:16px;
+                    padding:2rem;max-width:380px;width:100%;text-align:center;font-family:'Inter',sans-serif;">
+          <div style="font-size:2.5rem;margin-bottom:0.75rem;">✅</div>
+          <h3 style="font-size:1.1rem;font-weight:700;color:#6ee7b7;margin-bottom:0.5rem;">Password Berhasil Diubah!</h3>
+          <p style="font-size:12.5px;color:#5a6478;line-height:1.6;">
+            Mengalihkan ke halaman login...
+          </p>
+        </div>
+      `;
+    }
+
+    // Sign out & reload so they can login with new password
+    await sb.auth.signOut();
+    setTimeout(() => location.reload(), 2000);
+  } catch (e) {
+    alertEl.className = 'alert alert-error';
+    alertMsg.textContent = e.message || 'Gagal menyimpan password. Coba lagi.';
+    alertEl.style.display = 'flex';
+    btn.disabled = false;
+    btn.textContent = 'Simpan Password Baru';
+  }
+}
+
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', async () => {
   const pwInput = document.getElementById('login-password');
   if (pwInput) pwInput.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) await afterLogin(session.user);
+  // Skip auto-login if in password recovery mode
+  if (!_isRecoveryMode) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) await afterLogin(session.user);
+  }
 
   ['cfg-status_api_provider', 'cfg-status_refresh_interval', 'cfg-status_custom_url'].forEach(id => {
     const el = document.getElementById(id);

@@ -1197,6 +1197,15 @@
 <!-- ============================================================
      SCRIPTS
 ============================================================ -->
+<!-- Recovery redirect: if Supabase password reset lands here, forward to admin -->
+<script>
+(function() {
+  var h = window.location.hash || '';
+  if (h.indexOf('type=recovery') !== -1) {
+    window.location.replace('admin/index.html' + h);
+  }
+})();
+</script>
 <script src="libs/supabase.js" defer></script>
 <script src="js/nav.js" defer></script>
 

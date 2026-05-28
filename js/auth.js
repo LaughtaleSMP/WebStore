@@ -7,6 +7,18 @@ const SUPABASE_KEY = 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ── Intercept password recovery redirect ────────────────────
+// Supabase always redirects to Site URL. If this is a recovery,
+// forward to admin panel with the hash tokens intact.
+(function() {
+  const hash = window.location.hash || '';
+  if (hash.includes('type=recovery')) {
+    // Redirect to admin page, preserving the recovery hash
+    window.location.href = './admin/index.html' + hash;
+    return;
+  }
+})();
+
 // ── Redirect jika sudah login ───────────────────────────────
 sb.auth.getSession().then(({ data }) => {
   if (data.session) window.location.href = './';
