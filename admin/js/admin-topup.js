@@ -146,11 +146,16 @@ function _gtRow(r) {
     no: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="vertical-align:-1px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
   };
   let stHtml, deliveryHtml;
+  const isOnline = rm.includes('(online');
+  const isOffline = !isOnline && rm.includes('(offline');
   if (st === 'done') {
-    if (rm.includes('(online)')) {
+    if (isOnline) {
+      const isDeliveredOnLogin = rm.includes('delivered on login');
       stHtml = `<span style="color:#2dd4bf;font-weight:600;font-size:11px">${_s.gem} Masuk</span>`;
-      deliveryHtml = `<span style="color:#2dd4bf;font-size:11px">${_s.ok} Diterima player (online)</span>`;
-    } else if (rm.includes('(offline')) {
+      deliveryHtml = isDeliveredOnLogin
+        ? `<span style="color:#2dd4bf;font-size:11px">${_s.ok} Masuk saat player login</span>`
+        : `<span style="color:#2dd4bf;font-size:11px">${_s.ok} Diterima player (online)</span>`;
+    } else if (isOffline) {
       stHtml = `<span style="color:#a78bfa;font-weight:600;font-size:11px">${_s.box} Antri</span>`;
       deliveryHtml = '<span style="color:#a78bfa;font-size:11px">Menunggu player login</span>';
     } else {
@@ -173,7 +178,8 @@ function _gtRow(r) {
   }) : '—';
   const note = r.admin_note || '';
 
-  const cancelHtml = st === 'pending'
+  const canCancel = (st === 'pending') || isOffline;
+  const cancelHtml = canCancel
     ? `<button onclick="window._gtCancel(${r.id})" style="font-family:inherit;font-size:10px;font-weight:600;padding:3px 10px;border-radius:5px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.06);color:var(--red);cursor:pointer;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:3px" onmouseover="this.style.background='rgba(248,113,113,.18)'" onmouseout="this.style.background='rgba(248,113,113,.06)'">${_s.no} Cancel</button>`
     : '<span style="color:var(--text-faint);font-size:11px">&mdash;</span>';
 

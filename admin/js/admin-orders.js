@@ -802,7 +802,7 @@ window.allOrdersLoad = async function () {
     var t = _topupMap[o.id];
     if (!t) return '<span style="color:var(--text-faint);font-size:11px">&mdash;</span>';
     if (t.status === 'done') {
-      return t.result_msg.includes('(online)')
+      return t.result_msg.includes('(online')
         ? '<span style="background:rgba(45,212,191,.12);color:#2dd4bf;border:1px solid rgba(45,212,191,.25);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600">' + _ds.gem + ' Masuk</span>'
         : '<span style="background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.2);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600">' + _ds.box + ' Antri</span>';
     }

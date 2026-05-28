@@ -207,9 +207,11 @@ async function fetchHistory() {
       var st = h.status || 'pending';
       var rm = h.result_msg || '';
       var stCls, stLabel;
+      var isOnline = (rm.indexOf('(online') >= 0);
+      var isOffline = (!isOnline && rm.indexOf('(offline') >= 0);
       if (st === 'done') {
-        if (rm.indexOf('(online)') >= 0) { stCls = 'online'; stLabel = _iSvg.gem + ' Masuk'; }
-        else if (rm.indexOf('(offline') >= 0) { stCls = 'queued'; stLabel = _iSvg.box + ' Antri'; }
+        if (isOnline) { stCls = 'online'; stLabel = _iSvg.gem + ' Masuk'; }
+        else if (isOffline) { stCls = 'queued'; stLabel = _iSvg.box + ' Antri'; }
         else { stCls = 'done'; stLabel = _iSvg.ok + ' Selesai'; }
       } else if (st === 'failed') {
         stCls = 'failed'; stLabel = _iSvg.no + ' Gagal';
@@ -223,14 +225,16 @@ async function fetchHistory() {
       var adminLabel = noteAdminMatch ? noteAdminMatch[1] : (h.admin_key && h.admin_key !== 'laughtale-topup' ? h.admin_key : '');
       var admin = adminLabel ? ' \u00b7 oleh ' + esc(adminLabel) : '';
       var dInfo = '';
-      if (st === 'done' && rm.indexOf('(online)') >= 0) dInfo = _iSvg.ok + ' Diterima langsung saat online';
-      else if (st === 'done' && rm.indexOf('(offline') >= 0) dInfo = _iSvg.box + ' Tercatat, masuk saat login';
+      if (st === 'done' && rm.indexOf('delivered on login') >= 0) dInfo = _iSvg.ok + ' Masuk saat login';
+      else if (st === 'done' && isOnline) dInfo = _iSvg.ok + ' Diterima langsung saat online';
+      else if (st === 'done' && isOffline) dInfo = _iSvg.box + ' Tercatat, masuk saat login';
       else if (st === 'pending') dInfo = _iSvg.hr + ' Menunggu server (~30 dtk)';
       else if (st === 'failed') dInfo = rm ? esc(rm) : 'Gagal diproses';
       else if (st === 'done') dInfo = _iSvg.ok + ' Berhasil diproses';
       var cancelBtn = '';
-      if (st === 'pending') {
-        cancelBtn = '<button class="h-cancel" onclick="cancelTopup(' + h.id + ')" title="Batalkan topup ini">' +
+      var canCancel = (st === 'pending') || isOffline;
+      if (canCancel) {
+        cancelBtn = '<button class="h-cancel" onclick="window._cancelTopup(\'' + h.id + '\')" title="Batalkan topup ini">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
           'CANCEL</button>';
       }
@@ -248,7 +252,7 @@ async function fetchHistory() {
 }
 
 // ── Cancel topup ──
-async function cancelTopup(id) {
+window._cancelTopup = async function(id) {
   if (!confirm('Batalkan topup ini? Entry akan dihapus dari antrian.')) return;
   try {
     const res = await fetch(EP + '?id=eq.' + id, {
@@ -265,7 +269,7 @@ async function cancelTopup(id) {
   } catch (ex) {
     toast('Error: ' + ex.message, false);
   }
-}
+};
 
 function timeAgo(ts) {
   if (!ts) return '?';
