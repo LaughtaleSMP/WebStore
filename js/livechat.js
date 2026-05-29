@@ -240,6 +240,8 @@
     _hideAll();
     if (codeWrap) codeWrap.style.display = '';
     if (codeEl) codeEl.textContent = code;
+    var inlineEl = document.getElementById('lc-code-inline');
+    if (inlineEl) inlineEl.textContent = code;
     _startVerifyPoll(name);
   }
 
