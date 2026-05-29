@@ -15,7 +15,7 @@
   var VERIFY   = SB_URL + '/rest/v1/chat_verify';
   var ACCT     = SB_URL + '/rest/v1/chat_accounts';
 
-  var MAX_MSG      = 80;
+  var MSG_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
   var POLL_MS      = 10000;
   var RATE_MS      = 3000;
   var VERIFY_POLL  = 5000;
@@ -491,15 +491,35 @@
   });
 
   // ══════════════════════════════════════════
+  //  VERIFIED NAMES CACHE (for ✓ badge)
+  // ══════════════════════════════════════════
+  var _verifiedNames = {}; // gamertag → true
+
+  function _refreshVerified() {
+    fetch(ACCT + '?select=gamertag', { headers: _hdr })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (rows) {
+        var fresh = {};
+        for (var i = 0; i < rows.length; i++) {
+          if (rows[i].gamertag) fresh[rows[i].gamertag] = true;
+        }
+        _verifiedNames = fresh;
+      }).catch(function () {});
+  }
+  _refreshVerified();
+  setInterval(_refreshVerified, 60000); // refresh every 60s
+
+  // ══════════════════════════════════════════
   //  FETCH / POLL MESSAGES
   // ══════════════════════════════════════════
   function _fetchAll() {
     _setStatus('polling');
-    fetch(EP + '?order=id.desc&limit=' + MAX_MSG, { headers: _hdr })
+    var since = new Date(Date.now() - MSG_WINDOW_MS).toISOString();
+    fetch(EP + '?created_at=gte.' + since + '&order=id.asc', { headers: _hdr })
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (rows) {
         if (!rows) return;
-        rows.reverse(); messages = rows;
+        messages = rows;
         lastId = rows.length ? rows[rows.length - 1].id : 0;
         _renderAll(); _scroll(); _setStatus('connected');
       }).catch(function () { _setStatus('offline'); });
@@ -532,7 +552,6 @@
       }
       if (!dup) messages.push(r);
     }
-    if (messages.length > MAX_MSG) messages = messages.slice(messages.length - MAX_MSG);
     _renderNew(rows); _updateCount();
   }
 
@@ -559,6 +578,8 @@
 
   function _buildMsg(m) {
     var el = document.createElement('div');
+    var isVerified = _verifiedNames[m.player_name] === true;
+    var verifyBadge = isVerified ? '<span class="lc-verified" title="Verified">✓</span>' : '';
 
     // System message (join/leave/death)
     if (m.source === 'system') {
@@ -567,7 +588,7 @@
       var cfg = _SYS_CFG[t];
       el.innerHTML =
         '<span class="lc-sys-icon ' + cfg.cls + '">' + cfg.svg + '</span>' +
-        '<span class="lc-sys-text"><b>' + _esc(m.player_name || '?') + '</b> ' + _esc(m.message || '') + '</span>' +
+        '<span class="lc-sys-text"><b>' + _esc(m.player_name || '?') + '</b>' + verifyBadge + ' ' + _esc(m.message || '') + '</span>' +
         '<span class="lc-msg-time">' + _time(m.created_at) + '</span>';
       return el;
     }
@@ -577,7 +598,7 @@
     var g = m.source === 'game';
     el.innerHTML =
       '<span class="lc-src ' + (g ? 'lc-src-game' : 'lc-src-web') + '">' + (g ? SVG_GAME : SVG_WEB) + (g ? 'GAME' : 'WEB') + '</span>' +
-      '<div class="lc-msg-body"><span class="lc-msg-name">' + _esc(m.player_name || '?') + '</span><span class="lc-msg-text">' + _esc(m.message || '') + '</span></div>' +
+      '<div class="lc-msg-body"><span class="lc-msg-name">' + _esc(m.player_name || '?') + verifyBadge + '</span><span class="lc-msg-text">' + _esc(m.message || '') + '</span></div>' +
       '<span class="lc-msg-time">' + _time(m.created_at) + '</span>';
     return el;
   }
@@ -593,12 +614,14 @@
     msgList.appendChild(frag); _updateCount();
   }
 
+  var DOM_CAP = 800; // cap DOM nodes for perf, data stays 24h
+
   function _renderNew(rows) {
     var empty = msgList.querySelector('.lc-empty'); if (empty) empty.remove();
     var frag = document.createDocumentFragment();
     for (var i = 0; i < rows.length; i++) frag.appendChild(_buildMsg(rows[i]));
     msgList.appendChild(frag);
-    while (msgList.children.length > MAX_MSG) msgList.removeChild(msgList.firstChild);
+    while (msgList.children.length > DOM_CAP) msgList.removeChild(msgList.firstChild);
   }
 
   function _scroll() { setTimeout(function () { msgList.scrollTop = msgList.scrollHeight; }, 50); }
