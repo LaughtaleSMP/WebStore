@@ -108,6 +108,13 @@
   var msgIn      = document.getElementById('lc-input');
   var sendBtn    = document.getElementById('lc-send');
   var logoutBtn  = document.getElementById('lc-logout-btn');
+  // Reset PIN
+  var resetForm  = document.getElementById('lc-reset-form');
+  var resetGt    = document.getElementById('lc-reset-gt');
+  var resetBtn   = document.getElementById('lc-reset-btn');
+  var resetErr   = document.getElementById('lc-reset-error');
+  var toResetBtn = document.getElementById('lc-to-reset');
+  var toLoginFromReset = document.getElementById('lc-to-login-from-reset');
 
   if (!panel || !msgList) return;
 
@@ -116,6 +123,7 @@
   var pollTimer = null, isOpen = false;
   var verifiedName = null, verifyPollId = null, verifyRowId = null;
   var _pendingGt = null;
+  var _isResetMode = false;
   var _loginAttempts = 0, _loginCooldownUntil = 0;
 
   // ══════════════════════════════════════════
@@ -193,6 +201,12 @@
     e.preventDefault(); _hideAll(); if (regForm) regForm.style.display = '';
   });
   if (toLoginBtn) toLoginBtn.addEventListener('click', function (e) {
+    e.preventDefault(); _hideAll(); if (loginForm) loginForm.style.display = '';
+  });
+  if (toResetBtn) toResetBtn.addEventListener('click', function (e) {
+    e.preventDefault(); _hideAll(); if (resetForm) resetForm.style.display = '';
+  });
+  if (toLoginFromReset) toLoginFromReset.addEventListener('click', function (e) {
     e.preventDefault(); _hideAll(); if (loginForm) loginForm.style.display = '';
   });
 
@@ -309,12 +323,53 @@
             // Show PIN setup
             _hideAll();
             if (pinWrap) pinWrap.style.display = '';
+            if (pinBtn) pinBtn.textContent = _isResetMode ? 'SIMPAN PIN BARU' : 'BUAT AKUN';
             if (pinIn1) pinIn1.focus();
           }
         }).catch(function () {});
     }, VERIFY_POLL);
   }
   function _stopVerifyPoll() { if (verifyPollId) { clearInterval(verifyPollId); verifyPollId = null; } }
+
+  // ══════════════════════════════════════════
+  //  RESET PIN — re-verify gamertag → set new PIN
+  // ══════════════════════════════════════════
+  if (resetBtn) resetBtn.addEventListener('click', _doReset);
+  if (resetGt) resetGt.addEventListener('keydown', function (e) { if (e.key === 'Enter') _doReset(); });
+
+  function _doReset() {
+    var gt = _sanitize(resetGt?.value, 20);
+    if (!gt) { resetGt?.focus(); return; }
+
+    _hideErr(resetErr);
+    resetBtn.disabled = true;
+    resetBtn.textContent = '...';
+
+    // Check if account EXISTS (required for reset)
+    fetch(ACCT + '?gamertag=eq.' + encodeURIComponent(gt) + '&select=id', { headers: _hdr })
+      .then(function (r) { return r.json(); })
+      .then(function (rows) {
+        if (!rows || !rows.length) throw new Error('Akun "' + _esc(gt) + '" tidak ditemukan.');
+        // Generate verify code (same as register)
+        var code = String(Math.floor(100000 + Math.random() * 900000));
+        return fetch(VERIFY, {
+          method: 'POST', headers: _jHdr(),
+          body: JSON.stringify({ player_name: gt, code: code, verified: false })
+        }).then(function (r) { return r.json(); }).then(function (vr) {
+          if (!vr || !vr.length) throw new Error('Gagal buat kode. Coba lagi.');
+          verifyRowId = vr[0].id;
+          _pendingGt = gt;
+          _isResetMode = true;
+          try { localStorage.setItem(PENDING_KEY, JSON.stringify({ name: gt, code: code, rowId: vr[0].id, ts: Date.now() })); } catch (e) {}
+          _showCodeStep(code, gt);
+        });
+      }).catch(function (e) {
+        _showErr(resetErr, e.message || 'Error');
+      }).finally(function () {
+        resetBtn.disabled = false;
+        resetBtn.textContent = 'RESET PIN';
+      });
+  }
 
   // ══════════════════════════════════════════
   //  REGISTER — Step 3: set PIN → create account
@@ -335,23 +390,33 @@
 
     var newToken = _genToken();
     _hash(p1).then(function (hash) {
-      return fetch(ACCT, {
-        method: 'POST', headers: _jHdr(),
-        body: JSON.stringify({ gamertag: _pendingGt, pin_hash: hash, session_token: newToken })
-      });
+      if (_isResetMode) {
+        // PATCH existing account with new PIN
+        return fetch(ACCT + '?gamertag=eq.' + encodeURIComponent(_pendingGt), {
+          method: 'PATCH', headers: _jHdr(),
+          body: JSON.stringify({ pin_hash: hash, session_token: newToken })
+        });
+      } else {
+        // POST new account
+        return fetch(ACCT, {
+          method: 'POST', headers: _jHdr(),
+          body: JSON.stringify({ gamertag: _pendingGt, pin_hash: hash, session_token: newToken })
+        });
+      }
     }).then(function (r) {
-      if (!r.ok) throw new Error('Gagal buat akun (HTTP ' + r.status + ')');
+      if (!r.ok) throw new Error((_isResetMode ? 'Gagal reset PIN' : 'Gagal buat akun') + ' (HTTP ' + r.status + ')');
       return r.json();
     }).then(function () {
       verifiedName = _pendingGt;
       _saveSession(_pendingGt, newToken);
       try { localStorage.removeItem(PENDING_KEY); } catch (e) {}
+      _isResetMode = false;
       _showAuthed(_pendingGt);
     }).catch(function (e) {
       _showErr(pinErr, e.message || 'Gagal');
     }).finally(function () {
       pinBtn.disabled = false;
-      pinBtn.textContent = 'BUAT AKUN';
+      pinBtn.textContent = _isResetMode ? 'SIMPAN PIN BARU' : 'BUAT AKUN';
     });
   }
 
@@ -378,7 +443,7 @@
   //  UI HELPERS
   // ══════════════════════════════════════════
   function _hideAll() {
-    [authGate, loginForm, regForm, codeWrap, pinWrap, authedWrap].forEach(function (el) {
+    [authGate, loginForm, regForm, codeWrap, pinWrap, authedWrap, resetForm].forEach(function (el) {
       if (el) el.style.display = 'none';
     });
   }

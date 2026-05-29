@@ -211,7 +211,17 @@
         </div>
         <button type="button" class="lc-login-btn" id="lc-login-btn">MASUK</button>
         <div class="lc-login-error" id="lc-login-error" style="display:none"></div>
-        <div class="lc-switch-link">Belum punya akun? <a href="#" id="lc-to-reg">Daftar</a></div>
+        <div class="lc-switch-link">Belum punya akun? <a href="#" id="lc-to-reg">Daftar</a> | <a href="#" id="lc-to-reset">Lupa PIN?</a></div>
+      </div>
+      <!-- Reset PIN Form -->
+      <div class="lc-login-form" id="lc-reset-form" style="display:none">
+        <div class="lc-login-row">
+          <svg class="lc-login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4"/><circle cx="15" cy="11" r=".5" fill="currentColor"/><circle cx="17" cy="13" r=".5" fill="currentColor"/></svg>
+          <input type="text" class="lc-login-input" id="lc-reset-gt" placeholder="Gamertag yang terdaftar" maxlength="20" autocomplete="off">
+        </div>
+        <button type="button" class="lc-login-btn" id="lc-reset-btn">RESET PIN</button>
+        <div class="lc-login-error" id="lc-reset-error" style="display:none"></div>
+        <div class="lc-switch-link">Ingat PIN? <a href="#" id="lc-to-login-from-reset">Login</a></div>
       </div>
       <!-- Register Form -->
       <div class="lc-login-form" id="lc-reg-form" style="display:none">
