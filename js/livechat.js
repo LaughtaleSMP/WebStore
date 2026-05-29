@@ -29,7 +29,16 @@
   var _hdr = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
   function _jHdr() { return { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }; }
   function _esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function _time(iso) { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}); } catch(e) { return ''; } }
+  function _time(iso) {
+    if (!iso) return '';
+    try {
+      var d = new Date(iso);
+      var hh = String(d.getHours()).padStart(2, '0');
+      var mm = String(d.getMinutes()).padStart(2, '0');
+      var ss = String(d.getSeconds()).padStart(2, '0');
+      return hh + ':' + mm + ':' + ss;
+    } catch(e) { return ''; }
+  }
   function _sanitize(s, max) { return String(s || '').replace(/[\x00-\x1f]/g, '').trim().substring(0, max || 20); }
 
   // SHA-256 hash (Web Crypto API)

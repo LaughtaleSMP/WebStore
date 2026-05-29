@@ -225,13 +225,14 @@
   display: flex;
   flex-flow: row nowrap;
   align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
+  gap: 8px;
+  padding: 5px 12px;
   border-radius: 6px;
   transition: background .15s;
   animation: lcMsgIn .25s ease;
+  min-height: 28px;
 }
-.lc-msg:hover { background: rgba(255,255,255,.02); }
+.lc-msg:hover { background: rgba(255,255,255,.025); }
 @keyframes lcMsgIn {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -240,30 +241,30 @@
 /* Source Badge */
 .lc-src {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .3rem;
+  font-size: .34rem;
   font-weight: 700;
-  padding: 2px 5px;
-  border-radius: 3px;
+  padding: 3px 7px;
+  border-radius: 4px;
   flex-shrink: 0;
   letter-spacing: .6px;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   white-space: nowrap;
   line-height: 1;
-  height: 18px;
+  height: 22px;
   box-sizing: border-box;
 }
-.lc-src svg { width: 8px; height: 8px; opacity: .8; }
+.lc-src svg { width: 10px; height: 10px; opacity: .85; }
 .lc-src-game {
   color: var(--green);
-  background: rgba(52,211,153,.08);
-  border: 1px solid rgba(52,211,153,.15);
+  background: rgba(52,211,153,.1);
+  border: 1px solid rgba(52,211,153,.2);
 }
 .lc-src-web {
   color: var(--ac);
-  background: rgba(168,85,247,.08);
-  border: 1px solid rgba(168,85,247,.15);
+  background: rgba(168,85,247,.1);
+  border: 1px solid rgba(168,85,247,.2);
 }
 
 /* Message Content */
@@ -274,64 +275,65 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: 0;
-  line-height: 18px;
+  line-height: 1.4;
   overflow: hidden;
 }
 .lc-msg-name {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .38rem;
+  font-size: .44rem;
   font-weight: 700;
-  color: rgba(255,255,255,.85);
-  margin-right: 4px;
+  color: rgba(255,255,255,.9);
+  margin-right: 6px;
   white-space: nowrap;
 }
 .lc-msg-text {
-  font-size: .38rem;
-  color: var(--dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .44rem;
+  color: rgba(255,255,255,.7);
   word-break: break-word;
   overflow-wrap: anywhere;
 }
 .lc-msg-time {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .28rem;
-  color: var(--mute);
+  font-size: .34rem;
+  color: rgba(255,255,255,.35);
   flex-shrink: 0;
   white-space: nowrap;
-  opacity: .45;
   margin-left: auto;
-  line-height: 18px;
+  padding-left: 8px;
 }
 
-/* ── System Messages (join/leave) ── */
+/* ── System Messages (join/leave/death) ── */
 .lc-msg-sys {
   background: transparent !important;
-  padding: 2px 10px !important;
-  gap: 6px !important;
-  opacity: .5;
+  padding: 3px 12px !important;
+  gap: 8px !important;
+  min-height: 24px;
 }
-.lc-msg-sys:hover { opacity: .7; background: transparent !important; }
+.lc-msg-sys:hover { background: rgba(255,255,255,.015) !important; }
 .lc-sys-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 11px; height: 11px;
+  width: 14px; height: 14px;
 }
-.lc-sys-icon svg { width: 11px; height: 11px; display: block; }
-.lc-sys-join { color: var(--green, #26a69a); }
-.lc-sys-leave { color: var(--red, #ef5350); }
-.lc-sys-death { color: #ef5350; opacity: .8; }
+.lc-sys-icon svg { width: 14px; height: 14px; display: block; }
+.lc-sys-join { color: #34d399; }
+.lc-sys-leave { color: #f87171; }
+.lc-sys-death { color: #f87171; }
 .lc-sys-text {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .36rem;
-  color: var(--mute);
+  font-size: .42rem;
+  color: rgba(255,255,255,.5);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
 }
 .lc-sys-text b {
-  color: rgba(255,255,255,.55);
-  font-weight: 600;
+  color: rgba(255,255,255,.75);
+  font-weight: 700;
 }
 
 /* ── Input Area ── */
@@ -753,15 +755,17 @@ body.light .lc-messages::after {
   .lc-empty-text { font-size: .44rem; }
   .lc-empty-sub { font-size: .36rem; }
 
-  .lc-msg { gap: 6px; padding: 5px 6px; border-radius: 5px; }
-  .lc-src { font-size: .3rem; padding: 2px 5px; gap: 2px; }
-  .lc-src svg { width: 8px; height: 8px; }
-  .lc-msg-name { font-size: .4rem; }
+  .lc-msg { gap: 6px; padding: 4px 8px; border-radius: 5px; min-height: 26px; }
+  .lc-src { font-size: .32rem; padding: 2px 6px; gap: 3px; height: 20px; }
+  .lc-src svg { width: 9px; height: 9px; }
+  .lc-msg-name { font-size: .42rem; }
   .lc-msg-text { font-size: .42rem; }
-  .lc-msg-time { font-size: .28rem; }
+  .lc-msg-time { font-size: .32rem; }
 
-  .lc-sys-text { font-size: .3rem; }
-  .lc-sys-icon { width: 8px; height: 8px; }
+  .lc-sys-text { font-size: .38rem; }
+  .lc-sys-icon { width: 12px; height: 12px; }
+  .lc-sys-icon svg { width: 12px; height: 12px; }
+  .lc-msg-sys { padding: 3px 8px !important; min-height: 22px; }
 
   /* Input area */
   .lc-input-wrap { gap: 8px; padding: 10px 12px; }
@@ -812,17 +816,22 @@ body.light .lc-messages::after {
 
   .lc-msg {
     gap: 4px;
-    padding: 4px 4px;
+    padding: 4px 6px;
+    min-height: 24px;
   }
   .lc-src {
-    font-size: .32rem;
-    padding: 1px 4px;
-    letter-spacing: .5px;
+    font-size: .3rem;
+    padding: 2px 4px;
+    letter-spacing: .4px;
+    height: 18px;
   }
-  .lc-src svg { width: 6px; height: 6px; }
-  .lc-msg-name { font-size: .42rem; margin-right: 4px; }
-  .lc-msg-text { font-size: .48rem; }
-  .lc-msg-time { font-size: .3rem; margin-top: 2px; }
+  .lc-src svg { width: 8px; height: 8px; }
+  .lc-msg-name { font-size: .4rem; margin-right: 4px; }
+  .lc-msg-text { font-size: .4rem; }
+  .lc-msg-time { font-size: .3rem; }
+  .lc-sys-text { font-size: .36rem; }
+  .lc-sys-icon { width: 10px; height: 10px; }
+  .lc-sys-icon svg { width: 10px; height: 10px; }
 
   .lc-input-wrap { padding: 6px 8px; gap: 5px; }
   .lc-code-display { font-size: 1.2rem; letter-spacing: 5px; padding: 8px 10px; }
