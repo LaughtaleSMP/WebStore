@@ -422,6 +422,7 @@
   height: 100%;
   min-width: 0;
   -webkit-appearance: none;
+  appearance: none;
 }
 .lc-login-input::placeholder { color: var(--mute); opacity: .5; }
 .lc-login-btn {
@@ -601,6 +602,7 @@
   min-width: 0;
   height: 100%;
   -webkit-appearance: none;
+  appearance: none;
 }
 .lc-msg-input::placeholder { color: var(--mute); opacity: .6; }
 
