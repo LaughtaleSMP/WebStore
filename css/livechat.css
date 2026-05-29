@@ -6,7 +6,7 @@
 
 /* ── Panel Container ── */
 .lc-panel {
-  background: linear-gradient(135deg, rgba(13,17,23,.9), rgba(22,31,46,.85));
+  background: var(--surface, rgba(13,17,23,.6));
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   padding: 0;
@@ -179,15 +179,7 @@
   background: rgba(168,85,247,.15);
   border-radius: 2px;
 }
-.lc-messages::after {
-  content: '';
-  position: sticky;
-  bottom: 0; left: 0; right: 0;
-  height: 20px;
-  background: linear-gradient(transparent, rgba(13,17,23,.6));
-  pointer-events: none;
-  flex-shrink: 0;
-}
+/* removed: dark gradient overlay at bottom of messages */
 
 /* ── Empty State ── */
 .lc-empty {
@@ -342,8 +334,8 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  border-top: 1px solid rgba(255,255,255,.03);
-  background: rgba(0,0,0,.2);
+  border-top: 1px solid rgba(255,255,255,.05);
+  background: transparent;
 }
 
 /* Auth Gate (not logged in — clickable prompt) */
@@ -701,20 +693,12 @@ body.light .lc-header-orb {
   border-color: rgba(168,85,247,.12);
 }
 body.light .lc-msg:hover { background: rgba(0,0,0,.015); }
-body.light .lc-input-wrap {
-  background: rgba(0,0,0,.02);
-  border-color: rgba(0,0,0,.04);
-}
-body.light .lc-name-wrap,
 body.light .lc-msg-wrap {
   background: rgba(0,0,0,.02);
   border-color: rgba(0,0,0,.06);
 }
 body.light .lc-send-btn {
   background: linear-gradient(135deg, rgba(168,85,247,.06), rgba(168,85,247,.12));
-}
-body.light .lc-messages::after {
-  background: linear-gradient(transparent, rgba(245,245,250,.6));
 }
 
 

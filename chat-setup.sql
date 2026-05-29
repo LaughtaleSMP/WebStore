@@ -43,13 +43,21 @@ CREATE POLICY "anon_all_verify" ON chat_verify FOR ALL TO anon USING (true) WITH
 
 -- 3. Chat Accounts (persistent verified gamertag + PIN)
 CREATE TABLE IF NOT EXISTS chat_accounts (
-  id          BIGSERIAL PRIMARY KEY,
-  gamertag    TEXT NOT NULL UNIQUE,
-  pin_hash    TEXT NOT NULL,
-  verified_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  last_login  TIMESTAMPTZ
+  id            BIGSERIAL PRIMARY KEY,
+  gamertag      TEXT NOT NULL UNIQUE,
+  pin_hash      TEXT NOT NULL,
+  session_token TEXT,
+  verified_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_login    TIMESTAMPTZ
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_acct_gt ON chat_accounts (gamertag);
+CREATE INDEX IF NOT EXISTS idx_chat_acct_token ON chat_accounts (session_token);
+
+-- Safe migration: add session_token if not exists
+DO $$ BEGIN
+  ALTER TABLE chat_accounts ADD COLUMN IF NOT EXISTS session_token TEXT;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
 
 ALTER TABLE chat_accounts ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "anon_all_accounts" ON chat_accounts;

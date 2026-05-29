@@ -41,6 +41,26 @@
   }
   function _sanitize(s, max) { return String(s || '').replace(/[\x00-\x1f]/g, '').trim().substring(0, max || 20); }
 
+  // Generate random session token (64 hex chars)
+  function _genToken() {
+    var arr = new Uint8Array(32);
+    crypto.getRandomValues(arr);
+    var hex = '';
+    for (var i = 0; i < arr.length; i++) hex += ('0' + arr[i].toString(16)).slice(-2);
+    return hex;
+  }
+
+  // Save session to both localStorage and Supabase
+  function _saveSession(gt, token) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ name: gt, token: token, ts: Date.now() }));
+    // Also save gamertag for quick re-login
+    try { localStorage.setItem('lc_gt', gt); } catch(e) {}
+    fetch(ACCT + '?gamertag=eq.' + encodeURIComponent(gt), {
+      method: 'PATCH', headers: _jHdr(),
+      body: JSON.stringify({ session_token: token, last_login: new Date().toISOString() })
+    }).catch(function () {});
+  }
+
   // SHA-256 hash (Web Crypto API)
   function _hash(pin) {
     var data = new TextEncoder().encode(pin + SALT);
@@ -99,18 +119,44 @@
   var _loginAttempts = 0, _loginCooldownUntil = 0;
 
   // ══════════════════════════════════════════
-  //  SESSION RESTORE
+  //  SESSION RESTORE — verify token against Supabase
   // ══════════════════════════════════════════
-  try {
-    var sess = JSON.parse(localStorage.getItem(SESSION_KEY));
-    if (sess && sess.name && sess.ts && Date.now() - sess.ts < 7 * 86400000) {
-      verifiedName = sess.name;
-      _showAuthed(sess.name);
-    }
-  } catch (e) {}
+  (function _restoreSession() {
+    try {
+      var sess = JSON.parse(localStorage.getItem(SESSION_KEY));
+      if (sess && sess.name && sess.token && sess.ts && Date.now() - sess.ts < 7 * 86400000) {
+        // Verify token against server
+        fetch(ACCT + '?gamertag=eq.' + encodeURIComponent(sess.name) + '&session_token=eq.' + sess.token + '&select=gamertag', { headers: _hdr })
+          .then(function (r) { return r.ok ? r.json() : []; })
+          .then(function (rows) {
+            if (rows && rows.length) {
+              verifiedName = sess.name;
+              _showAuthed(sess.name);
+            } else {
+              // Token invalid — clear and show auth gate
+              localStorage.removeItem(SESSION_KEY);
+              _restorePending();
+            }
+          }).catch(function () {
+            // Network error — trust local session temporarily
+            verifiedName = sess.name;
+            _showAuthed(sess.name);
+          });
+        return;
+      }
+    } catch (e) {}
+    _restorePending();
+  })();
 
   // Restore pending verification
-  if (!verifiedName) {
+  function _restorePending() {
+    if (verifiedName) return;
+    // Pre-fill gamertag from last login
+    try {
+      var savedGt = localStorage.getItem('lc_gt');
+      if (savedGt && loginGt) loginGt.value = savedGt;
+      if (savedGt && regGt) regGt.value = savedGt;
+    } catch(e) {}
     try {
       var pend = JSON.parse(localStorage.getItem(PENDING_KEY));
       if (pend && pend.name && pend.code && pend.rowId && pend.ts && Date.now() - pend.ts < 86400000) {
@@ -185,15 +231,11 @@
           }
           throw new Error('PIN salah (' + (MAX_LOGIN_ATTEMPTS - _loginAttempts) + ' percobaan tersisa)');
         }
-        // Success — update last_login (fire and forget)
-        fetch(ACCT + '?gamertag=eq.' + encodeURIComponent(gt), {
-          method: 'PATCH', headers: _jHdr(),
-          body: JSON.stringify({ last_login: new Date().toISOString() })
-        }).catch(function () {});
-
+        // Success — generate session token and save to server + localStorage
         _loginAttempts = 0;
         verifiedName = gt;
-        localStorage.setItem(SESSION_KEY, JSON.stringify({ name: gt, ts: Date.now() }));
+        var token = _genToken();
+        _saveSession(gt, token);
         _showAuthed(gt);
       }).catch(function (e) {
         _showErr(loginErr, e.message || 'Login gagal');
@@ -291,17 +333,18 @@
     pinBtn.disabled = true;
     pinBtn.textContent = '...';
 
+    var newToken = _genToken();
     _hash(p1).then(function (hash) {
       return fetch(ACCT, {
         method: 'POST', headers: _jHdr(),
-        body: JSON.stringify({ gamertag: _pendingGt, pin_hash: hash })
+        body: JSON.stringify({ gamertag: _pendingGt, pin_hash: hash, session_token: newToken })
       });
     }).then(function (r) {
       if (!r.ok) throw new Error('Gagal buat akun (HTTP ' + r.status + ')');
       return r.json();
     }).then(function () {
       verifiedName = _pendingGt;
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ name: _pendingGt, ts: Date.now() }));
+      _saveSession(_pendingGt, newToken);
       try { localStorage.removeItem(PENDING_KEY); } catch (e) {}
       _showAuthed(_pendingGt);
     }).catch(function (e) {
@@ -316,6 +359,13 @@
   //  LOGOUT
   // ══════════════════════════════════════════
   if (logoutBtn) logoutBtn.addEventListener('click', function () {
+    // Clear session token from Supabase
+    if (verifiedName) {
+      fetch(ACCT + '?gamertag=eq.' + encodeURIComponent(verifiedName), {
+        method: 'PATCH', headers: _jHdr(),
+        body: JSON.stringify({ session_token: null })
+      }).catch(function () {});
+    }
     verifiedName = null;
     _stopVerifyPoll();
     try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
