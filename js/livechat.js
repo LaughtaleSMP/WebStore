@@ -515,8 +515,10 @@
   function _fetchAll() {
     _setStatus('polling');
     var since = new Date(Date.now() - MSG_WINDOW_MS).toISOString();
-    fetch(EP + '?created_at=gte.' + since + '&order=id.asc', { headers: _hdr })
-      .then(function (r) { return r.ok ? r.json() : []; })
+    fetch(EP + '?created_at=gte.' + since + '&order=id.asc', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Range': '0-4999' }
+    })
+      .then(function (r) { return (r.ok || r.status === 206) ? r.json() : []; })
       .then(function (rows) {
         if (!rows) return;
         messages = rows;
