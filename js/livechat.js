@@ -491,7 +491,7 @@
   });
 
   // ══════════════════════════════════════════
-  //  VERIFIED NAMES CACHE (for ✓ badge)
+  //  VERIFIED NAMES CACHE (for verified badge)
   // ══════════════════════════════════════════
   var _verifiedNames = {}; // gamertag → true
 
@@ -579,7 +579,7 @@
   function _buildMsg(m) {
     var el = document.createElement('div');
     var isVerified = _verifiedNames[m.player_name] === true;
-    var verifyBadge = isVerified ? '<span class="lc-verified" title="Verified">✓</span>' : '';
+    var verifyBadge = isVerified ? '<span class="lc-verified" title="Verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" width="9" height="9"><polyline points="20 6 9 17 4 12"/></svg></span>' : '';
 
     // System message (join/leave/death)
     if (m.source === 'system') {

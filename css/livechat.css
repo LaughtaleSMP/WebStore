@@ -295,13 +295,11 @@
   padding-left: 8px;
 }
 
-/* Verified Badge */
+/* Verified Badge (SVG checkmark) */
 .lc-verified {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: .34rem;
-  font-weight: 800;
   color: #34d399;
   background: rgba(52,211,153,.12);
   border: 1px solid rgba(52,211,153,.25);
@@ -310,9 +308,11 @@
   height: 14px;
   margin-left: 3px;
   vertical-align: middle;
-  line-height: 1;
-  text-shadow: 0 0 6px rgba(52,211,153,.4);
   flex-shrink: 0;
+  filter: drop-shadow(0 0 3px rgba(52,211,153,.35));
+}
+.lc-verified svg {
+  display: block;
 }
 
 /* ── System Messages (join/leave/death) ── */
