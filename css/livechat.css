@@ -515,6 +515,38 @@ body.lc-fs-active #pn { display: none !important; }
   50% { transform: scale(1.02); filter: drop-shadow(0 0 5px rgba(56,189,248,.8)); color: #7dd3fc; }
 }
 
+/* ── Custom Chat Backgrounds ── */
+.lc-bg-galaxy {
+  position: relative;
+  background: linear-gradient(90deg, rgba(168,85,247,0.08) 0%, rgba(56,189,248,0.02) 100%);
+  box-shadow: inset 1px 0 0 rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.02);
+  overflow: hidden;
+}
+.lc-bg-galaxy::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; bottom: 0; width: 2px;
+  background: linear-gradient(180deg, #a855f7, #38bdf8);
+  box-shadow: 0 0 6px rgba(168,85,247,0.6);
+}
+.lc-bg-galaxy::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; bottom: 0; width: 60%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+  transform: skewX(-20deg);
+  animation: lcMsgShimmer 6s infinite ease-in-out;
+  pointer-events: none;
+}
+body.light .lc-bg-galaxy {
+  background: linear-gradient(90deg, rgba(168,85,247,0.12) 0%, rgba(56,189,248,0.04) 100%);
+  box-shadow: inset 1px 0 0 rgba(255,255,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+@keyframes lcMsgShimmer {
+  0%, 30% { left: -100%; }
+  70%, 100% { left: 200%; }
+}
+
 /* ── System Messages (join/leave/death) ── */
 .lc-msg-sys {
   background: transparent !important;

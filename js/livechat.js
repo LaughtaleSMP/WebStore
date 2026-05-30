@@ -793,7 +793,7 @@
     }
 
     // Normal chat message
-    el.className = 'lc-msg';
+    el.className = 'lc-msg' + (isSupporter ? ' lc-bg-galaxy' : '');
     var g = m.source === 'game';
     el.innerHTML =
       '<span class="lc-src ' + (g ? 'lc-src-game' : 'lc-src-web') + '">' + (g ? SVG_GAME : SVG_WEB) + (g ? 'GAME' : 'WEB') + '</span>' +
