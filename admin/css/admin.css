@@ -307,6 +307,10 @@ a:hover { text-decoration: underline; text-underline-offset: 2px; }
   box-shadow: var(--shadow-glow);
 }
 .form-input::placeholder { color: var(--text-faint); }
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
 .form-group { margin-bottom: 13px; }
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
 

@@ -334,6 +334,8 @@
 
     const overlay = document.getElementById('sp-overlay');
     overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
     overlay.onclick = e => { if (e.target === overlay) window._spClose(); };
   };
 
@@ -341,6 +343,8 @@
     _proofUrl = '';
     _selectedPayMethod = '';
     document.getElementById('sp-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
   };
 
   window._spQty = function(dir) {
@@ -665,12 +669,16 @@
     requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('show')));
     // Click outside to close
     overlay.addEventListener('click', e => { if (e.target === overlay) window._spConfirmClose(); });
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
   }
 
   window._spConfirmClose = function() {
     const el = document.getElementById('sp-confirm');
     if (!el) return;
     el.classList.remove('show');
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
     setTimeout(() => el.remove(), 300);
   };
 
@@ -686,6 +694,8 @@
   /* ── Order Status Tracker ── */
   window._spTrackOpen = function() {
     document.getElementById('sp-track-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
     const input = document.getElementById('sp-track-id');
     if (input) { input.value = ''; input.focus(); }
     const result = document.getElementById('sp-track-result');
@@ -694,6 +704,8 @@
 
   window._spTrackClose = function() {
     document.getElementById('sp-track-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
   };
 
   window._spTrackSearch = async function() {

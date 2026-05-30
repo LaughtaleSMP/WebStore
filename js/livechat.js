@@ -229,7 +229,8 @@
     // Badge: only show when there are unseen messages
     if (scrollNew) {
       if (_unseenCount > 0) {
-        scrollNew.textContent = _unseenCount > 99 ? '99+' : String(_unseenCount);
+        var num = _unseenCount > 99 ? '99+' : String(_unseenCount);
+        scrollNew.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" style="display:block;"><circle cx="12" cy="12" r="11" fill="#a855f7" stroke="rgba(0,0,0,0.5)" stroke-width="2"/><text x="12" y="12" dy=".35em" text-anchor="middle" fill="#ffffff" font-family="system-ui, sans-serif" font-size="' + (num.length > 2 ? '9px' : '13px') + '" font-weight="800">' + num + '</text></svg>';
         scrollNew.style.display = '';
       } else {
         scrollNew.style.display = 'none';
@@ -605,6 +606,7 @@
           if (rows[i].gamertag) fresh[rows[i].gamertag] = true;
         }
         _verifiedNames = fresh;
+        window._lcVerified = fresh;
       }).catch(function () {});
 
     // Fetch leaderboard_sync for topup_log and gacha_lb to grant Supporter Diamond badge
@@ -629,6 +631,7 @@
              }
          }
          _supporterNames = freshS;
+         window._lcSupporters = freshS;
       }).catch(function(){});
   }
   _refreshVerified();
@@ -820,7 +823,14 @@
     // Check scroll position BEFORE adding new content
     var wasAtBottom = msgList.scrollHeight - msgList.scrollTop - msgList.clientHeight < 80;
     var frag = document.createDocumentFragment();
-    for (var i = 0; i < rows.length; i++) frag.appendChild(_buildMsg(rows[i]));
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      if (r.source !== 'system' && r.player_name) {
+        if (!window._lcRecentMessages) window._lcRecentMessages = {};
+        window._lcRecentMessages[r.player_name] = { msg: r.message, time: Date.now() };
+      }
+      frag.appendChild(_buildMsg(r));
+    }
     msgList.appendChild(frag);
     while (msgList.children.length > DOM_CAP) msgList.removeChild(msgList.firstChild);
     // Auto-scroll if was at bottom, else show 'new messages' button

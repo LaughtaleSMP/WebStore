@@ -370,9 +370,8 @@
         <div class="lc-input-wrap" style="position:relative">
           <div class="lc-scroll-wrap" id="lc-scroll-wrap" style="display:none">
             <button class="lc-scroll-btn" id="lc-scroll-btn" title="Ke pesan terbaru">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                stroke-linejoin="round" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 4v16M19 13l-7 7-7-7"/>
               </svg>
             </button>
             <span class="lc-scroll-badge" id="lc-scroll-new" style="display:none"></span>
@@ -787,23 +786,166 @@
           <button class="tab" data-dim="nether">Nether <span class="dim-badge" id="dim-nether">0</span></button>
           <button class="tab" data-dim="the_end">The End <span class="dim-badge" id="dim-end">0</span></button>
         </div>
-        <div id="radar-filters"
-          style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;font-family:'JetBrains Mono',monospace;font-size:.5rem">
-          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--mute)"
-            title="Sembunyikan pemain yang tidak bergerak >5 menit"><input type="checkbox" id="rf-afk"
-              style="margin:0">Hide AFK</label>
-          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--mute)"
-            title="Hanya tampilkan pemain dengan PvP aktif"><input type="checkbox" id="rf-pvp" style="margin:0">PvP
-            only</label>
-          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--mute)"
-            title="Sembunyikan land claim normal, hanya tampilkan yang inactive ≥7 hari"><input type="checkbox"
-              id="rf-expiring" style="margin:0">Land expiring only</label>
-          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--mute)"
-            title="Filter pemain berdasarkan nama owner land"><input type="text" id="rf-owner" placeholder="Owner..."
-              style="background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:1px 4px;font-size:.5rem;width:80px;font-family:inherit"></label>
-          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--mute)"
-            title="Gabungkan marker pemain berdekatan saat zoom out"><input type="checkbox" id="rf-cluster" checked
-              style="margin:0">Cluster</label>
+        <style>
+          .rf-pill {
+            display: flex; align-items: center; gap: 6px; padding: 4px 10px;
+            background: rgba(10, 14, 18, 0.6); border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 6px; color: rgba(255, 255, 255, 0.4); cursor: pointer; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+            user-select: none; font-family: 'Inter', 'Segoe UI', sans-serif; font-size: 0.55rem; font-weight: 500;
+            position: relative; overflow: hidden; backdrop-filter: blur(4px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          }
+          .rf-pill:hover { 
+            background: rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.8); border-color: rgba(255, 255, 255, 0.15); 
+            transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+          }
+          .rf-pill:active { transform: translateY(0); }
+          .rf-pill input[type="checkbox"] { display: none; }
+          .rf-pill .rf-icon {
+            display: inline-flex; width: 12px; height: 12px; align-items: center; justify-content: center;
+            border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.25s ease;
+            background: rgba(0,0,0,0.3);
+          }
+          .rf-pill .rf-icon::after {
+            content: ''; width: 6px; height: 6px; border-radius: 1px; background: transparent; transition: all 0.25s cubic-bezier(0.2, 1.4, 0.4, 1);
+            transform: scale(0);
+          }
+          .rf-pill.active {
+            background: rgba(34, 211, 238, 0.08); border-color: rgba(34, 211, 238, 0.3); color: #22d3ee;
+            box-shadow: 0 4px 12px rgba(34, 211, 238, 0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+          }
+          .rf-pill.active .rf-icon { border-color: rgba(34, 211, 238, 0.5); background: rgba(34, 211, 238, 0.1); }
+          .rf-pill.active .rf-icon::after { background: #22d3ee; transform: scale(1); box-shadow: 0 0 6px rgba(34, 211, 238, 0.8); }
+          
+          .rf-pill.active.danger {
+            background: rgba(244, 63, 94, 0.08); border-color: rgba(244, 63, 94, 0.3); color: #f43f5e;
+            box-shadow: 0 4px 12px rgba(244, 63, 94, 0.15);
+          }
+          .rf-pill.active.danger .rf-icon { border-color: rgba(244, 63, 94, 0.5); background: rgba(244, 63, 94, 0.1); }
+          .rf-pill.active.danger .rf-icon::after { background: #f43f5e; box-shadow: 0 0 6px rgba(244, 63, 94, 0.8); }
+
+          .rf-search-wrap {
+            display: flex; align-items: center; background: rgba(10, 14, 18, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px;
+            padding: 4px 10px; transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            font-family: 'Inter', 'Segoe UI', sans-serif; font-size: 0.55rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2); backdrop-filter: blur(4px);
+          }
+          .rf-search-wrap:focus-within {
+            border-color: rgba(168, 85, 247, 0.4); box-shadow: 0 4px 12px rgba(168, 85, 247, 0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+            background: rgba(168, 85, 247, 0.03); transform: translateY(-1px);
+          }
+          .rf-search-wrap svg { width: 10px; height: 10px; color: var(--mute); transition: color 0.2s ease; margin-right: 6px; }
+          .rf-search-wrap:focus-within svg { color: #a855f7; }
+          .rf-search {
+            background: transparent; border: none; color: var(--text); font-size: inherit; font-family: inherit;
+            width: 70px; outline: none; transition: width 0.3s ease;
+          }
+          .rf-search:focus { width: 120px; }
+          .rf-search::placeholder { color: rgba(255,255,255,0.3); }
+
+          /* Premium Custom Select Dropdown */
+          .cs-wrap {
+            position: relative; width: 100%; margin-bottom: 6px;
+            background: rgba(10, 14, 18, 0.6); border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 6px; transition: all 0.25s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2); backdrop-filter: blur(4px);
+            font-family: 'Inter', 'Segoe UI', sans-serif; font-size: 0.55rem;
+            user-select: none;
+          }
+          .cs-wrap:hover { border-color: rgba(255,255,255,0.15); }
+          .cs-wrap.open {
+            border-color: rgba(168, 85, 247, 0.5); box-shadow: 0 4px 12px rgba(168, 85, 247, 0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+            background: rgba(168, 85, 247, 0.03);
+          }
+          .cs-value {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 10px; cursor: pointer; color: var(--text);
+          }
+          .cs-value svg { width: 12px; height: 12px; color: var(--mute); transition: transform 0.3s ease; }
+          .cs-wrap.open .cs-value svg { transform: rotate(180deg); color: #a855f7; }
+          
+          .cs-dropdown {
+            position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+            background: rgba(6, 10, 14, 0.98); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            backdrop-filter: blur(12px); z-index: 20; max-height: 180px; overflow-y: auto;
+            opacity: 0; pointer-events: none; transform: translateY(-4px); transition: all 0.2s cubic-bezier(0.2,0.8,0.2,1);
+          }
+          .cs-wrap.open .cs-dropdown { opacity: 1; pointer-events: auto; transform: translateY(0); }
+          
+          .cs-dropdown::-webkit-scrollbar { width: 4px; }
+          .cs-dropdown::-webkit-scrollbar-track { background: transparent; }
+          .cs-dropdown::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+          .cs-dropdown::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+          .cs-opt {
+            padding: 8px 10px; color: var(--mute); cursor: pointer; transition: all 0.15s ease;
+            display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.02);
+          }
+          .cs-opt:hover { background: rgba(255,255,255,0.05); color: var(--text); padding-left: 14px; }
+          .cs-opt.active {
+            background: rgba(168, 85, 247, 0.1); color: #c084fc; font-weight: 600;
+            border-left: 2px solid #a855f7; padding-left: 12px;
+          }
+        </style>
+        <div id="radar-filters" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+          <label class="rf-pill" title="Sembunyikan pemain yang tidak bergerak >5 menit">
+            <input type="checkbox" id="rf-afk"><span class="rf-icon"></span>Hide AFK
+          </label>
+          <label class="rf-pill" title="Hanya tampilkan pemain dengan PvP aktif">
+            <input type="checkbox" id="rf-pvp"><span class="rf-icon"></span>PvP only
+          </label>
+          <label class="rf-pill" title="Sembunyikan land claim normal, hanya tampilkan yang inactive ≥7 hari">
+            <input type="checkbox" id="rf-expiring"><span class="rf-icon"></span>Land Expiring
+          </label>
+          <label class="rf-pill active" title="Gabungkan marker pemain berdekatan saat zoom out">
+            <input type="checkbox" id="rf-cluster" checked><span class="rf-icon"></span>Smart Cluster
+          </label>
+          <label class="rf-pill danger" title="Sembunyikan semua pemain dari radar (berguna saat mencari entitas)">
+            <input type="checkbox" id="rf-hide-player"><span class="rf-icon"></span>Hide Players
+          </label>
+          <div style="width:1px;height:14px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+          <div style="position:relative;" id="hm-filter-dropdown">
+            <button class="rf-pill" id="hm-f-btn" style="border-radius:4px;background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+              Filter Heatmap
+            </button>
+            <div id="hm-f-panel" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;background:rgba(6,10,14,0.98);border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:10px;z-index:10;width:240px;backdrop-filter:blur(12px);box-shadow:0 8px 24px rgba(0,0,0,0.8);">
+              <div style="font-weight:600;color:var(--text);margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
+                <span>Filter Family</span>
+                <span id="hm-f-close" style="cursor:pointer;color:var(--mute);padding:0 4px;">✕</span>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">
+                <label class="rf-pill active" title="Tampilkan Hostile Mobs"><input type="checkbox" id="rf-hm-hostile" checked><span class="rf-icon"></span>Hostile</label>
+                <label class="rf-pill active" title="Tampilkan Passive Mobs"><input type="checkbox" id="rf-hm-passive" checked><span class="rf-icon"></span>Passive</label>
+                <label class="rf-pill active" title="Tampilkan Items"><input type="checkbox" id="rf-hm-item" checked><span class="rf-icon"></span>Items</label>
+                <label class="rf-pill active" title="Lain-lain"><input type="checkbox" id="rf-hm-other" checked><span class="rf-icon"></span>Lainnya</label>
+              </div>
+              <div style="font-weight:600;color:var(--text);margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:4px;">Filter Spesifik (Tipe)</div>
+              <div class="cs-wrap" id="hm-type-wrap">
+                <div class="cs-value" id="hm-type-val">
+                  <div style="display:flex;align-items:center;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <span id="hm-type-text">-- Semua Tipe --</span>
+                  </div>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+                <div class="cs-dropdown" id="hm-type-list">
+                  <div class="cs-opt active" data-val="">-- Semua Tipe --</div>
+                  <!-- Populated by JS -->
+                </div>
+                <input type="hidden" id="rf-hm-type" value="">
+              </div>
+              <div style="font-size:0.45rem;color:var(--mute);line-height:1.4;margin-top:6px;">
+                *Daftar tipe otomatis diambil dari data live Lag Contributor.
+              </div>
+            </div>
+          </div>
+          <div class="rf-search-wrap" title="Filter pemain berdasarkan nama owner land">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="rf-owner" class="rf-search" placeholder="Cari Owner...">
+          </div>
         </div>
         <div
           style="position:relative;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;background:#080c08"
@@ -1019,12 +1161,12 @@
     </div>
 
   </div>
-  <script src="js/atmo-canvas.js"></script>
-  <script src="js/monitor-page.js"></script>
-  <script src="js/monitor-forecast.js"></script>
-  <script src="js/livechat.js"></script>
-  <script src="js/page-nav.js"></script>
-  <script src="js/auto-refresh.js"></script>
+  <script src="js/atmo-canvas.js?v=48"></script>
+  <script src="js/monitor-page.js?v=48"></script>
+  <script src="js/monitor-forecast.js?v=48"></script>
+  <script src="js/livechat.js?v=48"></script>
+  <script src="js/page-nav.js?v=48"></script>
+  <script src="js/auto-refresh.js?v=48"></script>
 </body>
 
 </html>
