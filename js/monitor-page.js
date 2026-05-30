@@ -1361,8 +1361,33 @@ function _setRadarHistError(msg){
       }else{_lastTap=0;}
     }}},{passive:true});
   }
+  var _BULAN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  function _fmtTimeLabel(ts){
+    var t=new Date(ts);
+    var hh=String(t.getHours()).padStart(2,'0');
+    var mm=String(t.getMinutes()).padStart(2,'0');
+    var time=hh+':'+mm;
+    // Show date if range > 12 hours
+    if(_radarRangeHours>12){
+      return t.getDate()+' '+_BULAN[t.getMonth()]+', '+time;
+    }
+    return time+' WIB';
+  }
   var tl=$('radar-timeline');
-  if(tl)tl.addEventListener('input',function(){var v=parseInt(tl.value),lb=$('radar-time-label');if(v>=radarHistory.length){radarTimeIdx=-1;_stopAnim();if(lb)lb.textContent='Live';}else{radarTimeIdx=v;if(lb&&radarHistory[v]){var t=new Date(radarHistory[v].ts);lb.textContent=t.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+' WIB';}_startAnim();}drawRadar();});
+  if(tl)tl.addEventListener('input',function(){
+    var v=parseInt(tl.value),lb=$('radar-time-label');
+    if(v>=radarHistory.length){
+      radarTimeIdx=-1;_stopAnim();
+      if(lb)lb.textContent='Live';
+    }else{
+      radarTimeIdx=v;
+      if(lb&&radarHistory[v]){
+        lb.textContent=_fmtTimeLabel(radarHistory[v].ts)+' ('+( v+1)+'/'+radarHistory.length+')';
+      }
+      _startAnim();
+    }
+    drawRadar();
+  });
   var sb=$('radar-step-back'),sf=$('radar-step-fwd'),_hId=0,_hDelay=0,_hCnt=0;
   function _stepDir(dir){var s=$('radar-timeline');if(!s)return;s.value=dir<0?Math.max(0,parseInt(s.value)-1):Math.min(parseInt(s.max)||radarHistory.length,parseInt(s.value)+1);s.dispatchEvent(new Event('input'));}
   function _hStart(dir){_stepDir(dir);_hDelay=setTimeout(function(){_hCnt=0;_hId=setInterval(function(){_hCnt++;_stepDir(dir);if(_hCnt===5){clearInterval(_hId);_hId=setInterval(function(){_stepDir(dir);},50);}},150);},400);}
