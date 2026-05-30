@@ -1235,21 +1235,36 @@ function _selectPlayer(name){
   else if(radarTimeIdx>=0)_startAnim();
 }
 
-async function fetchRadarHistory(){
-  // [SRE] Circuit breaker: 3 fail berturut → freeze 5 menit, banner notice user.
+var _radarRangeHours=12; // current range (hours)
+var _RANGE_LABELS={2:'2j lalu',12:'12j lalu',24:'1 hari lalu',168:'7 hari lalu'};
+async function fetchRadarHistory(hours){
+  if(hours!==undefined)_radarRangeHours=hours;
+  // [SRE] Circuit breaker: 3 fail berturut - freeze 5 menit.
   if(_radarHistFreeze&&Date.now()<_radarHistFreeze)return;
   try{
-    var since=new Date(Date.now()-12*3600000).toISOString();
+    var ms=_radarRangeHours*3600000;
+    var since=new Date(Date.now()-ms).toISOString();
+    // Scale limit: more hours = more rows, cap at 288 (enough for 24h @ 5min interval)
+    var limit=Math.min(288,Math.max(50,Math.round(_radarRangeHours*12)));
     var _srvFilter=(_servers[_currentIdx]&&_servers[_currentIdx].server_id)?'&server_id=eq.'+_servers[_currentIdx].server_id:'';
-    var ctrl=new AbortController(),tm=setTimeout(function(){ctrl.abort();},10000);
-    var r=await fetch(SB_URL+'/rest/v1/metrics_history?ts=gte.'+since+'&order=ts.asc&limit=144&select=ts,pos'+_srvFilter,{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},signal:ctrl.signal});
+    var ctrl=new AbortController(),tm=setTimeout(function(){ctrl.abort();},15000);
+    // order=ts.desc so we always get the NEWEST rows first, then reverse client-side
+    var r=await fetch(SB_URL+'/rest/v1/metrics_history?ts=gte.'+since+'&order=ts.desc&limit='+limit+'&select=ts,pos'+_srvFilter,{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},signal:ctrl.signal});
     clearTimeout(tm);
     var d=await r.json();
     if(Array.isArray(d)){
       _radarHistFails=0;_radarHistFreeze=0;_setRadarHistError('');
-      radarHistory=d.slice(-144).map(function(row){var o={ts:row.ts,_pos:[]};try{o._pos=typeof row.pos==='string'?JSON.parse(row.pos):(Array.isArray(row.pos)?row.pos:[]);}catch(e){}return o;});
+      // Reverse to chronological order (oldest first)
+      d.reverse();
+      radarHistory=d.map(function(row){var o={ts:row.ts,_pos:[]};try{o._pos=typeof row.pos==='string'?JSON.parse(row.pos):(Array.isArray(row.pos)?row.pos:[]);}catch(e){}return o;});
+      // Reset slider to Live mode
       var sl=$('radar-timeline');if(sl){sl.max=radarHistory.length;sl.value=radarHistory.length;}
+      radarTimeIdx=-1; // force Live mode
+      _stopAnim();
+      // Update left label
+      var rl=$('radar-range-label');if(rl)rl.textContent=_RANGE_LABELS[_radarRangeHours]||_radarRangeHours+'j lalu';
       _computeExp();_hmDirty=true;
+      drawRadar();
     }
   }catch(e){
     _radarHistFails++;
@@ -1379,13 +1394,22 @@ function _setRadarHistError(msg){
   if(pb)pb.addEventListener('click',function(){
     _playIdx=(_playIdx+1)%_playSpeeds.length;
     var sp=_playSpeeds[_playIdx];
-    pb.textContent=sp?'▶ '+sp+'×':'⏸ Off';
+    pb.textContent=sp?'\u25b6 '+sp+'\u00d7':'\u23f8 Off';
     pb.className='tab'+(sp?' a':'');
     if(sp){if(!_playRaf)_playRaf=requestAnimationFrame(_playLoop);}
     else _playStop();
   });
+  // Range tab handler
+  var rt=$('radar-range-tabs');
+  if(rt)rt.addEventListener('click',function(e){
+    var btn=e.target.closest('[data-hours]');if(!btn)return;
+    rt.querySelectorAll('.tab').forEach(function(b){b.classList.remove('a');});
+    btn.classList.add('a');
+    var h=parseInt(btn.dataset.hours)||12;
+    fetchRadarHistory(h);
+  });
   fetchRadarHistory();
-  setInterval(fetchRadarHistory,300000);
+  setInterval(function(){fetchRadarHistory();},300000);
 })();
 
 /* ═══ Land Claims Panel ═══ */

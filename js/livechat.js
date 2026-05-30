@@ -115,16 +115,26 @@
   var resetErr   = document.getElementById('lc-reset-error');
   var toResetBtn = document.getElementById('lc-to-reset');
   var toLoginFromReset = document.getElementById('lc-to-login-from-reset');
+  // Fullscreen
+  var fsBtn      = document.getElementById('lc-fullscreen-btn');
+  var fsExpand   = document.getElementById('lc-fs-expand');
+  var fsCompress = document.getElementById('lc-fs-compress');
+  // Loading & scroll
+  var loadingEl  = document.getElementById('lc-loading');
+  var scrollWrap = document.getElementById('lc-scroll-wrap');
+  var scrollBtn  = document.getElementById('lc-scroll-btn');
+  var scrollNew  = document.getElementById('lc-scroll-new');
 
   if (!panel || !msgList) return;
 
   // ── State ──
   var messages = [], lastId = 0, lastSendTs = 0;
-  var pollTimer = null, isOpen = false;
+  var pollTimer = null, isOpen = false, isFullscreen = false;
   var verifiedName = null, verifyPollId = null, verifyRowId = null;
   var _pendingGt = null;
   var _isResetMode = false;
   var _loginAttempts = 0, _loginCooldownUntil = 0;
+  var _unseenCount = 0, _atBottom = true;
 
   // ══════════════════════════════════════════
   //  SESSION RESTORE — verify token against Supabase
@@ -176,13 +186,91 @@
   }
 
   // ══════════════════════════════════════════
+  //  FULLSCREEN
+  // ══════════════════════════════════════════
+  function _toggleFullscreen(e) {
+    if (e) e.stopPropagation(); // don't trigger header collapse
+    isFullscreen = !isFullscreen;
+    panel.classList.toggle('lc-fullscreen', isFullscreen);
+    document.body.classList.toggle('lc-fs-active', isFullscreen);
+    if (fsExpand)   fsExpand.style.display   = isFullscreen ? 'none' : '';
+    if (fsCompress) fsCompress.style.display = isFullscreen ? '' : 'none';
+    // In fullscreen, auto-open if not already
+    if (isFullscreen && !isOpen) {
+      isOpen = true;
+      panel.classList.add('open');
+      _fetchAll(); _startPoll();
+    }
+    // Scroll to bottom after layout settles
+    setTimeout(function () { msgList.scrollTop = msgList.scrollHeight; }, 80);
+  }
+  if (fsBtn) fsBtn.addEventListener('click', _toggleFullscreen);
+  // ESC to exit fullscreen
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && isFullscreen) _toggleFullscreen();
+  });
+
+  // ══════════════════════════════════════════
+  //  SCROLL — unified handler (bottom check + load-older)
+  // ══════════════════════════════════════════
+  function _checkAtBottom() {
+    var threshold = 80;
+    _atBottom = msgList.scrollHeight - msgList.scrollTop - msgList.clientHeight < threshold;
+    if (_atBottom) {
+      _unseenCount = 0;
+      if (scrollWrap) scrollWrap.style.display = 'none';
+    } else {
+      _showScrollBtn();
+    }
+  }
+  function _showScrollBtn() {
+    if (!scrollWrap) return;
+    scrollWrap.style.display = '';
+    // Badge: only show when there are unseen messages
+    if (scrollNew) {
+      if (_unseenCount > 0) {
+        scrollNew.textContent = _unseenCount > 99 ? '99+' : String(_unseenCount);
+        scrollNew.style.display = '';
+      } else {
+        scrollNew.style.display = 'none';
+      }
+    }
+  }
+  function _onScroll() {
+    _checkAtBottom();
+    if (msgList.scrollTop < 40 && !_loadingOlder && !_noMoreOlder) {
+      _loadOlder();
+    }
+  }
+  msgList.addEventListener('scroll', _onScroll, { passive: true });
+  if (scrollBtn) {
+    scrollBtn.addEventListener('click', function () {
+      _unseenCount = 0;
+      if (scrollNew) scrollNew.style.display = 'none';
+      msgList.scrollTo({ top: msgList.scrollHeight, behavior: 'smooth' });
+      if (scrollWrap) scrollWrap.style.display = 'none';
+    });
+  }
+
+  // ══════════════════════════════════════════
   //  PANEL TOGGLE
   // ══════════════════════════════════════════
   header.addEventListener('click', function () {
     isOpen = !isOpen;
     panel.classList.toggle('open', isOpen);
-    if (isOpen) { _fetchAll(); _startPoll(); _scroll(); }
-    else _stopPoll();
+    if (isOpen) {
+      _fetchAll(); _startPoll();
+    } else {
+      _stopPoll();
+      // Exit fullscreen if closing panel
+      if (isFullscreen) {
+        isFullscreen = false;
+        panel.classList.remove('lc-fullscreen');
+        document.body.classList.remove('lc-fs-active');
+        if (fsExpand)   fsExpand.style.display   = '';
+        if (fsCompress) fsCompress.style.display = 'none';
+      }
+    }
   });
 
   // ══════════════════════════════════════════
@@ -209,6 +297,18 @@
   if (toLoginFromReset) toLoginFromReset.addEventListener('click', function (e) {
     e.preventDefault(); _hideAll(); if (loginForm) loginForm.style.display = '';
   });
+
+  // ── Close (X) buttons — dismiss form, show auth gate ──
+  function _dismissForm() {
+    _hideAll();
+    if (authGate) authGate.style.display = '';
+  }
+  var loginCloseBtn = document.getElementById('lc-login-close');
+  var resetCloseBtn = document.getElementById('lc-reset-close');
+  var regCloseBtn   = document.getElementById('lc-reg-close');
+  if (loginCloseBtn) loginCloseBtn.addEventListener('click', _dismissForm);
+  if (resetCloseBtn) resetCloseBtn.addEventListener('click', _dismissForm);
+  if (regCloseBtn)   regCloseBtn.addEventListener('click', _dismissForm);
 
   // ══════════════════════════════════════════
   //  LOGIN (gamertag + PIN)
@@ -510,21 +610,88 @@
   setInterval(_refreshVerified, 60000); // refresh every 60s
 
   // ══════════════════════════════════════════
-  //  FETCH / POLL MESSAGES
+  //  FETCH / POLL MESSAGES  (reverse pagination)
+  //  Open → load 50 newest → scroll to bottom (instant)
+  //  Scroll up to top → lazy-load 50 older → keep position
   // ══════════════════════════════════════════
+  var BATCH = 50;
+  var _oldestId = 0;      // smallest loaded id (for older fetch)
+  var _loadingOlder = false;
+  var _noMoreOlder = false; // true when we hit 24h boundary
+
   function _fetchAll() {
     _setStatus('polling');
-    var since = new Date(Date.now() - MSG_WINDOW_MS).toISOString();
-    fetch(EP + '?created_at=gte.' + since + '&order=id.asc', {
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Range': '0-4999' }
-    })
-      .then(function (r) { return (r.ok || r.status === 206) ? r.json() : []; })
+    if (loadingEl) loadingEl.style.display = 'flex';
+    _noMoreOlder = false;
+    _oldestId = 0;
+    // Fetch latest BATCH messages (desc → reverse to asc for render)
+    fetch(EP + '?order=id.desc&limit=' + BATCH, { headers: _hdr })
+      .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (rows) {
-        if (!rows) return;
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (!rows) rows = [];
+        rows.reverse(); // oldest-first for rendering
         messages = rows;
-        lastId = rows.length ? rows[rows.length - 1].id : 0;
-        _renderAll(); _scroll(); _setStatus('connected');
-      }).catch(function () { _setStatus('offline'); });
+        if (rows.length) {
+          lastId = rows[rows.length - 1].id;
+          _oldestId = rows[0].id;
+        }
+        if (rows.length < BATCH) _noMoreOlder = true;
+        _renderAll();
+        _scroll(); // jump to newest
+        _setStatus('connected');
+      }).catch(function () {
+        if (loadingEl) loadingEl.style.display = 'none';
+        _setStatus('offline');
+      });
+  }
+
+  // ── Load older messages on scroll-to-top ──
+  function _loadOlder() {
+    if (_loadingOlder || _noMoreOlder || !_oldestId) return;
+    _loadingOlder = true;
+    _showTopLoader(true);
+    var since = new Date(Date.now() - MSG_WINDOW_MS).toISOString();
+    var url = EP + '?id=lt.' + _oldestId + '&created_at=gte.' + since +
+              '&order=id.desc&limit=' + BATCH;
+    fetch(url, { headers: _hdr })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (rows) {
+        _loadingOlder = false;
+        _showTopLoader(false);
+        if (!rows || !rows.length) { _noMoreOlder = true; return; }
+        rows.reverse(); // oldest-first
+        if (rows.length < BATCH) _noMoreOlder = true;
+        _oldestId = rows[0].id;
+        // Prepend to messages array
+        messages = rows.concat(messages);
+        // Prepend to DOM (preserve scroll position)
+        var prevHeight = msgList.scrollHeight;
+        var frag = document.createDocumentFragment();
+        for (var i = 0; i < rows.length; i++) frag.appendChild(_buildMsg(rows[i]));
+        msgList.insertBefore(frag, msgList.firstChild);
+        // Restore scroll so user stays in same position
+        msgList.scrollTop = msgList.scrollHeight - prevHeight;
+        _updateCount();
+      }).catch(function () {
+        _loadingOlder = false;
+        _showTopLoader(false);
+      });
+  }
+
+
+  // Inline top loader element
+  var _topLoaderEl = null;
+  function _showTopLoader(show) {
+    if (show && !_topLoaderEl) {
+      _topLoaderEl = document.createElement('div');
+      _topLoaderEl.className = 'lc-top-loader';
+      _topLoaderEl.innerHTML = '<div class="lc-skeleton lc-skeleton-med"></div><div class="lc-skeleton lc-skeleton-short"></div>';
+      msgList.insertBefore(_topLoaderEl, msgList.firstChild);
+    } else if (!show && _topLoaderEl) {
+      _topLoaderEl.remove();
+      _topLoaderEl = null;
+    }
   }
 
   function _pollNew() {
@@ -536,7 +703,6 @@
       .then(function (rows) {
         if (!rows || !rows.length) return;
         _addMsgs(rows);
-        if (msgList.scrollHeight - msgList.scrollTop - msgList.clientHeight < 60) _scroll();
         _setStatus('connected');
       }).catch(function () { _setStatus('offline'); });
   }
@@ -620,19 +786,48 @@
 
   function _renderNew(rows) {
     var empty = msgList.querySelector('.lc-empty'); if (empty) empty.remove();
+    // Check scroll position BEFORE adding new content
+    var wasAtBottom = msgList.scrollHeight - msgList.scrollTop - msgList.clientHeight < 80;
     var frag = document.createDocumentFragment();
     for (var i = 0; i < rows.length; i++) frag.appendChild(_buildMsg(rows[i]));
     msgList.appendChild(frag);
     while (msgList.children.length > DOM_CAP) msgList.removeChild(msgList.firstChild);
+    // Auto-scroll if was at bottom, else show 'new messages' button
+    if (wasAtBottom) {
+      msgList.scrollTo({ top: msgList.scrollHeight, behavior: 'smooth' });
+    } else {
+      _unseenCount += rows.length;
+      _showScrollBtn();
+    }
   }
 
-  function _scroll() { setTimeout(function () { msgList.scrollTop = msgList.scrollHeight; }, 50); }
+  function _scroll() {
+    setTimeout(function () {
+      msgList.scrollTop = msgList.scrollHeight;
+      _unseenCount = 0;
+      if (scrollWrap) scrollWrap.style.display = 'none';
+      if (scrollNew)  scrollNew.style.display  = 'none';
+    }, 50);
+  }
   function _updateCount() { if (countEl) countEl.textContent = messages.length; }
   function _setStatus(s) {
     if (!statusDot || !statusTxt) return;
     statusDot.className = 'lc-status-dot ' + s;
     statusTxt.textContent = ({ connected:'Terhubung', polling:'Polling...', offline:'Offline' })[s] || s;
   }
+
+  // ── Pre-fetch count so badge shows before panel opens ──
+  function _prefetchCount() {
+    // Light query: get latest 50 (same as BATCH) to show realistic count
+    fetch(EP + '?order=id.desc&limit=50&select=id', { headers: _hdr })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (rows) {
+        if (rows && rows.length && countEl) {
+          countEl.textContent = rows.length;
+        }
+      }).catch(function () {});
+  }
+  _prefetchCount();
 
   if (location.hash === '#chat') { isOpen = true; panel.classList.add('open'); _fetchAll(); _startPoll(); }
   console.log('[LiveChat] v2 initialized (accounts, 10s poll)');

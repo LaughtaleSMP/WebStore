@@ -146,18 +146,66 @@
   color: var(--ac);
 }
 
+/* ── Fullscreen Button ── */
+.lc-fullscreen-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--mute);
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0;
+  margin-left: 4px;
+  flex-shrink: 0;
+  transition: color .2s, background .2s;
+  pointer-events: all; /* don't bubble to header toggle */
+}
+.lc-fullscreen-btn:hover { color: var(--ac); background: rgba(168,85,247,.1); }
+.lc-fullscreen-btn svg { width: 13px; height: 13px; display: block; }
+
+/* ── Fullscreen Mode ── */
+.lc-panel.lc-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000; /* above page-nav (9999) */
+  border-radius: 0;
+  margin: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg, #0d1117);
+}
+.lc-panel.lc-fullscreen .lc-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.lc-panel.lc-fullscreen .lc-messages {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+/* Hide page-nav and prevent page scroll when fullscreen active */
+body.lc-fs-active { overflow: hidden; }
+body.lc-fs-active #pn { display: none !important; }
+
 /* ── Body ── */
 .lc-body {
   display: none;
   flex-direction: column;
+  position: relative;
 }
 .lc-panel.open .lc-body {
   display: flex;
   animation: lcBodyIn .35s ease;
 }
 @keyframes lcBodyIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Messages ── */
@@ -173,7 +221,116 @@
   scrollbar-color: rgba(168,85,247,.12) transparent;
   position: relative;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain; /* prevent scroll chaining to page */
 }
+
+/* ── Skeleton Loading (absolute overlay over message list) ── */
+.lc-loading {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 5;
+}
+.lc-skeleton {
+  height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,.04) 0%,
+    rgba(255,255,255,.09) 50%,
+    rgba(255,255,255,.04) 100%);
+  background-size: 200% 100%;
+  animation: lcShimmer 1.4s infinite ease-in-out;
+  width: 90%;
+}
+.lc-skeleton-short { width: 55%; }
+.lc-skeleton-med   { width: 72%; }
+@keyframes lcShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Top loader (inline, prepended when loading older) ── */
+.lc-top-loader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0 10px;
+}
+
+/* ── Scroll to bottom (wrapper anchors to lc-input-wrap top-right) ── */
+.lc-scroll-wrap {
+  position: absolute;
+  top: -44px;
+  right: 10px;
+  z-index: 12;
+}
+.lc-scroll-btn {
+  display: grid;
+  place-items: center;     /* perfect centering, no flex span interference */
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: rgba(15, 15, 20, 0.82);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  transition: all 0.2s ease;
+}
+.lc-scroll-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  /* chevron polyline "6 9 12 15 18 9" center-of-mass ~y=11, viewBox center=12
+     +1px nudge so visual center aligns with geometric center */
+  transform: translateY(1px);
+  pointer-events: none;
+}
+.lc-scroll-btn:hover {
+  background: rgba(30, 30, 40, 0.95);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* Badge: floats top-left of the circle button */
+.lc-scroll-badge {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #a855f7;
+  border: 1.5px solid rgba(15, 15, 20, 0.9);
+  border-radius: 10px;
+  color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: .32rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+  animation: lcBadgePulse 1.8s ease-in-out infinite;
+}
+@keyframes lcBadgePulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(168,85,247,.45); }
+  50%       { box-shadow: 0 0 14px rgba(168,85,247,.8); }
+}
+@keyframes lcFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.lc-scroll-wrap { animation: lcFadeUp .3s ease-out; }
 .lc-messages::-webkit-scrollbar { width: 3px; }
 .lc-messages::-webkit-scrollbar-thumb {
   background: rgba(168,85,247,.15);
@@ -403,6 +560,30 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  position: relative; /* anchor for close button */
+}
+/* Close (X) button on forms */
+.lc-form-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: rgba(255,255,255,.25);
+  cursor: pointer;
+  transition: color .2s, background .2s;
+  padding: 0;
+  z-index: 2;
+}
+.lc-form-close:hover {
+  color: rgba(255,255,255,.7);
+  background: rgba(255,255,255,.06);
 }
 .lc-login-row {
   display: flex;

@@ -172,6 +172,10 @@
     </div>
     <span class="lc-header-badge lc-badge-live"><span class="lc-live-dot"></span>LIVE</span>
     <span class="lc-header-badge lc-badge-count" id="lc-count">0</span>
+    <button class="lc-fullscreen-btn" id="lc-fullscreen-btn" title="Fullscreen" aria-label="Fullscreen chat">
+      <svg id="lc-fs-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+      <svg id="lc-fs-compress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:none"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+    </button>
     <svg class="lc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
   </div>
   <div class="lc-body" id="lc-body">
@@ -188,7 +192,21 @@
         <div class="lc-empty-sub">Pesan dari server game muncul di sini</div>
       </div>
     </div>
-    <div class="lc-input-wrap">
+    <!-- Skeleton loading overlay -->
+    <div class="lc-loading" id="lc-loading" style="display:none">
+      <div class="lc-skeleton"></div>
+      <div class="lc-skeleton lc-skeleton-short"></div>
+      <div class="lc-skeleton"></div>
+      <div class="lc-skeleton lc-skeleton-med"></div>
+      <div class="lc-skeleton lc-skeleton-short"></div>
+    </div>
+    <div class="lc-input-wrap" style="position:relative">
+      <div class="lc-scroll-wrap" id="lc-scroll-wrap" style="display:none">
+        <button class="lc-scroll-btn" id="lc-scroll-btn" title="Ke pesan terbaru">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <span class="lc-scroll-badge" id="lc-scroll-new" style="display:none"></span>
+      </div>
       <!-- Gate: Click to start -->
       <div class="lc-auth-gate" id="lc-auth-gate">
         <div class="lc-auth-icon">
@@ -201,6 +219,9 @@
       </div>
       <!-- Login Form -->
       <div class="lc-login-form" id="lc-login-form" style="display:none">
+        <button type="button" class="lc-form-close" id="lc-login-close" title="Tutup">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
         <div class="lc-login-row">
           <svg class="lc-login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4"/><circle cx="15" cy="11" r=".5" fill="currentColor"/><circle cx="17" cy="13" r=".5" fill="currentColor"/></svg>
           <input type="text" class="lc-login-input" id="lc-login-gt" placeholder="Gamertag" maxlength="20" autocomplete="off">
@@ -215,6 +236,9 @@
       </div>
       <!-- Reset PIN Form -->
       <div class="lc-login-form" id="lc-reset-form" style="display:none">
+        <button type="button" class="lc-form-close" id="lc-reset-close" title="Tutup">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
         <div class="lc-login-row">
           <svg class="lc-login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4"/><circle cx="15" cy="11" r=".5" fill="currentColor"/><circle cx="17" cy="13" r=".5" fill="currentColor"/></svg>
           <input type="text" class="lc-login-input" id="lc-reset-gt" placeholder="Gamertag yang terdaftar" maxlength="20" autocomplete="off">
@@ -225,6 +249,9 @@
       </div>
       <!-- Register Form -->
       <div class="lc-login-form" id="lc-reg-form" style="display:none">
+        <button type="button" class="lc-form-close" id="lc-reg-close" title="Tutup">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
         <div class="lc-login-row">
           <svg class="lc-login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4"/><circle cx="15" cy="11" r=".5" fill="currentColor"/><circle cx="17" cy="13" r=".5" fill="currentColor"/></svg>
           <input type="text" class="lc-login-input" id="lc-reg-gt" placeholder="Gamertag Minecraft" maxlength="20" autocomplete="off">
@@ -418,7 +445,7 @@
     <div class="info-row"><span>Hari Ke</span><b id="world-day">—</b></div>
     <div class="info-row"><span>Server Tick</span><b id="world-tick">—</b></div>
     <div class="info-row"><span>Cuaca</span><b id="world-weather">—</b></div>
-    <div class="info-row"><span>Terakhir Update</span><b id="metrics-time">—</b></div>
+    <div class="info-row"><span>Terakhir Update</span><b id="metrics-time">&mdash;</b></div>
   </div>
 </div>
 
@@ -455,12 +482,23 @@
     <div class="radar-coord-tip" id="radar-coord-tip"></div>
     <div class="hs-reco" id="hs-reco"></div>
   </div>
+  <!-- Range selector -->
   <div style="display:flex;align-items:center;gap:4px;margin-top:8px">
-    <span style="font-family:'JetBrains Mono',monospace;font-size:.45rem;color:var(--mute)">12j lalu</span>
-    <button class="tab" id="radar-step-back" style="width:26px;padding:2px;font-size:.65rem;flex-shrink:0" title="Mundur 1 point">◀</button>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:.4rem;color:var(--mute);flex-shrink:0">Range:</span>
+    <div id="radar-range-tabs" style="display:flex;gap:2px">
+      <button class="tab" data-hours="2" style="padding:2px 6px;font-size:.4rem">2j</button>
+      <button class="tab a" data-hours="12" style="padding:2px 6px;font-size:.4rem">12j</button>
+      <button class="tab" data-hours="24" style="padding:2px 6px;font-size:.4rem">1h</button>
+      <button class="tab" data-hours="168" style="padding:2px 6px;font-size:.4rem">7h</button>
+    </div>
+  </div>
+  <!-- Timeline slider -->
+  <div style="display:flex;align-items:center;gap:4px;margin-top:4px">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:.45rem;color:var(--mute)" id="radar-range-label">12j lalu</span>
+    <button class="tab" id="radar-step-back" style="width:26px;padding:2px;font-size:.65rem;flex-shrink:0" title="Mundur 1 point">&#x25C0;</button>
     <input type="range" id="radar-timeline" min="0" max="144" value="144" style="flex:1;height:4px;accent-color:var(--ac)">
-    <button class="tab" id="radar-step-fwd" style="width:26px;padding:2px;font-size:.65rem;flex-shrink:0" title="Maju 1 point">▶</button>
-    <button class="tab" id="radar-play" style="padding:2px 6px;font-size:.55rem;flex-shrink:0" title="Autoplay history (klik untuk cycle: Off → 1× → 2× → 4×)">⏸ Off</button>
+    <button class="tab" id="radar-step-fwd" style="width:26px;padding:2px;font-size:.65rem;flex-shrink:0" title="Maju 1 point">&#x25B6;</button>
+    <button class="tab" id="radar-play" style="padding:2px 6px;font-size:.55rem;flex-shrink:0" title="Autoplay history">&#x23F8; Off</button>
     <span style="font-family:'JetBrains Mono',monospace;font-size:.45rem;color:var(--mute)">Now</span>
   </div>
   <div id="radar-time-label" style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:.48rem;color:var(--ac);margin-top:2px">Live</div>
@@ -542,3 +580,4 @@
 <script src="js/auto-refresh.js"></script>
 </body>
 </html>
+
