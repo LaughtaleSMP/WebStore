@@ -1046,11 +1046,31 @@ function drawRadar(){
     if(!_inCur&&_oDim){radarDim=_oDim;var _dt=$('radar-dim-tabs');if(_dt)_dt.querySelectorAll('.tab').forEach(function(b){b.classList.remove('a');if(b.dataset.dim===_oDim)b.classList.add('a');});}
   }
   var ap;
-  if(isLive){ap=radarPlayers.filter(function(p){return p.dim===radarDim&&p.x!==undefined;});}
+  if(isLive){ap=radarPlayers.filter(function(p){return p.dim===radarDim&&p.x!==undefined;}).map(function(p){return{name:p.name,x:p.x,z:p.z,pvp:!!p.pvp,di:p.di};});}
   else{var sn=radarHistory[radarTimeIdx];var pd=sn?sn._pos:[];ap=pd.filter(function(p){return(DIM_SHORT[p.d]||'overworld')===radarDim;}).map(function(p){return{name:p.n,x:p.x,z:p.z,pvp:!!p.p};});}
   // [FILTER] Apply player filter (AFK / PvP / owner) sebelum render
   if(isLive)ap=_applyPlayerFilter(ap);
   _lastAP=ap;
+  // [UX: TWEENING] Smoothly animate player positions across frames
+  if(!window._radarTween) window._radarTween = {};
+  var _needsTw = false;
+  for(var i=0;i<ap.length;i++){
+    var p=ap[i], tw=window._radarTween[p.name];
+    if(tw && tw.d===radarDim){
+      var dx=p.x-tw.x, dz=p.z-tw.z, ds=dx*dx+dz*dz;
+      if(ds>1000000){ tw.x=p.x; tw.z=p.z; } // snap only if >1000 blocks (real teleport)
+      else if(ds>0.2){ tw.x+=dx*0.18; tw.z+=dz*0.18; _needsTw=true; }
+      else{ tw.x=p.x; tw.z=p.z; }
+    }else{
+      window._radarTween[p.name]={x:p.x,z:p.z,d:radarDim};
+      tw=window._radarTween[p.name];
+    }
+    p.x=tw.x; p.z=tw.z;
+  }
+  if(_needsTw && !isInteract && !radarRaf && typeof _radarQueued!=='undefined' && !_radarQueued){
+    radarRaf = requestAnimationFrame(function(){ radarRaf=0; drawRadar(); });
+  }
+
   if(rSel&&rFollow){for(var i=0;i<ap.length;i++){if(ap[i].name===rSel){radarPanX=ap[i].x;radarPanZ=ap[i].z;break;}}}
   var GS=[10,25,50,100,250,500,1000,2500,5000],gs=GS[GS.length-1];
   for(var i=0;i<GS.length;i++){if(GS[i]*sc>=55){gs=GS[i];break;}}
@@ -1178,7 +1198,7 @@ function drawRadar(){
       drawHead(ctx,px,pz,p.name,p.pvp,dc,18);
       ctx.save();if(!dim){ctx.shadowColor='rgba(0,0,0,0.7)';ctx.shadowBlur=2;ctx.shadowOffsetY=1;}
       ctx.fillStyle=dim?'rgba(255,255,255,0.25)':'#fff';ctx.font='600 10px Inter,sans-serif';ctx.textAlign='center';ctx.fillText(p.name,px,pz-14);ctx.restore();
-      ctx.fillStyle=dim?'rgba(255,255,255,0.12)':'rgba(255,255,255,0.35)';ctx.font='500 7px JetBrains Mono,monospace';ctx.textAlign='center';ctx.fillText(p.x+', '+p.z,px,pz+18);
+      ctx.fillStyle=dim?'rgba(255,255,255,0.12)':'rgba(255,255,255,0.35)';ctx.font='500 7px JetBrains Mono,monospace';ctx.textAlign='center';ctx.fillText(Math.round(p.x)+', '+Math.round(p.z),px,pz+18);
       if(p.pvp&&!dim){ctx.fillStyle='rgba(248,113,113,0.8)';ctx.font='700 6px JetBrains Mono,monospace';ctx.fillText('\u2694 PVP',px,pz+26);}
     }
     if(dim)ctx.globalAlpha=1;
@@ -1211,7 +1231,7 @@ function _rInfo(ap){
     ct.innerHTML='<b style="color:#fff;font-size:.7rem">'+esc(rSel)+'</b><br><span style="font-size:.52rem;color:'+(_any?'var(--dim)':'#f87171')+'">'+(_any?'Berpindah dimensi...':'Offline')+'</span>';return;
   }
   var h='<b style="color:#fff;font-size:.7rem">'+esc(p.name)+'</b>';
-  h+='<div style="font-size:.55rem;color:var(--cyan);margin-top:2px">X: '+p.x+' &nbsp; Z: '+p.z+'</div>';
+  h+='<div style="font-size:.55rem;color:var(--cyan);margin-top:2px">X: '+Math.round(p.x)+' &nbsp; Z: '+Math.round(p.z)+'</div>';
   h+='<div style="font-size:.48rem;color:var(--mute);margin-top:1px">'+radarDim.replace('_',' ')+'</div>';
   if(p.pvp)h+='<div style="font-size:.52rem;color:#f87171;font-weight:700;margin-top:1px">\u2694 PVP ON</div>';
   h+='<div style="font-size:.45rem;color:var(--mute);margin-top:3px">Klik map kosong untuk deselect</div>';
@@ -1315,6 +1335,11 @@ function _setRadarHistError(msg){
     // Double-click to zoom into clicked area
     cv.addEventListener('dblclick',function(e){
       e.preventDefault();
+      if(rSel && rFollow) {
+        radarZoom=Math.max(50,Math.round(radarZoom/3));
+        drawRadar();
+        return;
+      }
       var r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
       var cW=parseInt(cv.style.width)||600,cH=parseInt(cv.style.height)||400;
       var sc=Math.min(cW,cH)/(radarZoom*2);
@@ -1328,14 +1353,14 @@ function _setRadarHistError(msg){
     });
     cv.addEventListener('mousedown',function(e){_clickStart={x:e.clientX,y:e.clientY,t:Date.now()};radarDrag=true;_radarInteracting=true;cv.style.cursor='move';radarDragStart={x:e.clientX,z:e.clientY,px:radarPanX,pz:radarPanZ};});
     window.addEventListener('mousemove',function(e){if(!radarDrag)return;var sc=Math.min(parseInt(cv.style.width)||600,parseInt(cv.style.height)||400)/(radarZoom*2);radarPanX=radarDragStart.px-(e.clientX-radarDragStart.x)/sc;radarPanZ=radarDragStart.pz-(e.clientY-radarDragStart.z)/sc;rFollow=false;if(!radarRaf){radarRaf=requestAnimationFrame(function(){drawRadar();radarRaf=0;});}});
-    window.addEventListener('mouseup',function(e){if(!radarDrag)return;radarDrag=false;_radarInteracting=false;_interactEnd=Date.now();cv.style.cursor='crosshair';var dx=e.clientX-_clickStart.x,dy=e.clientY-_clickStart.y;if(Math.abs(dx)<5&&Math.abs(dy)<5&&Date.now()-_clickStart.t<300){var hit=_rHit(cv,e);if(hit){_selectPlayer(hit.name);}else if(_rfState.cluster&&radarZoom>1500&&_lastAP.length>=5){
+    window.addEventListener('mouseup',function(e){if(!radarDrag)return;radarDrag=false;_radarInteracting=false;_interactEnd=Date.now();cv.style.cursor='crosshair';var dx=e.clientX-_clickStart.x,dy=e.clientY-_clickStart.y;if(Math.abs(dx)<5&&Math.abs(dy)<5&&Date.now()-_clickStart.t<300){var hit=_rHit(cv,e);if(hit){_selectPlayer(hit.name);window._lastSelT=Date.now();}else if(_rfState.cluster&&radarZoom>1500&&_lastAP.length>=5){
       // Cluster click: zoom in 60% to drill into the cluster
       var rb=cv.getBoundingClientRect(),mxC=e.clientX-rb.left,myC=e.clientY-rb.top;
       var Wc=parseInt(cv.style.width)||600,Hc=parseInt(cv.style.height)||400;
       var scC=Math.min(Wc,Hc)/(radarZoom*2);
       radarPanX=radarPanX+(mxC-Wc/2)/scC;radarPanZ=radarPanZ+(myC-Hc/2)/scC;
       radarZoom=Math.max(50,Math.round(radarZoom*0.6));rFollow=false;
-    }else{_selectPlayer(null);}}drawRadar();});
+    }else{if(Date.now()-(window._lastSelT||0)>400)_selectPlayer(null);}}drawRadar();});
     cv.addEventListener('wheel',function(e){e.preventDefault();_radarInteracting=true;radarZoom=e.deltaY>0?Math.min(10000,radarZoom*1.3):Math.max(50,radarZoom/1.3);radarZoom=Math.round(radarZoom);rFollow=false;clearTimeout(window._wheelEnd);window._wheelEnd=setTimeout(function(){_radarInteracting=false;_interactEnd=Date.now();drawRadar();},200);if(!radarRaf){radarRaf=requestAnimationFrame(function(){drawRadar();radarRaf=0;});}},{passive:false});
     var rPinch={a:false,d0:0,z0:0};
     function _td(ts){var dx=ts[0].clientX-ts[1].clientX,dy=ts[0].clientY-ts[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
@@ -1348,14 +1373,21 @@ function _setRadarHistError(msg){
       if(Math.abs(dx)<8&&Math.abs(dy)<8&&now-_tStart.t<300){
         if(now-_lastTap<400){
           // Double tap — zoom in
-          var r=cv.getBoundingClientRect(),mx=ct.clientX-r.left,my=ct.clientY-r.top;
-          var cW=parseInt(cv.style.width)||600,cH=parseInt(cv.style.height)||400;
-          var sc=Math.min(cW,cH)/(radarZoom*2);
-          radarPanX=radarPanX+(mx-cW/2)/sc;radarPanZ=radarPanZ+(my-cH/2)/sc;
-          radarZoom=Math.max(50,Math.round(radarZoom/3));rFollow=false;drawRadar();
+          if(rSel && rFollow) {
+            radarZoom=Math.max(50,Math.round(radarZoom/3));
+            drawRadar();
+          } else {
+            var r=cv.getBoundingClientRect(),mx=ct.clientX-r.left,my=ct.clientY-r.top;
+            var cW=parseInt(cv.style.width)||600,cH=parseInt(cv.style.height)||400;
+            var sc=Math.min(cW,cH)/(radarZoom*2);
+            radarPanX=radarPanX+(mx-cW/2)/sc;radarPanZ=radarPanZ+(my-cH/2)/sc;
+            radarZoom=Math.max(50,Math.round(radarZoom/3));rFollow=false;drawRadar();
+          }
           _lastTap=0;
         }else{
-          var hit=_rHit(cv,ct);_selectPlayer(hit?hit.name:null);
+          var hit=_rHit(cv,ct);
+          if(hit){ _selectPlayer(hit.name); window._lastSelT=now; }
+          else{ if(now-(window._lastSelT||0)>400) _selectPlayer(null); }
           _lastTap=now;
         }
       }else{_lastTap=0;}

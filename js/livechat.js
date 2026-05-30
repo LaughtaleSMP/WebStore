@@ -594,6 +594,7 @@
   //  VERIFIED NAMES CACHE (for verified badge)
   // ══════════════════════════════════════════
   var _verifiedNames = {}; // gamertag → true
+  var _supporterNames = {}; // gamertag → true
 
   function _refreshVerified() {
     fetch(ACCT + '?select=gamertag', { headers: _hdr })
@@ -605,6 +606,30 @@
         }
         _verifiedNames = fresh;
       }).catch(function () {});
+
+    // Fetch leaderboard_sync for topup_log and gacha_lb to grant Supporter Diamond badge
+    fetch(SB_URL + '/rest/v1/leaderboard_sync?id=eq.current&select=topup_log,gacha_lb', { headers: _hdr })
+      .then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(rows){
+         if(!rows.length) return;
+         var freshS = {};
+         var row = rows[0];
+         if (row.topup_log) {
+             var logs = row.topup_log;
+             if(typeof logs === 'string') { try { logs = JSON.parse(logs); } catch(e){ logs=[]; } }
+             for(var i=0; i<logs.length; i++){ if(logs[i].t) freshS[logs[i].t] = true; }
+         }
+         if (row.gacha_lb) {
+             var lb = row.gacha_lb;
+             if(typeof lb === 'string') { try { lb = JSON.parse(lb); } catch(e){ lb={}; } }
+             if(lb && lb.gem) {
+                 for(var i=0; i<lb.gem.length; i++){
+                     if(lb.gem[i].name && lb.gem[i].gem > 0) freshS[lb.gem[i].name] = true;
+                 }
+             }
+         }
+         _supporterNames = freshS;
+      }).catch(function(){});
   }
   _refreshVerified();
   setInterval(_refreshVerified, 60000); // refresh every 60s
@@ -746,8 +771,14 @@
 
   function _buildMsg(m) {
     var el = document.createElement('div');
+    var isSupporter = _supporterNames[m.player_name] === true;
     var isVerified = _verifiedNames[m.player_name] === true;
-    var verifyBadge = isVerified ? '<span class="lc-verified" title="Verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" width="9" height="9"><polyline points="20 6 9 17 4 12"/></svg></span>' : '';
+    var verifyBadge = '';
+    if (isSupporter) {
+      verifyBadge = '<span class="lc-supporter" title="Supporter (Topup)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M6 3l6 6 6-6"/><path d="M2 9h20"/></svg></span>';
+    } else if (isVerified) {
+      verifyBadge = '<span class="lc-verified" title="Verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" width="9" height="9"><polyline points="20 6 9 17 4 12"/></svg></span>';
+    }
 
     // System message (join/leave/death)
     if (m.source === 'system') {

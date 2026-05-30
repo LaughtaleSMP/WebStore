@@ -425,7 +425,7 @@ body.lc-fs-active #pn { display: none !important; }
   flex-wrap: wrap;
   gap: 0;
   line-height: 1.4;
-  overflow: hidden;
+  overflow: visible;
 }
 .lc-msg-name {
   font-family: 'JetBrains Mono', monospace;
@@ -470,6 +470,49 @@ body.lc-fs-active #pn { display: none !important; }
 }
 .lc-verified svg {
   display: block;
+}
+
+/* Supporter Badge (Diamond) */
+.lc-supporter {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #38bdf8;
+  background: rgba(56,189,248,.1);
+  border: 1px solid rgba(56,189,248,.25);
+  border-radius: 4px;
+  width: 14px;
+  height: 14px;
+  margin-left: 3px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 0 4px rgba(56,189,248,.1) inset;
+}
+.lc-supporter::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent);
+  transform: skewX(-20deg);
+  animation: lcShineSweep 4s infinite ease-in-out;
+}
+.lc-supporter svg {
+  display: block;
+  position: relative;
+  z-index: 2;
+  animation: lcDiamondPulse 3s infinite ease-in-out;
+}
+@keyframes lcShineSweep {
+  0%, 40% { left: -100%; opacity: 0; }
+  50% { opacity: 1; }
+  60%, 100% { left: 200%; opacity: 0; }
+}
+@keyframes lcDiamondPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(56,189,248,.4)); color: #38bdf8; }
+  50% { transform: scale(1.02); filter: drop-shadow(0 0 5px rgba(56,189,248,.8)); color: #7dd3fc; }
 }
 
 /* ── System Messages (join/leave/death) ── */
