@@ -12,6 +12,12 @@ var _tpsBuf=[],_hmOn=false,_hmGrid=null,_hmDirty=true,_hmMax=1;
 // [A11Y] Honor prefers-reduced-motion — disable sonar pulse, land pulse, trail anim.
 // Global flag dipakai oleh drawRadar dan _hmAnimLoop. Listener di setup di IIFE bawah.
 var _reduceMotion=(typeof window!=='undefined'&&window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)||false;
+var _perfMode=false;
+try{
+  var savedPerf=localStorage.getItem('lt_perf_mode');
+  if(savedPerf!==null)_perfMode=savedPerf==='1';
+  else _perfMode=(typeof window!=='undefined'&&window.innerWidth<768);
+}catch(e){_perfMode=(typeof window!=='undefined'&&window.innerWidth<768);}
 var _notifOn=false,_notifCD={},_notifHist=[],_NOTIF_CD=300000;
 var _uptimeLog=null,_prevOnline=null;
 var _fetchLock=false,_lastBDSHash='',_srvStatCache=null,_srvStatCacheTs=0;
@@ -923,10 +929,10 @@ function _getHeadBitmap(name,pvp,dc,sz,isVIP){
   var rRad = sz/2;
   
   octx.save();
-  if(pvp){octx.shadowColor='#f87171';octx.shadowBlur=8;}
-  else if(name===rSel){octx.shadowColor='#fbbf24';octx.shadowBlur=10;}
-  else if(isVIP){octx.shadowColor='#c084fc';octx.shadowBlur=10;}
-  else{octx.shadowColor=dc;octx.shadowBlur=4;}
+  if(pvp&&!_perfMode){octx.shadowColor='#f87171';octx.shadowBlur=8;}
+  else if(name===rSel&&!_perfMode){octx.shadowColor='#fbbf24';octx.shadowBlur=10;}
+  else if(isVIP&&!_perfMode){octx.shadowColor='#c084fc';octx.shadowBlur=10;}
+  else if(!_perfMode){octx.shadowColor=dc;octx.shadowBlur=4;}
   
   octx.beginPath();
   if(octx.roundRect) octx.roundRect(hx, hy, sz, sz, 2);
@@ -1089,9 +1095,9 @@ function drawRadar(){
   var ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
   ctx.fillStyle='#0a0e14';ctx.fillRect(0,0,W,H);
   var cX=W/2,cY=H/2,sc=Math.min(W,H)/(radarZoom*2);
-  // Fog of war — skip during interaction (expensive chunk iteration)
+  // Fog of war — skip during interaction or in Performance Mode
   // Also skip when zoomed out so far that chunks are sub-pixel (no visual benefit)
-  if(!isInteract){
+  if(!isInteract&&!_perfMode){
     if(Date.now()-_expLast>30000)_computeExp();
     var _cw=_EXP_CS*sc;
     if(_cw>=2&&_expSet.size>0){
@@ -1184,12 +1190,14 @@ function drawRadar(){
   for(var i=0;i<GS.length;i++){if(GS[i]*sc>=55){gs=GS[i];break;}}
   var rng=radarZoom*1.2;
   
-  // Vignette Background (Professional Depth)
-  var _vGrad = ctx.createRadialGradient(cX, cY, Math.min(W,H)*0.2, cX, cY, Math.max(W,H)*0.8);
-  _vGrad.addColorStop(0, 'rgba(0,0,0,0)');
-  _vGrad.addColorStop(1, 'rgba(0,0,0,0.65)');
-  ctx.fillStyle = _vGrad;
-  ctx.fillRect(0,0,W,H);
+  // Vignette Background (Professional Depth) — skipped in Performance Mode for speed
+  if(!_perfMode){
+    var _vGrad = ctx.createRadialGradient(cX, cY, Math.min(W,H)*0.2, cX, cY, Math.max(W,H)*0.8);
+    _vGrad.addColorStop(0, 'rgba(0,0,0,0)');
+    _vGrad.addColorStop(1, 'rgba(0,0,0,0.65)');
+    ctx.fillStyle = _vGrad;
+    ctx.fillRect(0,0,W,H);
+  }
 
   ctx.setLineDash([2,4]);ctx.strokeStyle='rgba(255,255,255,0.03)';ctx.lineWidth=1;
   var s1=Math.floor((radarPanX-rng)/gs)*gs,e1=Math.ceil((radarPanX+rng)/gs)*gs;
@@ -1336,8 +1344,8 @@ function drawRadar(){
     }
   }
 
-  // Render Epic Particles (Rendered BEFORE players so they don't overlap faces)
-  if(window._radarParticles && window._radarParticles.length > 0 && !isInteract){
+  // Render Epic Particles (Rendered BEFORE players so they don't overlap faces) — skipped in Mode Ringan
+  if(window._radarParticles && window._radarParticles.length > 0 && !isInteract && !_perfMode){
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
     var nextP = [];
@@ -1378,8 +1386,8 @@ function drawRadar(){
     var isVerified = window._lcVerified && window._lcVerified[p.name];
     if (isVIP) isVerified = false; // Replace verified mark with diamond logo if topup
 
-    // Draw cinematic motion trail
-    if(p.trail && p.trail.length > 1 && !dim && !isInteract){
+    // Draw cinematic motion trail — skipped in Mode Ringan
+    if(p.trail && p.trail.length > 1 && !dim && !isInteract && !_perfMode){
       ctx.save();
       if(isVIP) ctx.globalCompositeOperation = 'screen';
       
@@ -1511,7 +1519,7 @@ function drawRadar(){
     var br = bh / 2;
     
     var gx0=0, gy0=0, gx1=0, gy1=0;
-    if(isVIP && !dim) {
+    if(isVIP && !dim && !_perfMode) {
        _needsTw = true;
        var t = Date.now() / 2000;
        var cx = bx + bw/2;
@@ -1562,7 +1570,7 @@ function drawRadar(){
           ctx.lineWidth = 1.5;
           ctx.stroke();
           
-          if(!isInteract){
+          if(!isInteract && !_perfMode){
             var isLowEnd = window.innerWidth < 768;
             var pTime = Date.now() / 1200;
             var hue = 190 + 80 * (Math.sin(pTime)+1)/2;
@@ -1597,7 +1605,7 @@ function drawRadar(){
           ctx.lineWidth = 1;
           ctx.stroke();
           
-          if(!isInteract){
+          if(!isInteract && !_perfMode){
             ctx.shadowColor = 'rgba(0,0,0,0.85)';
             ctx.shadowBlur = 4;
             ctx.shadowOffsetY = 1;
@@ -1712,7 +1720,7 @@ function drawRadar(){
           ctx.arcTo(bX, bY, bX + r, bY, r);
           ctx.closePath();
           
-          if(isVIP && window.innerWidth >= 768) {
+          if(isVIP && window.innerWidth >= 768 && !_perfMode) {
              ctx.shadowColor = '#c084fc';
              ctx.shadowBlur = 8;
           }
@@ -1824,7 +1832,7 @@ function drawRadar(){
     radarRaf = requestAnimationFrame(function rf(){ 
        radarRaf=0; 
        var now = Date.now();
-       var fpsLimit = (window.innerWidth < 768) ? 41 : 33; // 24 FPS mobile, 30 FPS desktop
+       var fpsLimit = _perfMode ? 66 : ((window.innerWidth < 768) ? 41 : 33); // 15 FPS Mode Ringan, 24 FPS mobile, 30 FPS desktop
        if(!window._lastRadarTw || now - window._lastRadarTw > fpsLimit) {
           window._lastRadarTw = now;
           drawRadar();
@@ -1895,7 +1903,16 @@ function _rHit(canvas,e){
   return best ? {type:'player', player: best} : null;
 }
 
-function _startAnim(){if(radarAnimId)return;(function l(){radarAnimId=requestAnimationFrame(function(){drawRadar();if(radarTimeIdx>=0&&radarTimeIdx<radarHistory.length)l();else radarAnimId=0;});})();}
+function _startAnim(){
+  if(radarAnimId)return;
+  (function l(){
+    radarAnimId=requestAnimationFrame(function(){
+      drawRadar();
+      if(radarTimeIdx===-1)l();
+      else radarAnimId=0;
+    });
+  })();
+}
 function _stopAnim(){if(radarAnimId){cancelAnimationFrame(radarAnimId);radarAnimId=0;}}
 
 function _selectPlayer(name){
@@ -1979,6 +1996,18 @@ function _setRadarHistError(msg){
   _rfBindCheck('rf-hm-passive','hmPassive');
   _rfBindCheck('rf-hm-item','hmItem');
   _rfBindCheck('rf-hm-other','hmOther');
+  
+  // Bind Mode Ringan UI
+  var pmc=$('perf-mode-check');
+  if(pmc){
+    pmc.checked=!!_perfMode;
+    pmc.addEventListener('change',function(){
+      _perfMode=pmc.checked;
+      try{localStorage.setItem('lt_perf_mode',_perfMode?'1':'0');}catch(e){}
+      window._hmDirty=true;
+      drawRadar();
+    });
+  }
   
   var hmfBtn=$('hm-f-btn'), hmfPanel=$('hm-f-panel'), hmfClose=$('hm-f-close');
   if(hmfBtn&&hmfPanel){
@@ -2125,18 +2154,32 @@ function _setRadarHistError(msg){
   }
   var tl=$('radar-timeline');
   if(tl)tl.addEventListener('input',function(){
+    _radarInteracting=true;
+    clearTimeout(window._timelineEnd);
+    window._timelineEnd=setTimeout(function(){
+      _radarInteracting=false;
+      _interactEnd=Date.now();
+      drawRadar();
+    },150);
+
     var v=parseInt(tl.value),lb=$('radar-time-label');
     if(v>=radarHistory.length){
       radarTimeIdx=-1;_stopAnim();
       if(lb)lb.textContent='Live';
+      _startAnim();
     }else{
       radarTimeIdx=v;
       if(lb&&radarHistory[v]){
         lb.textContent=_fmtTimeLabel(radarHistory[v].ts)+' ('+( v+1)+'/'+radarHistory.length+')';
       }
-      _startAnim();
+      _stopAnim();
     }
-    drawRadar();
+    if(!radarRaf){
+      radarRaf=requestAnimationFrame(function(){
+        drawRadar();
+        radarRaf=0;
+      });
+    }
   });
   var sb=$('radar-step-back'),sf=$('radar-step-fwd'),_hId=0,_hDelay=0,_hCnt=0;
   function _stepDir(dir){var s=$('radar-timeline');if(!s)return;s.value=dir<0?Math.max(0,parseInt(s.value)-1):Math.min(parseInt(s.max)||radarHistory.length,parseInt(s.value)+1);s.dispatchEvent(new Event('input'));}
@@ -3269,8 +3312,8 @@ function _renderHeatmap(ctx,cX,cY,sc,W,H){
         ctx.fillText(d.c,centerX,centerZ);
       }
     }
-    // ── Sonar wave on orange+ (t >= 0.4) — budget-limited ──
-    if(t>=0.4&&sonarCount<sonarBudget){
+    // ── Sonar wave on orange+ (t >= 0.4) — budget-limited, skipped in Mode Ringan ──
+    if(t>=0.4&&sonarCount<sonarBudget&&!_perfMode){
       sonarCount++;
       var maxR=zoomedOut?Math.max(18,8+t*16):cellPx*1.8;
       for(var wi=0;wi<2;wi++){
@@ -4349,7 +4392,7 @@ drawRadar=function(){
   _radarThrottleId=setTimeout(function(){
     _radarThrottleId=0;
     if(_radarQueued){_radarQueued=false;_baseDrawRadar();_updateRadarA11y();}
-  },33); // ~30fps cap
+  },_perfMode?50:33); // Throttles drawing to 20 FPS in Mode Ringan
 };
 // [A11Y] Live-region summary for screen readers — rate-limited to 5s.
 // Hindari assistive-tech spam saat radar redraw 30x/detik.
