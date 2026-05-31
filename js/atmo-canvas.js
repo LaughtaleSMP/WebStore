@@ -29,20 +29,20 @@ window.AtmoCanvas = function(canvas, opts){
   var skyG, fogG, groundG, wetG;
   var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-  // Config
-  var DROP_DENSITY = 0.00028;       // drops per sqpx target (scaled by intensity)
-  var DROP_SPEED   = [9, 20];
-  var DROP_WIND    = 1.6;
-  var DROP_LEN     = [10, 26];
-  var DROP_ALPHA   = [0.07, 0.26];
+  // Config — tuned for cinematic rain quality
+  var DROP_DENSITY = 0.00045;       // drops per sqpx target (scaled by intensity)
+  var DROP_SPEED   = [10, 22];
+  var DROP_WIND    = 1.8;
+  var DROP_LEN     = [14, 32];
+  var DROP_ALPHA   = [0.10, 0.32];
   var BOLT_INT     = [1500, 4500];
-  var SPLASH_N     = [3, 6];
-  var RIPPLE_MAX   = 32;
-  var STREAK_MAX   = 40;
+  var SPLASH_N     = [4, 8];
+  var RIPPLE_MAX   = 48;
+  var STREAK_MAX   = 55;
 
   function targetDropCount(){
     var n = W*H * DROP_DENSITY * intensity;
-    return Math.max(8, Math.min(260, Math.round(n)));
+    return Math.max(12, Math.min(420, Math.round(n)));
   }
 
   function buildGradients(){
@@ -78,7 +78,7 @@ window.AtmoCanvas = function(canvas, opts){
       vy: rnd(DROP_SPEED[0], DROP_SPEED[1]),
       len: rnd(DROP_LEN[0], DROP_LEN[1]),
       a: rnd(DROP_ALPHA[0], DROP_ALPHA[1]),
-      w: rnd(0.3, 0.65),
+      w: rnd(0.5, 1.0),
     };
   }
 
@@ -165,7 +165,7 @@ window.AtmoCanvas = function(canvas, opts){
       ctx.beginPath();
       ctx.moveTo(d.x, d.y);
       ctx.lineTo(d.x - dx, d.y - d.len);
-      ctx.strokeStyle = 'rgba(160,205,235,'+d.a+')';
+      ctx.strokeStyle = 'rgba(175,215,245,'+d.a+')';
       ctx.lineWidth = d.w;
       ctx.stroke();
       d.x += d.vx; d.y += d.vy;
@@ -181,7 +181,7 @@ window.AtmoCanvas = function(canvas, opts){
       var s = splashes[i];
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(180,215,240,'+(s.life*0.45)+')';
+      ctx.fillStyle = 'rgba(190,220,245,'+(s.life*0.55)+')';
       ctx.fill();
       s.x += s.vx; s.y += s.vy;
       s.vy += 0.14;
@@ -302,7 +302,7 @@ window.AtmoCanvas = function(canvas, opts){
   }
 
   function resize(){
-    DPR = Math.min(window.devicePixelRatio || 1, 1.5) * 0.7;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
     // Pakai clientWidth/clientHeight (mengikuti CSS inset:0 stretch ke parent),
     // BUKAN getBoundingClientRect/style.width — supaya canvas tetap stretchy saat parent resize.
     W = Math.max(40, canvas.clientWidth | 0);

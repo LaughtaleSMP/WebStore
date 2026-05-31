@@ -4376,7 +4376,7 @@ function _atmoCanvasSync(card,weather){
     _atmoFx.setMode('clear');
     card.classList.remove('has-canvas-fx');
   }else{
-    _atmoFx.setIntensity(weather==='thunder'?0.85:0.55);
+    _atmoFx.setIntensity(weather==='thunder'?0.90:0.70);
     _atmoFx.setMode(weather);
     card.classList.add('has-canvas-fx');
   }
