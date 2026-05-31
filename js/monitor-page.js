@@ -1081,6 +1081,7 @@ function _clusterPlayers(ap,sc,W,H){
 }
 function drawRadar(){
   try{
+  var _now = Date.now();
   var canvas=$('radar-canvas');if(!canvas)return;
   var par=canvas.parentElement;
   var isInteract=_radarInteracting||Date.now()-_interactEnd<150;
@@ -1098,21 +1099,25 @@ function drawRadar(){
   // Fog of war — skip during interaction or in Performance Mode
   // Also skip when zoomed out so far that chunks are sub-pixel (no visual benefit)
   if(!isInteract&&!_perfMode){
-    if(Date.now()-_expLast>30000)_computeExp();
+    if(_now-_expLast>30000)_computeExp();
     var _cw=_EXP_CS*sc;
-    if(_cw>=2&&_expSet.size>0){
+    if(_cw>=6&&_expSet.size>0){
       var _rng2=radarZoom*1.2;
       var _sx=Math.floor((radarPanX-_rng2)/_EXP_CS),_ex=Math.ceil((radarPanX+_rng2)/_EXP_CS);
       var _sz=Math.floor((radarPanZ-_rng2)/_EXP_CS),_ez=Math.ceil((radarPanZ+_rng2)/_EXP_CS);
       // Cap iteration count to prevent lag at extreme zoom-out
       var _fogCols=_ex-_sx+1,_fogRows=_ez-_sz+1;
-      if(_fogCols*_fogRows<=40000){
+      if(_fogCols*_fogRows<=2500){
+        ctx.fillStyle='rgba(0,0,0,0.18)';
+        ctx.beginPath();
         for(var _cx=_sx;_cx<=_ex;_cx++){for(var _cz=_sz;_cz<=_ez;_cz++){
           var _fx=cX+(_cx*_EXP_CS-radarPanX)*sc,_fz=cY+(_cz*_EXP_CS-radarPanZ)*sc;
           if(_fx+_cw<0||_fx>W||_fz+_cw<0||_fz>H)continue;
-          ctx.fillStyle=_expSet.has(radarDim+':'+_cx+','+_cz)?'rgba(52,211,153,0.018)':'rgba(0,0,0,0.18)';
-          ctx.fillRect(_fx,_fz,_cw,_cw);
+          if(!_expSet.has(radarDim+':'+_cx+','+_cz)){
+            ctx.rect(_fx,_fz,_cw,_cw);
+          }
         }}
+        ctx.fill();
       }
     }
   }
@@ -1340,16 +1345,21 @@ function drawRadar(){
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('\u2694', clx, clz);
       ctx.restore();
-      if(!radarRaf){ radarRaf = requestAnimationFrame(function(){ radarRaf=0; drawRadar(); }); }
     }
   }
-
-  // Render Epic Particles (Rendered BEFORE players so they don't overlap faces) — skipped in Mode Ringan
+  // Render Epic Particles (batched & highly optimized)
   if(window._radarParticles && window._radarParticles.length > 0 && !isInteract && !_perfMode){
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
     var nextP = [];
-    var nowT = Date.now();
+    var particleColorMap = {
+      '#c084fc': 'rgba(192,132,252,',
+      '#22d3ee': 'rgba(34,211,238,',
+      '#a5f3fc': 'rgba(165,243,252,',
+      '#e879f9': 'rgba(232,121,249,'
+    };
+    var subBatches = {};
+    
     for(var i=0; i<window._radarParticles.length; i++){
       var pt = window._radarParticles[i];
       pt.life -= 16;
@@ -1358,15 +1368,32 @@ function drawRadar(){
       var px = cX + (pt.x - radarPanX)*sc;
       var pz = cY + (pt.z - radarPanZ)*sc;
       if(px<-10||px>W+10||pz<-10||pz>H+10){ nextP.push(pt); continue; }
+      
       var pRatio = pt.life / pt.maxLife;
-      ctx.beginPath();
-      ctx.arc(px, pz, pt.r * pRatio, 0, 6.28);
-      ctx.fillStyle = pt.c;
-      ctx.globalAlpha = pRatio * 0.9;
-      ctx.fill();
+      var alpha = Math.round(pRatio * 9) / 10;
+      if(alpha <= 0) continue;
+      
+      var baseColor = particleColorMap[pt.c] || 'rgba(192,132,252,';
+      var fillStyle = baseColor + alpha + ')';
+      
+      if(!subBatches[fillStyle]) subBatches[fillStyle] = [];
+      subBatches[fillStyle].push({x: px, z: pz, r: pt.r * pRatio});
+      
       nextP.push(pt);
     }
     window._radarParticles = nextP;
+    
+    for(var style in subBatches){
+      var list = subBatches[style];
+      ctx.fillStyle = style;
+      ctx.beginPath();
+      for(var j=0; j<list.length; j++){
+        var p = list[j];
+        ctx.moveTo(p.x + p.r, p.z);
+        ctx.arc(p.x, p.z, p.r, 0, 6.28);
+      }
+      ctx.fill();
+    }
     ctx.restore();
     if(window._radarParticles.length > 0) _needsTw = true;
   }
@@ -1375,23 +1402,49 @@ function drawRadar(){
   var renderUnits=_clusterPlayers(ap,sc,W,H);
   var clQ = [];
   var isHoveringCluster = false;
+  var nameplateQueue = [];
   for(var i=0;i<renderUnits.length;i++){
     var unit=renderUnits[i];
     if(unit.cluster){ clQ.push(unit); continue; }
     var p=unit.single,px=cX+(p.x-radarPanX)*sc,pz=cY+(p.z-radarPanZ)*sc;
     if(px<-20||px>W+20||pz<-20||pz>H+20)continue;
-    var dim=rSel&&rSel!==p.name;
-    if(dim)ctx.globalAlpha=0.25;
-    var isVIP = window._lcSupporters && window._lcSupporters[p.name];
-    var isVerified = window._lcVerified && window._lcVerified[p.name];
+    var pNameLower = (p.name || '').toLowerCase();
+    var isVIP = window._lcSupporters && window._lcSupporters[pNameLower];
+    var isVerified = window._lcVerified && window._lcVerified[pNameLower];
     if (isVIP) isVerified = false; // Replace verified mark with diamond logo if topup
 
-    // Draw cinematic motion trail — skipped in Mode Ringan
+    var dim=rSel&&rSel!==p.name;
+    if(dim)ctx.globalAlpha=0.25;
+
+    // Draw cinematic motion trail — dual-stroke glow simulation for 60 FPS performance
     if(p.trail && p.trail.length > 1 && !dim && !isInteract && !_perfMode){
       ctx.save();
       if(isVIP) ctx.globalCompositeOperation = 'screen';
       
       var tLen = p.trail.length;
+      
+      // Step 1: Draw glowing backdrop lines (thick, high transparency)
+      ctx.beginPath();
+      for(var k=0; k<tLen-1; k++){
+        var t0 = p.trail[k];
+        var t1 = p.trail[k+1];
+        var tx0 = cX + (t0.x - radarPanX)*sc, tz0 = cY + (t0.z - radarPanZ)*sc;
+        var tx1 = cX + (t1.x - radarPanX)*sc, tz1 = cY + (t1.z - radarPanZ)*sc;
+        
+        ctx.moveTo(tx0, tz0);
+        ctx.lineTo(tx1, tz1);
+      }
+      var lastT = p.trail[tLen-1];
+      ctx.moveTo(cX + (lastT.x - radarPanX)*sc, cY + (lastT.z - radarPanZ)*sc);
+      ctx.lineTo(px, pz);
+      
+      ctx.lineWidth = isVIP ? 12 : 9;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = isVIP ? 'rgba(192, 132, 252, 0.15)' : hexAlpha(dc, 0.15);
+      ctx.stroke();
+      
+      // Step 2: Draw core trail lines with dynamic opacity fading
       for(var k=0; k<tLen-1; k++){
         var t0 = p.trail[k];
         var t1 = p.trail[k+1];
@@ -1404,31 +1457,19 @@ function drawRadar(){
         ctx.lineTo(tx1, tz1);
         
         ctx.lineWidth = (isVIP ? 5 : 4) * (0.3 + 0.7 * frac);
-        ctx.lineCap = 'round';
         ctx.globalAlpha = Math.pow(frac, 1.5); 
-        
-        if(isVIP) {
-           ctx.strokeStyle = frac > 0.5 ? '#22d3ee' : '#c084fc';
-           ctx.shadowColor = '#c084fc';
-           ctx.shadowBlur = 15 * frac;
-        } else {
-           ctx.strokeStyle = dc;
-           ctx.shadowColor = dc;
-           ctx.shadowBlur = 8 * frac;
-        }
+        ctx.strokeStyle = isVIP ? (frac > 0.5 ? '#22d3ee' : '#c084fc') : dc;
         ctx.stroke();
       }
-      var lastT = p.trail[tLen-1];
-      var lx = cX + (lastT.x - radarPanX)*sc, lz = cY + (lastT.z - radarPanZ)*sc;
-      ctx.beginPath(); ctx.moveTo(lx, lz); ctx.lineTo(px, pz);
+      
+      ctx.beginPath();
+      ctx.moveTo(cX + (lastT.x - radarPanX)*sc, cY + (lastT.z - radarPanZ)*sc);
+      ctx.lineTo(px, pz);
       ctx.lineWidth = isVIP ? 5 : 4;
-      ctx.globalAlpha = 1;
-      if(isVIP) {
-         ctx.strokeStyle = '#22d3ee'; ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 15;
-      } else {
-         ctx.strokeStyle = dc; ctx.shadowColor = dc; ctx.shadowBlur = 8;
-      }
+      ctx.globalAlpha = 1.0;
+      ctx.strokeStyle = isVIP ? '#22d3ee' : dc;
       ctx.stroke();
+      
       ctx.restore();
     }
 
@@ -1503,240 +1544,318 @@ function drawRadar(){
       }
       ctx.restore();
     }
-    ctx.font='600 10px Inter,sans-serif';
-    var textW = ctx.measureText(p.name).width;
-    
-    var iconSpace = 0;
-    if(isVerified) iconSpace += 12;
-    if(isVIP) iconSpace += 12;
-    
-    var padX = 6, padY = 4;
-    var nameY = pz - 21; 
-    var bw = textW + padX*2 + iconSpace;
-    var bx = px - bw/2;
-    var by = nameY - 8;
-    var bh = 12 + padY; 
-    var br = bh / 2;
-    
-    var gx0=0, gy0=0, gx1=0, gy1=0;
-    if(isVIP && !dim && !_perfMode) {
-       _needsTw = true;
-       var t = Date.now() / 2000;
-       var cx = bx + bw/2;
-       var cy = by + bh/2;
-       var radius = bw * 1.5;
-       gx0 = cx + Math.cos(t) * radius;
-       gy0 = cy + Math.sin(t) * radius;
-       gx1 = cx - Math.cos(t) * radius;
-       gy1 = cy - Math.sin(t) * radius;
-    }
-    
-    if(!dim) {
-        if(isVIP && !isInteract) {
-           ctx.beginPath();
-           ctx.moveTo(px, by + bh);
-           ctx.lineTo(px, pz - 9);
-           ctx.strokeStyle = 'rgba(103, 232, 249, 0.4)';
-           ctx.lineWidth = 1;
-           ctx.stroke();
-        }
-
-        if(isVIP) {
-          var bgG = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
-          bgG.addColorStop(0, 'rgba(88, 28, 135, 0.35)');
-          bgG.addColorStop(0.5, 'rgba(30, 58, 138, 0.35)');
-          bgG.addColorStop(1, 'rgba(21, 94, 117, 0.35)');
-          ctx.fillStyle = bgG;
-        } else {
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        }
-        
-        ctx.beginPath();
-        ctx.moveTo(bx + br, by);
-        ctx.lineTo(bx + bw - br, by);
-        ctx.arc(bx + bw - br, by + br, br, -Math.PI/2, Math.PI/2);
-        ctx.lineTo(bx + br, by + bh);
-        ctx.arc(bx + br, by + br, br, Math.PI/2, Math.PI*1.5);
-        ctx.closePath();
-        ctx.fill();
-        
-        if(isVIP) {
-          var bdG = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
-          bdG.addColorStop(0, '#c084fc');
-          bdG.addColorStop(0.5, '#818cf8');
-          bdG.addColorStop(1, '#2dd4bf');
-          
-          ctx.strokeStyle = bdG;
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-          
-          if(!isInteract && !_perfMode){
-            var isLowEnd = window.innerWidth < 768;
-            var pTime = Date.now() / 1200;
-            var hue = 190 + 80 * (Math.sin(pTime)+1)/2;
-            if(!isLowEnd) {
-               ctx.shadowColor = 'hsl(' + hue + ', 90%, 60%)';
-               ctx.shadowBlur = 12;
-            }
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-            ctx.lineWidth = 2.5;
-            ctx.stroke();
-            
-            if(Math.random() < (isLowEnd ? 0.2 : 0.7)) {
-              if(!window._radarParticles) window._radarParticles = [];
-              var ex = bx + Math.random() * bw;
-              var ez = by + Math.random() * bh;
-              if(Math.random() < 0.4) ex = bx + (Math.random() > 0.5 ? 0 : bw); 
-              
-              window._radarParticles.push({
-                 x: (ex - cX)/sc + radarPanX,
-                 z: (ez - cY)/sc + radarPanZ,
-                 vx: (Math.random() - 0.5) * 0.08,
-                 vz: -0.15 - Math.random() * 0.15,
-                 life: 150 + Math.random()*200,
-                 maxLife: 350,
-                 r: 0.6 + Math.random()*1.2,
-                 c: Math.random() > 0.6 ? '#c084fc' : (Math.random() > 0.5 ? '#a5f3fc' : '#e879f9')
-              });
-            }
+    // Defer the entire nameplate rendering pass using a closure IIFE to capture variables
+    (function(p, px, pz, isVIP, isVerified, dim, dc) {
+       // Pre-evaluate chat state for priority sorting
+       var pNameKey = (p.name || '').trim().toLowerCase();
+       var activeChat = null;
+       if (window._lcRecentMessages && window._lcRecentMessages[pNameKey] && !dim) {
+          var chat = window._lcRecentMessages[pNameKey];
+          var age = Date.now() - chat.time;
+          if (age < 8000) {
+             _needsTw = true;
+             activeChat = { msg: (chat.msg || '').toString().replace(/\n/g, ' '), age: age };
+             if (activeChat.msg.length > 35) activeChat.msg = activeChat.msg.substring(0, 33) + '...';
           }
-        } else {
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-          ctx.lineWidth = 1;
-          ctx.stroke();
-          
-          if(!isInteract && !_perfMode){
-            ctx.shadowColor = 'rgba(0,0,0,0.85)';
-            ctx.shadowBlur = 4;
-            ctx.shadowOffsetY = 1;
-          }
-        }
-    }
-    
-    if(isVIP && !dim) {
-       var tG = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
-       tG.addColorStop(0, '#e879f9');
-       tG.addColorStop(0.5, '#a78bfa');
-       tG.addColorStop(1, '#67e8f9');
-       ctx.fillStyle = tG;
-    } else {
-       ctx.fillStyle = dim ? 'rgba(255,255,255,0.25)' : '#fff';
-    }
-
-    var textStartX = px - iconSpace/2;
-    if(isVIP && !dim) {
-       var isLowEnd = window.innerWidth < 768;
-       if(!isLowEnd) {
-         ctx.shadowColor = 'rgba(167, 139, 250, 0.8)';
-         ctx.shadowBlur = 5;
        }
-    }
-    ctx.textAlign = 'center';
-    ctx.fillText(p.name, textStartX, nameY + 3);
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-    
-    var iconX = textStartX + textW/2 + 6;
-    if(!dim) {
-      if(isVerified) {
-         ctx.save();
-         ctx.translate(iconX, nameY - 4);
-         ctx.scale(0.4, 0.4);
-         ctx.beginPath();
-         ctx.moveTo(4, 12); ctx.lineTo(9, 17); ctx.lineTo(20, 6);
-         ctx.strokeStyle = '#fef08a'; // Cosmic Starlight Gold
-         ctx.lineWidth = 4;
-         ctx.stroke();
-         ctx.restore();
-         iconX += 12;
-      }
-      
-      if(isVIP) {
-         ctx.save();
-         ctx.translate(iconX, nameY - 4);
-         ctx.scale(0.35, 0.35);
-         ctx.beginPath();
-         ctx.moveTo(6, 3); ctx.lineTo(18, 3); ctx.lineTo(22, 9); ctx.lineTo(12, 22); ctx.lineTo(2, 9); ctx.closePath();
-         ctx.fillStyle = 'rgba(103, 232, 249, 0.25)';
-         ctx.fill();
-         ctx.moveTo(6, 3); ctx.lineTo(12, 9); ctx.lineTo(18, 3);
-         ctx.moveTo(2, 9); ctx.lineTo(22, 9);
-         ctx.strokeStyle = '#67e8f9'; // Cosmic Cyan
-         ctx.lineWidth = 2.5;
-         ctx.stroke();
-         ctx.restore();
-         iconX += 12;
-      }
-    }
-    
-    if(!isInteract){
-      ctx.fillStyle=dim?'rgba(255,255,255,0.12)':'rgba(255,255,255,0.4)';
-      ctx.font='500 7px JetBrains Mono,monospace';
-      ctx.fillText(Math.round(p.x)+', '+Math.round(p.z),px,pz+18);
-      if(p.pvp&&!dim){ctx.fillStyle='rgba(248,113,113,0.8)';ctx.font='700 6px JetBrains Mono,monospace';ctx.fillText('\u2694 PVP',px,pz+26);}
-    }
-    if(dim)ctx.globalAlpha=1;
-    
-    if (window._lcRecentMessages && window._lcRecentMessages[p.name] && !dim) {
-       var chat = window._lcRecentMessages[p.name];
-       var age = Date.now() - chat.time;
-       if (age < 8000) { 
-          _needsTw = true; 
-          var bubbleAlpha = age > 7000 ? (8000 - age) / 1000 : (age < 300 ? age/300 : 1);
-          
-          ctx.save();
-          ctx.globalAlpha = bubbleAlpha;
-          ctx.font = '500 9px Inter,sans-serif';
-          
-          var msgStr = (chat.msg || '').toString().replace(/\n/g, ' ');
-          if(msgStr.length > 35) msgStr = msgStr.substring(0, 33) + '...';
-          
-          var bTextW = ctx.measureText(msgStr).width;
-          var bPadX = 7, bPadY = 5;
-          var bW = Math.max(bTextW + bPadX*2, 24);
-          var bH = 14 + bPadY;
-          var bX = px - bW/2;
-          var bY = by - bH - 6; 
-          
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)'; 
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-          ctx.lineWidth = 1;
-          
-          ctx.beginPath();
-          var r = 4;
-          ctx.moveTo(bX + r, bY);
-          ctx.lineTo(bX + bW - r, bY);
-          ctx.arcTo(bX + bW, bY, bX + bW, bY + r, r);
-          ctx.lineTo(bX + bW, bY + bH - r);
-          ctx.arcTo(bX + bW, bY + bH, bX + bW - r, bY + bH, r);
-          
-          ctx.lineTo(px + 4, bY + bH);
-          ctx.lineTo(px, bY + bH + 5);
-          ctx.lineTo(px - 4, bY + bH);
-          
-          ctx.lineTo(bX + r, bY + bH);
-          ctx.arcTo(bX, bY + bH, bX, bY + bH - r, r);
-          ctx.lineTo(bX, bY + r);
-          ctx.arcTo(bX, bY, bX + r, bY, r);
-          ctx.closePath();
-          
-          if(isVIP && window.innerWidth >= 768 && !_perfMode) {
-             ctx.shadowColor = '#c084fc';
-             ctx.shadowBlur = 8;
+       var isShowingChat = !!activeChat;
+
+       nameplateQueue.push({
+          isChat: isShowingChat,
+          isVIP: isVIP,
+          draw: function() {
+             var iconSpace = 0;
+             if(isVerified) iconSpace += 12;
+             if(isVIP) iconSpace += 12;
+             
+             var padX = 6, padY = 4;
+             var nameY = pz - 21; 
+
+             if (!window._playerNameWidths) window._playerNameWidths = {};
+             var nameW = window._playerNameWidths[p.name];
+             if (nameW === undefined) {
+                ctx.font='600 10px Inter,sans-serif';
+                nameW = window._playerNameWidths[p.name] = ctx.measureText(p.name).width;
+             }
+             var textW = nameW;
+             var displayName = p.name;
+             
+             if (isShowingChat) {
+                displayName = activeChat.msg;
+                if (!window._playerChatWidths) window._playerChatWidths = {};
+                var chatW = window._playerChatWidths[displayName];
+                if (chatW === undefined) {
+                   ctx.font = 'italic 9px Inter, sans-serif';
+                   chatW = window._playerChatWidths[displayName] = ctx.measureText(displayName).width;
+                }
+                textW = Math.max(nameW, chatW + 18); // Stable width including vector speaker icon space
+             }
+             
+             // Liquid Stretching Animation (Fluid Physics using global window cache)
+             if (!window._playerTagWidths) window._playerTagWidths = {};
+             var pKey = p.name;
+             if (window._playerTagWidths[pKey] === undefined) window._playerTagWidths[pKey] = nameW;
+             window._playerTagWidths[pKey] += (textW - window._playerTagWidths[pKey]) * 0.16;
+             textW = window._playerTagWidths[pKey];
+             
+             var bw = textW + padX*2 + iconSpace;
+             var bx = px - bw/2;
+             var by = nameY - 8;
+             var bh = 12 + padY; 
+             var br = bh / 2;
+             
+             var gx0=0, gy0=0, gx1=0, gy1=0;
+             if(isVIP && !dim && !_perfMode) {
+                var t = Date.now() / 2000;
+                var cx = bx + bw/2;
+                var cy = by + bh/2;
+                var radius = bw * 1.5;
+                gx0 = cx + Math.cos(t) * radius;
+                gy0 = cy + Math.sin(t) * radius;
+                gx1 = cx - Math.cos(t) * radius;
+                gy1 = cy - Math.sin(t) * radius;
+             }
+             
+             if(dim) ctx.globalAlpha = 0.25;
+             
+             if(!dim) {
+                 if(isVIP && !isInteract) {
+                    ctx.beginPath();
+                    ctx.moveTo(px, by + bh);
+                    ctx.lineTo(px, pz - 9);
+                    ctx.strokeStyle = 'rgba(103, 232, 249, 0.4)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                 }
+
+                 if(isVIP) {
+                   var bgG = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
+                   bgG.addColorStop(0, 'rgba(88, 28, 135, 0.35)');
+                   bgG.addColorStop(0.5, 'rgba(30, 58, 138, 0.35)');
+                   bgG.addColorStop(1, 'rgba(21, 94, 117, 0.35)');
+                   ctx.fillStyle = bgG;
+                 } else {
+                   ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                 }
+                 
+                 ctx.beginPath();
+                 ctx.moveTo(bx + br, by);
+                 ctx.lineTo(bx + bw - br, by);
+                 ctx.arcTo(bx + bw, by, bx + bw, by + bh, br);
+                 ctx.lineTo(bx + bw, by + bh - br);
+                 ctx.arcTo(bx + bw, by + bh, bx, by + bh, br);
+                 ctx.lineTo(bx + br, by + bh);
+                 ctx.arcTo(bx, by + bh, bx, by, br);
+                 ctx.lineTo(bx, by + br);
+                 ctx.arcTo(bx, by, bx + br, by, br);
+                 ctx.closePath();
+                 ctx.fill();
+                 
+                 if(isVIP || isShowingChat) {
+                   var bdG = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
+                   if (isVIP) {
+                      bdG.addColorStop(0, '#c084fc');
+                      bdG.addColorStop(0.5, '#818cf8');
+                      bdG.addColorStop(1, '#2dd4bf');
+                   } else {
+                      bdG.addColorStop(0, '#38bdf8'); // Glowing sky blue neon border
+                      bdG.addColorStop(1, '#818cf8'); // Glowing cyber lavender
+                   }
+                   
+                   ctx.strokeStyle = bdG;
+                   
+                   // Smooth pulse resizing logic for active chat neon border
+                   var strokeW = 1.5;
+                   if (isShowingChat) {
+                      var age = activeChat.age;
+                      var fadeAlpha = age > 7000 ? (8000 - age) / 1000 : (age < 300 ? age/300 : 1);
+                      strokeW = (1.2 + Math.sin(Date.now() / 140) * 0.4) * fadeAlpha;
+                   }
+                   
+                   // Draw dual-stroke glowing vector outline instead of slow shadowBlur
+                   if(!isInteract && !_perfMode){
+                     ctx.strokeStyle = bdG;
+                     ctx.lineWidth = strokeW + 2.5;
+                     ctx.globalAlpha = 0.20;
+                     ctx.stroke();
+                     ctx.globalAlpha = 1.0;
+                   }
+                   
+                   ctx.strokeStyle = bdG;
+                   ctx.lineWidth = strokeW;
+                   ctx.stroke();
+                   
+                   if(!isInteract && !_perfMode){
+                     var isLowEnd = window.innerWidth < 768;
+                     if(Math.random() < (isLowEnd ? 0.2 : 0.7)) {
+                       if(!window._radarParticles) window._radarParticles = [];
+                       var ex = bx + Math.random() * bw;
+                       var ez = by + Math.random() * bh;
+                       if(Math.random() < 0.4) ex = bx + (Math.random() > 0.5 ? 0 : bw); 
+                       
+                       window._radarParticles.push({
+                          x: (ex - cX)/sc + radarPanX,
+                          z: (ez - cY)/sc + radarPanZ,
+                          vx: (Math.random() - 0.5) * 0.08,
+                          vz: -0.15 - Math.random() * 0.15,
+                          life: 150 + Math.random()*200,
+                          maxLife: 350,
+                          r: 0.6 + Math.random()*1.2,
+                          c: Math.random() > 0.6 ? '#c084fc' : (Math.random() > 0.5 ? '#a5f3fc' : '#e879f9')
+                       });
+                     }
+                   }
+                 } else {
+                   ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                   ctx.lineWidth = 1;
+                   ctx.stroke();
+                 }
+             }
+             
+             if (isShowingChat) {
+                var age = activeChat.age;
+                var chatAlpha = age > 7000 ? (8000 - age) / 1000 : (age < 300 ? age/300 : 1);
+                ctx.save();
+                ctx.globalAlpha = chatAlpha;
+                ctx.fillStyle = isVIP ? '#fef08a' : '#22d3ee'; // Starlight yellow or cyber cyan for active chat
+             } else if(isVIP && !dim) {
+                var tG = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
+                tG.addColorStop(0, '#e879f9');
+                tG.addColorStop(0.5, '#a78bfa');
+                tG.addColorStop(1, '#67e8f9');
+                ctx.fillStyle = tG;
+             } else {
+                ctx.fillStyle = dim ? 'rgba(255,255,255,0.25)' : '#fff';
+             }
+
+             var textStartX = px - iconSpace/2;
+             var drawTextX = textStartX;
+             var chatW = 0;
+             
+             if (isShowingChat) {
+                if (!window._playerChatWidths) window._playerChatWidths = {};
+                chatW = window._playerChatWidths[displayName];
+                if (chatW === undefined) {
+                   ctx.font = 'italic 9px Inter, sans-serif';
+                   chatW = window._playerChatWidths[displayName] = ctx.measureText(displayName).width;
+                }
+                drawTextX += 9; // Offset text right by 9px to balance 18px speaker space
+             }
+             
+             // Draw Custom Vector Speaker Icon (BOLD Megaphone, ANIMATED sequential waves)
+             if (isShowingChat) {
+                var speakX = drawTextX - chatW/2 - 10;
+                // Pre-scaled Megaphone Body
+                ctx.beginPath();
+                ctx.moveTo(speakX + 0.9, nameY - 1.35);
+                ctx.lineTo(speakX + 2.7, nameY - 1.35);
+                ctx.lineTo(speakX + 4.95, nameY - 3.15);
+                ctx.lineTo(speakX + 4.95, nameY + 3.15);
+                ctx.lineTo(speakX + 2.7, nameY + 1.35);
+                ctx.lineTo(speakX + 0.9, nameY + 1.35);
+                ctx.closePath();
+                ctx.fillStyle = isVIP ? '#fef08a' : '#22d3ee';
+                ctx.fill();
+                
+                // Pre-scaled sequential sound waves propagating outwards
+                var baseWaveColor = isVIP ? 'rgba(254, 240, 138,' : 'rgba(34, 211, 222,';
+                ctx.lineWidth = 0.99;
+                
+                for (var w = 0; w < 2; w++) {
+                   var wFrac = ((Date.now() / 700) + w * 0.5) % 1;
+                   var radius = (3 + wFrac * 6.5) * 0.45;
+                   var alpha = 1 - wFrac;
+                   if (alpha <= 0.02) continue;
+                   
+                   ctx.strokeStyle = baseWaveColor + alpha + ')';
+                   ctx.beginPath();
+                   ctx.arc(speakX + 4.95, nameY, radius, -Math.PI/3, Math.PI/3);
+                   ctx.stroke();
+                }
+             }
+             
+             ctx.textAlign = 'center';
+             ctx.font = isShowingChat ? 'italic 9px Inter, sans-serif' : '600 10px Inter, sans-serif';
+             ctx.fillText(displayName, drawTextX, nameY + 3);
+             ctx.shadowBlur = 0;
+             ctx.shadowOffsetY = 0;
+             if (isShowingChat) {
+                ctx.restore();
+             }
+             
+             var actualTextW = isShowingChat ? chatW : nameW;
+             var actualTextCenter = isShowingChat ? drawTextX : textStartX;
+             var iconX = actualTextCenter + actualTextW/2 + 3;
+             if(!dim) {
+               if(isVerified) {
+                  ctx.beginPath();
+                  ctx.moveTo(iconX + 1.6, nameY + 0.8);
+                  ctx.lineTo(iconX + 3.6, nameY + 2.8);
+                  ctx.lineTo(iconX + 8.0, nameY - 1.6);
+                  ctx.strokeStyle = '#fef08a'; // Cosmic Starlight Gold
+                  ctx.lineWidth = 1.6;
+                  ctx.stroke();
+                  iconX += 12;
+               }
+               
+               if(isVIP) {
+                  var vx1 = iconX + 2.1, vy1 = nameY - 2.95;
+                  var vx2 = iconX + 6.3, vy2 = nameY - 2.95;
+                  var vx3 = iconX + 7.7, vy3 = nameY - 0.85;
+                  var vx4 = iconX + 4.2, vy4 = nameY + 3.7;
+                  var vx5 = iconX + 0.7, vy5 = nameY - 0.85;
+                  var vxMiddle = iconX + 4.2, vyMiddle = nameY - 0.85;
+
+                  ctx.beginPath();
+                  ctx.moveTo(vx1, vy1);
+                  ctx.lineTo(vx2, vy2);
+                  ctx.lineTo(vx3, vy3);
+                  ctx.lineTo(vx4, vy4);
+                  ctx.lineTo(vx5, vy5);
+                  ctx.closePath();
+                  ctx.fillStyle = 'rgba(103, 232, 249, 0.25)';
+                  ctx.fill();
+
+                  ctx.beginPath();
+                  ctx.moveTo(vx1, vy1);
+                  ctx.lineTo(vxMiddle, vyMiddle);
+                  ctx.lineTo(vx2, vy2);
+                  ctx.moveTo(vx5, vy5);
+                  ctx.lineTo(vx3, vy3);
+                  ctx.strokeStyle = '#67e8f9'; // Cosmic Cyan
+                  ctx.lineWidth = 0.875;
+                  ctx.stroke();
+                  iconX += 12;
+               }
+             }
+             
+             if(!isInteract){
+               ctx.fillStyle=dim?'rgba(255,255,255,0.12)':'rgba(255,255,255,0.4)';
+               ctx.font='500 7px JetBrains Mono,monospace';
+               ctx.fillText(Math.round(p.x)+', '+Math.round(p.z),px,pz+18);
+               if(p.pvp&&!dim){ctx.fillStyle='rgba(248,113,113,0.8)';ctx.font='700 6px JetBrains Mono,monospace';ctx.fillText('\u2694 PVP',px,pz+26);}
+             }
+             
+             if (dim) ctx.globalAlpha = 1;
           }
-          
-          ctx.fill();
-          ctx.stroke();
-          
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = '#f8fafc'; 
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(msgStr, px, bY + bH/2);
-          
-          ctx.restore();
-       }
-    }
+       });
+    })(p, px, pz, isVIP, isVerified, dim, dc);
+    
+
+  }
+  
+  // Sort nameplate queue: Normal first, then VIP/Chatting players on top of everyone!
+  nameplateQueue.sort(function(a, b) {
+     if (a.isChat && !b.isChat) return 1;
+     if (!a.isChat && b.isChat) return -1;
+     if (a.isVIP && !b.isVIP) return 1;
+     if (!a.isVIP && b.isVIP) return -1;
+     return 0;
+  });
+  
+  // Execute all nameplate drawings on the absolute top layer!
+  for (var k = 0; k < nameplateQueue.length; k++) {
+     nameplateQueue[k].draw();
   }
   
 
@@ -1832,8 +1951,8 @@ function drawRadar(){
     radarRaf = requestAnimationFrame(function rf(){ 
        radarRaf=0; 
        var now = Date.now();
-       var fpsLimit = _perfMode ? 66 : ((window.innerWidth < 768) ? 41 : 33); // 15 FPS Mode Ringan, 24 FPS mobile, 30 FPS desktop
-       if(!window._lastRadarTw || now - window._lastRadarTw > fpsLimit) {
+       var fpsLimit = _perfMode ? 33 : 0; // 30 FPS in Performance Mode (Mode Ringan), full unthrottled 60+ FPS in standard mode
+       if(fpsLimit === 0 || !window._lastRadarTw || now - window._lastRadarTw > fpsLimit) {
           window._lastRadarTw = now;
           drawRadar();
        } else {

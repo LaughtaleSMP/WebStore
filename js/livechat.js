@@ -128,7 +128,7 @@
   if (!panel || !msgList) return;
 
   // ── State ──
-  var messages = [], lastId = 0, lastSendTs = 0;
+  var messages = [], lastId = 0, lastSendTs = 0, _isFirstPoll = true;
   var pollTimer = null, isOpen = false, isFullscreen = false;
   var verifiedName = null, verifyPollId = null, verifyRowId = null;
   var _pendingGt = null;
@@ -260,9 +260,8 @@
     isOpen = !isOpen;
     panel.classList.toggle('open', isOpen);
     if (isOpen) {
-      _fetchAll(); _startPoll();
+      _fetchAll();
     } else {
-      _stopPoll();
       // Exit fullscreen if closing panel
       if (isFullscreen) {
         isFullscreen = false;
@@ -603,7 +602,7 @@
       .then(function (rows) {
         var fresh = {};
         for (var i = 0; i < rows.length; i++) {
-          if (rows[i].gamertag) fresh[rows[i].gamertag] = true;
+          if (rows[i].gamertag) fresh[rows[i].gamertag.toLowerCase()] = true;
         }
         _verifiedNames = fresh;
         window._lcVerified = fresh;
@@ -619,14 +618,14 @@
          if (row.topup_log) {
              var logs = row.topup_log;
              if(typeof logs === 'string') { try { logs = JSON.parse(logs); } catch(e){ logs=[]; } }
-             for(var i=0; i<logs.length; i++){ if(logs[i].t) freshS[logs[i].t] = true; }
+             for(var i=0; i<logs.length; i++){ if(logs[i].t) freshS[logs[i].t.toLowerCase()] = true; }
          }
          if (row.gacha_lb) {
              var lb = row.gacha_lb;
              if(typeof lb === 'string') { try { lb = JSON.parse(lb); } catch(e){ lb={}; } }
              if(lb && lb.gem) {
                  for(var i=0; i<lb.gem.length; i++){
-                     if(lb.gem[i].name && lb.gem[i].gem > 0) freshS[lb.gem[i].name] = true;
+                     if(lb.gem[i].name && lb.gem[i].gem > 0) freshS[lb.gem[i].name.toLowerCase()] = true;
                  }
              }
          }
@@ -723,15 +722,42 @@
   }
 
   function _pollNew() {
-    if (!isOpen) return;
     var url = EP + '?order=id.asc&limit=20';
     if (lastId > 0) url += '&id=gt.' + lastId;
     fetch(url, { headers: _hdr })
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (rows) {
-        if (!rows || !rows.length) return;
-        _addMsgs(rows);
+        if (!rows || !rows.length) {
+          _isFirstPoll = false;
+          return;
+        }
+
+        // Only show chat bubbles on the radar if it is NOT the first poll
+        var gotNewMsg = false;
+        if (!_isFirstPoll) {
+          if (!window._lcRecentMessages) window._lcRecentMessages = {};
+          for (var i = 0; i < rows.length; i++) {
+            var rMsg = rows[i];
+            var rNameKey = (rMsg.player_name || '').trim().toLowerCase();
+            if (rMsg.source !== 'system' && rNameKey) {
+              window._lcRecentMessages[rNameKey] = { msg: rMsg.message, time: Date.now() };
+              gotNewMsg = true;
+            }
+          }
+        }
+        _isFirstPoll = false;
+
+        if (isOpen) {
+          _addMsgs(rows);
+        } else {
+          for (var i = 0; i < rows.length; i++) {
+            if (rows[i].id > lastId) lastId = rows[i].id;
+          }
+        }
         _setStatus('connected');
+        if (gotNewMsg && typeof drawRadar === 'function') {
+          try { drawRadar(); } catch(e) {}
+        }
       }).catch(function () { _setStatus('offline'); });
   }
 
@@ -827,7 +853,8 @@
       var r = rows[i];
       if (r.source !== 'system' && r.player_name) {
         if (!window._lcRecentMessages) window._lcRecentMessages = {};
-        window._lcRecentMessages[r.player_name] = { msg: r.message, time: Date.now() };
+        var nameKey = (r.player_name || '').trim().toLowerCase();
+        window._lcRecentMessages[nameKey] = { msg: r.message, time: Date.now() };
       }
       frag.appendChild(_buildMsg(r));
     }
@@ -870,6 +897,19 @@
   }
   _prefetchCount();
 
-  if (location.hash === '#chat') { isOpen = true; panel.classList.add('open'); _fetchAll(); _startPoll(); }
-  console.log('[LiveChat] v2 initialized (accounts, 10s poll)');
+  // Initialize lastId from Supabase latest message to avoid historical message flashes on load,
+  // then start background polling.
+  fetch(EP + '?order=id.desc&limit=1', { headers: _hdr })
+    .then(function (r) { return r.ok ? r.json() : []; })
+    .then(function (rows) {
+      if (rows && rows.length) {
+        lastId = rows[0].id;
+      }
+      _startPoll();
+    }).catch(function () {
+      _startPoll();
+    });
+
+  if (location.hash === '#chat') { isOpen = true; panel.classList.add('open'); _fetchAll(); }
+  console.log('[LiveChat] v2 initialized (accounts, 10s background poll)');
 })();
