@@ -18,6 +18,51 @@
   <link rel="stylesheet" href="css/monitor.css">
   <link rel="stylesheet" href="css/livechat.css">
   <link rel="stylesheet" href="css/atmosphere.css">
+  <style>
+    /* Premium custom micro-animations & SaaS enhancements */
+    @keyframes bellShake {
+      0%, 100% { transform: rotate(0); }
+      15% { transform: rotate(-15deg); }
+      30% { transform: rotate(12deg); }
+      45% { transform: rotate(-10deg); }
+      60% { transform: rotate(8deg); }
+      75% { transform: rotate(-4deg); }
+      90% { transform: rotate(2deg); }
+    }
+    @keyframes bellPulse {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(192, 132, 252, 0.4)); }
+      50% { transform: scale(1.12); filter: drop-shadow(0 0 8px rgba(192, 132, 252, 0.8)); }
+    }
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .lc-notif-btn:hover #lc-bell-icon {
+      animation: bellShake 0.6s ease-in-out;
+    }
+    .lc-notif-btn.active #lc-bell-icon {
+      animation: bellPulse 2.2s infinite ease-in-out;
+    }
+    
+    /* Professional Update Assets button hover styling */
+    #update-assets-btn {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.1) !important;
+    }
+    #update-assets-btn:hover {
+      background: rgba(168, 85, 247, 0.2) !important;
+      border-color: rgba(168, 85, 247, 0.45) !important;
+      color: #dfb3ff !important;
+      box-shadow: 0 0 15px rgba(168, 85, 247, 0.3) !important;
+      transform: translateY(-1.5px) !important;
+    }
+    #update-assets-btn:active {
+      transform: translateY(0.5px) !important;
+    }
+  </style>
 </head>
 
 <body>
@@ -1148,14 +1193,12 @@
       </div>
     </div>
 
-    <!-- Footer -->
     <div class="ft" style="margin-top:1.25rem">
       <span class="up" id="last-update">Mengambil data...</span>
-      <button class="rb" id="refresh-btn" onclick="doRefresh()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <polyline points="23 4 23 10 17 10" />
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-        </svg>REFRESH
+      <button class="rb" id="update-assets-btn" onclick="forceUpdateAssets()" style="background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.25); color:#c084fc;" title="Bersihkan cache & force load versi terbaru">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="width:12px; height:12px;">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.73-.73" />
+        </svg>UPDATE ASET
       </button>
     </div>
     <div class="kbd-bar">
@@ -1167,12 +1210,12 @@
     </div>
 
   </div>
-  <script src="js/atmo-canvas.js?v=59"></script>
-  <script src="js/monitor-page.js?v=59"></script>
-  <script src="js/monitor-forecast.js?v=59"></script>
-  <script src="js/livechat.js?v=59"></script>
-  <script src="js/page-nav.js?v=59"></script>
-  <script src="js/auto-refresh.js?v=59"></script>
+  <script src="js/atmo-canvas.js?v=63"></script>
+  <script src="js/monitor-page.js?v=63"></script>
+  <script src="js/monitor-forecast.js?v=63"></script>
+  <script src="js/livechat.js?v=63"></script>
+  <script src="js/page-nav.js?v=63"></script>
+  <script src="js/auto-refresh.js?v=63"></script>
 </body>
 
 </html>

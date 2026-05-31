@@ -558,35 +558,103 @@
   function _showErr(el, msg) { if (el) { el.textContent = msg; el.style.display = ''; } }
   function _hideErr(el) { if (el) el.style.display = 'none'; }
 
-  function _showToast(msg) {
+  function _showToast(msg, isSuccess) {
     var t = document.createElement('div');
     t.style.position = 'fixed';
     t.style.bottom = '85px';
     t.style.right = '20px';
-    t.style.background = 'rgba(15, 10, 25, 0.95)';
-    t.style.border = '1px solid rgba(192, 132, 252, 0.4)';
+    t.style.background = 'rgba(20, 10, 35, 0.85)';
+    t.style.backdropFilter = 'blur(12px)';
+    t.style.webkitBackdropFilter = 'blur(12px)';
+    t.style.border = '1px solid rgba(192, 132, 252, 0.3)';
     t.style.color = '#fff';
-    t.style.padding = '8px 16px';
-    t.style.borderRadius = '8px';
-    t.style.fontFamily = 'system-ui, sans-serif';
+    t.style.padding = '10px 18px';
+    t.style.borderRadius = '12px';
+    t.style.fontFamily = "'Inter', sans-serif";
     t.style.fontSize = '12px';
-    t.style.fontWeight = '500';
+    t.style.fontWeight = '600';
     t.style.zIndex = '99999';
-    t.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
-    t.style.transition = 'opacity 0.3s, transform 0.3s';
-    t.style.transform = 'translateY(10px)';
+    t.style.boxShadow = '0 8px 32px rgba(0,0,0,0.35), inset 0 1px 1px rgba(255,255,255,0.08)';
+    t.style.transition = 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    t.style.transform = 'translateY(15px)';
     t.style.opacity = '0';
-    t.textContent = msg;
+    t.style.display = 'flex';
+    t.style.alignItems = 'center';
+    t.style.gap = '8px';
+    
+    var iconHtml = isSuccess === false 
+      ? '<span style="color:#ef4444; font-size:14px; display:inline-flex; align-items:center; font-weight:bold;">✕</span>' 
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="3" style="width:14px; height:14px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3" /></svg>';
+      
+    t.innerHTML = iconHtml + '<span style="letter-spacing:0.2px;">' + msg + '</span>';
     document.body.appendChild(t);
     setTimeout(function() {
       t.style.opacity = '1';
       t.style.transform = 'translateY(0)';
-    }, 10);
+    }, 15);
     setTimeout(function() {
       t.style.opacity = '0';
-      t.style.transform = 'translateY(-10px)';
-      setTimeout(function() { t.remove(); }, 300);
-    }, 2500);
+      t.style.transform = 'translateY(-15px)';
+      setTimeout(function() { t.remove(); }, 400);
+    }, 2800);
+  }
+
+  function _showPrePermissionModal(callback) {
+    var modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.background = 'rgba(9, 9, 15, 0.7)';
+    modal.style.backdropFilter = 'blur(16px)';
+    modal.style.webkitBackdropFilter = 'blur(16px)';
+    modal.style.zIndex = '999999';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.animation = 'fadeIn 0.3s ease';
+    
+    modal.innerHTML = [
+      '<div style="background:rgba(20,10,35,0.85); border:1px solid rgba(168,85,247,0.35); padding:35px 30px; border-radius:20px; text-align:center; box-shadow:0 12px 40px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08); max-width:90%; width:340px; backdrop-filter:blur(10px); webkit-backdrop-filter:blur(10px); transition: all 0.3s ease;">',
+        '<div style="width:56px; height:56px; background:rgba(168,85,247,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto; border:1px solid rgba(168,85,247,0.3); animation:bellPulse 2.2s infinite ease-in-out;">',
+          '<svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2.5" style="width:24px; height:24px;">',
+            '<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />',
+          '</svg>',
+        '</div>',
+        '<h3 style="margin:0 0 8px 0; font-size:15px; font-weight:700; color:#c084fc; letter-spacing:0.5px; font-family:\'Inter\', sans-serif;">AKTIFKAN NOTIFIKASI</h3>',
+        '<p style="margin:0 0 24px 0; font-size:11.5px; color:rgba(255,255,255,0.65); line-height:1.6; font-weight:500; font-family:\'Inter\', sans-serif;">Dapatkan pemberitahuan push real-time di HP/PC Anda setiap kali ada chat baru dari pemain lain di game.</p>',
+        '<div style="display:flex; gap:10px; justify-content:center;">',
+          '<button id="lc-perm-cancel" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.7); padding:10px 18px; border-radius:10px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:\'Inter\', sans-serif;">BATAL</button>',
+          '<button id="lc-perm-allow" style="background:linear-gradient(135deg, #a855f7, #7c3aed); border:none; color:#fff; padding:10px 22px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(124,58,237,0.35); transition:all 0.2s; font-family:\'Inter\', sans-serif;">AKTIFKAN</button>',
+        '</div>',
+      '</div>'
+    ].join('');
+    
+    document.body.appendChild(modal);
+    
+    var btnCancel = modal.querySelector('#lc-perm-cancel');
+    var btnAllow = modal.querySelector('#lc-perm-allow');
+    var container = modal.querySelector('div');
+    
+    btnCancel.addEventListener('mouseenter', function() { btnCancel.style.background = 'rgba(255,255,255,0.1)'; });
+    btnCancel.addEventListener('mouseleave', function() { btnCancel.style.background = 'rgba(255,255,255,0.05)'; });
+    
+    btnAllow.addEventListener('mouseenter', function() { btnAllow.style.transform = 'translateY(-1px)'; btnAllow.style.boxShadow = '0 6px 16px rgba(124,58,237,0.5)'; });
+    btnAllow.addEventListener('mouseleave', function() { btnAllow.style.transform = 'translateY(0)'; btnAllow.style.boxShadow = '0 4px 12px rgba(124,58,237,0.35)'; });
+    
+    btnCancel.addEventListener('click', function() {
+      modal.style.opacity = '0';
+      container.style.transform = 'scale(0.9)';
+      setTimeout(function() { modal.remove(); }, 250);
+    });
+    
+    btnAllow.addEventListener('click', function() {
+      modal.style.opacity = '0';
+      container.style.transform = 'scale(0.9)';
+      setTimeout(function() { modal.remove(); }, 200);
+      callback();
+    });
   }
 
   function _initNotifs() {
@@ -598,9 +666,9 @@
     var isEnabled = localStorage.getItem('lc_push_notif') === 'true';
     if (Notification.permission === 'granted' && isEnabled) {
       _notifsEnabled = true;
+      notifBtn.classList.add('active');
       if (bellIcon) {
         bellIcon.style.color = '#c084fc';
-        bellIcon.style.filter = 'drop-shadow(0 0 2px rgba(192, 132, 252, 0.4))';
       }
     }
     notifBtn.addEventListener('click', function(e) {
@@ -608,30 +676,35 @@
       if (_notifsEnabled) {
         _notifsEnabled = false;
         localStorage.setItem('lc_push_notif', 'false');
+        notifBtn.classList.remove('active');
         if (bellIcon) {
           bellIcon.style.color = '';
-          bellIcon.style.filter = '';
         }
-        _showToast('Notifikasi dinonaktifkan.');
+        _showToast('Notifikasi dinonaktifkan.', false);
       } else {
-        Notification.requestPermission().then(function(perm) {
-          if (perm === 'granted') {
-            _notifsEnabled = true;
-            localStorage.setItem('lc_push_notif', 'true');
-            if (bellIcon) {
-              bellIcon.style.color = '#c084fc';
-              bellIcon.style.filter = 'drop-shadow(0 0 2px rgba(192, 132, 252, 0.4))';
+        _showPrePermissionModal(function() {
+          Notification.requestPermission().then(function(perm) {
+            if (perm === 'granted') {
+              _notifsEnabled = true;
+              localStorage.setItem('lc_push_notif', 'true');
+              notifBtn.classList.add('active');
+              if (bellIcon) {
+                bellIcon.style.color = '#c084fc';
+              }
+              _showToast('Notifikasi HP/PC Aktif!', true);
+              try {
+                new Notification("Mimi - Laughtale SMP", {
+                  body: "Notifikasi chat sistem berhasil diaktifkan!",
+                  icon: "assets/favicon.svg",
+                  badge: "assets/favicon.svg",
+                  tag: "laughtale-chat",
+                  vibrate: [200, 100, 200]
+                });
+              } catch(ex) {}
+            } else if (perm === 'denied') {
+              _showToast('Izin ditolak. Silakan aktifkan di pengaturan browser Anda.', false);
             }
-            _showToast('Notifikasi HP/PC Aktif!');
-            try {
-              new Notification("Laughtale SMP Chat", {
-                body: "Notifikasi chat sistem berhasil diaktifkan!",
-                icon: "assets/favicon.svg"
-              });
-            } catch(ex) {}
-          } else if (perm === 'denied') {
-            _showToast('Izin ditolak. Silakan aktifkan di pengaturan browser Anda.');
-          }
+          });
         });
       }
     });

@@ -47,6 +47,63 @@ function _moonPhaseFromDay(day){
   return ((d%8)+8)%8;
 }
 
+window.forceUpdateAssets = function() {
+  try {
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        return Promise.all(names.map(function(name) {
+          return caches.delete(name);
+        }));
+      }).then(function() {
+        console.log('[Cache] Caches cleared.');
+      });
+    }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        for (var i = 0; i < regs.length; i++) {
+          regs[i].unregister();
+        }
+      });
+    }
+    try { localStorage.removeItem('lt_cached_data'); } catch(e) {}
+    
+    // High-fidelity SaaS blur loading transition screen
+    var ov = document.createElement('div');
+    ov.style.position = 'fixed';
+    ov.style.top = '0';
+    ov.style.left = '0';
+    ov.style.width = '100vw';
+    ov.style.height = '100vh';
+    ov.style.background = 'rgba(9, 9, 15, 0.7)';
+    ov.style.backdropFilter = 'blur(20px)';
+    ov.style.webkitBackdropFilter = 'blur(20px)';
+    ov.style.zIndex = '999999';
+    ov.style.display = 'flex';
+    ov.style.flexDirection = 'column';
+    ov.style.alignItems = 'center';
+    ov.style.justifyContent = 'center';
+    ov.style.color = '#fff';
+    ov.style.fontFamily = "'Inter', sans-serif";
+    ov.style.animation = 'fadeIn 0.4s ease';
+    ov.innerHTML = [
+      '<div style="background:rgba(20,10,35,0.65); border:1px solid rgba(168,85,247,0.3); padding:30px 40px; border-radius:16px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,0.5); max-width:90%; width:360px; backdrop-filter:blur(5px); webkit-backdrop-filter:blur(5px);">',
+        '<svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" style="width:44px; height:44px; margin-bottom:16px; animation:spin 1.2s linear infinite;">',
+          '<path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.73-.73" />',
+        '</svg>',
+        '<h3 style="margin:0 0 8px 0; font-size:16px; font-weight:700; letter-spacing:0.5px; color:#c084fc;">MEMPERBARUI ASET</h3>',
+        '<p style="margin:0; font-size:12px; color:rgba(255,255,255,0.65); line-height:1.6; font-weight:500;">Menghapus cache lawas dan menyinkronkan aset dasbor versi terbaru...</p>',
+      '</div>'
+    ].join('');
+    document.body.appendChild(ov);
+
+    setTimeout(function() {
+      window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+    }, 1800);
+  } catch(e) {
+    window.location.reload(true);
+  }
+};
+
 // Procedural Web Audio API sound synthesizers (high-fidelity zero-asset audio)
 var _audioCtx = null;
 function getAudioContext() {
