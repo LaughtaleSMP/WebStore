@@ -25,6 +25,15 @@
   var MAX_LOGIN_ATTEMPTS = 5;
   var LOGIN_COOLDOWN_MS  = 60000;
 
+  // Inject global shared gradient for supporter badges once to save GPU memory
+  var sharedSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  sharedSvg.style.position = 'absolute';
+  sharedSvg.style.width = '0';
+  sharedSvg.style.height = '0';
+  sharedSvg.style.overflow = 'hidden';
+  sharedSvg.innerHTML = '<defs><linearGradient id="lc-supporter-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#38bdf8"/><stop offset="50%" stop-color="#c084fc"/><stop offset="100%" stop-color="#f472b6"/></linearGradient></defs>';
+  document.body.appendChild(sharedSvg);
+
   // ── Helpers ──
   var _hdr = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
   function _jHdr() { return { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }; }
@@ -676,7 +685,76 @@
       if (_notifsEnabled) {
         _notifsEnabled = false;
         localStorage.setItem('lc_push_notif', 'false');
-        notifBtn.classList.remove('active  // ══════════════════════════════════════════
+        notifBtn.classList.remove('active');
+        if (bellIcon) {
+          bellIcon.style.color = '';
+        }
+        _showToast('Notifikasi dinonaktifkan.', false);
+      } else {
+        _showPrePermissionModal(function() {
+          Notification.requestPermission().then(function(perm) {
+            if (perm === 'granted') {
+              _notifsEnabled = true;
+              localStorage.setItem('lc_push_notif', 'true');
+              notifBtn.classList.add('active');
+              if (bellIcon) {
+                bellIcon.style.color = '#c084fc';
+              }
+              _showToast('Notifikasi HP/PC Aktif!', true);
+              try {
+                new Notification("Mimi - Laughtale SMP", {
+                  body: "Notifikasi chat sistem berhasil diaktifkan!",
+                  icon: "assets/favicon.svg",
+                  badge: "assets/favicon.svg",
+                  tag: "laughtale-chat",
+                  vibrate: [200, 100, 200]
+                });
+              } catch(ex) {}
+            } else if (perm === 'denied') {
+              _showToast('Izin ditolak. Silakan aktifkan di pengaturan browser Anda.', false);
+            }
+          });
+        });
+      }
+    });
+  }
+
+  // ══════════════════════════════════════════
+  //  SEND MESSAGE
+  // ══════════════════════════════════════════
+  function _sendMsg() {
+    if (!verifiedName) return;
+    var raw = (msgIn?.value || '').trim();
+    if (!raw) { msgIn?.focus(); return; }
+    var msg = _sanitize(raw, 200);
+    if (!msg) return;
+    if (Date.now() - lastSendTs < RATE_MS) return;
+
+    sendBtn.disabled = true;
+    lastSendTs = Date.now();
+
+    fetch(EP, {
+      method: 'POST', headers: _jHdr(),
+      body: JSON.stringify({ source: 'web', player_name: verifiedName, message: msg })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function (rows) {
+      if (rows && rows.length) { _addMsgs(rows); _scroll(); }
+      msgIn.value = '';
+    }).catch(function (e) {
+      console.warn('[LiveChat] Send fail:', e);
+    }).finally(function () {
+      setTimeout(function () { sendBtn.disabled = false; }, RATE_MS);
+    });
+  }
+
+  if (sendBtn) sendBtn.addEventListener('click', _sendMsg);
+  if (msgIn) msgIn.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); _sendMsg(); }
+  });
+
+  // ══════════════════════════════════════════
   //  VERIFIED NAMES CACHE (for verified badge)
   //  Optimized with a 5-minute cooldown to prevent CPU/Network overhead
   // ══════════════════════════════════════════
@@ -726,69 +804,7 @@
       }).catch(function(){});
   }
   _refreshVerified();
-  setInterval(_refreshVerified, 300000); // refresh every 5 minshen(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    }).then(function (rows) {
-      if (rows && rows.length) { _addMsgs(rows); _scroll(); }
-      msgIn.value = '';
-    }).catch(function (e) {
-      console.warn('[LiveChat] Send fail:', e);
-    }).finally(function () {
-      setTimeout(function () { sendBtn.disabled = false; }, RATE_MS);
-    });
-  }
-
-  if (sendBtn) sendBtn.addEventListener('click', _sendMsg);
-  if (msgIn) msgIn.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); _sendMsg(); }
-  });
-
-  // ══════════════════════════════════════════
-  //  VERIFIED NAMES CACHE (for verified badge)
-  // ══════════════════════════════════════════
-  var _verifiedNames = {}; // gamertag → true
-  var _supporterNames = {}; // gamertag → true
-
-  function _refreshVerified() {
-    fetch(ACCT + '?select=gamertag', { headers: _hdr })
-      .then(function (r) { return r.ok ? r.json() : []; })
-      .then(function (rows) {
-        var fresh = {};
-        for (var i = 0; i < rows.length; i++) {
-          if (rows[i].gamertag) fresh[rows[i].gamertag.toLowerCase()] = true;
-        }
-        _verifiedNames = fresh;
-        window._lcVerified = fresh;
-      }).catch(function () {});
-
-    // Fetch leaderboard_sync for topup_log and gacha_lb to grant Supporter Diamond badge
-    fetch(SB_URL + '/rest/v1/leaderboard_sync?id=eq.current&select=topup_log,gacha_lb', { headers: _hdr })
-      .then(function(r){ return r.ok ? r.json() : []; })
-      .then(function(rows){
-         if(!rows.length) return;
-         var freshS = {};
-         var row = rows[0];
-         if (row.topup_log) {
-             var logs = row.topup_log;
-             if(typeof logs === 'string') { try { logs = JSON.parse(logs); } catch(e){ logs=[]; } }
-             for(var i=0; i<logs.length; i++){ if(logs[i].t) freshS[logs[i].t.toLowerCase()] = true; }
-         }
-         if (row.gacha_lb) {
-             var lb = row.gacha_lb;
-             if(typeof lb === 'string') { try { lb = JSON.parse(lb); } catch(e){ lb={}; } }
-             if(lb && lb.gem) {
-                 for(var i=0; i<lb.gem.length; i++){
-                     if(lb.gem[i].name && lb.gem[i].gem > 0) freshS[lb.gem[i].name.toLowerCase()] = true;
-                 }
-             }
-         }
-         _supporterNames = freshS;
-         window._lcSupporters = freshS;
-      }).catch(function(){});
-  }
-  _refreshVerified();
-  setInterval(_refreshVerified, 60000); // refresh every 60s
+  setInterval(_refreshVerified, 300000); // refresh every 5 mins
 
   // ══════════════════════════════════════════
   //  FETCH / POLL MESSAGES  (reverse pagination)
@@ -989,16 +1005,8 @@
     var isVerified = _verifiedNames[m.player_name] === true;
     var verifyBadge = '';
     if (isSupporter) {
-      var gradId = 'lc-diag-' + Math.random().toString(36).substr(2, 9);
       verifyBadge = '<span class="lc-supporter" title="Supporter (Topup)">' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="url(#' + gradId + ')" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10" class="lc-diamond-svg">' +
-          '<defs>' +
-            '<linearGradient id="' + gradId + '" x1="0%" y1="0%" x2="100%" y2="100%">' +
-              '<stop offset="0%" stop-color="#38bdf8"/>' +
-              '<stop offset="50%" stop-color="#c084fc"/>' +
-              '<stop offset="100%" stop-color="#f472b6"/>' +
-            '</linearGradient>' +
-          '</defs>' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="url(#lc-supporter-grad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10" class="lc-diamond-svg">' +
           '<path d="M6 3h12l4 6-10 13L2 9z"/>' +
           '<path d="M6 3l6 6 6-6"/>' +
           '<path d="M2 9h20"/>' +
@@ -1041,7 +1049,7 @@
     msgList.appendChild(frag); _updateCount();
   }
 
-  var DOM_CAP = 800; // cap DOM nodes for perf, data stays 24h
+  var DOM_CAP = 150; // cap DOM nodes to 150 messages for ultimate smooth rendering and performance
 
   function _renderNew(rows) {
     var empty = msgList.querySelector('.lc-empty'); if (empty) empty.remove();

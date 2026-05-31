@@ -3528,12 +3528,14 @@ function _showHotspotReco(cv,worldX,worldZ,px,pz){
 var _HM_CS=16; // 1 Minecraft chunk = 16 blocks
 var _hmKeys=[];     // cached array of keys for current dimension
 var _hmKeysDim='';  // dimension the key cache was built for
-var _hmBeaconCache={};  // offscreen bitmap cache for beacon glows
-var _hmBeaconCacheTTL=0;
+
 function _buildHeatmap(){
   if(!_hmDirty&&_hmGrid)return;
   _hmGrid={};_hmMax=1;_hmKeys=[];_hmKeysDim='';
-  _hmBeaconCache={};_hmBeaconCacheTTL=0;
+  
+  // Extract typeFilters ONCE at the top instead of inside the inner loop
+  var typeFilters = _rfState.hmType ? _rfState.hmType.toLowerCase().split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
+  
   // Use live entity_hotspots data from server metrics
   if(lastMetrics&&lastMetrics.entity_hotspots&&lastMetrics.entity_hotspots.length){
     var hs=lastMetrics.entity_hotspots;
@@ -3544,7 +3546,6 @@ function _buildHeatmap(){
       var k=dm+':'+cx+','+cz;
       
       var filteredCount = 0;
-      var typeFilters = _rfState.hmType ? _rfState.hmType.toLowerCase().split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
       if(h.top && h.top.length){
         for(var m=0;m<h.top.length;m++){
           var parts=h.top[m].split(':');
@@ -3583,7 +3584,8 @@ function _buildHeatmap(){
 }
 /* Extract keys for current dimension (cached until data or dim changes) */
 function _hmGetKeys(dim){
-  if(_hmKeysDim===dim&&_hmKeys.length)return _hmKeys;
+  // FIXED: Removed && _hmKeys.length to allow empty states to return early rather than loop infinitely every frame!
+  if(_hmKeysDim===dim)return _hmKeys;
   _hmKeys=[];
   var pfx=dim+':';
   var allKeys=Object.keys(_hmGrid);
@@ -3602,29 +3604,6 @@ function _hmGetKeys(dim){
   _hmKeys.sort(function(a,b){return a.c-b.c;});
   _hmKeysDim=dim;
   return _hmKeys;
-}
-/* Get a cached offscreen beacon glow bitmap */
-function _getBeaconBitmap(r,g,b,t,beaconR){
-  var key=r+'|'+g+'|'+b+'|'+Math.round(t*10)+'|'+Math.round(beaconR);
-  if(_hmBeaconCache[key])return _hmBeaconCache[key];
-  // Limit cache size
-  if(Object.keys(_hmBeaconCache).length>80){_hmBeaconCache={};_hmBeaconCacheTTL=0;}
-  var sz=Math.ceil(beaconR*2)+2;
-  var oc=document.createElement('canvas');
-  oc.width=sz;oc.height=sz;
-  var octx=oc.getContext('2d');
-  var cx=sz/2,cy=sz/2;
-  var grad=octx.createRadialGradient(cx,cy,0,cx,cy,beaconR);
-  grad.addColorStop(0,'rgba('+r+','+g+','+b+','+(0.7+t*0.3)+')');
-  grad.addColorStop(0.5,'rgba('+r+','+g+','+b+','+(0.3+t*0.2)+')');
-  grad.addColorStop(1,'rgba('+r+','+g+','+b+',0)');
-  octx.fillStyle=grad;
-  octx.fillRect(0,0,sz,sz);
-  // Inner bright core
-  octx.beginPath();octx.arc(cx,cy,Math.max(2,1+t*3),0,6.2832);
-  octx.fillStyle='rgba('+r+','+g+','+b+','+(0.8+t*0.2)+')';octx.fill();
-  _hmBeaconCache[key]=oc;
-  return oc;
 }
 /* Compute heatmap color for a normalized intensity t in [0,1] */
 function _hmColor(t){
@@ -3671,8 +3650,8 @@ function _renderHeatmap(ctx,cX,cY,sc,W,H){
   var cellSz=_HM_CS*LOD;
   var cellPx=cellSz*sc;
   var sonarPhase=_reduceMotion?0.5:(Date.now()%2400)/2400;
-  // Budget: max 12 sonar waves to prevent GPU thrashing at far zoom
-  var sonarBudget=12,sonarCount=0;
+  // FIXED: Reduced sonar budget from 12 to 4 to prevent canvas stroke thrashing on massive entity counts
+  var sonarBudget=4,sonarCount=0;
 
   for(var i=0;i<renderData.length;i++){
     var d=renderData[i];
@@ -3682,13 +3661,28 @@ function _renderHeatmap(ctx,cX,cY,sc,W,H){
     if(centerX<-40||centerX>W+40||centerZ<-40||centerZ>H+40)continue;
     var t=Math.min(d.c/_hmMax,1);
     var col=_hmColor(t);
-    var r=col.r,g=col.g,b=col.b;
+    var r=col.r,g=col.g,b=col.b; // Fixed variable mapping
 
     if(zoomedOut){
-      // ── Beacon mode: use cached bitmap for glow ──
+      // ── Beacon mode: Render directly to primary canvas via hardware-accelerated radial gradients ──
+      // This completely avoids allocating dynamically created Canvas elements on the fly, eliminating garbage collection pauses!
       var beaconR=Math.max(6,4+t*10);
-      var bmp=_getBeaconBitmap(r,g,b,t,beaconR);
-      ctx.drawImage(bmp,Math.floor(centerX-bmp.width/2),Math.floor(centerZ-bmp.height/2));
+      var grad=ctx.createRadialGradient(centerX,centerZ,0,centerX,centerZ,beaconR);
+      grad.addColorStop(0,'rgba('+r+','+g+','+b+','+(0.7+t*0.3)+')');
+      grad.addColorStop(0.5,'rgba('+r+','+g+','+b+','+(0.3+t*0.2)+')');
+      grad.addColorStop(1,'rgba('+r+','+g+','+b+',0)');
+      
+      ctx.fillStyle=grad;
+      ctx.beginPath();
+      ctx.arc(centerX,centerZ,beaconR,0,6.2832);
+      ctx.fill();
+      
+      // Inner bright core
+      ctx.beginPath();
+      ctx.arc(centerX,centerZ,Math.max(2,1+t*3),0,6.2832);
+      ctx.fillStyle='rgba('+r+','+g+','+b+','+(0.8+t*0.2)+')';
+      ctx.fill();
+
       // Entity count label on high-danger beacons
       if(t>=0.3){
         ctx.fillStyle='rgba(255,255,255,'+(0.5+t*0.5)+')';
