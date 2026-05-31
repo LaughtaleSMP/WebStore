@@ -1094,8 +1094,14 @@ function drawRadar(){
   canvas.width=W*dpr;canvas.height=H*dpr;
   canvas.style.width=W+'px';canvas.style.height=H+'px';
   var ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#0a0e14';ctx.fillRect(0,0,W,H);
   var cX=W/2,cY=H/2,sc=Math.min(W,H)/(radarZoom*2);
+  
+  // Premium Cosmic Radial Background (Professional Muted Dark Slate)
+  var bgGrad = ctx.createRadialGradient(cX, cY, 0, cX, cY, Math.max(W, H) * 0.9);
+  bgGrad.addColorStop(0, '#0f1626'); // Sleek dark steel navy center (muted & professional)
+  bgGrad.addColorStop(1, '#070a10'); // Premium carbon black border
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0,0,W,H);
   // Fog of war — skip during interaction or in Performance Mode
   // Also skip when zoomed out so far that chunks are sub-pixel (no visual benefit)
   if(!isInteract&&!_perfMode){
@@ -1199,7 +1205,7 @@ function drawRadar(){
   if(!_perfMode){
     var _vGrad = ctx.createRadialGradient(cX, cY, Math.min(W,H)*0.2, cX, cY, Math.max(W,H)*0.8);
     _vGrad.addColorStop(0, 'rgba(0,0,0,0)');
-    _vGrad.addColorStop(1, 'rgba(0,0,0,0.65)');
+    _vGrad.addColorStop(1, 'rgba(0,0,0,0.48)');
     ctx.fillStyle = _vGrad;
     ctx.fillRect(0,0,W,H);
   }
@@ -1686,9 +1692,8 @@ function drawRadar(){
                    ctx.stroke();
                    
                    if(!isInteract && !_perfMode){
-                     var isLowEnd = window.innerWidth < 768;
-                     if(Math.random() < (isLowEnd ? 0.2 : 0.7)) {
-                       if(!window._radarParticles) window._radarParticles = [];
+                     if(!window._radarParticles) window._radarParticles = [];
+                     if(window._radarParticles.length < 25 && Math.random() < 0.08) {
                        var ex = bx + Math.random() * bw;
                        var ez = by + Math.random() * bh;
                        if(Math.random() < 0.4) ex = bx + (Math.random() > 0.5 ? 0 : bw); 
@@ -1696,11 +1701,11 @@ function drawRadar(){
                        window._radarParticles.push({
                           x: (ex - cX)/sc + radarPanX,
                           z: (ez - cY)/sc + radarPanZ,
-                          vx: (Math.random() - 0.5) * 0.08,
-                          vz: -0.15 - Math.random() * 0.15,
-                          life: 150 + Math.random()*200,
-                          maxLife: 350,
-                          r: 0.6 + Math.random()*1.2,
+                          vx: (Math.random() - 0.5) * 0.06,
+                          vz: -0.10 - Math.random() * 0.10,
+                          life: 120 + Math.random()*150,
+                          maxLife: 270,
+                          r: 0.5 + Math.random()*1.0,
                           c: Math.random() > 0.6 ? '#c084fc' : (Math.random() > 0.5 ? '#a5f3fc' : '#e879f9')
                        });
                      }
@@ -1799,12 +1804,18 @@ function drawRadar(){
                }
                
                if(isVIP) {
-                  var vx1 = iconX + 2.1, vy1 = nameY - 2.95;
-                  var vx2 = iconX + 6.3, vy2 = nameY - 2.95;
-                  var vx3 = iconX + 7.7, vy3 = nameY - 0.85;
-                  var vx4 = iconX + 4.2, vy4 = nameY + 3.7;
-                  var vx5 = iconX + 0.7, vy5 = nameY - 0.85;
-                  var vxMiddle = iconX + 4.2, vyMiddle = nameY - 0.85;
+                  var vx1 = iconX + 2.5, vy1 = nameY - 4.0;
+                  var vx2 = iconX + 6.5, vy2 = nameY - 4.0;
+                  var vx3 = iconX + 9.0, vy3 = nameY + 0.5;
+                  var vx4 = iconX + 4.5, vy4 = nameY + 5.0;
+                  var vx5 = iconX + 0.0, vy5 = nameY + 0.5;
+                  var vxMiddle = iconX + 4.5, vyMiddle = nameY + 0.5;
+
+                  // 1. Draw solid holographic gradient fill
+                  var dGrad = ctx.createLinearGradient(iconX, nameY - 4, iconX + 9, nameY + 5);
+                  dGrad.addColorStop(0, 'rgba(56, 189, 248, 0.45)');   // Sky Blue
+                  dGrad.addColorStop(0.5, 'rgba(168, 85, 247, 0.45)'); // Cyber Purple
+                  dGrad.addColorStop(1, 'rgba(244, 114, 182, 0.45)');  // Cosmic Pink
 
                   ctx.beginPath();
                   ctx.moveTo(vx1, vy1);
@@ -1813,18 +1824,45 @@ function drawRadar(){
                   ctx.lineTo(vx4, vy4);
                   ctx.lineTo(vx5, vy5);
                   ctx.closePath();
-                  ctx.fillStyle = 'rgba(103, 232, 249, 0.25)';
+                  ctx.fillStyle = dGrad;
                   ctx.fill();
 
+                  // 2. Draw glowing neon outline and internal diamond facets
+                  ctx.save();
+                  if(!isInteract && !_perfMode) {
+                     ctx.shadowColor = '#c084fc';
+                     ctx.shadowBlur = 6;
+                  }
+
+                  var strokeGrad = ctx.createLinearGradient(iconX, nameY - 4, iconX + 9, nameY + 5);
+                  strokeGrad.addColorStop(0, '#38bdf8');
+                  strokeGrad.addColorStop(0.5, '#c084fc');
+                  strokeGrad.addColorStop(1, '#f472b6');
+
+                  // Draw outer outline
+                  ctx.beginPath();
+                  ctx.moveTo(vx1, vy1);
+                  ctx.lineTo(vx2, vy2);
+                  ctx.lineTo(vx3, vy3);
+                  ctx.lineTo(vx4, vy4);
+                  ctx.lineTo(vx5, vy5);
+                  ctx.closePath();
+                  ctx.strokeStyle = strokeGrad;
+                  ctx.lineWidth = 1.0;
+                  ctx.stroke();
+
+                  // Draw internal gemstone cut facets matching the SVG design
                   ctx.beginPath();
                   ctx.moveTo(vx1, vy1);
                   ctx.lineTo(vxMiddle, vyMiddle);
                   ctx.lineTo(vx2, vy2);
                   ctx.moveTo(vx5, vy5);
                   ctx.lineTo(vx3, vy3);
-                  ctx.strokeStyle = '#67e8f9'; // Cosmic Cyan
-                  ctx.lineWidth = 0.875;
+                  ctx.strokeStyle = strokeGrad;
+                  ctx.lineWidth = 0.85;
                   ctx.stroke();
+
+                  ctx.restore();
                   iconX += 12;
                }
              }
@@ -2124,6 +2162,19 @@ function _setRadarHistError(msg){
       _perfMode=pmc.checked;
       try{localStorage.setItem('lt_perf_mode',_perfMode?'1':'0');}catch(e){}
       window._hmDirty=true;
+      
+      // Auto-toggle heavy atmospheric rain/thunder background to save massive CPU/GPU
+      var atmoCard = document.querySelector('.atmo-card');
+      if(atmoCard && typeof _atmoLoadState === 'function') {
+         var atmoState = _atmoLoadState();
+         if(atmoState && atmoState.wx) {
+            _atmoCanvasSync(atmoCard, _perfMode ? 'clear' : atmoState.wx);
+         }
+      }
+      if(_perfMode) {
+         window._radarParticles = [];
+      }
+      
       drawRadar();
     });
   }
@@ -4116,7 +4167,7 @@ function _atmoCanvasSync(card,weather){
   if(!_atmoFx){
     try{_atmoFx=window.AtmoCanvas(cv);}catch(e){return;}
   }
-  if(weather==='clear'){
+  if(weather==='clear' || _perfMode){
     _atmoFx.setMode('clear');
     card.classList.remove('has-canvas-fx');
   }else{

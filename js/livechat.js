@@ -804,7 +804,21 @@
     var isVerified = _verifiedNames[m.player_name] === true;
     var verifyBadge = '';
     if (isSupporter) {
-      verifyBadge = '<span class="lc-supporter" title="Supporter (Topup)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M6 3l6 6 6-6"/><path d="M2 9h20"/></svg></span>';
+      var gradId = 'lc-diag-' + Math.random().toString(36).substr(2, 9);
+      verifyBadge = '<span class="lc-supporter" title="Supporter (Topup)">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="url(#' + gradId + ')" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10" class="lc-diamond-svg">' +
+          '<defs>' +
+            '<linearGradient id="' + gradId + '" x1="0%" y1="0%" x2="100%" y2="100%">' +
+              '<stop offset="0%" stop-color="#38bdf8"/>' +
+              '<stop offset="50%" stop-color="#c084fc"/>' +
+              '<stop offset="100%" stop-color="#f472b6"/>' +
+            '</linearGradient>' +
+          '</defs>' +
+          '<path d="M6 3h12l4 6-10 13L2 9z"/>' +
+          '<path d="M6 3l6 6 6-6"/>' +
+          '<path d="M2 9h20"/>' +
+        '</svg>' +
+      '</span>';
     } else if (isVerified) {
       verifyBadge = '<span class="lc-verified" title="Verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" width="9" height="9"><polyline points="20 6 9 17 4 12"/></svg></span>';
     }
