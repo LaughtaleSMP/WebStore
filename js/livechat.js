@@ -676,58 +676,57 @@
       if (_notifsEnabled) {
         _notifsEnabled = false;
         localStorage.setItem('lc_push_notif', 'false');
-        notifBtn.classList.remove('active');
-        if (bellIcon) {
-          bellIcon.style.color = '';
+        notifBtn.classList.remove('active  // ══════════════════════════════════════════
+  //  VERIFIED NAMES CACHE (for verified badge)
+  //  Optimized with a 5-minute cooldown to prevent CPU/Network overhead
+  // ══════════════════════════════════════════
+  var _verifiedNames = {}; // gamertag → true
+  var _supporterNames = {}; // gamertag → true
+  var _lastRefreshTs = 0;
+
+  function _refreshVerified() {
+    var now = Date.now();
+    if (_lastRefreshTs > 0 && now - _lastRefreshTs < 300000) return; // 5 mins cooldown
+    _lastRefreshTs = now;
+
+    fetch(ACCT + '?select=gamertag', { headers: _hdr })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (rows) {
+        var fresh = {};
+        for (var i = 0; i < rows.length; i++) {
+          if (rows[i].gamertag) fresh[rows[i].gamertag.toLowerCase()] = true;
         }
-        _showToast('Notifikasi dinonaktifkan.', false);
-      } else {
-        _showPrePermissionModal(function() {
-          Notification.requestPermission().then(function(perm) {
-            if (perm === 'granted') {
-              _notifsEnabled = true;
-              localStorage.setItem('lc_push_notif', 'true');
-              notifBtn.classList.add('active');
-              if (bellIcon) {
-                bellIcon.style.color = '#c084fc';
-              }
-              _showToast('Notifikasi HP/PC Aktif!', true);
-              try {
-                new Notification("Mimi - Laughtale SMP", {
-                  body: "Notifikasi chat sistem berhasil diaktifkan!",
-                  icon: "assets/favicon.svg",
-                  badge: "assets/favicon.svg",
-                  tag: "laughtale-chat",
-                  vibrate: [200, 100, 200]
-                });
-              } catch(ex) {}
-            } else if (perm === 'denied') {
-              _showToast('Izin ditolak. Silakan aktifkan di pengaturan browser Anda.', false);
-            }
-          });
-        });
-      }
-    });
+        _verifiedNames = fresh;
+        window._lcVerified = fresh;
+      }).catch(function () {});
+
+    // Fetch leaderboard_sync for topup_log and gacha_lb to grant Supporter Diamond badge
+    fetch(SB_URL + '/rest/v1/leaderboard_sync?id=eq.current&select=topup_log,gacha_lb', { headers: _hdr })
+      .then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(rows){
+         if(!rows.length) return;
+         var freshS = {};
+         var row = rows[0];
+         if (row.topup_log) {
+             var logs = row.topup_log;
+             if(typeof logs === 'string') { try { logs = JSON.parse(logs); } catch(e){ logs=[]; } }
+             for(var i=0; i<logs.length; i++){ if(logs[i].t) freshS[logs[i].t.toLowerCase()] = true; }
+         }
+         if (row.gacha_lb) {
+             var lb = row.gacha_lb;
+             if(typeof lb === 'string') { try { lb = JSON.parse(lb); } catch(e){ lb={}; } }
+             if(lb && lb.gem) {
+                 for(var i=0; i<lb.gem.length; i++){
+                     if(lb.gem[i].name && lb.gem[i].gem > 0) freshS[lb.gem[i].name.toLowerCase()] = true;
+                 }
+             }
+         }
+         _supporterNames = freshS;
+         window._lcSupporters = freshS;
+      }).catch(function(){});
   }
-
-  // ══════════════════════════════════════════
-  //  SEND MESSAGE
-  // ══════════════════════════════════════════
-  function _sendMsg() {
-    if (!verifiedName) return;
-    var raw = (msgIn?.value || '').trim();
-    if (!raw) { msgIn?.focus(); return; }
-    var msg = _sanitize(raw, 200);
-    if (!msg) return;
-    if (Date.now() - lastSendTs < RATE_MS) return;
-
-    sendBtn.disabled = true;
-    lastSendTs = Date.now();
-
-    fetch(EP, {
-      method: 'POST', headers: _jHdr(),
-      body: JSON.stringify({ source: 'web', player_name: verifiedName, message: msg })
-    }).then(function (r) {
+  _refreshVerified();
+  setInterval(_refreshVerified, 300000); // refresh every 5 minshen(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     }).then(function (rows) {
