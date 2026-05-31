@@ -904,7 +904,7 @@ window.addEventListener('DOMContentLoaded',function(){
   loadConfig().then(function(){
     fetchStatus();
     refreshTimer=setInterval(fetchStatus,30000);
-    _fastPollTimer=setInterval(_fastPollPositions,5000);
+    _fastPollTimer=setInterval(_fastPollPositions,8000); // [PERF] 8s (was 5s) — balances radar freshness vs network/CPU
   });
 });
 // Fast-poll: lightweight 5s fetch for player radar positions only
@@ -971,7 +971,7 @@ window.addEventListener('resize',function(){
 });
 document.addEventListener('visibilitychange',function(){
   if(document.hidden){if(refreshTimer)clearInterval(refreshTimer);if(_fastPollTimer)clearInterval(_fastPollTimer);}
-  else{fetchStatus();refreshTimer=setInterval(fetchStatus,30000);_fastPollTimer=setInterval(_fastPollPositions,5000);}
+  else{fetchStatus();refreshTimer=setInterval(fetchStatus,30000);_fastPollTimer=setInterval(_fastPollPositions,8000);}
 });
 window.doRefresh=function(){fetchStatus();};
 
@@ -1637,56 +1637,31 @@ function drawRadar(){
     if(p.trail && p.trail.length > 1 && !dim && !isInteract && !_perfMode){
       ctx.save();
       if(isVIP) ctx.globalCompositeOperation = 'screen';
-      
       var tLen = p.trail.length;
-      
-      // Step 1: Draw glowing backdrop lines (thick, high transparency)
-      ctx.beginPath();
-      for(var k=0; k<tLen-1; k++){
-        var t0 = p.trail[k];
-        var t1 = p.trail[k+1];
-        var tx0 = cX + (t0.x - radarPanX)*sc, tz0 = cY + (t0.z - radarPanZ)*sc;
-        var tx1 = cX + (t1.x - radarPanX)*sc, tz1 = cY + (t1.z - radarPanZ)*sc;
-        
-        ctx.moveTo(tx0, tz0);
-        ctx.lineTo(tx1, tz1);
-      }
       var lastT = p.trail[tLen-1];
-      ctx.moveTo(cX + (lastT.x - radarPanX)*sc, cY + (lastT.z - radarPanZ)*sc);
-      ctx.lineTo(px, pz);
-      
-      ctx.lineWidth = isVIP ? 12 : 9;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = isVIP ? 'rgba(192, 132, 252, 0.15)' : hexAlpha(dc, 0.15);
-      ctx.stroke();
-      
-      // Step 2: Draw core trail lines with dynamic opacity fading
-      for(var k=0; k<tLen-1; k++){
-        var t0 = p.trail[k];
-        var t1 = p.trail[k+1];
-        var tx0 = cX + (t0.x - radarPanX)*sc, tz0 = cY + (t0.z - radarPanZ)*sc;
-        var tx1 = cX + (t1.x - radarPanX)*sc, tz1 = cY + (t1.z - radarPanZ)*sc;
-        
-        var frac = (k + 1) / tLen; 
-        ctx.beginPath();
-        ctx.moveTo(tx0, tz0);
-        ctx.lineTo(tx1, tz1);
-        
-        ctx.lineWidth = (isVIP ? 5 : 4) * (0.3 + 0.7 * frac);
-        ctx.globalAlpha = Math.pow(frac, 1.5); 
-        ctx.strokeStyle = isVIP ? (frac > 0.5 ? '#22d3ee' : '#c084fc') : dc;
-        ctx.stroke();
-      }
-      
+      // [PERF] Single batched stroke for glow backdrop
       ctx.beginPath();
-      ctx.moveTo(cX + (lastT.x - radarPanX)*sc, cY + (lastT.z - radarPanZ)*sc);
+      for(var k=0; k<tLen-1; k++){
+        var t0 = p.trail[k], t1 = p.trail[k+1];
+        ctx.moveTo(cX+(t0.x-radarPanX)*sc, cY+(t0.z-radarPanZ)*sc);
+        ctx.lineTo(cX+(t1.x-radarPanX)*sc, cY+(t1.z-radarPanZ)*sc);
+      }
+      ctx.moveTo(cX+(lastT.x-radarPanX)*sc, cY+(lastT.z-radarPanZ)*sc);
       ctx.lineTo(px, pz);
-      ctx.lineWidth = isVIP ? 5 : 4;
-      ctx.globalAlpha = 1.0;
+      ctx.lineWidth = isVIP ? 10 : 7;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = isVIP ? 'rgba(192,132,252,0.15)' : hexAlpha(dc, 0.15);
+      ctx.stroke();
+      // [PERF] Core trail: single stroke (skip per-segment fade for perf)
+      ctx.beginPath();
+      ctx.moveTo(cX+(p.trail[0].x-radarPanX)*sc, cY+(p.trail[0].z-radarPanZ)*sc);
+      for(var k=1; k<tLen; k++) ctx.lineTo(cX+(p.trail[k].x-radarPanX)*sc, cY+(p.trail[k].z-radarPanZ)*sc);
+      ctx.lineTo(px, pz);
+      ctx.lineWidth = isVIP ? 4 : 3;
+      ctx.globalAlpha = 0.8;
       ctx.strokeStyle = isVIP ? '#22d3ee' : dc;
       ctx.stroke();
-      
+      ctx.globalAlpha = 1.0;
       ctx.restore();
     }
 
@@ -1726,9 +1701,10 @@ function drawRadar(){
          // Removed floating diamond as requested by user
          
          // Epic Galaxy Particles Emission
-         if(speedMod > 1 && !isInteract) {
+         // [PERF] Reduced spawn rate 0.6→0.25, added global cap check
+         if(speedMod > 1 && !isInteract && (!window._radarParticles || window._radarParticles.length < 30)) {
            if(!window._radarParticles) window._radarParticles = [];
-           if(Math.random() < 0.6) {
+           if(Math.random() < 0.25) {
              var emitAngle = p.a + Math.PI + (Math.random()-0.5)*0.6;
              var pSpeed = (0.2 + Math.random()*0.8) * speedMod * 0.1;
              var isP = Math.random() > 0.5;
@@ -1904,7 +1880,8 @@ function drawRadar(){
                    
                    if(!isInteract && !_perfMode){
                      if(!window._radarParticles) window._radarParticles = [];
-                     if(window._radarParticles.length < 25 && Math.random() < 0.08) {
+                     // [PERF] Reduced particle cap 25→12, spawn rate 0.08→0.04
+                     if(window._radarParticles.length < 12 && Math.random() < 0.04) {
                        var ex = bx + Math.random() * bw;
                        var ez = by + Math.random() * bh;
                        if(Math.random() < 0.4) ex = bx + (Math.random() > 0.5 ? 0 : bw); 
@@ -2197,12 +2174,13 @@ function drawRadar(){
   // Update land expiry panel (skip during interaction for perf)
   if(!isInteract&&typeof _renderExpPanel==='function')try{_renderExpPanel();}catch(ex){}
   
+  // [PERF] Tween rAF capped to 20fps in all modes (was uncapped 60fps+ in standard mode)
   if(_needsTw && !isInteract && !radarRaf && typeof _radarQueued!=='undefined' && !_radarQueued){
-    radarRaf = requestAnimationFrame(function rf(){ 
-       radarRaf=0; 
+    radarRaf = requestAnimationFrame(function rf(){
+       radarRaf=0;
        var now = Date.now();
-       var fpsLimit = _perfMode ? 33 : 0; // 30 FPS in Performance Mode (Mode Ringan), full unthrottled 60+ FPS in standard mode
-       if(fpsLimit === 0 || !window._lastRadarTw || now - window._lastRadarTw > fpsLimit) {
+       var fpsLimit = _perfMode ? 50 : 50; // 20 FPS cap for tween animation (saves major CPU)
+       if(!window._lastRadarTw || now - window._lastRadarTw > fpsLimit) {
           window._lastRadarTw = now;
           drawRadar();
        } else {
@@ -3528,14 +3506,12 @@ function _showHotspotReco(cv,worldX,worldZ,px,pz){
 var _HM_CS=16; // 1 Minecraft chunk = 16 blocks
 var _hmKeys=[];     // cached array of keys for current dimension
 var _hmKeysDim='';  // dimension the key cache was built for
-
+var _hmBeaconCache={};  // offscreen bitmap cache for beacon glows
+var _hmBeaconCacheTTL=0;
 function _buildHeatmap(){
   if(!_hmDirty&&_hmGrid)return;
   _hmGrid={};_hmMax=1;_hmKeys=[];_hmKeysDim='';
-  
-  // Extract typeFilters ONCE at the top instead of inside the inner loop
-  var typeFilters = _rfState.hmType ? _rfState.hmType.toLowerCase().split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
-  
+  _hmBeaconCache={};_hmBeaconCacheTTL=0;
   // Use live entity_hotspots data from server metrics
   if(lastMetrics&&lastMetrics.entity_hotspots&&lastMetrics.entity_hotspots.length){
     var hs=lastMetrics.entity_hotspots;
@@ -3546,6 +3522,7 @@ function _buildHeatmap(){
       var k=dm+':'+cx+','+cz;
       
       var filteredCount = 0;
+      var typeFilters = _rfState.hmType ? _rfState.hmType.toLowerCase().split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
       if(h.top && h.top.length){
         for(var m=0;m<h.top.length;m++){
           var parts=h.top[m].split(':');
@@ -3584,8 +3561,7 @@ function _buildHeatmap(){
 }
 /* Extract keys for current dimension (cached until data or dim changes) */
 function _hmGetKeys(dim){
-  // FIXED: Removed && _hmKeys.length to allow empty states to return early rather than loop infinitely every frame!
-  if(_hmKeysDim===dim)return _hmKeys;
+  if(_hmKeysDim===dim&&_hmKeys.length)return _hmKeys;
   _hmKeys=[];
   var pfx=dim+':';
   var allKeys=Object.keys(_hmGrid);
@@ -3604,6 +3580,29 @@ function _hmGetKeys(dim){
   _hmKeys.sort(function(a,b){return a.c-b.c;});
   _hmKeysDim=dim;
   return _hmKeys;
+}
+/* Get a cached offscreen beacon glow bitmap */
+function _getBeaconBitmap(r,g,b,t,beaconR){
+  var key=r+'|'+g+'|'+b+'|'+Math.round(t*10)+'|'+Math.round(beaconR);
+  if(_hmBeaconCache[key])return _hmBeaconCache[key];
+  // Limit cache size
+  if(Object.keys(_hmBeaconCache).length>80){_hmBeaconCache={};_hmBeaconCacheTTL=0;}
+  var sz=Math.ceil(beaconR*2)+2;
+  var oc=document.createElement('canvas');
+  oc.width=sz;oc.height=sz;
+  var octx=oc.getContext('2d');
+  var cx=sz/2,cy=sz/2;
+  var grad=octx.createRadialGradient(cx,cy,0,cx,cy,beaconR);
+  grad.addColorStop(0,'rgba('+r+','+g+','+b+','+(0.7+t*0.3)+')');
+  grad.addColorStop(0.5,'rgba('+r+','+g+','+b+','+(0.3+t*0.2)+')');
+  grad.addColorStop(1,'rgba('+r+','+g+','+b+',0)');
+  octx.fillStyle=grad;
+  octx.fillRect(0,0,sz,sz);
+  // Inner bright core
+  octx.beginPath();octx.arc(cx,cy,Math.max(2,1+t*3),0,6.2832);
+  octx.fillStyle='rgba('+r+','+g+','+b+','+(0.8+t*0.2)+')';octx.fill();
+  _hmBeaconCache[key]=oc;
+  return oc;
 }
 /* Compute heatmap color for a normalized intensity t in [0,1] */
 function _hmColor(t){
@@ -3650,8 +3649,8 @@ function _renderHeatmap(ctx,cX,cY,sc,W,H){
   var cellSz=_HM_CS*LOD;
   var cellPx=cellSz*sc;
   var sonarPhase=_reduceMotion?0.5:(Date.now()%2400)/2400;
-  // FIXED: Reduced sonar budget from 12 to 4 to prevent canvas stroke thrashing on massive entity counts
-  var sonarBudget=4,sonarCount=0;
+  // Budget: max 12 sonar waves to prevent GPU thrashing at far zoom
+  var sonarBudget=12,sonarCount=0;
 
   for(var i=0;i<renderData.length;i++){
     var d=renderData[i];
@@ -3661,28 +3660,13 @@ function _renderHeatmap(ctx,cX,cY,sc,W,H){
     if(centerX<-40||centerX>W+40||centerZ<-40||centerZ>H+40)continue;
     var t=Math.min(d.c/_hmMax,1);
     var col=_hmColor(t);
-    var r=col.r,g=col.g,b=col.b; // Fixed variable mapping
+    var r=col.r,g=col.g,b=col.b;
 
     if(zoomedOut){
-      // ── Beacon mode: Render directly to primary canvas via hardware-accelerated radial gradients ──
-      // This completely avoids allocating dynamically created Canvas elements on the fly, eliminating garbage collection pauses!
+      // ── Beacon mode: use cached bitmap for glow ──
       var beaconR=Math.max(6,4+t*10);
-      var grad=ctx.createRadialGradient(centerX,centerZ,0,centerX,centerZ,beaconR);
-      grad.addColorStop(0,'rgba('+r+','+g+','+b+','+(0.7+t*0.3)+')');
-      grad.addColorStop(0.5,'rgba('+r+','+g+','+b+','+(0.3+t*0.2)+')');
-      grad.addColorStop(1,'rgba('+r+','+g+','+b+',0)');
-      
-      ctx.fillStyle=grad;
-      ctx.beginPath();
-      ctx.arc(centerX,centerZ,beaconR,0,6.2832);
-      ctx.fill();
-      
-      // Inner bright core
-      ctx.beginPath();
-      ctx.arc(centerX,centerZ,Math.max(2,1+t*3),0,6.2832);
-      ctx.fillStyle='rgba('+r+','+g+','+b+','+(0.8+t*0.2)+')';
-      ctx.fill();
-
+      var bmp=_getBeaconBitmap(r,g,b,t,beaconR);
+      ctx.drawImage(bmp,Math.floor(centerX-bmp.width/2),Math.floor(centerZ-bmp.height/2));
       // Entity count label on high-danger beacons
       if(t>=0.3){
         ctx.fillStyle='rgba(255,255,255,'+(0.5+t*0.5)+')';
@@ -4783,7 +4767,7 @@ drawRadar=function(){
   _radarThrottleId=setTimeout(function(){
     _radarThrottleId=0;
     if(_radarQueued){_radarQueued=false;_baseDrawRadar();_updateRadarA11y();}
-  },_perfMode?50:33); // Throttles drawing to 20 FPS in Mode Ringan
+  },50); // [PERF] 20fps cap in all modes (was 30fps standard / 20fps perf)
 };
 // [A11Y] Live-region summary for screen readers — rate-limited to 5s.
 // Hindari assistive-tech spam saat radar redraw 30x/detik.

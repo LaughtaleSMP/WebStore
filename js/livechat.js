@@ -16,7 +16,7 @@
   var ACCT     = SB_URL + '/rest/v1/chat_accounts';
 
   var MSG_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
-  var POLL_MS      = 10000;
+  var POLL_MS      = 15000; // [PERF] 15s poll — balances responsiveness vs battery/network
   var RATE_MS      = 3000;
   var VERIFY_POLL  = 5000;
   var SESSION_KEY  = 'lc_session';
@@ -24,15 +24,6 @@
   var SALT         = '_laughtale_chat_v2';
   var MAX_LOGIN_ATTEMPTS = 5;
   var LOGIN_COOLDOWN_MS  = 60000;
-
-  // Inject global shared gradient for supporter badges once to save GPU memory
-  var sharedSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  sharedSvg.style.position = 'absolute';
-  sharedSvg.style.width = '0';
-  sharedSvg.style.height = '0';
-  sharedSvg.style.overflow = 'hidden';
-  sharedSvg.innerHTML = '<defs><linearGradient id="lc-supporter-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#38bdf8"/><stop offset="50%" stop-color="#c084fc"/><stop offset="100%" stop-color="#f472b6"/></linearGradient></defs>';
-  document.body.appendChild(sharedSvg);
 
   // ── Helpers ──
   var _hdr = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY };
@@ -608,64 +599,6 @@
     }, 2800);
   }
 
-  function _showPrePermissionModal(callback) {
-    var modal = document.createElement('div');
-    modal.style.position = 'fixed';
-    modal.style.top = '0';
-    modal.style.left = '0';
-    modal.style.width = '100vw';
-    modal.style.height = '100vh';
-    modal.style.background = 'rgba(9, 9, 15, 0.7)';
-    modal.style.backdropFilter = 'blur(16px)';
-    modal.style.webkitBackdropFilter = 'blur(16px)';
-    modal.style.zIndex = '999999';
-    modal.style.display = 'flex';
-    modal.style.alignItems = 'center';
-    modal.style.justifyContent = 'center';
-    modal.style.animation = 'fadeIn 0.3s ease';
-    
-    modal.innerHTML = [
-      '<div style="background:rgba(20,10,35,0.85); border:1px solid rgba(168,85,247,0.35); padding:35px 30px; border-radius:20px; text-align:center; box-shadow:0 12px 40px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.08); max-width:90%; width:340px; backdrop-filter:blur(10px); webkit-backdrop-filter:blur(10px); transition: all 0.3s ease;">',
-        '<div style="width:56px; height:56px; background:rgba(168,85,247,0.15); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto; border:1px solid rgba(168,85,247,0.3); animation:bellPulse 2.2s infinite ease-in-out;">',
-          '<svg viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2.5" style="width:24px; height:24px;">',
-            '<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />',
-          '</svg>',
-        '</div>',
-        '<h3 style="margin:0 0 8px 0; font-size:15px; font-weight:700; color:#c084fc; letter-spacing:0.5px; font-family:\'Inter\', sans-serif;">AKTIFKAN NOTIFIKASI</h3>',
-        '<p style="margin:0 0 24px 0; font-size:11.5px; color:rgba(255,255,255,0.65); line-height:1.6; font-weight:500; font-family:\'Inter\', sans-serif;">Dapatkan pemberitahuan push real-time di HP/PC Anda setiap kali ada chat baru dari pemain lain di game.</p>',
-        '<div style="display:flex; gap:10px; justify-content:center;">',
-          '<button id="lc-perm-cancel" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.7); padding:10px 18px; border-radius:10px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:\'Inter\', sans-serif;">BATAL</button>',
-          '<button id="lc-perm-allow" style="background:linear-gradient(135deg, #a855f7, #7c3aed); border:none; color:#fff; padding:10px 22px; border-radius:10px; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(124,58,237,0.35); transition:all 0.2s; font-family:\'Inter\', sans-serif;">AKTIFKAN</button>',
-        '</div>',
-      '</div>'
-    ].join('');
-    
-    document.body.appendChild(modal);
-    
-    var btnCancel = modal.querySelector('#lc-perm-cancel');
-    var btnAllow = modal.querySelector('#lc-perm-allow');
-    var container = modal.querySelector('div');
-    
-    btnCancel.addEventListener('mouseenter', function() { btnCancel.style.background = 'rgba(255,255,255,0.1)'; });
-    btnCancel.addEventListener('mouseleave', function() { btnCancel.style.background = 'rgba(255,255,255,0.05)'; });
-    
-    btnAllow.addEventListener('mouseenter', function() { btnAllow.style.transform = 'translateY(-1px)'; btnAllow.style.boxShadow = '0 6px 16px rgba(124,58,237,0.5)'; });
-    btnAllow.addEventListener('mouseleave', function() { btnAllow.style.transform = 'translateY(0)'; btnAllow.style.boxShadow = '0 4px 12px rgba(124,58,237,0.35)'; });
-    
-    btnCancel.addEventListener('click', function() {
-      modal.style.opacity = '0';
-      container.style.transform = 'scale(0.9)';
-      setTimeout(function() { modal.remove(); }, 250);
-    });
-    
-    btnAllow.addEventListener('click', function() {
-      modal.style.opacity = '0';
-      container.style.transform = 'scale(0.9)';
-      setTimeout(function() { modal.remove(); }, 200);
-      callback();
-    });
-  }
-
   function _initNotifs() {
     if (!notifBtn) return;
     if (!('Notification' in window)) {
@@ -691,29 +624,27 @@
         }
         _showToast('Notifikasi dinonaktifkan.', false);
       } else {
-        _showPrePermissionModal(function() {
-          Notification.requestPermission().then(function(perm) {
-            if (perm === 'granted') {
-              _notifsEnabled = true;
-              localStorage.setItem('lc_push_notif', 'true');
-              notifBtn.classList.add('active');
-              if (bellIcon) {
-                bellIcon.style.color = '#c084fc';
-              }
-              _showToast('Notifikasi HP/PC Aktif!', true);
-              try {
-                new Notification("Mimi - Laughtale SMP", {
-                  body: "Notifikasi chat sistem berhasil diaktifkan!",
-                  icon: "assets/favicon.svg",
-                  badge: "assets/favicon.svg",
-                  tag: "laughtale-chat",
-                  vibrate: [200, 100, 200]
-                });
-              } catch(ex) {}
-            } else if (perm === 'denied') {
-              _showToast('Izin ditolak. Silakan aktifkan di pengaturan browser Anda.', false);
+        Notification.requestPermission().then(function(perm) {
+          if (perm === 'granted') {
+            _notifsEnabled = true;
+            localStorage.setItem('lc_push_notif', 'true');
+            notifBtn.classList.add('active');
+            if (bellIcon) {
+              bellIcon.style.color = '#c084fc';
             }
-          });
+            _showToast('Notifikasi HP/PC Aktif!', true);
+            try {
+              new Notification("Mimi - Laughtale SMP", {
+                body: "Notifikasi chat sistem berhasil diaktifkan!",
+                icon: "assets/favicon.svg",
+                badge: "assets/favicon.svg",
+                tag: "laughtale-chat",
+                vibrate: [200, 100, 200]
+              });
+            } catch(ex) {}
+          } else if (perm === 'denied') {
+            _showToast('Izin ditolak. Silakan aktifkan di pengaturan browser Anda.', false);
+          }
         });
       }
     });
@@ -728,22 +659,44 @@
     if (!raw) { msgIn?.focus(); return; }
     var msg = _sanitize(raw, 200);
     if (!msg) return;
-    if (Date.now() - lastSendTs < RATE_MS) return;
+    if (Date.now() - lastSendTs < RATE_MS) {
+      _showToast('Tunggu ' + Math.ceil((RATE_MS - (Date.now() - lastSendTs)) / 1000) + 's lagi...', false);
+      return;
+    }
 
     sendBtn.disabled = true;
     lastSendTs = Date.now();
+    var savedMsg = msgIn.value; // preserve for rollback on failure
 
     fetch(EP, {
       method: 'POST', headers: _jHdr(),
       body: JSON.stringify({ source: 'web', player_name: verifiedName, message: msg })
     }).then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
+      if (!r.ok) {
+        return r.text().then(function (body) {
+          var detail = '';
+          try {
+            var err = JSON.parse(body);
+            detail = err.message || err.error || '';
+            // Detect the specific pg_net trigger error
+            if (err.code === '42883' && detail.indexOf('net.http_post') >= 0) {
+              detail = 'Database trigger error (net.http_post). Hubungi admin untuk disable trigger.';
+            }
+          } catch(e) { detail = body; }
+          throw new Error(detail || 'HTTP ' + r.status);
+        });
+      }
+      return r.text().then(function (body) {
+        if (!body || !body.trim()) return [];
+        try { return JSON.parse(body); } catch(e) { return []; }
+      });
     }).then(function (rows) {
       if (rows && rows.length) { _addMsgs(rows); _scroll(); }
       msgIn.value = '';
     }).catch(function (e) {
       console.warn('[LiveChat] Send fail:', e);
+      msgIn.value = savedMsg; // restore message on failure
+      _showToast('Gagal kirim: ' + (e.message || 'Coba lagi'), false);
     }).finally(function () {
       setTimeout(function () { sendBtn.disabled = false; }, RATE_MS);
     });
@@ -756,17 +709,11 @@
 
   // ══════════════════════════════════════════
   //  VERIFIED NAMES CACHE (for verified badge)
-  //  Optimized with a 5-minute cooldown to prevent CPU/Network overhead
   // ══════════════════════════════════════════
   var _verifiedNames = {}; // gamertag → true
   var _supporterNames = {}; // gamertag → true
-  var _lastRefreshTs = 0;
 
   function _refreshVerified() {
-    var now = Date.now();
-    if (_lastRefreshTs > 0 && now - _lastRefreshTs < 300000) return; // 5 mins cooldown
-    _lastRefreshTs = now;
-
     fetch(ACCT + '?select=gamertag', { headers: _hdr })
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (rows) {
@@ -804,7 +751,7 @@
       }).catch(function(){});
   }
   _refreshVerified();
-  setInterval(_refreshVerified, 300000); // refresh every 5 mins
+  setInterval(_refreshVerified, 120000); // [PERF] refresh every 120s (was 60s)
 
   // ══════════════════════════════════════════
   //  FETCH / POLL MESSAGES  (reverse pagination)
@@ -892,6 +839,7 @@
   }
 
   function _pollNew() {
+    var _tabHidden = document.hidden;
     var url = EP + '?order=id.asc&limit=20';
     if (lastId > 0) url += '&id=gt.' + lastId;
     fetch(url, { headers: _hdr })
@@ -905,6 +853,8 @@
         // Only show chat bubbles on the radar if it is NOT the first poll
         var gotNewMsg = false;
         var playChime = false;
+        // Collect ALL incoming messages for notification (not just last one)
+        var incomingMsgs = [];
         if (!_isFirstPoll) {
           if (!window._lcRecentMessages) window._lcRecentMessages = {};
           for (var i = 0; i < rows.length; i++) {
@@ -916,36 +866,68 @@
             }
             if (rMsg.player_name !== verifiedName) {
               playChime = true;
+              // Collect for notification (skip system messages like join/leave/death)
+              if (rMsg.source !== 'system') {
+                incomingMsgs.push(rMsg);
+              }
             }
           }
         }
         _isFirstPoll = false;
 
-        if (playChime) {
+        // Sound chime (only when tab is visible — avoid surprise audio)
+        if (playChime && !_tabHidden) {
           if (typeof window.playChatChime === 'function') {
             window.playChatChime();
           }
-          if (_notifsEnabled && Notification.permission === 'granted' && document.hidden) {
-            var lastIncoming = null;
-            for (var i = rows.length - 1; i >= 0; i--) {
-              if (rows[i].player_name !== verifiedName) {
-                lastIncoming = rows[i];
-                break;
-              }
+        }
+
+        // Push Notifications — fire for ALL incoming messages, works when tab hidden OR visible
+        if (_notifsEnabled && Notification.permission === 'granted' && incomingMsgs.length > 0) {
+          if (incomingMsgs.length === 1) {
+            // Single message — show player name as title, message as body
+            var nm = incomingMsgs[0];
+            try {
+              new Notification(nm.player_name, {
+                body: nm.message,
+                icon: 'assets/favicon.svg',
+                badge: 'assets/favicon.svg',
+                tag: 'laughtale-chat-' + nm.id,
+                vibrate: [200, 100, 200],
+                renotify: true,
+                silent: false
+              });
+            } catch(e) { console.warn('[Notif]', e); }
+          } else {
+            // Multiple messages — batch into one notification with summary
+            var body = '';
+            for (var n = 0; n < Math.min(incomingMsgs.length, 5); n++) {
+              var im = incomingMsgs[n];
+              body += im.player_name + ': ' + im.message;
+              if (n < incomingMsgs.length - 1) body += '\n';
             }
-            if (lastIncoming) {
-              try {
-                new Notification(lastIncoming.player_name + " - Laughtale SMP", {
-                  body: lastIncoming.message,
-                  icon: "assets/favicon.svg",
-                  badge: "assets/favicon.svg",
-                  tag: "laughtale-chat",
-                  vibrate: [200, 100, 200], // Professional double-pulse vibration
-                  renotify: true
-                });
-              } catch(e) {}
-            }
+            if (incomingMsgs.length > 5) body += '\n+' + (incomingMsgs.length - 5) + ' pesan lagi';
+            try {
+              new Notification('Laughtale SMP Chat (' + incomingMsgs.length + ')', {
+                body: body,
+                icon: 'assets/favicon.svg',
+                badge: 'assets/favicon.svg',
+                tag: 'laughtale-chat-batch',
+                vibrate: [200, 100, 200],
+                renotify: true,
+                silent: false
+              });
+            } catch(e) { console.warn('[Notif]', e); }
           }
+        }
+
+        // [PERF] Skip DOM updates when tab is hidden
+        if (_tabHidden) {
+          // Still update lastId so we don't re-process these messages
+          for (var i = 0; i < rows.length; i++) {
+            if (rows[i].id > lastId) lastId = rows[i].id;
+          }
+          return;
         }
 
         if (isOpen) {
@@ -959,7 +941,10 @@
         if (gotNewMsg && typeof drawRadar === 'function') {
           try { drawRadar(); } catch(e) {}
         }
-      }).catch(function () { _setStatus('offline'); });
+      }).catch(function (e) {
+        console.warn('[LiveChat] Poll error:', e);
+        _setStatus('offline');
+      });
   }
 
   function _startPoll() { _stopPoll(); pollTimer = setInterval(_pollNew, POLL_MS); }
@@ -1001,12 +986,21 @@
 
   function _buildMsg(m) {
     var el = document.createElement('div');
-    var isSupporter = _supporterNames[m.player_name] === true;
-    var isVerified = _verifiedNames[m.player_name] === true;
+    var _nameKey = (m.player_name || '').toLowerCase();
+    var isSupporter = _supporterNames[_nameKey] === true;
+    var isVerified = _verifiedNames[_nameKey] === true;
     var verifyBadge = '';
     if (isSupporter) {
+      var gradId = 'lc-diag-' + Math.random().toString(36).substr(2, 9);
       verifyBadge = '<span class="lc-supporter" title="Supporter (Topup)">' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="url(#lc-supporter-grad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10" class="lc-diamond-svg">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="url(#' + gradId + ')" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10" class="lc-diamond-svg">' +
+          '<defs>' +
+            '<linearGradient id="' + gradId + '" x1="0%" y1="0%" x2="100%" y2="100%">' +
+              '<stop offset="0%" stop-color="#38bdf8"/>' +
+              '<stop offset="50%" stop-color="#c084fc"/>' +
+              '<stop offset="100%" stop-color="#f472b6"/>' +
+            '</linearGradient>' +
+          '</defs>' +
           '<path d="M6 3h12l4 6-10 13L2 9z"/>' +
           '<path d="M6 3l6 6 6-6"/>' +
           '<path d="M2 9h20"/>' +
@@ -1049,7 +1043,7 @@
     msgList.appendChild(frag); _updateCount();
   }
 
-  var DOM_CAP = 150; // cap DOM nodes to 150 messages for ultimate smooth rendering and performance
+  var DOM_CAP = 200; // [PERF] reduced from 800 — lighter DOM, data stays in memory array
 
   function _renderNew(rows) {
     var empty = msgList.querySelector('.lc-empty'); if (empty) empty.remove();
