@@ -124,6 +124,8 @@
   var scrollWrap = document.getElementById('lc-scroll-wrap');
   var scrollBtn  = document.getElementById('lc-scroll-btn');
   var scrollNew  = document.getElementById('lc-scroll-new');
+  var notifBtn   = document.getElementById('lc-notif-btn');
+  var bellIcon   = document.getElementById('lc-bell-icon');
 
   if (!panel || !msgList) return;
 
@@ -135,6 +137,7 @@
   var _isResetMode = false;
   var _loginAttempts = 0, _loginCooldownUntil = 0;
   var _unseenCount = 0, _atBottom = true;
+  var _notifsEnabled = false;
 
   // ══════════════════════════════════════════
   //  SESSION RESTORE — verify token against Supabase
@@ -555,6 +558,85 @@
   function _showErr(el, msg) { if (el) { el.textContent = msg; el.style.display = ''; } }
   function _hideErr(el) { if (el) el.style.display = 'none'; }
 
+  function _showToast(msg) {
+    var t = document.createElement('div');
+    t.style.position = 'fixed';
+    t.style.bottom = '85px';
+    t.style.right = '20px';
+    t.style.background = 'rgba(15, 10, 25, 0.95)';
+    t.style.border = '1px solid rgba(192, 132, 252, 0.4)';
+    t.style.color = '#fff';
+    t.style.padding = '8px 16px';
+    t.style.borderRadius = '8px';
+    t.style.fontFamily = 'system-ui, sans-serif';
+    t.style.fontSize = '12px';
+    t.style.fontWeight = '500';
+    t.style.zIndex = '99999';
+    t.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+    t.style.transition = 'opacity 0.3s, transform 0.3s';
+    t.style.transform = 'translateY(10px)';
+    t.style.opacity = '0';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() {
+      t.style.opacity = '1';
+      t.style.transform = 'translateY(0)';
+    }, 10);
+    setTimeout(function() {
+      t.style.opacity = '0';
+      t.style.transform = 'translateY(-10px)';
+      setTimeout(function() { t.remove(); }, 300);
+    }, 2500);
+  }
+
+  function _initNotifs() {
+    if (!notifBtn) return;
+    if (!('Notification' in window)) {
+      notifBtn.style.display = 'none';
+      return;
+    }
+    var isEnabled = localStorage.getItem('lc_push_notif') === 'true';
+    if (Notification.permission === 'granted' && isEnabled) {
+      _notifsEnabled = true;
+      if (bellIcon) {
+        bellIcon.style.color = '#c084fc';
+        bellIcon.style.filter = 'drop-shadow(0 0 2px rgba(192, 132, 252, 0.4))';
+      }
+    }
+    notifBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (_notifsEnabled) {
+        _notifsEnabled = false;
+        localStorage.setItem('lc_push_notif', 'false');
+        if (bellIcon) {
+          bellIcon.style.color = '';
+          bellIcon.style.filter = '';
+        }
+        _showToast('Notifikasi dinonaktifkan.');
+      } else {
+        Notification.requestPermission().then(function(perm) {
+          if (perm === 'granted') {
+            _notifsEnabled = true;
+            localStorage.setItem('lc_push_notif', 'true');
+            if (bellIcon) {
+              bellIcon.style.color = '#c084fc';
+              bellIcon.style.filter = 'drop-shadow(0 0 2px rgba(192, 132, 252, 0.4))';
+            }
+            _showToast('Notifikasi HP/PC Aktif!');
+            try {
+              new Notification("Laughtale SMP Chat", {
+                body: "Notifikasi chat sistem berhasil diaktifkan!",
+                icon: "assets/favicon.svg"
+              });
+            } catch(ex) {}
+          } else if (perm === 'denied') {
+            _showToast('Izin ditolak. Silakan aktifkan di pengaturan browser Anda.');
+          }
+        });
+      }
+    });
+  }
+
   // ══════════════════════════════════════════
   //  SEND MESSAGE
   // ══════════════════════════════════════════
@@ -734,6 +816,7 @@
 
         // Only show chat bubbles on the radar if it is NOT the first poll
         var gotNewMsg = false;
+        var playChime = false;
         if (!_isFirstPoll) {
           if (!window._lcRecentMessages) window._lcRecentMessages = {};
           for (var i = 0; i < rows.length; i++) {
@@ -743,9 +826,39 @@
               window._lcRecentMessages[rNameKey] = { msg: rMsg.message, time: Date.now() };
               gotNewMsg = true;
             }
+            if (rMsg.player_name !== verifiedName) {
+              playChime = true;
+            }
           }
         }
         _isFirstPoll = false;
+
+        if (playChime) {
+          if (typeof window.playChatChime === 'function') {
+            window.playChatChime();
+          }
+          if (_notifsEnabled && Notification.permission === 'granted' && document.hidden) {
+            var lastIncoming = null;
+            for (var i = rows.length - 1; i >= 0; i--) {
+              if (rows[i].player_name !== verifiedName) {
+                lastIncoming = rows[i];
+                break;
+              }
+            }
+            if (lastIncoming) {
+              try {
+                new Notification(lastIncoming.player_name + " - Laughtale SMP", {
+                  body: lastIncoming.message,
+                  icon: "assets/favicon.svg",
+                  badge: "assets/favicon.svg",
+                  tag: "laughtale-chat",
+                  vibrate: [200, 100, 200], // Professional double-pulse vibration
+                  renotify: true
+                });
+              } catch(e) {}
+            }
+          }
+        }
 
         if (isOpen) {
           _addMsgs(rows);
@@ -923,6 +1036,8 @@
     }).catch(function () {
       _startPoll();
     });
+
+  _initNotifs();
 
   if (location.hash === '#chat') { isOpen = true; panel.classList.add('open'); _fetchAll(); }
   console.log('[LiveChat] v2 initialized (accounts, 10s background poll)');

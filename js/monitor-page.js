@@ -47,6 +47,158 @@ function _moonPhaseFromDay(day){
   return ((d%8)+8)%8;
 }
 
+// Procedural Web Audio API sound synthesizers (high-fidelity zero-asset audio)
+var _audioCtx = null;
+function getAudioContext() {
+  if (!_audioCtx) {
+    var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtxClass) {
+      _audioCtx = new AudioCtxClass();
+    }
+  }
+  if (_audioCtx && _audioCtx.state === 'suspended') {
+    _audioCtx.resume();
+  }
+  return _audioCtx;
+}
+
+window.playChatChime = function() {
+  try {
+    var ctx = getAudioContext();
+    if (!ctx) return;
+    var now = ctx.currentTime;
+    
+    var osc1 = ctx.createOscillator();
+    var osc2 = ctx.createOscillator();
+    var gain1 = ctx.createGain();
+    var gain2 = ctx.createGain();
+    
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(523.25, now); // C5
+    osc1.frequency.exponentialRampToValueAtTime(783.99, now + 0.12); // G5
+    
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(659.25, now + 0.05); // E5
+    osc2.frequency.exponentialRampToValueAtTime(1046.50, now + 0.2); // C6
+    
+    gain1.gain.setValueAtTime(0, now);
+    gain1.gain.linearRampToValueAtTime(0.06, now + 0.02);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    
+    gain2.gain.setValueAtTime(0, now + 0.05);
+    gain2.gain.linearRampToValueAtTime(0.05, now + 0.07);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+    
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    
+    osc1.start(now);
+    osc1.stop(now + 0.2);
+    osc2.start(now + 0.05);
+    osc2.stop(now + 0.3);
+  } catch(e) {
+    console.warn('[Sound] Chat chime error:', e);
+  }
+};
+
+window.playRadarPing = function() {
+  try {
+    var ctx = getAudioContext();
+    if (!ctx) return;
+    var now = ctx.currentTime;
+    
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now); // A5 (Sonar frequency)
+    osc.frequency.exponentialRampToValueAtTime(330, now + 1.2);
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.08, now + 0.03); // Quick rise
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2); // Smooth long echo decay
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start(now);
+    osc.stop(now + 1.3);
+  } catch(e) {
+    console.warn('[Sound] Sonar ping error:', e);
+  }
+};
+
+window.playPvpAlert = function() {
+  try {
+    var ctx = getAudioContext();
+    if (!ctx) return;
+    var now = ctx.currentTime;
+    
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(587.33, now); // D5
+    osc.frequency.setValueAtTime(880, now + 0.1); // A5
+    osc.frequency.setValueAtTime(587.33, now + 0.2);
+    osc.frequency.setValueAtTime(880, now + 0.3);
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.06, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start(now);
+    osc.stop(now + 0.5);
+  } catch(e) {
+    console.warn('[Sound] PvP alert error:', e);
+  }
+};
+
+window._checkRadarNotifications = function(newPlayers) {
+  try {
+    if (!Array.isArray(newPlayers)) return;
+    if (!window._prevRadarNames) {
+      window._prevRadarNames = {};
+      window._prevRadarPvps = {};
+      for (var i = 0; i < newPlayers.length; i++) {
+        var p = newPlayers[i];
+        if (p && p.name) {
+          window._prevRadarNames[p.name.toLowerCase()] = true;
+          window._prevRadarPvps[p.name.toLowerCase()] = !!p.pvp;
+        }
+      }
+      return;
+    }
+    var playPing = false, playAlert = false, currentNames = {};
+    for (var i = 0; i < newPlayers.length; i++) {
+      var p = newPlayers[i];
+      if (!p || !p.name) continue;
+      var nameLower = p.name.toLowerCase();
+      currentNames[nameLower] = true;
+      if (!window._prevRadarNames[nameLower]) {
+        playPing = true;
+      }
+      if (p.pvp && !window._prevRadarPvps[nameLower]) {
+        playAlert = true;
+      }
+      window._prevRadarPvps[nameLower] = !!p.pvp;
+    }
+    window._prevRadarNames = currentNames;
+    if (playAlert && typeof window.playPvpAlert === 'function') {
+      window.playPvpAlert();
+    } else if (playPing && typeof window.playRadarPing === 'function') {
+      window.playRadarPing();
+    }
+  } catch(e) {
+    console.warn('[RadarSound] Check fail:', e);
+  }
+};
+
 async function loadConfig(){
   // Try loading multi-server config first
   try{
@@ -315,6 +467,7 @@ function applyBDSMetrics(m){
   safeSet('world-tick',fmtN(m.tick||0));
   safeSet('world-tps',tps.toFixed(1)+' / 20');
   radarPlayers=m.player_details||[];
+  if(typeof window._checkRadarNotifications==='function') window._checkRadarNotifications(radarPlayers);
   _updateAfkTracker();
   // Preserve existing radarLands if this sync doesn't include land_claims
   if(m.land_claims&&m.land_claims.length)radarLands=m.land_claims;
@@ -709,6 +862,7 @@ async function _fastPollPositions(){
     var m=typeof d[0].server_metrics==='string'?JSON.parse(d[0].server_metrics):d[0].server_metrics;
     if(!m||!m.player_details)return;
     radarPlayers=m.player_details;
+    if(typeof window._checkRadarNotifications==='function') window._checkRadarNotifications(radarPlayers);
     _updateAfkTracker();
     // KPI top: sinkron dengan radar — pakai player_details sebagai sumber utama
     try{
@@ -1210,7 +1364,7 @@ function drawRadar(){
     ctx.fillRect(0,0,W,H);
   }
 
-  ctx.setLineDash([2,4]);ctx.strokeStyle='rgba(255,255,255,0.03)';ctx.lineWidth=1;
+  ctx.setLineDash([2,4]);ctx.strokeStyle='rgba(255,255,255,0.1)';ctx.lineWidth=1;
   var s1=Math.floor((radarPanX-rng)/gs)*gs,e1=Math.ceil((radarPanX+rng)/gs)*gs;
   for(var g=s1;g<=e1;g+=gs){var gx=cX+(g-radarPanX)*sc;if(gx>=0&&gx<=W){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke();if(g!==0){ctx.fillStyle='rgba(255,255,255,0.15)';ctx.font='7px JetBrains Mono,monospace';ctx.textAlign='center';ctx.fillText(g,gx,H-4);}}}
   s1=Math.floor((radarPanZ-rng)/gs)*gs;e1=Math.ceil((radarPanZ+rng)/gs)*gs;
@@ -1252,10 +1406,10 @@ function drawRadar(){
     var lc=isExpiring?'#f87171':LAND_COLORS[nameHash(l.o)%LAND_COLORS.length];
     if(isWarn)lc='#fb923c';
     // Fill
-    var fillAlpha=isDead?0.12:isCrit?0.10:isWarn?0.08:0.07;
+    var fillAlpha=isDead?0.28:isCrit?0.24:isWarn?0.20:0.16;
     ctx.globalAlpha=fillAlpha;ctx.fillStyle=lc;ctx.fillRect(lx1,lz1,lw,lh);
     // Border
-    var borderAlpha=isDead?0.7:isCrit?0.55:isWarn?0.45:0.3;
+    var borderAlpha=isDead?0.9:isCrit?0.8:isWarn?0.7:0.65;
     // Pulsing effect for critical/dead lands
     if((isCrit||isDead)&&!_reduceMotion){var pulse=(Math.sin(Date.now()/400)+1)/2;borderAlpha=borderAlpha*(0.5+pulse*0.5);}
     ctx.globalAlpha=borderAlpha;ctx.strokeStyle=lc;ctx.lineWidth=isDead?2:isCrit?1.5:1;
@@ -1268,13 +1422,13 @@ function drawRadar(){
       var _lpad=_lfs+2;
       if(lw>30&&lh>_lfs){
         // Land name
-        ctx.globalAlpha=isExpiring?0.75:0.55;
+        ctx.globalAlpha=isExpiring?0.9:0.75;
         ctx.font='600 '+_lfs+'px JetBrains Mono,monospace';ctx.textAlign='left';
         ctx.fillStyle=lc;
         ctx.fillText(l.n,Math.max(lx1+4,2),Math.max(lz1+_lfs+2,_lfs+2));
         // Owner name
         if(l.o&&lh>_lpad+_lfs2+2){
-          ctx.globalAlpha=isExpiring?0.6:0.4;
+          ctx.globalAlpha=isExpiring?0.8:0.65;
           ctx.font='500 '+_lfs2+'px JetBrains Mono,monospace';
           ctx.fillStyle=isExpiring?lc:'rgba(255,255,255,0.55)';
           ctx.fillText(l.o,Math.max(lx1+4,2),Math.max(lz1+_lpad+_lfs2,_lpad+_lfs2));
@@ -1420,7 +1574,7 @@ function drawRadar(){
     if (isVIP) isVerified = false; // Replace verified mark with diamond logo if topup
 
     var dim=rSel&&rSel!==p.name;
-    if(dim)ctx.globalAlpha=0.25;
+    ctx.globalAlpha = dim ? 0.25 : 1.0;
 
     // Draw cinematic motion trail — dual-stroke glow simulation for 60 FPS performance
     if(p.trail && p.trail.length > 1 && !dim && !isInteract && !_perfMode){
@@ -1622,7 +1776,7 @@ function drawRadar(){
                 gy1 = cy - Math.sin(t) * radius;
              }
              
-             if(dim) ctx.globalAlpha = 0.25;
+             ctx.globalAlpha = dim ? 0.25 : 1.0;
              
              if(!dim) {
                  if(isVIP && !isInteract) {
@@ -1874,10 +2028,11 @@ function drawRadar(){
                if(p.pvp&&!dim){ctx.fillStyle='rgba(248,113,113,0.8)';ctx.font='700 6px JetBrains Mono,monospace';ctx.fillText('\u2694 PVP',px,pz+26);}
              }
              
-             if (dim) ctx.globalAlpha = 1;
+             ctx.globalAlpha = 1.0;
           }
        });
     })(p, px, pz, isVIP, isVerified, dim, dc);
+    ctx.globalAlpha = 1.0;
     
 
   }
@@ -1967,7 +2122,7 @@ function drawRadar(){
     ctx.restore();
   }
   if(window._clickedCluster && !clickedClusterFound) window._clickedCluster = null;
-  if(canvas && !radarDrag) canvas.style.cursor = isHoveringCluster ? 'pointer' : 'crosshair';
+  if(canvas && !radarDrag) canvas.style.cursor = isHoveringCluster ? 'pointer' : 'default';
 
   ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='600 10px Inter,sans-serif';ctx.textAlign='center';
   ctx.fillText('N',W/2,13);ctx.fillText('S',W/2,H-5);ctx.fillText('W',9,H/2+4);ctx.fillText('E',W-9,H/2+4);
@@ -2087,14 +2242,29 @@ async function fetchRadarHistory(hours){
   try{
     var ms=_radarRangeHours*3600000;
     var since=new Date(Date.now()-ms).toISOString();
-    // Scale limit: more hours = more rows, cap at 288 (enough for 24h @ 5min interval)
-    var limit=Math.min(288,Math.max(50,Math.round(_radarRangeHours*12)));
+    // Scale limit: more hours = more rows, cap at 2016 (enough for 7 days @ 5min interval)
+    var limit=Math.min(2016,Math.max(50,Math.round(_radarRangeHours*12)));
     var _srvFilter=(_servers[_currentIdx]&&_servers[_currentIdx].server_id)?'&server_id=eq.'+_servers[_currentIdx].server_id:'';
     var ctrl=new AbortController(),tm=setTimeout(function(){ctrl.abort();},15000);
     // order=ts.desc so we always get the NEWEST rows first, then reverse client-side
-    var r=await fetch(SB_URL+'/rest/v1/metrics_history?ts=gte.'+since+'&order=ts.desc&limit='+limit+'&select=ts,pos'+_srvFilter,{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},signal:ctrl.signal});
+    var d=null;
+    if(limit>1000){
+      var r1=await fetch(SB_URL+'/rest/v1/metrics_history?ts=gte.'+since+'&order=ts.desc&limit=1000&select=ts,pos'+_srvFilter,{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},signal:ctrl.signal});
+      var d1=await r1.json();
+      if(Array.isArray(d1)) {
+        d=d1;
+        if(d1.length===1000){
+          var remain=limit-1000;
+          var r2=await fetch(SB_URL+'/rest/v1/metrics_history?ts=gte.'+since+'&order=ts.desc&limit='+remain+'&offset=1000&select=ts,pos'+_srvFilter,{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},signal:ctrl.signal});
+          var d2=await r2.json();
+          if(Array.isArray(d2)) d=d.concat(d2);
+        }
+      }
+    }else{
+      var r=await fetch(SB_URL+'/rest/v1/metrics_history?ts=gte.'+since+'&order=ts.desc&limit='+limit+'&select=ts,pos'+_srvFilter,{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},signal:ctrl.signal});
+      d=await r.json();
+    }
     clearTimeout(tm);
-    var d=await r.json();
     if(Array.isArray(d)){
       _radarHistFails=0;_radarHistFreeze=0;_setRadarHistError('');
       // Reverse to chronological order (oldest first)
@@ -2277,7 +2447,7 @@ function _setRadarHistError(msg){
     });
     cv.addEventListener('mousedown',function(e){if(Date.now()-window._lastTouchT<500)return;_clickStart={x:e.clientX,y:e.clientY,t:Date.now()};radarDrag=true;_radarInteracting=true;cv.style.cursor='move';radarDragStart={x:e.clientX,z:e.clientY,px:radarPanX,pz:radarPanZ};});
     window.addEventListener('mousemove',function(e){if(!radarDrag||Date.now()-window._lastTouchT<500)return;var sc=Math.min(parseInt(cv.style.width)||600,parseInt(cv.style.height)||400)/(radarZoom*2);radarPanX=radarDragStart.px-(e.clientX-radarDragStart.x)/sc;radarPanZ=radarDragStart.pz-(e.clientY-radarDragStart.z)/sc;rFollow=false;if(!radarRaf){radarRaf=requestAnimationFrame(function(){drawRadar();radarRaf=0;});}});
-    window.addEventListener('mouseup',function(e){if(!radarDrag||Date.now()-window._lastTouchT<500)return;radarDrag=false;_radarInteracting=false;_interactEnd=Date.now();cv.style.cursor='crosshair';var dx=e.clientX-_clickStart.x,dy=e.clientY-_clickStart.y;if(Math.abs(dx)<10&&Math.abs(dy)<10&&Date.now()-_clickStart.t<400){var hit=_rHit(cv,e);if(hit){if(hit.type==='cluster'){window._clickedCluster=hit.cluster;_selectPlayer(null);}else if(hit.type==='cluster_close'){window._clickedCluster=null;}else if(hit.type==='player'){window._clickedCluster=null;_selectPlayer(hit.player.name);window._lastSelT=Date.now();}}else{window._clickedCluster=null;if(Date.now()-(window._lastSelT||0)>400)_selectPlayer(null);}}drawRadar();});
+    window.addEventListener('mouseup',function(e){if(!radarDrag||Date.now()-window._lastTouchT<500)return;radarDrag=false;_radarInteracting=false;_interactEnd=Date.now();cv.style.cursor='default';var dx=e.clientX-_clickStart.x,dy=e.clientY-_clickStart.y;if(Math.abs(dx)<10&&Math.abs(dy)<10&&Date.now()-_clickStart.t<400){var hit=_rHit(cv,e);if(hit){if(hit.type==='cluster'){window._clickedCluster=hit.cluster;_selectPlayer(null);}else if(hit.type==='cluster_close'){window._clickedCluster=null;}else if(hit.type==='player'){window._clickedCluster=null;_selectPlayer(hit.player.name);window._lastSelT=Date.now();}}else{window._clickedCluster=null;if(Date.now()-(window._lastSelT||0)>400)_selectPlayer(null);}}drawRadar();});
     cv.addEventListener('wheel',function(e){e.preventDefault();_radarInteracting=true;radarZoom=e.deltaY>0?Math.min(10000,radarZoom*1.3):Math.max(50,radarZoom/1.3);radarZoom=Math.round(radarZoom);rFollow=false;clearTimeout(window._wheelEnd);window._wheelEnd=setTimeout(function(){_radarInteracting=false;_interactEnd=Date.now();drawRadar();},200);if(!radarRaf){radarRaf=requestAnimationFrame(function(){drawRadar();radarRaf=0;});}},{passive:false});
     var rPinch={a:false,d0:0,z0:0};
     function _td(ts){var dx=ts[0].clientX-ts[1].clientX,dy=ts[0].clientY-ts[1].clientY;return Math.sqrt(dx*dx+dy*dy);}

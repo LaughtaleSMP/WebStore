@@ -323,6 +323,11 @@
         </div>
         <span class="lc-header-badge lc-badge-live"><span class="lc-live-dot"></span>LIVE</span>
         <span class="lc-header-badge lc-badge-count" id="lc-count">0</span>
+        <button class="lc-notif-btn" id="lc-notif-btn" title="Aktifkan Notifikasi HP/PC" aria-label="Toggle notifications" style="background:none;border:none;color:var(--mute);cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;transition:color .2s, transform .2s, filter .2s;outline:none;margin-right:2px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13" id="lc-bell-icon">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
+          </svg>
+        </button>
         <button class="lc-fullscreen-btn" id="lc-fullscreen-btn" title="Fullscreen" aria-label="Fullscreen chat">
           <svg id="lc-fs-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
             stroke-linecap="round">
@@ -950,7 +955,7 @@
         <div
           style="position:relative;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;background:#080c08"
           id="radar-wrap">
-          <canvas id="radar-canvas" height="360" style="cursor:crosshair;display:block" role="img"
+          <canvas id="radar-canvas" height="360" style="cursor:default;display:block" role="img"
             aria-label="Peta posisi pemain dan land claims" aria-describedby="radar-a11y"></canvas>
           <div id="radar-a11y" class="sr-only" aria-live="polite" aria-atomic="true"
             style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">
@@ -1162,12 +1167,12 @@
     </div>
 
   </div>
-  <script src="js/atmo-canvas.js?v=48"></script>
-  <script src="js/monitor-page.js?v=48"></script>
-  <script src="js/monitor-forecast.js?v=48"></script>
-  <script src="js/livechat.js?v=48"></script>
-  <script src="js/page-nav.js?v=48"></script>
-  <script src="js/auto-refresh.js?v=48"></script>
+  <script src="js/atmo-canvas.js?v=59"></script>
+  <script src="js/monitor-page.js?v=59"></script>
+  <script src="js/monitor-forecast.js?v=59"></script>
+  <script src="js/livechat.js?v=59"></script>
+  <script src="js/page-nav.js?v=59"></script>
+  <script src="js/auto-refresh.js?v=59"></script>
 </body>
 
 </html>
