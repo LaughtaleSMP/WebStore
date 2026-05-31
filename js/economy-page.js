@@ -2615,8 +2615,17 @@
       var totalN = _candles.length + (_liveCandle ? 1 : 0);
       if (!totalN) return -1;
       var rect = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-      var sc = cv.width / dpr / rect.width;
-      var sx = (clientX - rect.left) * sc, n = totalN;
+      // Canvas is inside a scrollable container — clientX is viewport-relative.
+      // We must add scrollLeft to translate into the canvas's internal coordinate space,
+      // then scale by (canvas logical width / CSS display width) to account for DPR.
+      var cssW = rect.width || scrollEl.clientWidth || 600;
+      var logicalW = cv.width / dpr;  // canvas logical (CSS) pixel width
+      var sc = logicalW > 0 ? (logicalW / cssW) : 1;
+      // offsetX in canvas CSS-pixels = (clientX - scrollEl bounding left) + scrollEl.scrollLeft
+      var scrollRect = scrollEl.getBoundingClientRect();
+      var offsetInScroll = (clientX - scrollRect.left) + scrollEl.scrollLeft;
+      var sx = offsetInScroll * sc;
+      var n = totalN;
       var pad_l = 10, pad_r = 64;
       var bw = Math.max(4, Math.round(_candleW * _zoomLevel)); if (bw > 48) bw = 48;
       var gap = Math.max(2, Math.round(_candleGap * _zoomLevel));

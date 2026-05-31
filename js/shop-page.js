@@ -816,13 +816,18 @@
 
   /* ── Gallery ── */
   function buildGallery(imgs) {
-    return `<div class="sp-gallery" id="sp-gallery">
-      ${imgs.map((img, i) => {
-        const url = _imgUrl(img);
-        const title = _imgTitle(img);
-        const isGif = url.toLowerCase().endsWith('.gif');
-        return `<div style="display:${i===0?'block':'none'}" data-idx="${i}"><img src="${esc(url)}" alt="${esc(title || 'Foto '+(i+1))}" ${isGif ? '' : 'loading="lazy"'} style="width:100%;display:block">${title ? `<div style="text-align:center;padding:6px 10px;font-size:.72rem;color:var(--sp-muted);font-weight:600;background:var(--sp-bg2)">${esc(title)}</div>` : ''}</div>`;
-      }).join('')}
+    return `<div class="sp-gallery-wrapper">
+      <div class="sp-gallery" id="sp-gallery">
+        ${imgs.map((img, i) => {
+          const url = _imgUrl(img);
+          const title = _imgTitle(img);
+          const isGif = url.toLowerCase().endsWith('.gif');
+          return `<div class="sp-gallery-slide" data-idx="${i}">
+            <img src="${esc(url)}" alt="${esc(title || 'Foto '+(i+1))}" ${isGif ? '' : 'loading="lazy"'} style="width:100%;display:block">
+            ${title ? `<div class="sp-gallery-title">${esc(title)}</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
       ${imgs.length > 1 ? `
         <button class="sp-gallery-arrow left" onclick="window._spSlide(-1)">‹</button>
         <button class="sp-gallery-arrow right" onclick="window._spSlide(1)">›</button>
@@ -835,29 +840,43 @@
 
   function setupGallery(imgs) {
     modalSlide = 0;
+    const gallery = document.getElementById('sp-gallery');
+    if (!gallery) return;
+
+    // Listen to touch scroll events to automatically update the active dot
+    gallery.addEventListener('scroll', () => {
+      const slideWidth = gallery.clientWidth;
+      if (slideWidth <= 0) return;
+      const index = Math.round(gallery.scrollLeft / slideWidth);
+      if (index !== modalSlide) {
+        modalSlide = index;
+        const dots = gallery.parentElement.querySelectorAll('.sp-gallery-dot');
+        dots.forEach((d, i) => d.classList.toggle('active', i === modalSlide));
+      }
+    }, { passive: true });
   }
 
   window._spSlide = function(dir) {
     const gallery = document.getElementById('sp-gallery');
     if (!gallery) return;
-    const slides = gallery.querySelectorAll('[data-idx]');
+    const slides = gallery.querySelectorAll('.sp-gallery-slide');
     if (!slides.length) return;
     modalSlide = (modalSlide + dir + slides.length) % slides.length;
-    showSlide(gallery, slides);
+    gallery.scrollTo({
+      left: modalSlide * gallery.clientWidth,
+      behavior: 'smooth'
+    });
   };
 
   window._spGo = function(idx) {
     const gallery = document.getElementById('sp-gallery');
     if (!gallery) return;
     modalSlide = idx;
-    showSlide(gallery, gallery.querySelectorAll('[data-idx]'));
+    gallery.scrollTo({
+      left: modalSlide * gallery.clientWidth,
+      behavior: 'smooth'
+    });
   };
-
-  function showSlide(gallery, allSlides) {
-    const slides = gallery.querySelectorAll('[data-idx]');
-    slides.forEach((s, i) => s.style.display = i === modalSlide ? 'block' : 'none');
-    gallery.querySelectorAll('.sp-gallery-dot').forEach((d, i) => d.classList.toggle('active', i === modalSlide));
-  }
 
   function badgeSpan(item) {
     const c = BC[item.badgeColor] || BC[''];

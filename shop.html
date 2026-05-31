@@ -198,11 +198,28 @@ body { background: var(--sp-bg); color: var(--sp-text); font-family:'Nunito',san
 .sp-modal-close:hover { color:var(--sp-text); border-color:var(--sp-red); }
 
 /* Modal gallery */
-.sp-gallery { position:relative; background:#080c12; }
-.sp-gallery img, .sp-gallery video { width:100%; display:block; max-height:360px; object-fit:contain; }
+.sp-gallery-wrapper {
+  position:relative; background:#080c12; overflow:hidden;
+}
+.sp-gallery {
+  display:flex; overflow-x:auto; scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  background:#080c12;
+}
+.sp-gallery::-webkit-scrollbar { display:none; }
+.sp-gallery-slide {
+  flex:0 0 100%; width:100%; scroll-snap-align:start; position:relative;
+}
+.sp-gallery-slide img, .sp-gallery-slide video {
+  width:100%; display:block; max-height:360px; object-fit:contain;
+}
+.sp-gallery-title {
+  text-align:center; padding:6px 10px; font-size:.72rem;
+  color:var(--sp-muted); font-weight:600; background:var(--sp-bg2);
+}
 .sp-gallery-nav {
   position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
-  display:flex; gap:6px;
+  display:flex; gap:6px; z-index:4;
 }
 .sp-gallery-dot {
   width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.3);
@@ -215,6 +232,7 @@ body { background: var(--sp-bg); color: var(--sp-text); font-family:'Nunito',san
   color:#fff; border-radius:8px; width:36px; height:36px;
   font-size:1.1rem; cursor:pointer; display:flex;
   align-items:center; justify-content:center; transition:all .15s;
+  z-index:4;
 }
 .sp-gallery-arrow:hover { background:var(--sp-purple); border-color:var(--sp-purple); }
 .sp-gallery-arrow.left { left:10px; }
