@@ -114,7 +114,7 @@
           ${navHtml}
           ${imgList[0].link ? `<a href="${escHtml(imgList[0].link)}" target="_blank" rel="noopener" id="bp-img-link" style="display:block;line-height:0">` : '<div id="bp-img-link" style="display:block;line-height:0">'}
           <img src="${escHtml(imgList[0].url)}" alt="${escHtml(cfg.title || 'Banner')}" class="bp-img" loading="lazy"
-            onerror="this.closest('.bp-modal').style.display='none'">
+            onerror="window._bpClose()">
           ${imgList[0].link ? '</a>' : '</div>'}
           ${dotsHtml}
         </div>
@@ -130,30 +130,41 @@
     `;
 
     document.body.appendChild(overlay);
+    document.documentElement.classList.add('no-scroll');
+    document.body.classList.add('no-scroll');
 
     // Carousel logic
     if (multi) {
       const img = overlay.querySelector('.bp-img');
-      const imgLink = overlay.querySelector('#bp-img-link');
       const dots = overlay.querySelectorAll('.bp-dot');
       const goTo = (idx) => {
         currentIdx = ((idx % imgList.length) + imgList.length) % imgList.length;
         const cur = imgList[currentIdx];
         img.src = cur.url;
-        // Update link
-        if (imgLink) {
+        // Update link dynamically using current active container in DOM
+        const currentLinkContainer = overlay.querySelector('#bp-img-link');
+        if (currentLinkContainer) {
           if (cur.link) {
-            if (imgLink.tagName === 'A') { imgLink.href = cur.link; }
-            else {
-              const a = document.createElement('a'); a.id = 'bp-img-link';
-              a.href = cur.link; a.target = '_blank'; a.rel = 'noopener';
+            if (currentLinkContainer.tagName === 'A') {
+              currentLinkContainer.href = cur.link;
+            } else {
+              const a = document.createElement('a');
+              a.id = 'bp-img-link';
+              a.href = cur.link;
+              a.target = '_blank';
+              a.rel = 'noopener';
               a.style.cssText = 'display:block;line-height:0';
-              imgLink.replaceWith(a); a.appendChild(img);
+              currentLinkContainer.replaceWith(a);
+              a.appendChild(img);
             }
-          } else if (imgLink.tagName === 'A') {
-            const d = document.createElement('div'); d.id = 'bp-img-link';
-            d.style.cssText = 'display:block;line-height:0';
-            imgLink.replaceWith(d); d.appendChild(img);
+          } else {
+            if (currentLinkContainer.tagName === 'A') {
+              const d = document.createElement('div');
+              d.id = 'bp-img-link';
+              d.style.cssText = 'display:block;line-height:0';
+              currentLinkContainer.replaceWith(d);
+              d.appendChild(img);
+            }
           }
         }
         dots.forEach((d, i) => d.classList.toggle('active', i === currentIdx));
@@ -173,14 +184,13 @@
       requestAnimationFrame(() => { overlay.classList.add('bp-visible'); });
     });
 
-    overlay.querySelector('.bp-backdrop').addEventListener('click', closePopup);
-
     function onKey(e) {
-      if (e.key === 'Escape') { closePopup(); document.removeEventListener('keydown', onKey); }
+      if (e.key === 'Escape') { closePopup(); }
       if (multi && e.key === 'ArrowLeft') overlay.querySelector('.bp-nav-prev')?.click();
       if (multi && e.key === 'ArrowRight') overlay.querySelector('.bp-nav-next')?.click();
     }
     document.addEventListener('keydown', onKey);
+    overlay._onKey = onKey;
 
     const closeBtn = overlay.querySelector('.bp-close');
     if (closeBtn) setTimeout(() => closeBtn.focus(), 150);
@@ -191,8 +201,11 @@
     const overlay = document.getElementById('banner-popup-overlay');
     if (!overlay) return;
     if (overlay._autoTimer) clearInterval(overlay._autoTimer);
+    if (overlay._onKey) document.removeEventListener('keydown', overlay._onKey);
     overlay.classList.remove('bp-visible');
     overlay.classList.add('bp-closing');
+    document.documentElement.classList.remove('no-scroll');
+    document.body.classList.remove('no-scroll');
     setTimeout(() => { overlay.remove(); }, 320);
   }
 
@@ -228,7 +241,7 @@
         background: rgba(0, 0, 0, 0.75);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
-        cursor: pointer;
+        cursor: default;
       }
       .bp-modal {
         position: relative;

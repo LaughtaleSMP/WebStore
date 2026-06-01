@@ -225,7 +225,10 @@ nav::after {
 .nav-hamburger.open span:nth-child(3) { width: 18px; transform: translateY(-6px) rotate(-45deg); }
 
 /* ── Scroll lock ── */
-body.no-scroll { overflow-y: hidden !important; }
+body.no-scroll, html.no-scroll, html:has(body.no-scroll) {
+  overflow: hidden !important;
+  height: 100% !important;
+}
 
 /* ── Mobile nav overlay ── */
 .nav-overlay {

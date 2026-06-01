@@ -1704,13 +1704,34 @@ section {
     align-items: center;
     justify-content: center;
     transition:
-        opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1),
-        transform 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+        opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
 #loading-screen.fade-out {
     opacity: 0;
-    transform: scale(1.03);
+    transform: scale(0.96);
+    filter: blur(16px);
+    -webkit-filter: blur(16px);
     pointer-events: none;
+}
+
+/* Cinematic camera aperture reveal for page entry when loading screen dismisses */
+#main-nav, main {
+    filter: blur(12px);
+    transform: scale(0.985);
+    opacity: 0;
+    transition:
+        filter 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+        opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: filter, transform, opacity;
+}
+
+html:not(.no-scroll) body:not(.no-scroll) #main-nav,
+html:not(.no-scroll) body:not(.no-scroll) main {
+    filter: blur(0);
+    transform: scale(1);
+    opacity: 1;
 }
 
 /* CSS-only radial glow — no image, no heavy filter */
@@ -1845,9 +1866,8 @@ section {
         rgba(168, 85, 247, 0.5) 100%
     );
     background-size: 200% auto;
-    animation:
-        barFill 1.6s cubic-bezier(0.4, 0, 0.2, 1) 0.6s forwards,
-        barShimmer 1.4s linear 0.6s infinite;
+    transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: barShimmer 1.4s linear infinite;
     box-shadow:
         0 0 6px rgba(255, 255, 255, 0.9),
         0 0 16px rgba(192, 132, 252, 1),
