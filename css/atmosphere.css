@@ -343,16 +343,6 @@
 .atmo-card.phase-sore  .atmo-badge{color:#fb923c}
 .atmo-card.phase-malam .atmo-badge{color:#a78bfa}
 
-/* Mobile: simplify animations — kurangi GPU load */
-@media(max-width:768px){
-  .atmo-card.has-fog .atmo-fog{animation:none}
-  .atmo-card.has-fog .atmo-celest .cel-ground-fog{animation-duration:30s}
-  .atmo-card.wx-rain .atmo-rain,.atmo-card.wx-thunder .atmo-rain{animation-duration:1.2s}
-  .atmo-card.wx-rain .atmo-rain::before,.atmo-card.wx-thunder .atmo-rain::before{animation-duration:2.4s}
-  .atmo-card.wx-rain .atmo-rain::after,.atmo-card.wx-thunder .atmo-rain::after{animation:none;opacity:.7}
-  .atmo-stars::before{animation-duration:7s}
-  .atmo-stars::after{animation-duration:11s}
-}
 
 /* Reduced motion: kill animations, keep static visuals */
 @media(prefers-reduced-motion:reduce){
