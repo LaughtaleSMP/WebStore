@@ -256,7 +256,54 @@ window._checkRadarNotifications = function(newPlayers) {
   }
 };
 
+function _checkAssetVersion(remoteVersion) {
+  var localVersion = '62'; // Fallback default
+  try {
+    var scr = document.querySelector('script[src*="monitor-page.js"]');
+    if (scr) {
+      var match = scr.src.match(/[?&]v=([^&]+)/);
+      if (match) localVersion = match[1];
+    }
+  } catch(e) {}
+  
+  if (remoteVersion && String(remoteVersion).trim() !== String(localVersion).trim()) {
+    var btn = $('update-assets-btn');
+    if (btn && !btn.querySelector('.update-notif-dot')) {
+      btn.style.position = 'relative';
+      btn.style.boxShadow = '0 0 15px rgba(168, 85, 247, 0.6), inset 0 0 8px rgba(168, 85, 247, 0.4)';
+      btn.style.borderColor = '#c084fc';
+      btn.style.animation = 'bellPulse 2.2s infinite ease-in-out';
+      
+      var dot = document.createElement('span');
+      dot.className = 'update-notif-dot';
+      dot.style.position = 'absolute';
+      dot.style.top = '-4px';
+      dot.style.right = '-4px';
+      dot.style.width = '8px';
+      dot.style.height = '8px';
+      dot.style.borderRadius = '50%';
+      dot.style.background = '#f43f5e'; // Vibrant red dot
+      dot.style.boxShadow = '0 0 8px #f43f5e';
+      dot.style.border = '1.5px solid #09090f';
+      btn.appendChild(dot);
+      
+      btn.title = 'Versi baru (' + remoteVersion + ') tersedia! Klik untuk memperbarui aset.';
+    }
+  }
+}
+
 async function loadConfig(){
+  // Check asset version from Supabase site_config
+  try {
+    var rVer = await fetch(SB_URL + '/rest/v1/site_config?key=eq.monitor_asset_version&select=value', {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+    });
+    var dVer = await rVer.json();
+    if (dVer && dVer[0] && dVer[0].value) {
+      _checkAssetVersion(dVer[0].value);
+    }
+  } catch(e) {}
+
   // Try loading multi-server config first
   try{
     var r=await fetch(SB_URL+'/rest/v1/site_config?key=eq.servers&select=value',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
