@@ -522,37 +522,37 @@ body.lc-fs-active #pn { display: none !important; }
   50% { transform: scale(1.08); }
 }
 
-/* ── Custom Chat Backgrounds (GIF Version) ── */
+/* ── Custom Chat Backgrounds (Performance-Optimized Premium Design) ── */
 .lc-bg-galaxy {
   position: relative;
-  /* Dark overlay for text readability + The actual Galaxy GIF */
-  background: linear-gradient(rgba(10,5,25,0.4), rgba(20,5,40,0.6)), url('../assets/galaxy.gif') center/cover no-repeat;
+  /* Cosmic Glassmorphism: Multi-layer high-fidelity gradient */
+  background: linear-gradient(135deg, rgba(30,10,60,0.55) 0%, rgba(15,10,35,0.85) 60%, rgba(56,189,248,0.06) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.22);
   border-radius: 4px;
   overflow: hidden;
-  /* EPIC AURA: Ominous Menacing Void Purple Glow */
+  /* Balanced ambient shadows (no performance penalty) */
   box-shadow: 
-    0 0 5px rgba(147,51,234,0.6), 
-    0 0 15px rgba(88,28,135,0.7), 
-    inset 0 0 20px rgba(10,0,20,0.8);
+    0 4px 16px rgba(15, 10, 30, 0.45), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.08), 
+    inset 0 0 12px rgba(168, 85, 247, 0.12);
   margin-top: 4px;
   margin-bottom: 4px;
 }
-/* Crisp multi-color left border with intense inward neon glow */
+/* Crisp multi-color left border without heavy box-shadow overlays */
 .lc-bg-galaxy::before {
   content: '';
   position: absolute;
   top: 0; left: 0; bottom: 0; width: 3px;
-  background: linear-gradient(180deg, #7e22ce, #4c1d95, #2e1065, #000000);
-  box-shadow: 3px 0 15px rgba(88,28,135,0.9), 5px 0 30px rgba(0,0,0,0.8); 
+  background: linear-gradient(180deg, #c084fc, #9333ea, #6366f1);
 }
-/* GPU-Accelerated Shimmer / Foil Sweep */
+/* Highly optimized slow GPU Shimmer / Foil Sweep */
 .lc-bg-galaxy::after {
   content: '';
   position: absolute;
-  top: 0; left: 0; bottom: 0; width: 150%;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 45%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 55%, transparent 100%);
-  transform: translateX(-100%) skewX(-15deg);
-  animation: lcMsgShimmerGPU 5s infinite ease-in-out;
+  top: 0; left: 0; bottom: 0; width: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.02) 40%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.02) 60%, transparent 100%);
+  transform: translateX(-100%) skewX(-20deg);
+  animation: lcMsgShimmerGPU 8s infinite cubic-bezier(0.25, 1, 0.5, 1);
   pointer-events: none;
   will-change: transform; /* Forces GPU hardware acceleration */
 }
@@ -561,8 +561,8 @@ body.light .lc-bg-galaxy {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
 }
 @keyframes lcMsgShimmerGPU {
-  0%, 20% { transform: translateX(-100%) skewX(-15deg); }
-  80%, 100% { transform: translateX(100%) skewX(-15deg); }
+  0%, 25% { transform: translateX(-100%) skewX(-20deg); }
+  75%, 100% { transform: translateX(100%) skewX(-20deg); }
 }
 
 /* ── System Messages (join/leave/death) ── */
