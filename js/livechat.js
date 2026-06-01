@@ -222,6 +222,8 @@
     if (_atBottom) {
       _unseenCount = 0;
       if (scrollWrap) scrollWrap.style.display = 'none';
+      // [PERF] Remove pulse class — stops lcBadgePulse animation immediately
+      if (scrollNew) scrollNew.classList.remove('has-unseen');
     } else {
       _showScrollBtn();
     }
@@ -229,14 +231,16 @@
   function _showScrollBtn() {
     if (!scrollWrap) return;
     scrollWrap.style.display = '';
-    // Badge: only show when there are unseen messages
+    // [PERF] Toggle .has-unseen class — animation only runs when messages are actually unread
     if (scrollNew) {
       if (_unseenCount > 0) {
         var num = _unseenCount > 99 ? '99+' : String(_unseenCount);
         scrollNew.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" style="display:block;"><circle cx="12" cy="12" r="11" fill="#a855f7" stroke="rgba(0,0,0,0.5)" stroke-width="2"/><text x="12" y="12" dy=".35em" text-anchor="middle" fill="#ffffff" font-family="system-ui, sans-serif" font-size="' + (num.length > 2 ? '9px' : '13px') + '" font-weight="800">' + num + '</text></svg>';
         scrollNew.style.display = '';
+        scrollNew.classList.add('has-unseen');    // ← starts pulse animation
       } else {
         scrollNew.style.display = 'none';
+        scrollNew.classList.remove('has-unseen'); // ← stops pulse animation
       }
     }
   }
@@ -250,7 +254,10 @@
   if (scrollBtn) {
     scrollBtn.addEventListener('click', function () {
       _unseenCount = 0;
-      if (scrollNew) scrollNew.style.display = 'none';
+      if (scrollNew) {
+        scrollNew.style.display = 'none';
+        scrollNew.classList.remove('has-unseen'); // [PERF] kill pulse on dismiss
+      }
       msgList.scrollTo({ top: msgList.scrollHeight, behavior: 'smooth' });
       if (scrollWrap) scrollWrap.style.display = 'none';
     });
@@ -972,6 +979,28 @@
   var SVG_LEAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
   var SVG_DEATH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="10" r="8"/><circle cx="9" cy="9" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.5" fill="currentColor" stroke="none"/><path d="M8 14h8"/><path d="M10 14v3M14 14v3M12 14v3"/></svg>';
 
+  // [PERF] Inject a single shared SVG <defs> block once at init.
+  // All supporter diamond badges reference this ONE gradient id 'lc-grad-diamond'
+  // instead of creating a unique gradient per message (which caused DOM bloat & memory leaks).
+  (function _injectSharedDefs() {
+    if (document.getElementById('lc-shared-defs')) return;
+    var svgDefs = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svgDefs.setAttribute('id', 'lc-shared-defs');
+    svgDefs.setAttribute('aria-hidden', 'true');
+    svgDefs.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;pointer-events:none';
+    svgDefs.innerHTML = '<defs><linearGradient id="lc-grad-diamond" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#38bdf8"/><stop offset="50%" stop-color="#c084fc"/><stop offset="100%" stop-color="#f472b6"/></linearGradient></defs>';
+    document.body.appendChild(svgDefs);
+  })();
+
+  // [PERF] Pre-built static badge strings — no per-message allocations
+  var _BADGE_SUPPORTER = '<span class="lc-supporter" title="Supporter (Topup)">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="url(#lc-grad-diamond)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10">'
+    + '<path d="M6 3h12l4 6-10 13L2 9z"/>'
+    + '<path d="M6 3l6 6 6-6"/>'
+    + '<path d="M2 9h20"/>'
+    + '</svg></span>';
+  var _BADGE_VERIFIED = '<span class="lc-verified" title="Verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" width="9" height="9"><polyline points="20 6 9 17 4 12"/></svg></span>';
+
   function _getSysType(msg) {
     if (!msg) return 'death';
     if (msg.indexOf('bergabung') >= 0) return 'join';
@@ -989,26 +1018,8 @@
     var _nameKey = (m.player_name || '').toLowerCase();
     var isSupporter = _supporterNames[_nameKey] === true;
     var isVerified = _verifiedNames[_nameKey] === true;
-    var verifyBadge = '';
-    if (isSupporter) {
-      var gradId = 'lc-diag-' + Math.random().toString(36).substr(2, 9);
-      verifyBadge = '<span class="lc-supporter" title="Supporter (Topup)">' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="url(#' + gradId + ')" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="10" height="10" class="lc-diamond-svg">' +
-          '<defs>' +
-            '<linearGradient id="' + gradId + '" x1="0%" y1="0%" x2="100%" y2="100%">' +
-              '<stop offset="0%" stop-color="#38bdf8"/>' +
-              '<stop offset="50%" stop-color="#c084fc"/>' +
-              '<stop offset="100%" stop-color="#f472b6"/>' +
-            '</linearGradient>' +
-          '</defs>' +
-          '<path d="M6 3h12l4 6-10 13L2 9z"/>' +
-          '<path d="M6 3l6 6 6-6"/>' +
-          '<path d="M2 9h20"/>' +
-        '</svg>' +
-      '</span>';
-    } else if (isVerified) {
-      verifyBadge = '<span class="lc-verified" title="Verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" width="9" height="9"><polyline points="20 6 9 17 4 12"/></svg></span>';
-    }
+    // [PERF] Use pre-built static badge strings — references shared gradient, zero per-call allocation
+    var verifyBadge = isSupporter ? _BADGE_SUPPORTER : (isVerified ? _BADGE_VERIFIED : '');
 
     // System message (join/leave/death)
     if (m.source === 'system') {
