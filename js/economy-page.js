@@ -2614,17 +2614,13 @@
     var _hoverCalc = function(clientX) {
       var totalN = _candles.length + (_liveCandle ? 1 : 0);
       if (!totalN) return -1;
-      var rect = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-      // Canvas is inside a scrollable container — clientX is viewport-relative.
-      // We must add scrollLeft to translate into the canvas's internal coordinate space,
-      // then scale by (canvas logical width / CSS display width) to account for DPR.
-      var cssW = rect.width || scrollEl.clientWidth || 600;
-      var logicalW = cv.width / dpr;  // canvas logical (CSS) pixel width
-      var sc = logicalW > 0 ? (logicalW / cssW) : 1;
-      // offsetX in canvas CSS-pixels = (clientX - scrollEl bounding left) + scrollEl.scrollLeft
+      // clientX is in viewport CSS pixels.
+      // scrollEl.getBoundingClientRect().left gives the scroll container's viewport-left edge.
+      // scrollEl.scrollLeft gives how far the content is scrolled.
+      // Together: (clientX - scrollRect.left) + scrollEl.scrollLeft = position inside canvas CSS pixels.
+      // No DPR scaling needed — canvas logical pixels == CSS pixels (DPR only affects physical pixels).
       var scrollRect = scrollEl.getBoundingClientRect();
-      var offsetInScroll = (clientX - scrollRect.left) + scrollEl.scrollLeft;
-      var sx = offsetInScroll * sc;
+      var sx = (clientX - scrollRect.left) + scrollEl.scrollLeft;
       var n = totalN;
       var pad_l = 10, pad_r = 64;
       var bw = Math.max(4, Math.round(_candleW * _zoomLevel)); if (bw > 48) bw = 48;
