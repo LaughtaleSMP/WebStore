@@ -18,7 +18,7 @@ function fmtDate(ts){
 }
 const fmt=n=>(n||0).toLocaleString('id-ID');
 
-let allData={bank:[],auction:[],gacha:[],topup:[],discCodes:{}};
+let allData={bank:[],auction:[],gacha:[],topup:[],land:[],discCodes:{}};
 let activeTab='bank';
 
 const ICONS={
@@ -26,6 +26,7 @@ const ICONS={
   auction:`<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 7.5l3-3 4 4-3 3"/></svg>`,
   gacha:`<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M6 3l6 6 6-6"/><path d="M2 9h20"/></svg>`,
   topup:`<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
+  land:`<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`
 };
 
 const RARITY_COLORS={
@@ -243,11 +244,33 @@ function renderTopup(logs){
   }).join('');
 }
 
+function renderLand(logs){
+  const el=$('log-content');
+  if(!logs.length){el.innerHTML='<div class="emp">Belum ada log transaksi land</div>';return}
+  const sorted=[...logs].sort((a,b)=>new Date(b.ts||0).getTime()-new Date(a.ts||0).getTime());
+  el.innerHTML=sorted.map((h,i)=>{
+    const action=h.action||'?';
+    let actLabel='',iconCls='land',amtHtml='';
+    if(action==='buy'){actLabel='Beli Land';amtHtml=`<div class="log-amount coin">-${fmt(Math.abs(h.coin))} ⛃${h.gem?`<br>-${fmt(Math.abs(h.gem))} ✦`:''}</div>`;}
+    else if(action==='sell'){actLabel='Hapus Land';amtHtml=`<div class="log-amount coin" style="color:var(--green)">+${fmt(h.coin)} ⛃</div>`;}
+    else if(action==='expand'){actLabel='Expand Land';amtHtml=`<div class="log-amount coin">-${fmt(Math.abs(h.coin))} ⛃${h.gem?`<br>-${fmt(Math.abs(h.gem))} ✦`:''}</div>`;}
+    else if(action==='transfer'){actLabel='Transfer Land';amtHtml=`<div class="log-amount">Gratis</div>`;}
+    return`<div class="log-row" style="animation:fs .3s ${i*30}ms ease both">
+      <div class="log-icon ${iconCls}">${ICONS.land}</div>
+      <div class="log-body">
+        <div class="log-main"><span class="pn">${esc(h.player||'?')}</span> <span class="badge land">${actLabel}</span></div>
+        <div class="log-detail">${esc(h.detail||'')} · <span class="log-time">${timeAgo(new Date(h.ts).getTime())}</span></div>
+      </div>
+      ${amtHtml}
+    </div>`;
+  }).join('');
+}
+
 function renderActive(){
-  const renderers={bank:renderBank,auction:renderAuction,gacha:renderGacha,topup:renderTopup};
+  const renderers={bank:renderBank,auction:renderAuction,gacha:renderGacha,topup:renderTopup,land:renderLand};
   (renderers[activeTab]||renderBank)(allData[activeTab]||[]);
   const meta=$('log-meta');
-  const counts={bank:allData.bank.length,auction:allData.auction.length,gacha:allData.gacha.length,topup:allData.topup.length};
+  const counts={bank:allData.bank.length,auction:allData.auction.length,gacha:allData.gacha.length,topup:allData.topup.length,land:allData.land.length};
   meta.textContent=`${counts[activeTab]} log · Sync: ${allData.syncAge||'—'}`;
 }
 
@@ -296,7 +319,7 @@ async function fetchLogs(){
   const timeoutId=setTimeout(()=>_currentAbort?.abort(),12000);
 
   try{
-    const r=await fetch(`${SB}/rest/v1/leaderboard_sync?id=eq.current&select=synced_at,bank_log,auction_log,gacha_log,topup_log,disc_codes`,
+    const r=await fetch(`${SB}/rest/v1/leaderboard_sync?id=eq.current&select=synced_at,bank_log,auction_log,gacha_log,topup_log,disc_codes,gacha_lb`,
       {headers:{apikey:SK,Authorization:`Bearer ${SK}`},signal:_currentAbort.signal});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const d=await r.json();
@@ -307,6 +330,8 @@ async function fetchLogs(){
       allData.auction=_safeParse(row.auction_log,[]);
       allData.gacha=_safeParse(row.gacha_log,[]);
       allData.topup=_safeParse(row.topup_log,[]);
+      const lbParsed=_safeParse(row.gacha_lb,{});
+      allData.land=_safeParse(lbParsed?.land_log,[]);
       allData.discCodes=_safeParse(row.disc_codes,{});
       if(row.synced_at){
         const el=Math.round((Date.now()-new Date(row.synced_at).getTime())/60000);

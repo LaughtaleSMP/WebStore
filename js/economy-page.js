@@ -17,7 +17,8 @@
     pt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
     eq: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>',
     add: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>',
-    deduct: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>'
+    deduct: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>',
+    land: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>'
   };
 
   // ── localStorage cache helpers ──
@@ -78,10 +79,12 @@
       var r = await fetch(SB_URL + '/rest/v1/leaderboard_sync?id=eq.current&select=gacha_lb,bank_log,auction_log,gacha_log,topup_log,disc_codes,synced_at', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
       var d = await r.json(); if (!d || !d[0]) return;
       var row = d[0];
+      var lbParsed = safeParse(row.gacha_lb, {});
       _data = {
-        lb: safeParse(row.gacha_lb, {}),
+        lb: lbParsed,
         bank: safeParse(row.bank_log, []), auction: safeParse(row.auction_log, []),
         gacha: safeParse(row.gacha_log, []), topup: safeParse(row.topup_log, []),
+        land: safeParse(lbParsed.land_log, []),
         disc: safeParse(row.disc_codes, {}), synced: row.synced_at
       };
       _cSet(CACHE_KEY, _data);
@@ -158,6 +161,9 @@
       { k: 'auction_fee', label: 'Auction Fee' }, { k: 'wealth_tax', label: 'Wealth Tax' },
       { k: 'demurrage', label: 'Demurrage' },
       { k: 'land_buy', label: 'Land Buy' }, { k: 'land_ppn', label: 'Land PPN' },
+      { k: 'land_buy_gem', label: 'Land (Gem)' },
+      { k: 'land_expand', label: 'Land Expand' }, { k: 'land_expand_ppn', label: 'Expand PPN' },
+      { k: 'land_expand_gem', label: 'Expand (Gem)' },
       { k: 'store_sink', label: 'Store Buy' }
     ];
     if (hasFlow) {
@@ -859,7 +865,7 @@
   }
 
   function renderLogs() {
-    var renderers = { bank: renderBank, auction: renderAuction, gacha: renderGachaLog, topup: renderTopup };
+    var renderers = { bank: renderBank, auction: renderAuction, gacha: renderGachaLog, topup: renderTopup, land: renderLand };
     (renderers[_activeTab] || renderBank)(_data[_activeTab] || []);
     var meta = $('log-meta'); if (meta) meta.textContent = (_data[_activeTab] || []).length + ' log';
   }
@@ -870,6 +876,28 @@
     el.innerHTML = sorted.map(function (h, i) {
       var tax = (h.tax || 0) > 0 ? ' <span class="tx">pajak ' + fmt(h.tax) + '</span>' : '';
       return '<div class="log-row" style="animation:fs .3s ' + i * 30 + 'ms ease both"><div class="log-icon sent">' + _ic.sent + '</div><div class="log-body"><div class="log-main"><span class="pn">' + esc(h.from || '?') + '</span> <span class="arrow">→</span> <span class="pn">' + esc(h.to || '?') + '</span></div><div class="log-detail">' + (h.note ? '"' + esc(h.note) + '" · ' : '') + '<span class="log-time">' + timeAgo(h.ts) + '</span></div></div><div class="log-amount coin">+' + fmt(h.amount) + ' Coin' + tax + '</div></div>';
+    }).join('');
+  }
+
+  function renderLand(logs) {
+    var el = $('log-content');
+    if (!logs.length) { el.innerHTML = '<div class="emp">Belum ada log transaksi land</div>'; return; }
+    var sorted = logs.slice().sort(function (a, b) { return new Date(b.ts || 0).getTime() - new Date(a.ts || 0).getTime(); });
+    el.innerHTML = sorted.map(function (h, i) {
+      var action = h.action || '?';
+      var actLabel = '', iconCls = 'land', amtHtml = '';
+      if (action === 'buy') { actLabel = 'Beli Land'; amtHtml = '<div class="log-amount coin">-' + fmt(Math.abs(h.coin)) + ' ⛃' + (h.gem ? '<br>-' + fmt(Math.abs(h.gem)) + ' ✦' : '') + '</div>'; }
+      else if (action === 'sell') { actLabel = 'Hapus Land'; amtHtml = '<div class="log-amount coin" style="color:var(--green)">+' + fmt(h.coin) + ' ⛃</div>'; }
+      else if (action === 'expand') { actLabel = 'Expand Land'; amtHtml = '<div class="log-amount coin">-' + fmt(Math.abs(h.coin)) + ' ⛃' + (h.gem ? '<br>-' + fmt(Math.abs(h.gem)) + ' ✦' : '') + '</div>'; }
+      else if (action === 'transfer') { actLabel = 'Transfer Land'; amtHtml = '<div class="log-amount">Gratis</div>'; }
+      return '<div class="log-row" style="animation:fs .3s ' + i * 30 + 'ms ease both">' +
+        '<div class="log-icon ' + iconCls + '">' + _ic.land + '</div>' +
+        '<div class="log-body">' +
+          '<div class="log-main"><span class="pn">' + esc(h.player || '?') + '</span> <span class="badge land">' + actLabel + '</span></div>' +
+          '<div class="log-detail">' + esc(h.detail || '') + ' · <span class="log-time">' + timeAgo(new Date(h.ts).getTime()) + '</span></div>' +
+        '</div>' +
+        amtHtml +
+      '</div>';
     }).join('');
   }
 
@@ -1892,6 +1920,134 @@
     el.innerHTML = '<span style="color:var(--mute);padding:3px 8px;border-radius:5px;background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.18);font-size:.36rem;font-weight:600">' + ts + '</span> ' + mkLbl('O', fmtN(c.o), 'var(--dim)') + ' ' + mkLbl('H', fmtN(c.h), CU) + ' ' + mkLbl('L', fmtN(c.l), CD) + ' ' + mkLbl('C', fmtN(c.c), 'var(--text)') + ' <span style="color:' + clr + ';padding:3px 10px;border-radius:5px;background:' + (d >= 0 ? 'rgba(38,166,154,0.1)' : 'rgba(239,83,80,0.1)') + ';border:1px solid ' + (d >= 0 ? 'rgba(38,166,154,0.2)' : 'rgba(239,83,80,0.2)') + ';font-weight:700">' + sg + fmtN(Math.abs(d)) + ' <span style="font-size:.34rem;opacity:.8">(' + sg + pct + '%)</span></span> <span style="padding:3px 8px;border-radius:5px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);color:var(--mute);font-size:.34rem">σ ' + volPct + '%</span>';
   }
 
+  function _showCandleDetails(c) {
+    if (!c) return;
+    var bms = _bucketMs();
+    var tStart = c.t;
+    var tEnd = c.t + bms;
+    
+    var flow = { mob_kill: 0, topup: 0, topup_first_bonus: 0, gacha_refund: 0, pvp_refund: 0, weekly_reward: 0, first_sale: 0, land_refund: 0, tax_distribute: 0, ubi_injection: 0, gacha_cost: 0, bank_tax: 0, mob_penalty: 0, pvp_penalty: 0, auction_fee: 0, wealth_tax: 0, demurrage: 0, land_buy: 0, land_ppn: 0, store_sink: 0 };
+    
+    var snaps = 0;
+    for (var i = 0; i < _trendData.length; i++) {
+      var row = _trendData[i];
+      var ts = new Date(row.ts).getTime();
+      if (ts >= tStart && ts < tEnd) {
+        var cf = row.coin_flow;
+        var p = typeof cf === 'string' ? safeParse(cf, null) : cf;
+        if (p) {
+          for (var k in flow) { if (p[k]) flow[k] += p[k]; }
+        }
+        snaps++;
+      }
+    }
+    
+    var sources = [
+      { k: 'mob_kill', label: 'Mob Kill' }, { k: 'topup', label: 'Topup' },
+      { k: 'topup_first_bonus', label: '1st Topup Bonus' },
+      { k: 'gacha_refund', label: 'Gacha Refund' }, { k: 'pvp_refund', label: 'PvP Refund' },
+      { k: 'weekly_reward', label: 'Weekly LB' }, { k: 'first_sale', label: '1st Sale' },
+      { k: 'land_refund', label: 'Land Refund' }, { k: 'tax_distribute', label: 'Tax Distrib' },
+      { k: 'ubi_injection', label: 'UBI Pemain Baru' }
+    ];
+    var sinks = [
+      { k: 'gacha_cost', label: 'Gacha Cost' }, { k: 'bank_tax', label: 'Bank Tax' },
+      { k: 'mob_penalty', label: 'Anti-Stack' }, { k: 'pvp_penalty', label: 'PvP Penalty' },
+      { k: 'auction_fee', label: 'Auction Fee' }, { k: 'wealth_tax', label: 'Wealth Tax' },
+      { k: 'demurrage', label: 'Demurrage' },
+      { k: 'land_buy', label: 'Land Buy' }, { k: 'land_ppn', label: 'Land PPN' },
+      { k: 'land_buy_gem', label: 'Land (Gem)' },
+      { k: 'land_expand', label: 'Land Expand' }, { k: 'land_expand_ppn', label: 'Expand PPN' },
+      { k: 'land_expand_gem', label: 'Expand (Gem)' },
+      { k: 'store_sink', label: 'Store Buy' }
+    ];
+    
+    var inj = 0, snk = 0;
+    var srcH = '', snkH = '';
+    
+    for (var i = 0; i < sources.length; i++) {
+      var v = flow[sources[i].k] || 0;
+      if (v > 0) {
+        inj += v;
+        srcH += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span style="color:var(--mute)">' + sources[i].label + '</span><span style="color:var(--green);font-weight:600">+' + fmtN(v) + '</span></div>';
+      }
+    }
+    for (var i = 0; i < sinks.length; i++) {
+      var v = flow[sinks[i].k] || 0;
+      if (v !== 0) {
+        var absV = Math.abs(v);
+        snk += absV;
+        snkH += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span style="color:var(--mute)">' + sinks[i].label + '</span><span style="color:var(--red);font-weight:600">-' + fmtN(absV) + '</span></div>';
+      }
+    }
+    
+    var net = inj - snk;
+    var priceDelta = c.c - c.o;
+    var isUp = priceDelta >= 0;
+    
+    var modal = document.createElement('div');
+    modal.id = 'candle-detail-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;animation:fs 0.2s ease';
+    
+    var tDate = new Date(c.t);
+    var tStr = tDate.getDate() + '/' + (tDate.getMonth() + 1) + ' ' + String(tDate.getHours()).padStart(2,'0') + ':' + String(tDate.getMinutes()).padStart(2,'0');
+    
+    var h = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;width:100%;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,0.5);overflow:hidden">';
+    h += '<div style="padding:16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.02)">';
+    h += '<div style="font-family:\'JetBrains Mono\',monospace">';
+    h += '<div style="font-size:.42rem;color:var(--mute);margin-bottom:4px">' + (c._live ? 'LIVE CANDLE' : tStr) + '</div>';
+    h += '<div style="font-size:.64rem;font-weight:700;color:' + (isUp ? 'var(--green)' : 'var(--red)') + '">' + (isUp ? '▲' : '▼') + ' ' + Math.abs(priceDelta).toFixed(0) + ' Koin</div>';
+    h += '</div>';
+    h += '<button id="close-cdm" style="background:none;border:none;color:var(--mute);font-size:1.2rem;cursor:pointer;padding:0 8px">&times;</button>';
+    h += '</div>';
+    
+    h += '<div style="padding:16px;max-height:60vh;overflow-y:auto">';
+    h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.38rem;margin-bottom:12px;color:var(--dim);text-align:center">Berdasarkan ' + snaps + ' snapshot data</div>';
+    
+    if (inj === 0 && snk === 0) {
+      h += '<div style="text-align:center;padding:20px;color:var(--mute);border:1px dashed var(--border);border-radius:8px">Tidak ada aliran koin tercatat pada periode ini.</div>';
+    } else {
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">';
+      h += '<div style="background:rgba(38,166,154,0.05);border:1px solid rgba(38,166,154,0.2);padding:10px;border-radius:8px;text-align:center">';
+      h += '<div style="color:var(--mute);font-size:.34rem;text-transform:uppercase;margin-bottom:4px">Total Masuk</div>';
+      h += '<div style="color:var(--green);font-size:.56rem;font-weight:700;font-family:\'JetBrains Mono\',monospace">+' + fmtN(inj) + '</div>';
+      h += '</div>';
+      h += '<div style="background:rgba(239,83,80,0.05);border:1px solid rgba(239,83,80,0.2);padding:10px;border-radius:8px;text-align:center">';
+      h += '<div style="color:var(--mute);font-size:.34rem;text-transform:uppercase;margin-bottom:4px">Total Keluar</div>';
+      h += '<div style="color:var(--red);font-size:.56rem;font-weight:700;font-family:\'JetBrains Mono\',monospace">-' + fmtN(snk) + '</div>';
+      h += '</div>';
+      h += '</div>';
+      
+      h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;font-family:\'JetBrains Mono\',monospace">';
+      h += '<span style="color:var(--text);font-weight:600;font-size:.42rem">Net Flow</span>';
+      h += '<span style="font-size:.52rem;font-weight:700;color:' + (net >= 0 ? 'var(--gold)' : 'var(--red)') + '">' + (net >= 0 ? '+' : '') + fmtN(net) + '</span>';
+      h += '</div>';
+      
+      if (srcH) {
+        h += '<div style="font-size:.42rem;color:var(--text);font-weight:600;margin-bottom:8px">Sumber Pemasukan</div>';
+        h += '<div style="margin-bottom:16px;font-family:\'JetBrains Mono\',monospace;font-size:.4rem">' + srcH + '</div>';
+      }
+      
+      if (snkH) {
+        h += '<div style="font-size:.42rem;color:var(--text);font-weight:600;margin-bottom:8px">Pengeluaran (Sink)</div>';
+        h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.4rem">' + snkH + '</div>';
+      }
+    }
+    
+    h += '</div></div>';
+    modal.innerHTML = h;
+    
+    document.body.appendChild(modal);
+    
+    var closeFn = function() {
+      if (modal.parentNode) modal.parentNode.removeChild(modal);
+    };
+    modal.querySelector('#close-cdm').addEventListener('click', closeFn);
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) closeFn();
+    });
+  }
+
   function _roundRect(ctx, x, y, w, h, r) {
     if (r > h / 2) r = h / 2; if (r > w / 2) r = w / 2;
     ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
@@ -2641,6 +2797,13 @@
       if (idx >= 0 && _hoverIdx !== idx) { _hoverIdx = idx; drawTrendChart(); }
     });
     cv.addEventListener('mouseleave', function () { if (_hoverIdx !== -1) { _hoverIdx = -1; drawTrendChart() } });
+    cv.addEventListener('click', function(e) {
+      var idx = _hoverCalc(e.clientX);
+      if (idx >= 0) {
+        var allC = _candles.slice(); if (_liveCandle) allC.push(_liveCandle);
+        if (allC[idx]) _showCandleDetails(allC[idx]);
+      }
+    });
 
     // ── Drag to scroll (mouse) ──
     var _dragging = false, _dragStartX = 0, _dragScrollLeft = 0;
@@ -2727,7 +2890,10 @@
           drawTrendChart();
           // Show OHLC header
           var allC = _candles.slice(); if (_liveCandle) allC.push(_liveCandle);
-          if (allC[idx]) _updHdr(allC[idx]);
+          if (allC[idx]) {
+            _updHdr(allC[idx]);
+            _showCandleDetails(allC[idx]);
+          }
           // Auto-dismiss after 3s
           clearTimeout(_tDismiss);
           _tDismiss = setTimeout(function() { _hoverIdx = -1; drawTrendChart(); if (_liveCandle) _updHdr(_liveCandle); }, 3000);
