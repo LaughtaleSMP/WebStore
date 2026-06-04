@@ -157,36 +157,85 @@
       return;
     }
 
-    var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px" role="table">' +
-      '<thead><tr style="border-bottom:1px solid var(--border);text-align:left">' +
-      '<th style="' + _TH + '">Player</th>' +
+    // --- SUMMARY METRICS ---
+    var totalGems = 0;
+    var onlineCount = 0;
+    for (var i = 0; i < backups.length; i++) {
+      var pData = _parseExport(backups[i].data);
+      totalGems += pData.gem;
+      if (backups[i].online) onlineCount++;
+    }
+
+    var summaryHtml = 
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:12px;margin-bottom:20px;">' +
+        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;">' +
+          '<div style="background:rgba(74,143,255,0.15);color:#4a8fff;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">👥</div>' +
+          '<div><div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Total Player</div>' +
+          '<div style="font-size:18px;font-weight:700;color:var(--text)">' + backups.length + '</div></div>' +
+        '</div>' +
+        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;">' +
+          '<div style="background:rgba(167,139,250,0.15);color:#a78bfa;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">💎</div>' +
+          '<div><div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Total Gem</div>' +
+          '<div style="font-size:18px;font-weight:700;color:#a78bfa">' + totalGems.toLocaleString('id-ID') + '</div></div>' +
+        '</div>' +
+        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;">' +
+          '<div style="background:rgba(74,222,128,0.15);color:#4ade80;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">🟢</div>' +
+          '<div><div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Online Now</div>' +
+          '<div style="font-size:18px;font-weight:700;color:#4ade80">' + onlineCount + '</div></div>' +
+        '</div>' +
+      '</div>';
+
+    var html = summaryHtml + 
+      '<div style="overflow-x:auto; background:var(--surface); border:1px solid var(--border); border-radius:12px;">' +
+      '<table style="width:100%;border-collapse:collapse;font-size:12.5px" role="table">' +
+      '<thead><tr style="border-bottom:1px solid var(--border);text-align:left;background:rgba(255,255,255,0.02)">' +
+      '<th style="' + _TH + ';padding-left:16px;">Player</th>' +
       '<th style="' + _TH + ';text-align:right">Gem</th>' +
       '<th style="' + _TH + ';text-align:center">Trails</th>' +
       '<th style="' + _TH + ';text-align:center">KillFX</th>' +
       '<th style="' + _TH + ';text-align:center">Status</th>' +
-      '<th style="' + _TH + ';width:80px"></th>' +
+      '<th style="' + _TH + ';width:40px;padding-right:16px;"></th>' +
       '</tr></thead><tbody>';
 
     for (var i = 0; i < filtered.length; i++) {
       var b = filtered[i];
       var p = _parseExport(b.data);
-      var gemStyle = p.gem > 0 ? 'color:#a78bfa;font-weight:700' : 'color:var(--text-faint)';
+      
+      // Glow effect for whales (> 1M Gems)
+      var gemStyle = p.gem >= 1000000 
+        ? 'color:#fef08a;font-weight:800;text-shadow:0 0 8px rgba(253,224,71,0.4)'
+        : p.gem > 0 ? 'color:#a78bfa;font-weight:700' : 'color:var(--text-faint)';
 
-      html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04)">' +
-        '<td style="padding:10px 6px;font-weight:600;color:var(--text)">' + escHtml(b.name) + '</td>' +
-        '<td style="padding:10px 6px;text-align:right;' + gemStyle + '">' + p.gem.toLocaleString('id-ID') + '</td>' +
-        '<td style="padding:10px 6px;text-align:center">' + _badge(p.particles.length, 'rgba(52,211,153,.15)', '#6ee7b7') + '</td>' +
-        '<td style="padding:10px 6px;text-align:center">' + _badge(p.killfx.length, 'rgba(248,113,113,.12)', '#fca5a5') + '</td>' +
-        '<td style="padding:10px 6px;text-align:center">' + _statusDot(b.online) + '</td>' +
-        '<td style="padding:10px 6px;text-align:right">' +
+      // Fetch player face
+      var avatarUrl = 'https://api.mineatar.io/face/' + encodeURIComponent(b.name) + '?scale=4';
+
+      html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04);transition:background 0.2s;" ' +
+              'onmouseover="this.style.background=\'rgba(255,255,255,0.03)\'" ' +
+              'onmouseout="this.style.background=\'transparent\'">' +
+        '<td style="padding:10px 6px 10px 16px;font-weight:600;color:var(--text)">' +
+          '<div style="display:flex;align-items:center;gap:10px;">' +
+            '<img src="' + avatarUrl + '" alt="Avatar" style="width:24px;height:24px;border-radius:4px;background:#2a2a2a;border:1px solid rgba(255,255,255,0.1);">' +
+            '<span>' + escHtml(b.name) + '</span>' +
+          '</div>' +
+        '</td>' +
+        '<td style="padding:12px 6px;text-align:right;' + gemStyle + '">' + p.gem.toLocaleString('id-ID') + '</td>' +
+        '<td style="padding:12px 6px;text-align:center">' + _badge(p.particles.length, 'rgba(52,211,153,.15)', '#6ee7b7') + '</td>' +
+        '<td style="padding:12px 6px;text-align:center">' + _badge(p.killfx.length, 'rgba(248,113,113,.12)', '#fca5a5') + '</td>' +
+        '<td style="padding:12px 6px;text-align:center">' + _statusDot(b.online) + '</td>' +
+        '<td style="padding:12px 16px 12px 6px;text-align:right">' +
           '<button class="btn-ghost rcv-copy-btn" data-str="' + escHtml(b.data) + '" ' +
-          'style="font-size:10.5px;padding:4px 10px;white-space:nowrap" aria-label="Copy import string ' + escHtml(b.name) + '">Copy</button>' +
+          'style="font-size:13px;padding:6px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--text-faint);transition:all 0.2s;" ' +
+          'onmouseover="this.style.color=\'#fff\';this.style.background=\'rgba(255,255,255,0.1)\'" ' +
+          'onmouseout="this.style.color=\'var(--text-faint)\';this.style.background=\'transparent\'" ' +
+          'aria-label="Copy import string ' + escHtml(b.name) + '" title="Copy Data">' +
+          '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+          '</button>' +
         '</td></tr>';
     }
 
     html += '</tbody></table></div>' +
-      '<div style="font-size:10.5px;color:var(--text-faint);margin-top:10px;text-align:right">' +
-      filtered.length + ' / ' + backups.length + ' player</div>';
+      '<div style="font-size:10.5px;color:var(--text-faint);margin-top:12px;text-align:right">' +
+      'Menampilkan ' + filtered.length + ' dari ' + backups.length + ' player</div>';
     body.innerHTML = html;
 
     body.querySelectorAll('.rcv-copy-btn').forEach(function (btn) {
