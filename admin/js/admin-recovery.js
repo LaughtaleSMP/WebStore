@@ -1,5 +1,6 @@
-// admin-recovery.js — Player Data Recovery Panel
-// Reads gacha_lb.player_backups from Supabase, displays in searchable table with copy-to-clipboard.
+// admin-recovery.js — Player Asset Recovery Panel
+// Displays gem, particle trails, kill effects per player.
+// 1-click recovery via recovery_queue table (polled by behavior pack).
 
 (function () {
   'use strict';
@@ -7,6 +8,8 @@
   var _cache = null, _cacheTs = 0;
   var _CACHE_TTL = 120_000;
   var _searchQuery = '';
+  var _trailNames = {};
+  var _fxNames = {};
 
   window.recoveryInjectNav = function () {
     var sidebar = document.querySelector('.sidebar');
@@ -46,8 +49,8 @@
           '</div>' +
         '</div>' +
         '<div style="font-size:11.5px;color:var(--text-faint);padding:0 16px 12px;line-height:1.6">' +
-          'Backup otomatis dari Minecraft sync (tiap 5 menit). ' +
-          'Copy string lalu import di game: <code>/gacha import &lt;string&gt;</code>' +
+          'Hanya player dengan Gem, Particle Trail, atau Kill Effect yang ditampilkan. ' +
+          'Klik <strong>Restore</strong> untuk mengirim data ke server (otomatis di-apply saat player login).' +
         '</div>' +
         '<div id="rcv-body" style="padding:0 16px 16px">' +
           '<div class="empty-state">Klik Refresh untuk memuat data.</div>' +
@@ -72,7 +75,7 @@
     if (!body) return;
 
     if (_cache && (Date.now() - _cacheTs) < _CACHE_TTL) {
-      _renderTable(_cache);
+      _renderCards(_cache);
       return;
     }
 
@@ -90,60 +93,69 @@
 
       if (resp.error) throw resp.error;
       if (!resp.data?.gacha_lb) {
-        body.innerHTML = '<div class="empty-state">Belum ada data sync.</div>';
+        body.innerHTML = '<div class="empty-state">Belum ada data sync. Server belum pernah online.</div>';
         return;
       }
 
       var lb = typeof resp.data.gacha_lb === 'string'
         ? JSON.parse(resp.data.gacha_lb)
         : resp.data.gacha_lb;
+
+      _trailNames = lb._trail_names || {};
+      _fxNames = lb._fx_names || {};
+
       var backups = lb.player_backups || [];
 
       if (!backups.length) {
-        body.innerHTML = '<div class="empty-state">Belum ada backup. Server perlu sync minimal 1x setelah update behavior pack.</div>';
+        var msg = '';
+        if (lb._backup_err) {
+          msg = '<div class="empty-state" style="color:#fbbf24">' +
+            'Sync berhasil tapi backup gagal.<br>' +
+            '<span style="font-size:10px;color:var(--text-faint)">Error: ' + escHtml(lb._backup_err) + '</span>' +
+            '</div>';
+        } else if (lb._backup_ts) {
+          msg = '<div class="empty-state">' +
+            'Tidak ada player yang memiliki Gem, Trail, atau KillFX.<br>' +
+            '<span style="font-size:10px;color:var(--text-faint)">Last sync: ' +
+            new Date(lb._backup_ts).toLocaleString('id-ID') + '</span>' +
+            '</div>';
+        } else {
+          msg = '<div class="empty-state">' +
+            'Belum ada backup. Server perlu sync minimal 1x setelah update behavior pack.' +
+            '</div>';
+        }
+        body.innerHTML = msg;
         return;
       }
 
       _cache = backups;
       _cacheTs = Date.now();
-      _renderTable(backups);
+      _renderCards(backups);
     } catch (e) {
       body.innerHTML = '<div class="empty-state" style="color:#f87171">Error: ' + escHtml(e.message) + '</div>';
     }
   }
 
-  function _parseExport(str) {
-    if (!str) return { gem: 0, particles: [], killfx: [] };
-    var result = { gem: 0, particles: [], killfx: [] };
-    var parts = str.split('|');
-    for (var i = 1; i < parts.length; i++) {
-      var ci = parts[i].indexOf(':');
-      if (ci < 0) continue;
-      var key = parts[i].slice(0, ci), val = parts[i].slice(ci + 1);
-      if (key === 'gem')               result.gem = parseInt(val) || 0;
-      else if (key === 'pt' && val)     result.particles = val.split(',').filter(Boolean);
-      else if (key === 'kfx' && val)    result.killfx = val.split(',').filter(Boolean);
+  function _trailName(tag) { return _trailNames[tag] || tag; }
+
+  function _fxName(id) {
+    if (_fxNames[id]) return _fxNames[id];
+    // Try JSON-encoded array key
+    try { return _fxNames[JSON.stringify([id])] || id; } catch { return id; }
+  }
+
+  var _rarityColors = {
+    'basic_': '#9ca3af', 'elite_': '#60a5fa', 'epic_': '#a78bfa', 'legendary_': '#fbbf24', 'adxP': '#fbbf24'
+  };
+
+  function _trailColor(tag) {
+    for (var prefix in _rarityColors) {
+      if (tag.startsWith(prefix) || tag === prefix) return _rarityColors[prefix];
     }
-    return result;
+    return '#9ca3af';
   }
 
-  function _badge(count, bgColor, fgColor) {
-    if (count <= 0) return '<span style="color:var(--text-faint)">0</span>';
-    return '<span style="background:' + bgColor + ';color:' + fgColor +
-      ';padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600">' + count + '</span>';
-  }
-
-  function _statusDot(online) {
-    var c = online ? '#4ade80' : '#5a6478';
-    var t = online ? 'Online' : 'Offline';
-    return '<span style="display:inline-flex;align-items:center;gap:4px">' +
-      '<span style="width:7px;height:7px;border-radius:50%;background:' + c + ';display:inline-block"></span>' +
-      '<span style="color:' + c + ';font-size:11px">' + t + '</span></span>';
-  }
-
-  var _TH = 'padding:8px 6px;color:var(--text-faint);font-weight:600;font-size:10px;text-transform:uppercase';
-
-  function _renderTable(backups) {
+  function _renderCards(backups) {
     var body = document.getElementById('rcv-body');
     if (!body) return;
 
@@ -157,98 +169,184 @@
       return;
     }
 
-    // --- SUMMARY METRICS ---
-    var totalGems = 0;
-    var onlineCount = 0;
+
+    var totalGems = 0, totalTrails = 0, totalFx = 0;
     for (var i = 0; i < backups.length; i++) {
-      var pData = _parseExport(backups[i].data);
-      totalGems += pData.gem;
-      if (backups[i].online) onlineCount++;
+      totalGems += backups[i].gem || 0;
+      totalTrails += (backups[i].trails || []).length;
+      totalFx += (backups[i].killfx || []).length;
     }
 
-    var summaryHtml = 
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:12px;margin-bottom:20px;">' +
-        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;">' +
-          '<div style="background:rgba(74,143,255,0.15);color:#4a8fff;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">👥</div>' +
-          '<div><div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Total Player</div>' +
-          '<div style="font-size:18px;font-weight:700;color:var(--text)">' + backups.length + '</div></div>' +
-        '</div>' +
-        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;">' +
-          '<div style="background:rgba(167,139,250,0.15);color:#a78bfa;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">💎</div>' +
-          '<div><div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Total Gem</div>' +
-          '<div style="font-size:18px;font-weight:700;color:#a78bfa">' + totalGems.toLocaleString('id-ID') + '</div></div>' +
-        '</div>' +
-        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;">' +
-          '<div style="background:rgba(74,222,128,0.15);color:#4ade80;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">🟢</div>' +
-          '<div><div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Online Now</div>' +
-          '<div style="font-size:18px;font-weight:700;color:#4ade80">' + onlineCount + '</div></div>' +
-        '</div>' +
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;margin-bottom:16px">' +
+      _kpiCard('Player', backups.length, 'rgba(74,143,255,0.15)', '#4a8fff') +
+      _kpiCard('Total Gem', totalGems.toLocaleString('id-ID'), 'rgba(167,139,250,0.15)', '#a78bfa') +
+      _kpiCard('Trails', totalTrails, 'rgba(52,211,153,0.15)', '#34d399') +
+      _kpiCard('Kill FX', totalFx, 'rgba(248,113,113,0.15)', '#f87171') +
       '</div>';
 
-    var html = summaryHtml + 
-      '<div style="overflow-x:auto; background:var(--surface); border:1px solid var(--border); border-radius:12px;">' +
-      '<table style="width:100%;border-collapse:collapse;font-size:12.5px" role="table">' +
-      '<thead><tr style="border-bottom:1px solid var(--border);text-align:left;background:rgba(255,255,255,0.02)">' +
-      '<th style="' + _TH + ';padding-left:16px;">Player</th>' +
-      '<th style="' + _TH + ';text-align:right">Gem</th>' +
-      '<th style="' + _TH + ';text-align:center">Trails</th>' +
-      '<th style="' + _TH + ';text-align:center">KillFX</th>' +
-      '<th style="' + _TH + ';text-align:center">Status</th>' +
-      '<th style="' + _TH + ';width:40px;padding-right:16px;"></th>' +
-      '</tr></thead><tbody>';
 
-    for (var i = 0; i < filtered.length; i++) {
-      var b = filtered[i];
-      var p = _parseExport(b.data);
-      
-      // Glow effect for whales (> 1M Gems)
-      var gemStyle = p.gem >= 1000000 
-        ? 'color:#fef08a;font-weight:800;text-shadow:0 0 8px rgba(253,224,71,0.4)'
-        : p.gem > 0 ? 'color:#a78bfa;font-weight:700' : 'color:var(--text-faint)';
+    html += '<div style="margin-bottom:16px;display:flex;gap:8px;align-items:center">' +
+      '<button id="rcv-restore-all" class="btn-ghost" ' +
+      'style="font-size:11px;padding:6px 14px;border:1px solid rgba(52,211,153,.3);color:#34d399" ' +
+      'aria-label="Restore all players">Restore All (' + filtered.length + ' player)</button>' +
+      '<span id="rcv-restore-status" style="font-size:11px;color:var(--text-faint)"></span>' +
+      '</div>';
 
-      // Fetch player face
-      var avatarUrl = 'https://api.mineatar.io/face/' + encodeURIComponent(b.name) + '?scale=4';
 
-      html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04);transition:background 0.2s;" ' +
-              'onmouseover="this.style.background=\'rgba(255,255,255,0.03)\'" ' +
-              'onmouseout="this.style.background=\'transparent\'">' +
-        '<td style="padding:10px 6px 10px 16px;font-weight:600;color:var(--text)">' +
-          '<div style="display:flex;align-items:center;gap:10px;">' +
-            '<img src="' + avatarUrl + '" alt="Avatar" style="width:24px;height:24px;border-radius:4px;background:#2a2a2a;border:1px solid rgba(255,255,255,0.1);">' +
-            '<span>' + escHtml(b.name) + '</span>' +
-          '</div>' +
-        '</td>' +
-        '<td style="padding:12px 6px;text-align:right;' + gemStyle + '">' + p.gem.toLocaleString('id-ID') + '</td>' +
-        '<td style="padding:12px 6px;text-align:center">' + _badge(p.particles.length, 'rgba(52,211,153,.15)', '#6ee7b7') + '</td>' +
-        '<td style="padding:12px 6px;text-align:center">' + _badge(p.killfx.length, 'rgba(248,113,113,.12)', '#fca5a5') + '</td>' +
-        '<td style="padding:12px 6px;text-align:center">' + _statusDot(b.online) + '</td>' +
-        '<td style="padding:12px 16px 12px 6px;text-align:right">' +
-          '<button class="btn-ghost rcv-copy-btn" data-str="' + escHtml(b.data) + '" ' +
-          'style="font-size:13px;padding:6px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--text-faint);transition:all 0.2s;" ' +
-          'onmouseover="this.style.color=\'#fff\';this.style.background=\'rgba(255,255,255,0.1)\'" ' +
-          'onmouseout="this.style.color=\'var(--text-faint)\';this.style.background=\'transparent\'" ' +
-          'aria-label="Copy import string ' + escHtml(b.name) + '" title="Copy Data">' +
-          '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
-          '</button>' +
-        '</td></tr>';
+    for (var j = 0; j < filtered.length; j++) {
+      html += _playerCard(filtered[j]);
     }
 
-    html += '</tbody></table></div>' +
-      '<div style="font-size:10.5px;color:var(--text-faint);margin-top:12px;text-align:right">' +
+    html += '<div style="font-size:10.5px;color:var(--text-faint);margin-top:12px;text-align:right">' +
       'Menampilkan ' + filtered.length + ' dari ' + backups.length + ' player</div>';
-    body.innerHTML = html;
 
-    body.querySelectorAll('.rcv-copy-btn').forEach(function (btn) {
+    body.innerHTML = html;
+    _bindButtons(filtered);
+  }
+
+  function _kpiCard(label, value, bg, color) {
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px">' +
+      '<div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.5px">' + label + '</div>' +
+      '<div style="font-size:18px;font-weight:700;color:' + color + ';margin-top:2px">' + value + '</div>' +
+      '</div>';
+  }
+
+  function _playerCard(b) {
+    var trails = b.trails || [];
+    var killfx = b.killfx || [];
+    var gemStyle = b.gem >= 1000 ? 'color:#a78bfa;font-weight:700' : 'color:var(--text)';
+    var avatarUrl = 'https://api.mineatar.io/face/' + encodeURIComponent(b.name) + '?scale=4';
+    var statusDot = b.online
+      ? '<span style="width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block"></span>'
+      : '<span style="width:6px;height:6px;border-radius:50%;background:#5a6478;display:inline-block"></span>';
+
+    var html = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;transition:border-color .2s" ' +
+      'onmouseover="this.style.borderColor=\'rgba(167,139,250,.4)\'" onmouseout="this.style.borderColor=\'var(--border)\'">';
+
+
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+      '<img src="' + avatarUrl + '" alt="" style="width:28px;height:28px;border-radius:6px;background:#2a2a2a;border:1px solid rgba(255,255,255,.1)">' +
+      '<div style="flex:1">' +
+        '<div style="display:flex;align-items:center;gap:6px">' +
+          statusDot +
+          '<span style="font-weight:600;font-size:13px;color:var(--text)">' + escHtml(b.name) + '</span>' +
+        '</div>' +
+        '<div style="font-size:11px;' + gemStyle + '">Gem: ' + (b.gem || 0).toLocaleString('id-ID') + '</div>' +
+      '</div>' +
+      '<button class="btn-ghost rcv-restore-btn" data-name="' + escHtml(b.name) + '" data-str="' + escHtml(b.data) + '" ' +
+        'style="font-size:11px;padding:5px 12px;border:1px solid rgba(52,211,153,.3);color:#34d399;border-radius:8px;font-weight:600" ' +
+        'aria-label="Restore ' + escHtml(b.name) + '">Restore</button>' +
+      '</div>';
+
+
+    if (trails.length > 0) {
+      html += '<div style="margin-bottom:8px">' +
+        '<div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;margin-bottom:4px">Particle Trails (' + trails.length + ')</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:4px">';
+      for (var t = 0; t < trails.length; t++) {
+        var tc = _trailColor(trails[t]);
+        html += '<span style="font-size:10.5px;padding:2px 8px;border-radius:6px;background:' + tc + '20;color:' + tc + ';border:1px solid ' + tc + '30;font-weight:500">' +
+          escHtml(_trailName(trails[t])) + '</span>';
+      }
+      html += '</div></div>';
+    }
+
+
+    if (killfx.length > 0) {
+      var customFx = killfx.filter(function(id) { return id !== 'Games:coins' && id !== 'none'; });
+      if (customFx.length > 0) {
+        html += '<div>' +
+          '<div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;margin-bottom:4px">Kill Effects (' + customFx.length + ')</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:4px">';
+        for (var f = 0; f < customFx.length; f++) {
+          html += '<span style="font-size:10.5px;padding:2px 8px;border-radius:6px;background:rgba(248,113,113,.12);color:#fca5a5;border:1px solid rgba(248,113,113,.2);font-weight:500">' +
+            escHtml(_fxName(customFx[f])) + '</span>';
+        }
+        html += '</div></div>';
+      }
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  function _bindButtons(filtered) {
+    document.querySelectorAll('.rcv-restore-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
+        var name = this.getAttribute('data-name');
         var str = this.getAttribute('data-str');
-        if (!str) return;
-        navigator.clipboard.writeText(str).then(function () {
-          showAdminToast('Import string disalin ke clipboard!');
-        }).catch(function () {
-          prompt('Copy string ini:', str);
-        });
+        if (!name || !str) return;
+        _confirmRestore([{ name: name, data: str }], this);
       });
     });
+
+    var allBtn = document.getElementById('rcv-restore-all');
+    if (allBtn) {
+      allBtn.addEventListener('click', function () {
+        var entries = filtered.map(function (b) { return { name: b.name, data: b.data }; });
+        _confirmRestore(entries, allBtn);
+      });
+    }
+  }
+
+  function _confirmRestore(entries, btn) {
+    var count = entries.length;
+    var names = entries.slice(0, 3).map(function(e) { return e.name; }).join(', ');
+    if (count > 3) names += ' +' + (count - 3) + ' lainnya';
+
+    var msg = 'Restore data ' + count + ' player?\n\n' + names +
+      '\n\nData akan dikirim ke server dan di-apply otomatis.';
+
+    if (typeof window.showMgrConfirm === 'function') {
+      window.showMgrConfirm({
+        title: 'Restore Player Data',
+        message: msg,
+        confirmText: 'Restore',
+        danger: false,
+        onConfirm: function () { _doRestore(entries, btn); },
+      });
+    } else {
+      if (!confirm(msg)) return;
+      _doRestore(entries, btn);
+    }
+  }
+
+  async function _doRestore(entries, btn) {
+    var sb = window._adminSb;
+    if (!sb) { showAdminToast('Supabase belum siap', 'error'); return; }
+
+    var origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Mengirim...';
+    var statusEl = document.getElementById('rcv-restore-status');
+
+    var success = 0, fail = 0;
+    for (var i = 0; i < entries.length; i++) {
+      try {
+        var { error } = await sb.from('recovery_queue').insert({
+          player_name: entries[i].name,
+          import_string: entries[i].data,
+          status: 'pending',
+        });
+        if (error) throw error;
+        success++;
+      } catch (e) {
+        fail++;
+        console.warn('[Recovery] Insert failed:', entries[i].name, e);
+      }
+      if (statusEl) statusEl.textContent = 'Mengirim ' + (i + 1) + '/' + entries.length + '...';
+    }
+
+    btn.disabled = false;
+    btn.textContent = origText;
+
+    if (fail === 0) {
+      showAdminToast('Restore ' + success + ' player berhasil dikirim! Server akan proses dalam ~30 detik.');
+    } else {
+      showAdminToast(success + ' berhasil, ' + fail + ' gagal', 'error');
+    }
+
+    if (statusEl) statusEl.textContent = success + ' dikirim' + (fail > 0 ? ', ' + fail + ' gagal' : '');
   }
 
   function _init() {
@@ -257,7 +355,7 @@
     document.addEventListener('input', function (e) {
       if (e.target.id !== 'rcv-search') return;
       _searchQuery = e.target.value.trim();
-      if (_cache) _renderTable(_cache);
+      if (_cache) _renderCards(_cache);
     });
 
     document.addEventListener('click', function (e) {
