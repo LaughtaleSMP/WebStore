@@ -46,6 +46,13 @@
               'color:var(--text);padding:6px 12px;font-size:12px;outline:none;font-family:inherit;width:180px">' +
             '<button class="btn-ghost" id="rcv-refresh" style="font-size:11px;padding:5px 10px" ' +
               'aria-label="Refresh data backup">Refresh</button>' +
+            '<div id="rcv-countdown" style="display:none;align-items:center;gap:6px;background:rgba(52,211,153,.08);padding:4px 10px;border-radius:20px;border:1px solid rgba(52,211,153,.2)" title="Auto-refresh dalam 60 detik">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" style="transform:rotate(-90deg)">' +
+                '<circle cx="12" cy="12" r="10" stroke="var(--border)" stroke-width="3" fill="none" />' +
+                '<circle id="rcv-progress-ring" cx="12" cy="12" r="10" stroke="#34d399" stroke-width="3" fill="none" stroke-dasharray="62.8" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear" />' +
+              '</svg>' +
+              '<span id="rcv-countdown-txt" style="font-size:10px;color:#34d399;font-weight:700;font-variant-numeric:tabular-nums;width:20px;text-align:right">60s</span>' +
+            '</div>' +
           '</div>' +
         '</div>' +
         '<div style="font-size:11.5px;color:var(--text-faint);padding:0 16px 12px;line-height:1.6">' +
@@ -65,21 +72,74 @@
     _origShow = window.showSection;
     window.showSection = function (name, el) {
       _origShow(name, el);
-      if (name === 'recovery') _loadData();
+      if (name === 'recovery') {
+        _startAutoRefresh();
+        _loadData();
+      } else {
+        _stopAutoRefresh();
+      }
     };
     window.showSection._recoveryHooked = true;
+  }
+
+  var _countdownTimer = null;
+  var _secondsLeft = 60;
+
+  function _startAutoRefresh() {
+    _stopAutoRefresh();
+    _secondsLeft = 60;
+    _updateCountdownUi();
+    
+    _countdownTimer = setInterval(function() {
+      _secondsLeft--;
+      if (_secondsLeft <= 0) {
+         _secondsLeft = 60;
+         _cache = null; 
+         _cacheTs = 0;
+         _loadData();
+      }
+      _updateCountdownUi();
+    }, 1000);
+  }
+
+  function _stopAutoRefresh() {
+    if (_countdownTimer) clearInterval(_countdownTimer);
+  }
+
+  function _updateCountdownUi() {
+    var container = document.getElementById('rcv-countdown');
+    var ring = document.getElementById('rcv-progress-ring');
+    var txt = document.getElementById('rcv-countdown-txt');
+    
+    if (container) container.style.display = 'flex';
+    if (txt) txt.textContent = _secondsLeft + 's';
+    if (ring) {
+      // 62.8 is the circumference of circle (2 * PI * r) where r=10
+      var offset = 62.8 - (62.8 * (_secondsLeft / 60));
+      ring.style.strokeDashoffset = offset;
+    }
   }
 
   async function _loadData() {
     var body = document.getElementById('rcv-body');
     if (!body) return;
 
+    var btn = document.getElementById('rcv-refresh');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;margin-right:4px;vertical-align:-2px"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4 31.4"/></svg>Memuat...';
+    }
+
     if (_cache && (Date.now() - _cacheTs) < _CACHE_TTL) {
       _renderCards(_cache);
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Refresh'; }
       return;
     }
 
-    body.innerHTML = '<div class="empty-state">Memuat data backup...</div>';
+    body.innerHTML = '<div class="empty-state" style="display:flex;flex-direction:column;align-items:center;gap:12px">' +
+      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4 31.4"/></svg>' +
+      '<span>Sinkronisasi data backup...</span>' +
+      '</div>';
 
     try {
       var sb = window._adminSb;
@@ -133,6 +193,9 @@
       _renderCards(backups);
     } catch (e) {
       body.innerHTML = '<div class="empty-state" style="color:#f87171">Error: ' + escHtml(e.message) + '</div>';
+    } finally {
+      var rBtn = document.getElementById('rcv-refresh');
+      if (rBtn) { rBtn.disabled = false; rBtn.innerHTML = 'Refresh'; }
     }
   }
 
@@ -185,11 +248,15 @@
       '</div>';
 
 
-    html += '<div style="margin-bottom:16px;display:flex;gap:8px;align-items:center">' +
+    html += '<div style="margin-bottom:20px;display:flex;gap:10px;align-items:center;padding:0 4px">' +
       '<button id="rcv-restore-all" class="btn-ghost" ' +
-      'style="font-size:11px;padding:6px 14px;border:1px solid rgba(52,211,153,.3);color:#34d399" ' +
-      'aria-label="Restore all players">Restore All (' + filtered.length + ' player)</button>' +
-      '<span id="rcv-restore-status" style="font-size:11px;color:var(--text-faint)"></span>' +
+      'style="font-size:12px;padding:8px 18px;border:1px solid rgba(52,211,153,.5);color:#10b981;border-radius:8px;font-weight:700;background:rgba(52,211,153,.1);transition:all 0.2s;display:flex;align-items:center;gap:6px;cursor:pointer;box-shadow:0 2px 8px rgba(52,211,153,.15)" ' +
+      'onmouseover="this.style.background=\'rgba(52,211,153,.2)\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 12px rgba(52,211,153,.25)\'" onmouseout="this.style.background=\'rgba(52,211,153,.1)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'0 2px 8px rgba(52,211,153,.15)\'" ' +
+      'aria-label="Restore all players">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>' +
+      'Restore All (' + filtered.length + ' Player)' +
+      '</button>' +
+      '<span id="rcv-restore-status" style="font-size:11.5px;color:var(--text-faint);font-weight:500"></span>' +
       '</div>';
 
 
@@ -205,37 +272,46 @@
   }
 
   function _kpiCard(label, value, bg, color) {
-    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px">' +
-      '<div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.5px">' + label + '</div>' +
-      '<div style="font-size:18px;font-weight:700;color:' + color + ';margin-top:2px">' + value + '</div>' +
+    return '<div style="background:linear-gradient(145deg, var(--surface) 0%, var(--surface2) 100%);border:1px solid var(--border);border-radius:12px;padding:14px 18px;box-shadow:0 4px 12px rgba(0,0,0,0.1);position:relative;overflow:hidden">' +
+      '<div style="position:absolute;top:-10px;right:-10px;width:60px;height:60px;background:' + bg + ';filter:blur(24px);border-radius:50%"></div>' +
+      '<div style="font-size:10.5px;color:var(--text-faint);font-weight:700;text-transform:uppercase;letter-spacing:1px;position:relative;z-index:1">' + label + '</div>' +
+      '<div style="font-size:24px;font-weight:800;color:' + color + ';margin-top:6px;text-shadow:0 2px 4px rgba(0,0,0,0.2);position:relative;z-index:1">' + value + '</div>' +
       '</div>';
   }
 
   function _playerCard(b) {
     var trails = b.trails || [];
     var killfx = b.killfx || [];
-    var gemStyle = b.gem >= 1000 ? 'color:#a78bfa;font-weight:700' : 'color:var(--text)';
-    var avatarUrl = 'https://api.mineatar.io/face/' + encodeURIComponent(b.name) + '?scale=4';
-    var statusDot = b.online
-      ? '<span style="width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block"></span>'
-      : '<span style="width:6px;height:6px;border-radius:50%;background:#5a6478;display:inline-block"></span>';
+    var gemStyle = b.gem >= 1000 ? 'color:#a78bfa;font-weight:800' : 'color:var(--text);font-weight:600';
+    
+    // Gunakan crafthead.net yang lebih toleran, fallback ke ui-avatars jika gagal (misal nama ada spasi)
+    var safeName = b.name.replace(/ /g, '_');
+    var avatarUrl = 'https://crafthead.net/helm/' + encodeURIComponent(safeName) + '/34.png';
+    var fallbackUrl = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(b.name) + '&background=2a2a2a&color=fff&size=34&bold=true';
 
-    var html = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;transition:border-color .2s" ' +
-      'onmouseover="this.style.borderColor=\'rgba(167,139,250,.4)\'" onmouseout="this.style.borderColor=\'var(--border)\'">';
+    var html = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);position:relative;overflow:hidden" ' +
+      'onmouseover="this.style.borderColor=\'rgba(167,139,250,.5)\';this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 8px 16px rgba(0,0,0,0.2)\'" ' +
+      'onmouseout="this.style.borderColor=\'var(--border)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'">';
 
-
-    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
-      '<img src="' + avatarUrl + '" alt="" style="width:28px;height:28px;border-radius:6px;background:#2a2a2a;border:1px solid rgba(255,255,255,.1)">' +
+    html += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">' +
+      '<div style="position:relative;width:34px;height:34px">' + 
+        '<img src="' + avatarUrl + '" onerror="this.onerror=null;this.src=\'' + fallbackUrl + '\'" alt="' + escHtml(b.name) + '" style="width:34px;height:34px;border-radius:8px;background:#2a2a2a;border:1px solid rgba(255,255,255,.1);box-shadow:0 2px 6px rgba(0,0,0,0.3);object-fit:cover">' +
+        '<div style="position:absolute;bottom:-3px;right:-3px;width:12px;height:12px;border-radius:50%;border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;background:' + (b.online ? '#4ade80' : '#64748b') + ';box-shadow:0 1px 3px rgba(0,0,0,0.4)"></div>' +
+      '</div>' +
       '<div style="flex:1">' +
-        '<div style="display:flex;align-items:center;gap:6px">' +
-          statusDot +
-          '<span style="font-weight:600;font-size:13px;color:var(--text)">' + escHtml(b.name) + '</span>' +
+        '<div style="font-weight:700;font-size:15px;color:var(--text);letter-spacing:0.3px;margin-bottom:2px">' + escHtml(b.name) + '</div>' +
+        '<div style="font-size:12px;' + gemStyle + ';display:flex;align-items:center;gap:5px">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M2 9h20"/></svg>' +
+          (b.gem || 0).toLocaleString('id-ID') +
         '</div>' +
-        '<div style="font-size:11px;' + gemStyle + '">Gem: ' + (b.gem || 0).toLocaleString('id-ID') + '</div>' +
       '</div>' +
       '<button class="btn-ghost rcv-restore-btn" data-name="' + escHtml(b.name) + '" data-str="' + escHtml(b.data) + '" ' +
-        'style="font-size:11px;padding:5px 12px;border:1px solid rgba(52,211,153,.3);color:#34d399;border-radius:8px;font-weight:600" ' +
-        'aria-label="Restore ' + escHtml(b.name) + '">Restore</button>' +
+        'style="font-size:11px;padding:6px 14px;border:1px solid rgba(52,211,153,.4);color:#34d399;border-radius:8px;font-weight:700;background:rgba(52,211,153,.05);transition:all 0.2s;display:flex;align-items:center;gap:5px;cursor:pointer" ' +
+        'onmouseover="this.style.background=\'rgba(52,211,153,.15)\';this.style.borderColor=\'#34d399\'" onmouseout="this.style.background=\'rgba(52,211,153,.05)\';this.style.borderColor=\'rgba(52,211,153,.4)\'" ' +
+        'aria-label="Restore ' + escHtml(b.name) + '">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>' +
+        'Restore' +
+      '</button>' +
       '</div>';
 
 
@@ -362,6 +438,8 @@
       if (e.target.id !== 'rcv-refresh') return;
       _cache = null;
       _cacheTs = 0;
+      _secondsLeft = 60; // reset timer if manual click
+      _updateCountdownUi();
       _loadData();
     });
   }
