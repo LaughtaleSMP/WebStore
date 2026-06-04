@@ -76,19 +76,38 @@
         fetchTrend();
         return;
       }
-      var r = await fetch(SB_URL + '/rest/v1/leaderboard_sync?id=eq.current&select=gacha_lb,bank_log,auction_log,gacha_log,topup_log,disc_codes,synced_at', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+      // Fetch main sync + permanent auction history in parallel
+      var mainP = fetch(SB_URL + '/rest/v1/leaderboard_sync?id=eq.current&select=gacha_lb,bank_log,auction_log,gacha_log,topup_log,disc_codes,synced_at', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+      var aucP  = fetch(SB_URL + '/rest/v1/auction_history?select=tx_time,tx_type,item_name,item_id,qty,seller,buyer,price&order=tx_time.desc&limit=5000', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } }).catch(function() { return null; });
+
+      var r = await mainP;
       var d = await r.json(); if (!d || !d[0]) return;
       var row = d[0];
       var lbParsed = safeParse(row.gacha_lb, {});
+
+      // Try permanent auction_history first, fallback to sync auction_log
+      var auctionData = safeParse(row.auction_log, []);
+      try {
+        var aRes = await aucP;
+        if (aRes && aRes.ok) {
+          var aRows = await aRes.json();
+          if (Array.isArray(aRows) && aRows.length > 0) {
+            auctionData = aRows.map(function(r) {
+              return { ts: r.tx_time, type: r.tx_type, item: r.item_name, itemId: r.item_id, qty: r.qty || 1, seller: r.seller, buyer: r.buyer, price: r.price };
+            });
+          }
+        }
+      } catch(e) { /* auction_history table belum ada, pakai fallback */ }
+
       _data = {
         lb: lbParsed,
-        bank: safeParse(row.bank_log, []), auction: safeParse(row.auction_log, []),
+        bank: safeParse(row.bank_log, []), auction: auctionData,
         gacha: safeParse(row.gacha_log, []), topup: safeParse(row.topup_log, []),
         land: safeParse(lbParsed.land_log, []),
         disc: safeParse(row.disc_codes, {}), synced: row.synced_at
       };
       _cSet(CACHE_KEY, _data);
-      _topItemsCache = null; // invalidate cache karena data baru
+      _mktCache = null; // invalidate market cache karena data baru
       var el = $('eco-sync');
       if (el) el.textContent = 'Sync: ' + (row.synced_at ? new Date(row.synced_at).toLocaleString('id-ID') : '—');
       renderAnalytics(); renderLogStats(); renderLogs(); renderDiscCodes(); renderTax();
@@ -936,10 +955,12 @@
         ? '<span class="pn">' + esc(h.seller || '?') + '</span>'
         : '<span class="pn">' + esc(h.seller || '?') + '</span> <span class="arrow">→</span> <span class="pn">' + esc(h.buyer || '?') + '</span>' + badge;
 
+      var qtyStr = h.qty > 1 ? ' x' + h.qty : '';
+
       return '<div class="log-row" style="animation:fs .3s ' + i * 30 + 'ms ease both">'
         + '<div class="log-icon ' + cls + '">' + (_ic[cls] || '') + '</div>'
         + '<div class="log-body">'
-        +   '<div class="log-main">' + esc(h.item || '?') + '</div>'
+        +   '<div class="log-main">' + esc(h.item || '?') + qtyStr + '</div>'
         +   '<div class="log-detail">' + detail + ' · <span class="log-time">' + timeAgo(h.ts) + '</span></div>'
         + '</div>'
         + amt
@@ -973,101 +994,298 @@
   }
 
   // ═══════════════════════════════════════════════════════════
-  // TOP 10 ITEM AUCTION — agregasi item terlaris dari log auction
-  // Single-pass O(N), null-proto map, cache 1 menit, top-K extraction
+  // MARKET ANALYTICS v2 — Full item price intelligence
+  // Category detection, search, sort, export, KPI, volume
   // ═══════════════════════════════════════════════════════════
-  var _topItemsCache = null, _topItemsCacheTs = 0;
-  var _TOP_CACHE_TTL = 60000;
+  var _mktCache = null, _mktCacheTs = 0;
+  var _MKT_TTL = 60000;
   var _SOLD_TYPES = { sold: 1, offer_accepted: 1, auction_won: 1 };
-  var _TOP_LIMIT = 10;
-  var _TOP_WEEK_MS = 7 * 24 * 3600 * 1000;
-  var _TOP_HALF_MS = 3.5 * 24 * 3600 * 1000;
+  var _mktSort = { col: 'count', dir: 'desc' };
+  var _mktFilter = 'all';
+  var _mktQuery = '';
 
-  function renderTopItems() {
-    var tbody = document.querySelector('#tbl-top-items tbody');
-    if (!tbody) return;
+  // ── Category detection from Minecraft itemId ──
+  var _CAT_RULES = [
+    { id: 'tool',    label: 'Alat',     cls: 'tool',    rx: /sword|axe|pickaxe|shovel|hoe|bow|crossbow|fishing_rod|shears|flint_and_steel|brush|mace/i },
+    { id: 'armor',   label: 'Armor',    cls: 'armor',   rx: /helmet|chestplate|leggings|boots|shield|elytra|turtle/i },
+    { id: 'mat',     label: 'Material', cls: 'mat',     rx: /diamond|emerald|gold|iron|netherite|copper|amethyst|quartz|lapis|redstone|coal|ingot|nugget|scrap|raw_/i },
+    { id: 'block',   label: 'Blok',     cls: 'block',   rx: /ore|stone|dirt|sand|gravel|log|planks|wool|concrete|terracotta|glass|brick|deepslate|tuff|prismarine|obsidian|sponge|beacon|end_stone|purpur|basalt/i },
+    { id: 'food',    label: 'Makanan',  cls: 'food',    rx: /apple|bread|steak|porkchop|mutton|chicken|cod|salmon|potato|carrot|beetroot|melon|cake|cookie|pie|stew|honey|chorus_fruit|golden_apple|enchanted_golden/i },
+    { id: 'special', label: 'Spesial',  cls: 'special', rx: /enchanted_book|nether_star|trident|totem|dragon|end_crystal|wither|spawner|head|skull|banner_pattern|music_disc|goat_horn|trim|template/i },
+  ];
+  function _mktCat(itemId) {
+    if (!itemId) return { id: 'misc', label: 'Lainnya', cls: 'misc' };
+    var clean = String(itemId).replace('minecraft:', '');
+    for (var i = 0; i < _CAT_RULES.length; i++) {
+      if (_CAT_RULES[i].rx.test(clean)) return _CAT_RULES[i];
+    }
+    return { id: 'misc', label: 'Lainnya', cls: 'misc' };
+  }
+
+  function _mktAggregate() {
     var logs = _data && _data.auction;
-    if (!Array.isArray(logs) || logs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--mute)">Belum ada transaksi auction</td></tr>';
-      var pill0 = $('top-items-pill'); if (pill0) pill0.textContent = '0 TX · 7 HARI';
-      return;
-    }
-
+    if (!Array.isArray(logs) || logs.length === 0) return null;
     var now = Date.now();
-    if (_topItemsCache && (now - _topItemsCacheTs) < _TOP_CACHE_TTL) {
-      _renderTopItemsHtml(tbody, _topItemsCache.arr, _topItemsCache.totalTx);
-      return;
-    }
+    if (_mktCache && (now - _mktCacheTs) < _MKT_TTL) return _mktCache;
 
-    // Single-pass aggregation
+    // First pass: collect all valid timestamps to find median for trend split
+    var timestamps = [];
     var agg = Object.create(null);
-    var cutoffWeek = now - _TOP_WEEK_MS;
-    var cutoffHalf = now - _TOP_HALF_MS;
-    var totalTx = 0;
+    var totalTx = 0, totalVol = 0, totalUnits = 0;
 
     for (var i = 0; i < logs.length; i++) {
       var h = logs[i];
       if (!h || !_SOLD_TYPES[h.type]) continue;
       var ts = h.ts || 0;
-      if (ts < cutoffWeek) continue;
+      var rawName = h.item;
+      if (!rawName) continue;
+      var name = String(rawName).trim();
+      if (!name || name === '?') continue;
+      var priceRaw = Number(h.price) || 0;
+      if (priceRaw <= 0) continue;
+      timestamps.push(ts);
+    }
+    // Median timestamp — splits data into older half vs newer half for trend
+    timestamps.sort(function(a, b) { return a - b; });
+    var medianTs = timestamps.length > 1 ? timestamps[Math.floor(timestamps.length / 2)] : now;
+
+    for (var i = 0; i < logs.length; i++) {
+      var h = logs[i];
+      if (!h || !_SOLD_TYPES[h.type]) continue;
+      var ts = h.ts || 0;
       var rawName = h.item;
       if (!rawName) continue;
       var name = String(rawName).trim();
       if (!name || name === '?') continue;
       var key = name.toLowerCase();
-      var price = Number(h.price) || 0;
-      if (price <= 0) continue;
+      var priceRaw = Number(h.price) || 0;
+      if (priceRaw <= 0) continue;
+      var qty = Number(h.qty) || 1;
+      var ppu = priceRaw / qty;
+      var itemId = h.itemId || '';
 
       var s = agg[key];
       if (!s) {
-        s = agg[key] = { name: name, count: 0, total: 0, min: price, max: price, recent: 0, old: 0, recentSum: 0, oldSum: 0 };
+        var cat = _mktCat(itemId);
+        s = agg[key] = {
+          name: name, itemId: itemId, cat: cat.id, catLabel: cat.label, catCls: cat.cls,
+          count: 0, total: 0, min: ppu, max: ppu, txCount: 0,
+          recent: 0, old: 0, recentSum: 0, oldSum: 0, trendPct: 0
+        };
       }
-      s.count++;
-      s.total += price;
-      if (price < s.min) s.min = price;
-      if (price > s.max) s.max = price;
-      if (ts >= cutoffHalf) { s.recent++; s.recentSum += price; }
-      else { s.old++; s.oldSum += price; }
+      if (!s.itemId && itemId) { s.itemId = itemId; var c2 = _mktCat(itemId); s.cat = c2.id; s.catLabel = c2.label; s.catCls = c2.cls; }
+      s.count += qty;
+      s.total += priceRaw;
+      s.txCount++;
+      if (ppu < s.min) s.min = ppu;
+      if (ppu > s.max) s.max = ppu;
+      if (ts >= medianTs) { s.recent += qty; s.recentSum += priceRaw; }
+      else { s.old += qty; s.oldSum += priceRaw; }
       totalTx++;
+      totalVol += priceRaw;
+      totalUnits += qty;
     }
 
     var arr = [];
-    for (var k in agg) arr.push(agg[k]);
-    arr.sort(function (a, b) { return b.count - a.count; });
-    if (arr.length > _TOP_LIMIT) arr.length = _TOP_LIMIT;
+    for (var k in agg) {
+      var it = agg[k];
+      it.avg = it.count > 0 ? Math.round(it.total / it.count) : 0;
+      it.spread = it.max > 0 ? Math.round((it.max - it.min) / it.max * 100) : 0;
+      // Trend calculation
+      if (it.recent > 0 && it.old > 0) {
+        var rA = it.recentSum / it.recent, oA = it.oldSum / it.old;
+        it.trendPct = ((rA - oA) / oA) * 100;
+      } else if (it.recent > 0 && it.old === 0) {
+        it.trendPct = 999; // marker for "new"
+      }
+      arr.push(it);
+    }
 
-    _topItemsCache = { arr: arr, totalTx: totalTx };
-    _topItemsCacheTs = now;
+    // Count categories
+    var catCounts = Object.create(null);
+    for (var j = 0; j < arr.length; j++) {
+      catCounts[arr[j].cat] = (catCounts[arr[j].cat] || 0) + 1;
+    }
 
-    _renderTopItemsHtml(tbody, arr, totalTx);
+    _mktCache = { arr: arr, totalTx: totalTx, totalVol: totalVol, totalUnits: totalUnits, catCounts: catCounts };
+    _mktCacheTs = now;
+    return _mktCache;
   }
 
-  function _renderTopItemsHtml(tbody, arr, totalTx) {
-    if (arr.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--mute)">Tidak ada data 7 hari terakhir</td></tr>';
-      var pill0 = $('top-items-pill'); if (pill0) pill0.textContent = '0 TX · 7 HARI';
-      return;
+  function _mktSortArr(arr) {
+    var col = _mktSort.col, dir = _mktSort.dir === 'asc' ? 1 : -1;
+    var sortFn;
+    switch (col) {
+      case 'name':  sortFn = function(a, b) { return a.name.localeCompare(b.name) * dir; }; break;
+      case 'cat':   sortFn = function(a, b) { return a.catLabel.localeCompare(b.catLabel) * dir; }; break;
+      case 'count': sortFn = function(a, b) { return (a.count - b.count) * dir; }; break;
+      case 'avg':   sortFn = function(a, b) { return (a.avg - b.avg) * dir; }; break;
+      case 'min':   sortFn = function(a, b) { return (a.min - b.min) * dir; }; break;
+      case 'max':   sortFn = function(a, b) { return (a.max - b.max) * dir; }; break;
+      case 'vol':   sortFn = function(a, b) { return (a.total - b.total) * dir; }; break;
+      case 'trend': sortFn = function(a, b) { return (a.trendPct - b.trendPct) * dir; }; break;
+      default:      sortFn = function(a, b) { return (b.count - a.count); };
     }
+    return arr.slice().sort(sortFn);
+  }
+
+  function _mktFilterArr(arr) {
+    var q = _mktQuery.toLowerCase();
     var out = [];
     for (var i = 0; i < arr.length; i++) {
       var it = arr[i];
-      var avg = Math.round(it.total / it.count);
-      var trendHtml = '<span style="color:var(--mute)">—</span>';
-      if (it.recent > 0 && it.old > 0) {
-        var recentAvg = it.recentSum / it.recent;
-        var oldAvg = it.oldSum / it.old;
-        var pct = ((recentAvg - oldAvg) / oldAvg) * 100;
-        if (pct > 5) trendHtml = '<span style="color:var(--green)">▲ ' + pct.toFixed(0) + '%</span>';
-        else if (pct < -5) trendHtml = '<span style="color:var(--red)">▼ ' + Math.abs(pct).toFixed(0) + '%</span>';
-        else trendHtml = '<span style="color:var(--mute)">≈ stabil</span>';
-      } else if (it.recent > 0 && it.old === 0) {
-        trendHtml = '<span style="color:var(--cyan)">★ baru</span>';
-      }
-      var rankColor = i === 0 ? 'var(--gold)' : i === 1 ? '#cbd5e1' : i === 2 ? '#cd7f32' : 'var(--mute)';
-      out.push('<tr><td style="color:' + rankColor + ';font-weight:700">' + (i + 1) + '</td><td style="font-weight:600">' + esc(it.name) + '</td><td style="text-align:right;color:var(--cyan)">' + it.count + 'x</td><td style="text-align:right;color:var(--gold)">' + fmt(avg) + '</td><td style="text-align:right;color:var(--mute)">' + fmt(it.min) + '</td><td style="text-align:right;color:var(--text)">' + fmt(it.max) + '</td><td>' + trendHtml + '</td></tr>');
+      if (_mktFilter !== 'all' && it.cat !== _mktFilter) continue;
+      if (q && it.name.toLowerCase().indexOf(q) === -1 && (it.itemId || '').toLowerCase().indexOf(q) === -1) continue;
+      out.push(it);
+    }
+    return out;
+  }
+
+  function renderTopItems() {
+    var data = _mktAggregate();
+    var tbody = document.querySelector('#tbl-top-items tbody');
+    if (!tbody) return;
+    if (!data) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:1rem;color:var(--mute)">Belum ada transaksi auction</td></tr>';
+      return;
+    }
+    _renderMktKpis(data);
+    _renderMktCats(data);
+    _renderMktTable(data);
+    _mktBindEvents();
+  }
+
+  function _renderMktKpis(data) {
+    var el = $('mkt-kpis'); if (!el) return;
+    var avgGlobal = data.totalUnits > 0 ? Math.round(data.totalVol / data.totalUnits) : 0;
+    el.innerHTML =
+      _mkMktKpi('Item Unik', 'var(--cyan)', data.arr.length, 'jenis item') +
+      _mkMktKpi('Total Transaksi', 'var(--green)', data.totalTx, 'all time') +
+      _mkMktKpi('Unit Terjual', '#a78bfa', fmtN(data.totalUnits), 'total unit') +
+      _mkMktKpi('Volume Koin', 'var(--gold)', fmtN(data.totalVol), 'total beredar') +
+      _mkMktKpi('Avg Global', '#f472b6', fmtN(avgGlobal) + '/u', 'per unit');
+    var pill = $('top-items-pill');
+    if (pill) pill.textContent = data.totalTx + ' TX · ALL TIME';
+  }
+
+  function _mkMktKpi(lbl, color, val, sub) {
+    return '<div class="mkt-kpi"><div class="mkt-kpi-lbl">' + lbl + '</div><div class="mkt-kpi-val" style="color:' + color + '">' + val + '</div><div class="mkt-kpi-sub">' + sub + '</div></div>';
+  }
+
+  function _renderMktCats(data) {
+    var el = $('mkt-cats'); if (!el) return;
+    var h = '<button class="mkt-btn' + (_mktFilter === 'all' ? ' act' : '') + '" data-cat="all">Semua</button>';
+    var order = ['tool','armor','mat','block','food','special','misc'];
+    var labels = { tool:'Alat', armor:'Armor', mat:'Material', block:'Blok', food:'Makanan', special:'Spesial', misc:'Lainnya' };
+    for (var i = 0; i < order.length; i++) {
+      var c = order[i], cnt = data.catCounts[c] || 0;
+      if (cnt === 0) continue;
+      h += '<button class="mkt-btn' + (_mktFilter === c ? ' act' : '') + '" data-cat="' + c + '">' + labels[c] + ' <span style="opacity:.5">' + cnt + '</span></button>';
+    }
+    el.innerHTML = h;
+  }
+
+  function _renderMktTable(data) {
+    var tbody = document.querySelector('#tbl-top-items tbody');
+    if (!tbody) return;
+    var filtered = _mktFilterArr(data.arr);
+    var sorted = _mktSortArr(filtered);
+
+    // Update sort arrow visuals
+    var ths = document.querySelectorAll('#tbl-top-items th.srt');
+    for (var t = 0; t < ths.length; t++) {
+      ths[t].classList.remove('asc', 'desc');
+      if (ths[t].getAttribute('data-col') === _mktSort.col) ths[t].classList.add(_mktSort.dir);
+    }
+
+    if (sorted.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:1.5rem;color:var(--mute);font-family:\'JetBrains Mono\',monospace;font-size:.5rem">' +
+        (_mktQuery ? 'Tidak ditemukan: "' + esc(_mktQuery) + '"' : 'Tidak ada data') + '</td></tr>';
+      var ft = $('mkt-footer'); if (ft) ft.textContent = '';
+      return;
+    }
+
+    var out = [];
+    for (var i = 0; i < sorted.length; i++) {
+      var it = sorted[i];
+      // Medal ranks
+      var rankIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '<span style="color:var(--mute)">' + (i + 1) + '</span>';
+
+      // Trend
+      var trendHtml, trendVal = it.trendPct;
+      if (trendVal === 999) trendHtml = '<span style="color:var(--cyan);font-weight:600">NEW</span>';
+      else if (trendVal > 5) trendHtml = '<span style="color:#26a69a;font-weight:600">▲' + trendVal.toFixed(0) + '%</span>';
+      else if (trendVal < -5) trendHtml = '<span style="color:#ef5350;font-weight:600">▼' + Math.abs(trendVal).toFixed(0) + '%</span>';
+      else if (it.recent > 0 || it.old > 0) trendHtml = '<span style="color:var(--mute)">—</span>';
+      else trendHtml = '<span style="color:var(--mute)">—</span>';
+
+      // ItemId display
+      var idHtml = it.itemId ? '<span class="mkt-id">' + esc(it.itemId.replace('minecraft:', '')) + '</span>' : '';
+
+      out.push('<tr>' +
+        '<td style="font-weight:700;text-align:center">' + rankIcon + '</td>' +
+        '<td><span style="font-weight:600">' + esc(it.name) + '</span>' + idHtml + '</td>' +
+        '<td class="mkt-col-cat"><span class="mkt-cat mkt-cat-' + it.catCls + '">' + it.catLabel + '</span></td>' +
+        '<td style="text-align:right;color:var(--cyan)">' + fmtN(it.count) + ' <span style="color:var(--dim);font-size:.32rem">' + it.txCount + 'tx</span></td>' +
+        '<td style="text-align:right;color:var(--gold);font-weight:700">' + fmt(it.avg) + '</td>' +
+        '<td style="text-align:right;color:var(--dim)">' + fmt(Math.round(it.min)) + '</td>' +
+        '<td style="text-align:right;color:var(--text)">' + fmt(Math.round(it.max)) + '</td>' +
+        '<td class="mkt-col-vol" style="text-align:right"><span class="mkt-vol">' + fmtN(it.total) + '</span></td>' +
+        '<td style="text-align:right">' + trendHtml + '</td>' +
+        '</tr>');
     }
     tbody.innerHTML = out.join('');
-    var pill = $('top-items-pill'); if (pill) pill.textContent = totalTx + ' TX · 7 HARI';
+    // Footer
+    var ft = $('mkt-footer');
+    if (ft) ft.textContent = 'Menampilkan ' + sorted.length + ' dari ' + data.arr.length + ' item · ' + fmtN(data.totalTx) + ' transaksi';
+  }
+
+  var _mktBound = false;
+  function _mktBindEvents() {
+    if (_mktBound) return;
+    _mktBound = true;
+
+    // Search
+    var searchEl = $('mkt-search');
+    if (searchEl) {
+      var debounce = null;
+      searchEl.addEventListener('input', function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(function () {
+          _mktQuery = searchEl.value.trim();
+          _renderMktTable(_mktCache);
+        }, 200);
+      });
+    }
+
+    // Category filter (event delegation)
+    var catsEl = $('mkt-cats');
+    if (catsEl) {
+      catsEl.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-cat]');
+        if (!btn) return;
+        _mktFilter = btn.getAttribute('data-cat');
+        _renderMktCats(_mktCache);
+        _renderMktTable(_mktCache);
+      });
+    }
+
+    // Sortable headers (event delegation)
+    var thead = document.querySelector('#tbl-top-items thead');
+    if (thead) {
+      thead.addEventListener('click', function (e) {
+        var th = e.target.closest('th.srt');
+        if (!th) return;
+        var col = th.getAttribute('data-col');
+        if (_mktSort.col === col) {
+          _mktSort.dir = _mktSort.dir === 'desc' ? 'asc' : 'desc';
+        } else {
+          _mktSort.col = col;
+          _mktSort.dir = (col === 'name' || col === 'cat') ? 'asc' : 'desc';
+        }
+        _renderMktTable(_mktCache);
+      });
+    }
   }
 
 

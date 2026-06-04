@@ -23,6 +23,7 @@ function showSection(name, el) {
     'manage-admins':    'Manajemen Admin',
     'activity-log':     'Log Aktivitas',
     'gem-topup':        'Topup Gem / Koin',
+    'recovery':         'Recovery Data',
   };
   document.getElementById('topbar-section').textContent = labels[name] || name;
 

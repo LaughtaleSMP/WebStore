@@ -118,6 +118,11 @@ async function afterLogin(user, roleData = null) {
   await loadAllConfig();
   await loadWAAdmins();
 
+  // Inject recovery nav (available to all admins)
+  if (typeof window.recoveryInjectNav === 'function') {
+    window.recoveryInjectNav();
+  }
+
   if (typeof window._idleStartTracking === 'function') window._idleStartTracking();
 
   // Bug #3 fix: ordersInitBadge didefinisi di admin-orders.js
