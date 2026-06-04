@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  var _cache = null, _cacheTs = 0;
+  var _cache = null, _cacheTs = 0, _lastBackupTs = 0;
   var _CACHE_TTL = 120_000;
   var _searchQuery = '';
   var _trailNames = {};
@@ -94,9 +94,8 @@
       _secondsLeft--;
       if (_secondsLeft <= 0) {
          _secondsLeft = 60;
-         _cache = null; 
-         _cacheTs = 0;
-         _loadData();
+         _cacheTs = 0; // force bypass cache TTL
+         _loadData(true); // silent refresh
       }
       _updateCountdownUi();
     }, 1000);
@@ -120,26 +119,30 @@
     }
   }
 
-  async function _loadData() {
+  async function _loadData(silent) {
     var body = document.getElementById('rcv-body');
     if (!body) return;
 
     var btn = document.getElementById('rcv-refresh');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;margin-right:4px;vertical-align:-2px"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4 31.4"/></svg>Memuat...';
+      if (!silent) {
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;margin-right:4px;vertical-align:-2px"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4 31.4"/></svg>Memuat...';
+      }
     }
 
-    if (_cache && (Date.now() - _cacheTs) < _CACHE_TTL) {
+    if (!silent && _cache && (Date.now() - _cacheTs) < _CACHE_TTL) {
       _renderCards(_cache);
       if (btn) { btn.disabled = false; btn.innerHTML = 'Refresh'; }
       return;
     }
 
-    body.innerHTML = '<div class="empty-state" style="display:flex;flex-direction:column;align-items:center;gap:12px">' +
-      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4 31.4"/></svg>' +
-      '<span>Sinkronisasi data backup...</span>' +
-      '</div>';
+    if (!silent) {
+      body.innerHTML = '<div class="empty-state" style="display:flex;flex-direction:column;align-items:center;gap:12px">' +
+        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4 31.4"/></svg>' +
+        '<span>Sinkronisasi data backup...</span>' +
+        '</div>';
+    }
 
     try {
       var sb = window._adminSb;
@@ -153,7 +156,7 @@
 
       if (resp.error) throw resp.error;
       if (!resp.data?.gacha_lb) {
-        body.innerHTML = '<div class="empty-state">Belum ada data sync. Server belum pernah online.</div>';
+        if (!silent) body.innerHTML = '<div class="empty-state">Belum ada data sync. Server belum pernah online.</div>';
         return;
       }
 
@@ -161,6 +164,16 @@
         ? JSON.parse(resp.data.gacha_lb)
         : resp.data.gacha_lb;
 
+      var newBackupTs = lb._backup_ts || 0;
+
+      // Seamless Auto-Refresh: Skip re-render if data hasn't changed
+      if (silent && _cache && newBackupTs > 0 && newBackupTs <= _lastBackupTs) {
+        _cacheTs = Date.now();
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Refresh'; }
+        return;
+      }
+
+      _lastBackupTs = newBackupTs;
       _trailNames = lb._trail_names || {};
       _fxNames = lb._fx_names || {};
 
@@ -184,7 +197,7 @@
             'Belum ada backup. Server perlu sync minimal 1x setelah update behavior pack.' +
             '</div>';
         }
-        body.innerHTML = msg;
+        if (!silent) body.innerHTML = msg;
         return;
       }
 
@@ -192,7 +205,7 @@
       _cacheTs = Date.now();
       _renderCards(backups);
     } catch (e) {
-      body.innerHTML = '<div class="empty-state" style="color:#f87171">Error: ' + escHtml(e.message) + '</div>';
+      if (!silent) body.innerHTML = '<div class="empty-state" style="color:#f87171">Error: ' + escHtml(e.message) + '</div>';
     } finally {
       var rBtn = document.getElementById('rcv-refresh');
       if (rBtn) { rBtn.disabled = false; rBtn.innerHTML = 'Refresh'; }
