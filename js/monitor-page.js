@@ -2415,12 +2415,12 @@ function _setRadarHistError(msg){
       try{localStorage.setItem('lt_perf_mode',_perfMode?'1':'0');}catch(e){}
       window._hmDirty=true;
       
-      // Auto-toggle heavy atmospheric rain/thunder background to save massive CPU/GPU
+      // Auto-toggle atmospheric rain intensity (perfMode = lower intensity, NOT disabled)
       var atmoCard = document.querySelector('.atmo-card');
       if(atmoCard && typeof _atmoLoadState === 'function') {
          var atmoState = _atmoLoadState();
          if(atmoState && atmoState.wx) {
-            _atmoCanvasSync(atmoCard, _perfMode ? 'clear' : atmoState.wx);
+            _atmoCanvasSync(atmoCard, atmoState.wx);
          }
       }
       if(_perfMode) {
@@ -4412,6 +4412,9 @@ function _atmoStarOp(td){
 }
 
 // Canvas FX (realistic rain/thunder). Dibuat lazily saat pertama kali ada wx non-clear.
+// NOTE: Canvas rain HARUS jalan di mobile juga supaya droplet sama dengan PC.
+// Sebelumnya _perfMode matikan canvas sepenuhnya → mobile fallback ke CSS rain yang beda.
+// Sekarang: perfMode hanya turunkan intensity (hemat GPU), BUKAN matikan.
 var _atmoFx=null;
 function _atmoCanvasSync(card,weather){
   if(typeof window.AtmoCanvas!=='function')return;
@@ -4419,11 +4422,14 @@ function _atmoCanvasSync(card,weather){
   if(!_atmoFx){
     try{_atmoFx=window.AtmoCanvas(cv);}catch(e){return;}
   }
-  if(weather==='clear' || _perfMode){
+  if(weather==='clear'){
     _atmoFx.setMode('clear');
     card.classList.remove('has-canvas-fx');
   }else{
-    _atmoFx.setIntensity(weather==='thunder'?0.90:0.70);
+    // PerfMode (mobile): intensity diturunkan supaya tetap smooth tapi droplet sama
+    var intensityRain    = _perfMode ? 0.35 : 0.70;
+    var intensityThunder = _perfMode ? 0.50 : 0.90;
+    _atmoFx.setIntensity(weather==='thunder' ? intensityThunder : intensityRain);
     _atmoFx.setMode(weather);
     card.classList.add('has-canvas-fx');
   }

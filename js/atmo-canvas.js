@@ -22,6 +22,7 @@ window.AtmoCanvas = function(canvas, opts){
   opts = opts || {};
   var ctx = canvas.getContext('2d');
   var W=0, H=0, DPR=1;
+  var isMobile = (typeof window !== 'undefined' && window.innerWidth < 768);
   var mode='clear', intensity=1.0;
   var rafId=0, running=false;
   var drops=[], splashes=[], ripples=[], streaks=[], bolts=[], clouds=[];
@@ -42,7 +43,8 @@ window.AtmoCanvas = function(canvas, opts){
 
   function targetDropCount(){
     var n = W*H * DROP_DENSITY * intensity;
-    return Math.max(12, Math.min(420, Math.round(n)));
+    var maxDrops = isMobile ? 200 : 420;
+    return Math.max(12, Math.min(maxDrops, Math.round(n)));
   }
 
   function buildGradients(){
@@ -302,7 +304,7 @@ window.AtmoCanvas = function(canvas, opts){
   }
 
   function resize(){
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    DPR = Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 2);
     // Pakai clientWidth/clientHeight (mengikuti CSS inset:0 stretch ke parent),
     // BUKAN getBoundingClientRect/style.width — supaya canvas tetap stretchy saat parent resize.
     W = Math.max(40, canvas.clientWidth | 0);
