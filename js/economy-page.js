@@ -99,6 +99,11 @@
         }
       } catch(e) { /* auction_history table belum ada, pakai fallback */ }
 
+      // [FIX] Deduplicate auction entries — backend DP can accumulate
+      // duplicate history entries from behavior pack restarts/reloads.
+      // Key: item+seller+buyer+type+ts (composite unique identifier).
+      auctionData = _dedup(auctionData);
+
       _data = {
         lb: lbParsed,
         bank: safeParse(row.bank_log, []), auction: auctionData,
@@ -117,6 +122,20 @@
   }
 
   function safeParse(v, d) { if (!v) return d; if (typeof v === 'string') try { return JSON.parse(v) } catch (e) { return d } return v }
+
+  // [FIX] Deduplicate auction log array. Key = type|item|seller|buyer|ts|price|qty.
+  // Prevents duplicate entries caused by behavior pack restarts where the same
+  // expiry/settle event fires again before the DP status update is persisted.
+  function _dedup(arr) {
+    if (!Array.isArray(arr) || arr.length < 2) return arr;
+    var seen = {};
+    return arr.filter(function (e) {
+      var k = (e.type || '') + '|' + (e.item || e.item_name || '') + '|' + (e.seller || '') + '|' + (e.buyer || '') + '|' + (e.ts || e.tx_time || '') + '|' + (e.price || 0) + '|' + (e.qty || 1);
+      if (seen[k]) return false;
+      seen[k] = 1;
+      return true;
+    });
+  }
 
   function renderAnalytics() {
     if (!_data) return;
