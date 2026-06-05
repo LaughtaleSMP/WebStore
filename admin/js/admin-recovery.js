@@ -245,7 +245,6 @@
       return;
     }
 
-
     var totalGems = 0, totalTrails = 0, totalFx = 0;
     for (var i = 0; i < backups.length; i++) {
       totalGems += backups[i].gem || 0;
@@ -253,110 +252,168 @@
       totalFx += (backups[i].killfx || []).length;
     }
 
-    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;margin-bottom:16px">' +
-      _kpiCard('Player', backups.length, 'rgba(74,143,255,0.15)', '#4a8fff') +
-      _kpiCard('Total Gem', totalGems.toLocaleString('id-ID'), 'rgba(167,139,250,0.15)', '#a78bfa') +
-      _kpiCard('Trails', totalTrails, 'rgba(52,211,153,0.15)', '#34d399') +
-      _kpiCard('Kill FX', totalFx, 'rgba(248,113,113,0.15)', '#f87171') +
+    var html = '<style>' +
+      '.rcv-kpi-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:20px; }' +
+      '.rcv-table-header { display:grid; grid-template-columns:160px 80px 1fr 1fr 1fr 90px; gap:12px; padding:12px 16px; font-size:10.5px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border); background:var(--surface2); border-radius:10px 10px 0 0; }' +
+      '.rcv-row { display:grid; grid-template-columns:160px 80px 1fr 1fr 1fr 90px; gap:12px; align-items:center; padding:12px 16px; transition:all 0.2s; border-bottom:1px solid var(--border); background:transparent; }' +
+      '.rcv-row:last-child { border-bottom:none; border-radius:0 0 10px 10px; }' +
+      '.rcv-row:hover { background:rgba(255,255,255,0.02); }' +
+      '.rcv-col-label { display:none; font-size:9.5px; color:var(--text-faint); font-weight:700; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px; }' +
+      '.rcv-list-container { border:1px solid var(--border); border-radius:10px; background:var(--surface); box-shadow:0 2px 12px rgba(0,0,0,0.05); }' +
+      '@media (max-width: 768px) {' +
+        '.rcv-table-header { display:none; }' +
+        '.rcv-list-container { background:transparent; border:none; box-shadow:none; }' +
+        '.rcv-row { display:flex; flex-direction:column; align-items:stretch; gap:12px; padding:16px; background:var(--surface2); border-radius:12px; margin-bottom:12px; border:1px solid var(--border); }' +
+        '.rcv-row:hover { background:var(--surface2); }' +
+        '.rcv-col-label { display:block; }' +
+        '.rcv-player-col { display:flex; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:12px; margin-bottom:4px; }' +
+        '.rcv-action-col { text-align:left !important; margin-top:6px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.05); }' +
+        '.rcv-action-col button { width:100%; justify-content:center; padding:12px 0 !important; font-size:12px !important; }' +
+        '.rcv-kpi-grid { grid-template-columns: 1fr 1fr; }' +
+      '}' +
+      '</style>';
+
+    html += '<div class="rcv-kpi-grid">' +
+      _kpiCard('Player Data', backups.length, 'rgba(56, 189, 248, 0.1)', '#38bdf8', 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z') +
+      _kpiCard('Total Gem', totalGems.toLocaleString('id-ID'), 'rgba(167, 139, 250, 0.1)', '#a78bfa', 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4') +
+      _kpiCard('Total Trails', totalTrails, 'rgba(52, 211, 153, 0.1)', '#34d399', 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z') +
+      _kpiCard('Kill Effects', totalFx, 'rgba(248, 113, 113, 0.1)', '#f87171', 'M13 10V3L4 14h7v7l9-11h-7z') +
       '</div>';
 
+    var lastSyncDate = _lastBackupTs ? new Date(_lastBackupTs).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', second:'2-digit'}) : 'Belum sync';
+    
+    html += '<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1)">' +
+      '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">' +
+        '<button id="rcv-restore-all" class="btn-ghost" style="font-size:11.5px;padding:6px 14px;border-radius:6px;display:flex;align-items:center;gap:6px;background:rgba(52,211,153,.1);color:#10b981;border:1px solid rgba(52,211,153,.3);cursor:pointer;font-weight:700;transition:all 0.2s" onmouseover="this.style.background=\'rgba(52,211,153,.2)\'" onmouseout="this.style.background=\'rgba(52,211,153,.1)\'">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>' +
+          'Restore All (' + filtered.length + ')' +
+        '</button>' +
+        '<span id="rcv-restore-status" style="font-size:11.5px;color:var(--text-faint);font-weight:500"></span>' +
+      '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;font-size:11px;color:var(--text-faint)">' +
+        '<div style="display:flex;align-items:center;gap:5px;background:rgba(52,211,153,.1);padding:4px 8px;border-radius:20px;border:1px solid rgba(52,211,153,.2)"><div style="width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399;animation:pulse 2s infinite"></div> <span style="color:#34d399;font-weight:600">Backup Safe</span></div>' +
+        '<span style="opacity:0.3;display:none;@media(min-width:600px){display:inline}">|</span>' +
+        '<span>Last Sync: <strong style="color:var(--text);font-variant-numeric:tabular-nums">' + lastSyncDate + '</strong></span>' +
+      '</div>' +
+    '</div>';
 
-    html += '<div style="margin-bottom:20px;display:flex;gap:10px;align-items:center;padding:0 4px">' +
-      '<button id="rcv-restore-all" class="btn-ghost" ' +
-      'style="font-size:12px;padding:8px 18px;border:1px solid rgba(52,211,153,.5);color:#10b981;border-radius:8px;font-weight:700;background:rgba(52,211,153,.1);transition:all 0.2s;display:flex;align-items:center;gap:6px;cursor:pointer;box-shadow:0 2px 8px rgba(52,211,153,.15)" ' +
-      'onmouseover="this.style.background=\'rgba(52,211,153,.2)\';this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 12px rgba(52,211,153,.25)\'" onmouseout="this.style.background=\'rgba(52,211,153,.1)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'0 2px 8px rgba(52,211,153,.15)\'" ' +
-      'aria-label="Restore all players">' +
-      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>' +
-      'Restore All (' + filtered.length + ' Player)' +
-      '</button>' +
-      '<span id="rcv-restore-status" style="font-size:11.5px;color:var(--text-faint);font-weight:500"></span>' +
-      '</div>';
+    html += '<div class="rcv-list-container">';
+    html += '<div class="rcv-table-header">' +
+      '<div>Player</div>' +
+      '<div>Gems</div>' +
+      '<div>Particle Trails</div>' +
+      '<div>Kill Effects</div>' +
+      '<div>Mimi Inka</div>' +
+      '<div style="text-align:right">Action</div>' +
+    '</div>';
 
-
+    html += '<div style="display:flex;flex-direction:column;">';
     for (var j = 0; j < filtered.length; j++) {
-      html += _playerCard(filtered[j]);
+      html += _playerRow(filtered[j], j === filtered.length - 1);
     }
+    html += '</div></div>';
 
-    html += '<div style="font-size:10.5px;color:var(--text-faint);margin-top:12px;text-align:right">' +
+    html += '<div style="font-size:11px;color:var(--text-faint);margin-top:16px;text-align:center">' +
       'Menampilkan ' + filtered.length + ' dari ' + backups.length + ' player</div>';
 
     body.innerHTML = html;
     _bindButtons(filtered);
   }
 
-  function _kpiCard(label, value, bg, color) {
-    return '<div style="background:linear-gradient(145deg, var(--surface) 0%, var(--surface2) 100%);border:1px solid var(--border);border-radius:12px;padding:14px 18px;box-shadow:0 4px 12px rgba(0,0,0,0.1);position:relative;overflow:hidden">' +
-      '<div style="position:absolute;top:-10px;right:-10px;width:60px;height:60px;background:' + bg + ';filter:blur(24px);border-radius:50%"></div>' +
-      '<div style="font-size:10.5px;color:var(--text-faint);font-weight:700;text-transform:uppercase;letter-spacing:1px;position:relative;z-index:1">' + label + '</div>' +
-      '<div style="font-size:24px;font-weight:800;color:' + color + ';margin-top:6px;text-shadow:0 2px 4px rgba(0,0,0,0.2);position:relative;z-index:1">' + value + '</div>' +
+  function _kpiCard(label, value, bg, color, iconPath) {
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)">' +
+      '<div style="width:40px;height:40px;border-radius:10px;background:' + bg + ';display:flex;align-items:center;justify-content:center;color:' + color + '">' +
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="' + iconPath + '"/></svg>' +
+      '</div>' +
+      '<div>' +
+        '<div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">' + label + '</div>' +
+        '<div style="font-size:18px;font-weight:800;color:var(--text);margin-top:2px">' + value + '</div>' +
+      '</div>' +
       '</div>';
   }
 
-  function _playerCard(b) {
+  function _playerRow(b, isLast) {
     var trails = b.trails || [];
     var killfx = b.killfx || [];
-    var gemStyle = b.gem >= 1000 ? 'color:#a78bfa;font-weight:800' : 'color:var(--text);font-weight:600';
+    var gemStyle = b.gem >= 1000 ? 'color:#a78bfa;font-weight:700' : 'color:var(--text);font-weight:600';
     
-    // Gunakan crafthead.net yang lebih toleran, fallback ke ui-avatars jika gagal (misal nama ada spasi)
     var safeName = b.name.replace(/ /g, '_');
-    var avatarUrl = 'https://crafthead.net/helm/' + encodeURIComponent(safeName) + '/34.png';
-    var fallbackUrl = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(b.name) + '&background=2a2a2a&color=fff&size=34&bold=true';
+    var avatarUrl = 'https://crafthead.net/helm/' + encodeURIComponent(safeName) + '/28.png';
+    var fallbackUrl = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(b.name) + '&background=2a2a2a&color=fff&size=28&bold=true';
 
-    var html = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);position:relative;overflow:hidden" ' +
-      'onmouseover="this.style.borderColor=\'rgba(167,139,250,.5)\';this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 8px 16px rgba(0,0,0,0.2)\'" ' +
-      'onmouseout="this.style.borderColor=\'var(--border)\';this.style.transform=\'translateY(0)\';this.style.boxShadow=\'none\'">';
+    var trailsHtml = '';
+    if (trails.length) {
+      trailsHtml += '<div style="display:flex;flex-wrap:wrap;gap:4px">';
+      for (var t = 0; t < trails.length; t++) {
+        var tc = _trailColor(trails[t]);
+        trailsHtml += '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:' + tc + '15;color:' + tc + ';border:1px solid ' + tc + '30;white-space:nowrap;font-weight:500">' + escHtml(_trailName(trails[t])) + '</span>';
+      }
+      trailsHtml += '</div>';
+    } else {
+      trailsHtml = '<span style="color:var(--text-faint);font-size:11px;font-style:italic">-</span>';
+    }
 
-    html += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">' +
-      '<div style="position:relative;width:34px;height:34px">' + 
-        '<img src="' + avatarUrl + '" onerror="this.onerror=null;this.src=\'' + fallbackUrl + '\'" alt="' + escHtml(b.name) + '" style="width:34px;height:34px;border-radius:8px;background:#2a2a2a;border:1px solid rgba(255,255,255,.1);box-shadow:0 2px 6px rgba(0,0,0,0.3);object-fit:cover">' +
-        '<div style="position:absolute;bottom:-3px;right:-3px;width:12px;height:12px;border-radius:50%;border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;background:' + (b.online ? '#4ade80' : '#64748b') + ';box-shadow:0 1px 3px rgba(0,0,0,0.4)"></div>' +
+    var fxHtml = '';
+    var customFx = killfx.filter(function(id) { return id !== 'Games:coins' && id !== 'none'; });
+    if (customFx.length) {
+      fxHtml += '<div style="display:flex;flex-wrap:wrap;gap:4px">';
+      for (var f = 0; f < customFx.length; f++) {
+        fxHtml += '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(248,113,113,.1);color:#fca5a5;border:1px solid rgba(248,113,113,.2);white-space:nowrap;font-weight:500">' + escHtml(_fxName(customFx[f])) + '</span>';
+      }
+      fxHtml += '</div>';
+    } else {
+      fxHtml = '<span style="color:var(--text-faint);font-size:11px;font-style:italic">-</span>';
+    }
+
+    var mimiHtml = '';
+    var mimiTags = b.mimi || [];
+    if (mimiTags.length) {
+      mimiHtml += '<div style="display:flex;flex-wrap:wrap;gap:4px">';
+      for (var m = 0; m < mimiTags.length; m++) {
+         mimiHtml += '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(74,143,255,.1);color:#60a5fa;border:1px solid rgba(74,143,255,.2);white-space:nowrap;font-weight:500">' + escHtml(mimiTags[m]) + '</span>';
+      }
+      mimiHtml += '</div>';
+    } else {
+      mimiHtml = '<span style="color:var(--text-faint);font-size:11px;font-style:italic">-</span>';
+    }
+
+    var borderBottom = isLast ? '' : 'border-bottom:1px solid var(--border);';
+
+    return '<div class="rcv-row">' +
+      '<div class="rcv-player-col">' +
+        '<div style="display:flex;align-items:center;gap:10px">' +
+          '<div style="position:relative">' +
+            '<img src="' + avatarUrl + '" onerror="this.onerror=null;this.src=\'' + fallbackUrl + '\'" style="width:28px;height:28px;border-radius:6px;background:#222;object-fit:cover;box-shadow:0 2px 4px rgba(0,0,0,0.3)">' +
+            '<div style="position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--surface);background:' + (b.online ? '#4ade80' : '#64748b') + '"></div>' +
+          '</div>' +
+          '<div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0.3px" title="' + escHtml(b.name) + '">' + escHtml(b.name) + '</div>' +
+        '</div>' +
       '</div>' +
-      '<div style="flex:1">' +
-        '<div style="font-weight:700;font-size:15px;color:var(--text);letter-spacing:0.3px;margin-bottom:2px">' + escHtml(b.name) + '</div>' +
-        '<div style="font-size:12px;' + gemStyle + ';display:flex;align-items:center;gap:5px">' +
+      '<div>' +
+        '<div class="rcv-col-label">Gems</div>' +
+        '<div style="display:flex;align-items:center;gap:4px;font-size:12.5px;' + gemStyle + '">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M2 9h20"/></svg>' +
           (b.gem || 0).toLocaleString('id-ID') +
         '</div>' +
       '</div>' +
-      '<button class="btn-ghost rcv-restore-btn" data-name="' + escHtml(b.name) + '" data-str="' + escHtml(b.data) + '" ' +
-        'style="font-size:11px;padding:6px 14px;border:1px solid rgba(52,211,153,.4);color:#34d399;border-radius:8px;font-weight:700;background:rgba(52,211,153,.05);transition:all 0.2s;display:flex;align-items:center;gap:5px;cursor:pointer" ' +
-        'onmouseover="this.style.background=\'rgba(52,211,153,.15)\';this.style.borderColor=\'#34d399\'" onmouseout="this.style.background=\'rgba(52,211,153,.05)\';this.style.borderColor=\'rgba(52,211,153,.4)\'" ' +
-        'aria-label="Restore ' + escHtml(b.name) + '">' +
-        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>' +
-        'Restore' +
-      '</button>' +
-      '</div>';
-
-
-    if (trails.length > 0) {
-      html += '<div style="margin-bottom:8px">' +
-        '<div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;margin-bottom:4px">Particle Trails (' + trails.length + ')</div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:4px">';
-      for (var t = 0; t < trails.length; t++) {
-        var tc = _trailColor(trails[t]);
-        html += '<span style="font-size:10.5px;padding:2px 8px;border-radius:6px;background:' + tc + '20;color:' + tc + ';border:1px solid ' + tc + '30;font-weight:500">' +
-          escHtml(_trailName(trails[t])) + '</span>';
-      }
-      html += '</div></div>';
-    }
-
-
-    if (killfx.length > 0) {
-      var customFx = killfx.filter(function(id) { return id !== 'Games:coins' && id !== 'none'; });
-      if (customFx.length > 0) {
-        html += '<div>' +
-          '<div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;margin-bottom:4px">Kill Effects (' + customFx.length + ')</div>' +
-          '<div style="display:flex;flex-wrap:wrap;gap:4px">';
-        for (var f = 0; f < customFx.length; f++) {
-          html += '<span style="font-size:10.5px;padding:2px 8px;border-radius:6px;background:rgba(248,113,113,.12);color:#fca5a5;border:1px solid rgba(248,113,113,.2);font-weight:500">' +
-            escHtml(_fxName(customFx[f])) + '</span>';
-        }
-        html += '</div></div>';
-      }
-    }
-
-    html += '</div>';
-    return html;
+      '<div>' +
+        '<div class="rcv-col-label">Particle Trails</div>' +
+        '<div>' + trailsHtml + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="rcv-col-label">Kill Effects</div>' +
+        '<div>' + fxHtml + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="rcv-col-label">Mimi Inka</div>' +
+        '<div>' + mimiHtml + '</div>' +
+      '</div>' +
+      '<div class="rcv-action-col">' +
+        '<button class="btn-ghost rcv-restore-btn" data-name="' + escHtml(b.name) + '" data-str="' + escHtml(b.data) + '" style="padding:5px 12px;font-size:11px;border-radius:4px;border:1px solid rgba(52,211,153,.3);color:#34d399;background:rgba(52,211,153,.05);cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;font-weight:600" onmouseover="this.style.background=\'rgba(52,211,153,.15)\';this.style.borderColor=\'#34d399\'" onmouseout="this.style.background=\'rgba(52,211,153,.05)\';this.style.borderColor=\'rgba(52,211,153,.3)\'" title="Restore ' + escHtml(b.name) + '">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg> Restore' +
+        '</button>' +
+      '</div>' +
+    '</div>';
   }
 
   function _bindButtons(filtered) {
