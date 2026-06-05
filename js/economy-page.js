@@ -62,7 +62,7 @@
     el.addEventListener('click', function (e) {
       var t = e.target.closest('.tab'); if (!t) return;
       document.querySelectorAll('#log-tabs .tab').forEach(function (b) { b.classList.remove('a') });
-      t.classList.add('a'); _activeTab = t.dataset.cat; renderLogs();
+      t.classList.add('a'); _activeTab = t.dataset.cat; _aucPage = 0; renderLogs();
     });
   }
 
@@ -78,14 +78,17 @@
       }
       // Fetch main sync + permanent auction history in parallel
       var mainP = fetch(SB_URL + '/rest/v1/leaderboard_sync?id=eq.current&select=gacha_lb,bank_log,auction_log,gacha_log,topup_log,disc_codes,synced_at', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
-      var aucP  = fetch(SB_URL + '/rest/v1/auction_history?select=tx_time,tx_type,item_name,item_id,qty,seller,buyer,price&order=tx_time.desc&limit=5000', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } }).catch(function() { return null; });
+      // Permanent table — fetch up to 10k rows for full market analytics.
+      // PostgREST default limit is 1000; Range header overrides it.
+      var aucP  = fetch(SB_URL + '/rest/v1/auction_history?select=tx_time,tx_type,item_name,item_id,qty,seller,buyer,price&order=tx_time.desc', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, Range: '0-9999', Prefer: 'count=exact' } }).catch(function() { return null; });
 
       var r = await mainP;
       var d = await r.json(); if (!d || !d[0]) return;
       var row = d[0];
       var lbParsed = safeParse(row.gacha_lb, {});
 
-      // Try permanent auction_history first, fallback to sync auction_log
+      // Primary: permanent auction_history table (unlimited).
+      // Fallback: sync auction_log (DP snapshot, limited).
       var auctionData = safeParse(row.auction_log, []);
       try {
         var aRes = await aucP;
@@ -99,9 +102,7 @@
         }
       } catch(e) { /* auction_history table belum ada, pakai fallback */ }
 
-      // [FIX] Deduplicate auction entries — backend DP can accumulate
-      // duplicate history entries from behavior pack restarts/reloads.
-      // Key: item+seller+buyer+type+ts (composite unique identifier).
+      // Deduplicate — safety net for overlapping sync/permanent data
       auctionData = _dedup(auctionData);
 
       _data = {
@@ -939,14 +940,18 @@
     }).join('');
   }
 
+  var _aucPage = 0;
+  var _AUC_PAGE_SIZE = 50;
+
   function renderAuction(logs) {
     var el = $('log-content');
-    if (!logs.length) { el.innerHTML = '<div class="emp">Belum ada log auction</div>'; return; }
+    if (!logs.length) { el.innerHTML = '<div class="emp">Belum ada log auction</div>'; _aucPage = 0; return; }
 
-    // [PERF] Sort by ts desc — terbaru di atas. Slice agar tidak mutate cache.
     var sorted = logs.slice().sort(function (a, b) { return (b.ts || 0) - (a.ts || 0) });
+    var limit = Math.min((_aucPage + 1) * _AUC_PAGE_SIZE, sorted.length);
+    var showing = sorted.slice(0, limit);
 
-    el.innerHTML = sorted.map(function (h, i) {
+    el.innerHTML = showing.map(function (h, i) {
       var t = h.type;
       var cls, badge = '', amt;
 
@@ -965,7 +970,6 @@
         cls = 'sold';
         amt = '<div class="log-amount coin">' + fmt(h.price) + ' Coin</div>';
       } else {
-        // Unknown type — tampil aman, tidak crash
         cls = 'sold';
         amt = h.price ? '<div class="log-amount coin">' + fmt(h.price) + ' Coin</div>' : '<div class="log-amount expired">—</div>';
       }
@@ -975,8 +979,9 @@
         : '<span class="pn">' + esc(h.seller || '?') + '</span> <span class="arrow">→</span> <span class="pn">' + esc(h.buyer || '?') + '</span>' + badge;
 
       var qtyStr = h.qty > 1 ? ' x' + h.qty : '';
+      var animDelay = i < 20 ? i * 30 : 0;
 
-      return '<div class="log-row" style="animation:fs .3s ' + i * 30 + 'ms ease both">'
+      return '<div class="log-row" style="animation:fs .3s ' + animDelay + 'ms ease both">'
         + '<div class="log-icon ' + cls + '">' + (_ic[cls] || '') + '</div>'
         + '<div class="log-body">'
         +   '<div class="log-main">' + esc(h.item || '?') + qtyStr + '</div>'
@@ -985,6 +990,15 @@
         + amt
         + '</div>';
     }).join('');
+
+    // "Load More" button if there are more entries
+    if (limit < sorted.length) {
+      el.innerHTML += '<div style="text-align:center;padding:12px">'
+        + '<button id="auc-load-more" style="font-family:\'JetBrains Mono\',monospace;font-size:.46rem;font-weight:600;padding:8px 24px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--dim);cursor:pointer;transition:all .2s;letter-spacing:.3px">'
+        + 'Tampilkan lebih (' + limit + '/' + sorted.length + ')</button></div>';
+      var btn = document.getElementById('auc-load-more');
+      if (btn) btn.onclick = function() { _aucPage++; renderAuction(logs); };
+    }
   }
 
   function renderGachaLog(logs) {

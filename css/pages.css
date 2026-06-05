@@ -17,6 +17,14 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   background:radial-gradient(ellipse 700px 450px at 15% 5%,rgba(168,85,247,.045),transparent),
              radial-gradient(ellipse 500px 400px at 88% 90%,rgba(34,211,238,.025),transparent)}
 
+/* Custom Scrollbar - Premium Glassmorphism */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(168, 85, 247, 0.4); }
+::-webkit-scrollbar-corner { background: transparent; }
+* { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.1) transparent; }
+
 /* Layout */
 .w{position:relative;z-index:1;max-width:700px;margin:0 auto;padding:1.5rem 1.25rem 4rem}
 
