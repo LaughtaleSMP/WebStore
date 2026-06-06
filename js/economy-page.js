@@ -96,9 +96,11 @@
         if (aRes && aRes.ok) {
           var aRows = await aRes.json();
           if (Array.isArray(aRows) && aRows.length > 0) {
-            auctionData = aRows.map(function(r) {
-              return { ts: r.tx_time, type: r.tx_type, item: r.item_name, itemId: r.item_id, qty: r.qty || 1, seller: r.seller, buyer: r.buyer, price: r.price };
+            var mappedRows = aRows.map(function(r) {
+              var tsNum = typeof r.tx_time === 'string' ? new Date(r.tx_time).getTime() : Number(r.tx_time) || 0;
+              return { ts: tsNum, type: r.tx_type, item: r.item_name, itemId: r.item_id, qty: r.qty || 1, seller: r.seller, buyer: r.buyer, price: r.price };
             });
+            auctionData = mappedRows.concat(auctionData);
           }
         }
       } catch(e) { /* auction_history table belum ada, pakai fallback */ }
