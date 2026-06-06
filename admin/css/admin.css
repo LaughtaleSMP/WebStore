@@ -823,8 +823,16 @@ input[type="password"]::-ms-clear {
 @keyframes dotBlink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
 .orders-stats-strip {
-  display: grid; grid-template-columns: repeat(3,1fr);
+  display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 10px; margin-bottom: 18px;
+}
+/* 3-col on medium */
+@media (max-width: 900px) {
+  .orders-stats-strip { grid-template-columns: repeat(2, 1fr); }
+}
+/* 2-col on tablet/mobile */
+@media (max-width: 768px) {
+  .orders-stats-strip { grid-template-columns: repeat(2, 1fr) !important; }
 }
 .ostat-card {
   background: var(--surface); border: 1px solid var(--border);
@@ -937,6 +945,25 @@ input[type="password"]::-ms-clear {
 @media (max-width: 1024px) {
   :root { --sidebar-w: 200px; }
   .main-content { padding: 1.5rem 1.75rem; }
+  /* Section max-width: loosen for medium screens */
+  .section { max-width: 100%; }
+  /* Dashboard stats: still 4-col but slightly smaller */
+  .orders-stats-strip { gap: 8px; }
+  .ostat-num { font-size: 19px; }
+}
+
+/* ── Medium desktop (1025-1280px): scale content properly ── */
+@media (min-width: 769px) and (max-width: 1280px) {
+  .fv2-charts-row { grid-template-columns: 1fr; }
+  .fv2-charts-row-b { grid-template-columns: 1fr !important; }
+  .fv2-bar-inner { grid-template-columns: 1fr 1fr; }
+  .fv2-summary { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Large desktop (>1280px): allow section to breathe ── */
+@media (min-width: 1281px) {
+  .section { max-width: 980px; }
+  .fv2-summary { grid-template-columns: repeat(4, 1fr); }
 }
 
 @media (max-width: 768px) {
@@ -1094,4 +1121,63 @@ input[type="password"]::-ms-clear {
   .orders-stats-strip, .finance-summary { grid-template-columns: 1fr; }
   .scfg-item-row { flex-wrap: wrap; }
   .scfg-item-actions { width: 100%; justify-content: flex-end; }
+}
+
+/* ── Dashboard quick-access buttons: 2-col always ── */
+@media (min-width: 769px) {
+  .dash-quick-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ── Smooth scrolling ── */
+.main-content {
+  scroll-behavior: smooth;
+}
+
+/* ── Section transition: smoother ── */
+@keyframes sectionIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.995); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Improved toast positioning on mobile (above bottom nav) ── */
+@media (max-width: 768px) {
+  #toast {
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    right: 0.75rem;
+    left: 0.75rem;
+    align-items: stretch;
+  }
+  .toast-item {
+    max-width: 100%;
+    text-align: center;
+  }
+}
+
+/* ── Focus visible: accessibility ── */
+*:focus-visible {
+  outline: 2px solid rgba(74,143,255,0.6);
+  outline-offset: 2px;
+}
+button:focus:not(:focus-visible) { outline: none; }
+
+/* ── Scroll indicator hint for Finance table on mobile ── */
+@media (max-width: 768px) {
+  .fv2-table-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-bottom: 6px;
+    animation: fadeOut 3s ease-in-out 2s forwards;
+  }
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to   { opacity: 0; pointer-events: none; }
+  }
+}
+@media (min-width: 769px) {
+  .fv2-table-hint { display: none; }
 }

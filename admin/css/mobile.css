@@ -151,7 +151,6 @@
     align-items: stretch;
   }
   .rcv-restore-all-btn { width: 100%; justify-content: center; }
-
   /* ── Glyph sheets: full width, no right gap ── */
   /* gs-add-bar stacks label on top, controls below */
   .gs-add-bar {
