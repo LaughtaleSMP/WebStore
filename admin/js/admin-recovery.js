@@ -333,14 +333,22 @@
     '</div>';
 
     // Table
-    html += '<div class="rcv-table-wrap" style="margin-top:14px">' +
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:8px">' +
+      '<span style="font-size:11px;color:var(--text-faint)">Player dengan asset tersimpan</span>' +
+      '<button id="rcv-expand-all" class="pnl-btn" style="font-size:10px;padding:4px 10px">' +
+        '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>' +
+        '<span>Expand All</span>' +
+      '</button>' +
+    '</div>';
+    
+    html += '<div class="rcv-table-wrap">' +
     '<table class="rcv-tbl"><thead><tr>' +
       '<th class="rcv-tbl-hdr" style="width:160px">Player</th>' +
-      '<th class="rcv-tbl-hdr" style="width:80px">Gems</th>' +
-      '<th class="rcv-tbl-hdr">Trails</th>' +
-      '<th class="rcv-tbl-hdr">Kill FX</th>' +
-      '<th class="rcv-tbl-hdr">Mimi</th>' +
-      '<th class="rcv-tbl-hdr" style="text-align:right;width:90px">Action</th>' +
+      '<th class="rcv-tbl-hdr" style="width:90px">Gems</th>' +
+      '<th class="rcv-tbl-hdr" style="min-width:200px">Trails</th>' +
+      '<th class="rcv-tbl-hdr" style="min-width:200px">Kill FX</th>' +
+      '<th class="rcv-tbl-hdr" style="width:120px">Mimi</th>' +
+      '<th class="rcv-tbl-hdr" style="text-align:right;width:100px">Action</th>' +
     '</tr></thead><tbody>';
 
     for (var j = 0; j < filtered.length; j++) {
@@ -374,28 +382,64 @@
     var avatarUrl   = 'https://crafthead.net/helm/' + encodeURIComponent(safeName) + '/30.png';
     var fallbackUrl = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(b.name || '?') + '&background=111820&color=fff&size=30&bold=true';
 
-    // Trails
-    var trailsHtml = '<div class="rcv-pills-wrap">';
+    // Trails (with collapse/expand only if > 4)
+    var trailsHtml = '';
     if (trails.length) {
-      for (var t = 0; t < trails.length; t++) {
-        trailsHtml += '<span class="pnl-pill pnl-pill-purple">' + escHtml(_trailName(trails[t])) + '</span>';
+      if (trails.length <= 4) {
+        // 4 or less: show all directly without collapse
+        trailsHtml += '<div class="rcv-pills-wrap" style="margin:4px 0">';
+        for (var t = 0; t < trails.length; t++) {
+          trailsHtml += '<span class="pnl-pill pnl-pill-purple" title="' + escHtml(_trailName(trails[t])) + '">' + escHtml(_trailName(trails[t])) + '</span>';
+        }
+        trailsHtml += '</div>';
+      } else {
+        // More than 4: show summary + collapsible list
+        var trailId = 'trails-' + (b.name || '').replace(/\s+/g, '-');
+        trailsHtml += '<div class="rcv-summary">';
+        trailsHtml += '<span class="pnl-pill pnl-pill-purple" style="font-size:10px;padding:3px 8px">' + trails.length + ' trails</span>';
+        trailsHtml += '<button class="rcv-toggle-btn" data-target="' + trailId + '" title="Expand/Collapse">';
+        trailsHtml += '<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
+        trailsHtml += '</button>';
+        trailsHtml += '</div>';
+        trailsHtml += '<div id="' + trailId + '" class="rcv-pills-wrap collapsed">';
+        for (var t = 0; t < trails.length; t++) {
+          trailsHtml += '<span class="pnl-pill pnl-pill-purple" title="' + escHtml(_trailName(trails[t])) + '">' + escHtml(_trailName(trails[t])) + '</span>';
+        }
+        trailsHtml += '</div>';
       }
     } else {
-      trailsHtml += '<span class="mi-slot-empty">-</span>';
+      trailsHtml = '<span class="mi-slot-empty">-</span>';
     }
-    trailsHtml += '</div>';
 
-    // Kill FX
+    // Kill FX (with collapse/expand only if > 4)
     var customFx = killfx.filter(function(id) { return id !== 'Games:coins' && id !== 'none'; });
-    var fxHtml = '<div class="rcv-pills-wrap">';
+    var fxHtml = '';
     if (customFx.length) {
-      for (var f = 0; f < customFx.length; f++) {
-        fxHtml += '<span class="pnl-pill pnl-pill-red">' + escHtml(_fxName(customFx[f])) + '</span>';
+      if (customFx.length <= 4) {
+        // 4 or less: show all directly without collapse
+        fxHtml += '<div class="rcv-pills-wrap" style="margin:4px 0">';
+        for (var f = 0; f < customFx.length; f++) {
+          fxHtml += '<span class="pnl-pill pnl-pill-red" title="' + escHtml(_fxName(customFx[f])) + '">' + escHtml(_fxName(customFx[f])) + '</span>';
+        }
+        fxHtml += '</div>';
+      } else {
+        // More than 4: show summary + collapsible list
+        var fxId = 'killfx-' + (b.name || '').replace(/\s+/g, '-');
+        fxHtml += '<div class="rcv-summary">';
+        fxHtml += '<span class="pnl-pill pnl-pill-red" style="font-size:10px;padding:3px 8px">' + customFx.length + ' effects</span>';
+        fxHtml += '<button class="rcv-toggle-btn" data-target="' + fxId + '" title="Expand/Collapse">';
+        fxHtml += '<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
+        fxHtml += '</button>';
+        fxHtml += '</div>';
+        fxHtml += '<div id="' + fxId + '" class="rcv-pills-wrap collapsed">';
+        for (var f = 0; f < customFx.length; f++) {
+          fxHtml += '<span class="pnl-pill pnl-pill-red" title="' + escHtml(_fxName(customFx[f])) + '">' + escHtml(_fxName(customFx[f])) + '</span>';
+        }
+        fxHtml += '</div>';
       }
     } else {
-      fxHtml += '<span class="mi-slot-empty">-</span>';
+      fxHtml = '<span class="mi-slot-empty">-</span>';
     }
-    fxHtml += '</div>';
 
     // Mimi data
     var mimiHtml = '';
@@ -440,6 +484,82 @@
   }
 
   function _bindButtons(filtered) {
+    // Expand/Collapse All button with debouncing
+    var expandAllBtn = document.getElementById('rcv-expand-all');
+    var allExpanded = false;
+    var isAnimating = false;
+    
+    if (expandAllBtn) {
+      expandAllBtn.addEventListener('click', function() {
+        if (isAnimating) return; // Prevent multiple rapid clicks
+        isAnimating = true;
+        
+        var allWraps = document.querySelectorAll('.rcv-pills-wrap');
+        var allToggles = document.querySelectorAll('.rcv-toggle-btn');
+        
+        if (!allExpanded) {
+          // Expand all - use requestAnimationFrame for smooth rendering
+          requestAnimationFrame(function() {
+            allWraps.forEach(function(wrap) {
+              wrap.classList.remove('collapsed');
+            });
+            allToggles.forEach(function(toggle) {
+              toggle.classList.add('expanded');
+            });
+          });
+          this.querySelector('span').textContent = 'Collapse All';
+          allExpanded = true;
+        } else {
+          // Collapse all
+          requestAnimationFrame(function() {
+            allWraps.forEach(function(wrap) {
+              wrap.classList.add('collapsed');
+            });
+            allToggles.forEach(function(toggle) {
+              toggle.classList.remove('expanded');
+            });
+          });
+          this.querySelector('span').textContent = 'Expand All';
+          allExpanded = false;
+        }
+        
+        // Reset animation lock after transition
+        setTimeout(function() {
+          isAnimating = false;
+        }, 350); // Slightly longer than CSS transition
+      });
+    }
+
+    // Toggle buttons - optimized with passive event listeners and debouncing
+    var toggleTimeout = null;
+    document.querySelectorAll('.rcv-toggle-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        
+        // Debounce rapid clicks
+        if (toggleTimeout) return;
+        toggleTimeout = setTimeout(function() {
+          toggleTimeout = null;
+        }, 300);
+        
+        var targetId = this.getAttribute('data-target');
+        var target = document.getElementById(targetId);
+        if (target) {
+          // Use requestAnimationFrame for smooth animation
+          var btnElement = this;
+          requestAnimationFrame(function() {
+            if (target.classList.contains('collapsed')) {
+              target.classList.remove('collapsed');
+              btnElement.classList.add('expanded');
+            } else {
+              target.classList.add('collapsed');
+              btnElement.classList.remove('expanded');
+            }
+          });
+        }
+      });
+    });
+
     document.querySelectorAll('.rcv-restore-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var name = this.getAttribute('data-name');
@@ -584,7 +704,10 @@
       });
     });
 
-    if (!rows.length) { showAdminToast('Tidak ada data Mimi Inka untuk di-restore', 'warn'); return; }
+    if (!rows.length) { 
+      if (!silent) showAdminToast('Tidak ada data Mimi Inka untuk di-restore', 'warn'); 
+      return; 
+    }
 
     var btn = document.getElementById('rcv-restore-mimi');
     if (btn) { btn.disabled = true; btn.textContent = 'Mengirim...'; }
@@ -620,8 +743,71 @@
     }
   }
 
+  // Pull to refresh logic
+  var _ptrStartY = 0;
+  var _isPulling = false;
+  var _ptrIndicator = null;
+
   function _init() {
     _hookNav();
+
+    var mainEl = document.querySelector('.main-content');
+    if (mainEl) {
+      _ptrIndicator = document.createElement('div');
+      _ptrIndicator.style.cssText = 'position:fixed;top:-50px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:8px 16px;font-size:11.5px;font-weight:700;color:var(--text);box-shadow:0 4px 12px rgba(0,0,0,0.4);transition:top 0.2s, opacity 0.2s;opacity:0;display:flex;align-items:center;gap:8px;pointer-events:none;';
+      _ptrIndicator.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v12M8 12l4 4 4-4"/></svg><span>Tarik untuk refresh...</span>';
+      document.body.appendChild(_ptrIndicator);
+
+      mainEl.addEventListener('touchstart', function(e) {
+        if (mainEl.scrollTop <= 0) {
+          _ptrStartY = e.touches[0].clientY;
+          _isPulling = true;
+        }
+      }, {passive: true});
+
+      mainEl.addEventListener('touchmove', function(e) {
+        if (!_isPulling) return;
+        var y = e.touches[0].clientY;
+        var diff = y - _ptrStartY;
+        // Hanya jalan jika section recovery aktif
+        if (diff > 0 && mainEl.scrollTop <= 0 && document.getElementById('sec-recovery')) {
+           _ptrIndicator.style.opacity = '1';
+           if (diff > 80) {
+             _ptrIndicator.style.top = '70px';
+             _ptrIndicator.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-10.26l3.08 3.69"/></svg><span style="color:var(--accent)">Lepas untuk refresh</span>';
+           } else {
+             _ptrIndicator.style.top = (diff - 50) + 'px';
+             _ptrIndicator.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v12M8 12l4 4 4-4"/></svg><span>Tarik untuk refresh...</span>';
+           }
+        }
+      }, {passive: true});
+
+      mainEl.addEventListener('touchend', function(e) {
+        if (!_isPulling) return;
+        _isPulling = false;
+        var diff = e.changedTouches[0].clientY - _ptrStartY;
+        if (diff > 80 && document.getElementById('sec-recovery')) {
+          _ptrIndicator.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4 31.4"/></svg><span style="color:var(--accent)">Memuat data...</span>';
+          _cache = null; _cacheTs = 0;
+          _secondsLeft = 60; _updateCountdownUi();
+          
+          _loadData().then(function() {
+             setTimeout(function() {
+               _ptrIndicator.style.top = '-50px';
+               _ptrIndicator.style.opacity = '0';
+             }, 400);
+          }).catch(function() {
+             setTimeout(function() {
+               _ptrIndicator.style.top = '-50px';
+               _ptrIndicator.style.opacity = '0';
+             }, 400);
+          });
+        } else {
+          _ptrIndicator.style.top = '-50px';
+          _ptrIndicator.style.opacity = '0';
+        }
+      }, {passive: true});
+    }
 
     document.addEventListener('input', function (e) {
       if (e.target.id !== 'rcv-search') return;
@@ -645,4 +831,18 @@
   }
 
   window.recoveryLoad = _loadData;
+  
+  // Expose refresh for pull-to-refresh (with delay to ensure PTR loaded)
+  function registerRefresh() {
+    if (typeof window.registerPanelRefresh === 'function') {
+      window.registerPanelRefresh('recovery', function() {
+        _cacheTs = 0; // Force bypass cache
+        _loadData(true); // Silent refresh
+      });
+    } else {
+      // Retry after PTR loads
+      setTimeout(registerRefresh, 100);
+    }
+  }
+  registerRefresh();
 })();

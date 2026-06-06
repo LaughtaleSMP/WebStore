@@ -4,7 +4,7 @@
    Bump CACHE_VERSION on every deploy to force cache invalidation.
    ═══════════════════════════════════════════════════════════════ */
 
-var CACHE_VERSION = 'lt-admin-v1';
+var CACHE_VERSION = 'lt-admin-v3-cors-fix';
 
 // Core shell files to pre-cache for offline support
 var SHELL_ASSETS = [

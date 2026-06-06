@@ -34,9 +34,16 @@
     var pending = ranges.length;
     ranges.forEach(function(r) {
       var img = new Image();
+      // CRITICAL: Set crossOrigin BEFORE setting src
+      img.crossOrigin = 'anonymous';
       img.onload  = function() { _spriteImages[r] = img; if (--pending===0 && cb) cb(); };
-      img.onerror = function() { if (--pending===0 && cb) cb(); }; // silent
-      img.src = sheets[r];
+      img.onerror = function() { 
+        console.warn('[Mimi] Failed to load glyph sheet:', sheets[r]);
+        if (--pending===0 && cb) cb(); 
+      };
+      // Add cache-busting query param to force fresh load with CORS
+      var url = sheets[r];
+      img.src = url + (url.indexOf('?') > -1 ? '&' : '?') + '_cors=' + Date.now();
     });
   }
 
@@ -61,7 +68,25 @@
     tile.width = T; tile.height = T;
     var tc = tile.getContext('2d');
     tc.drawImage(img, col * T, row * T, T, T, 0, 0, T, T);
-    var d = tc.getImageData(0, 0, T, T).data;
+    
+    // Try getImageData - if tainted, fallback to no-crop version
+    var d;
+    try {
+      d = tc.getImageData(0, 0, T, T).data;
+    } catch (e) {
+      // Canvas tainted - return full tile without auto-crop
+      console.warn('[Mimi] Canvas CORS issue, using full tile for U+' + cp.toString(16).toUpperCase());
+      var S = CROP_SCALE;
+      var fallback = document.createElement('canvas');
+      fallback.width = T * S; fallback.height = T * S;
+      var fc = fallback.getContext('2d');
+      fc.imageSmoothingEnabled = false;
+      fc.drawImage(tile, 0, 0, T, T, 0, 0, T * S, T * S);
+      var r2 = { url: fallback.toDataURL(), w: T * S, h: T * S };
+      _cropCache[cacheKey] = r2;
+      _cropOrder.push(cacheKey);
+      return r2;
+    }
     var x0 = T, y0 = T, x1 = -1, y1 = -1;
     for (var y = 0; y < T; y++) for (var x = 0; x < T; x++) {
       if (d[(y * T + x) * 4 + 3] > 0) {
