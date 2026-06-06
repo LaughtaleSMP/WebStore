@@ -10,6 +10,8 @@
 <link rel="stylesheet" href="css/admin.css">
 <link rel="stylesheet" href="css/finance.css">
 <link rel="stylesheet" href="css/admin-enhance.css">
+<link rel="stylesheet" href="css/admin-panels.css">
+  <link rel="stylesheet" href="css/mobile.css">
 <style>
 /* ─── Page-specific overrides ─── */
 .topbar { height: 50px; padding: 0 16px; }
@@ -524,6 +526,13 @@
           <path d="M10 17a3 3 0 0 0 4 0"/>
         </svg>
         Mimi Inka
+      </div>
+      <div class="nav-item" onclick="showSection('glyph-sheets',this)" id="nav-glyph-sheets">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        Glyph Sheets
       </div>
     </div><!-- /sidebar -->
 
@@ -1128,8 +1137,56 @@
   </div>
 </div>
 
+<!-- ═══ BOTTOM NAV (mobile only) ═══ -->
+<nav class="bottom-nav" id="bottom-nav" aria-label="Mobile navigation">
+
+  <button class="bnav-item active" id="bnav-dashboard" data-section="dashboard" aria-label="Dashboard">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+    <span class="bnav-label">Dashboard</span>
+  </button>
+
+  <button class="bnav-item" id="bnav-orders" data-section="orders" aria-label="Pesanan">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <path d="M16 10a4 4 0 01-8 0"/>
+    </svg>
+    <span class="bnav-label">Pesanan</span>
+    <span class="bnav-badge" id="bnav-orders-badge" style="display:none">0</span>
+  </button>
+
+  <button class="bnav-item" id="bnav-recovery" data-section="recovery" aria-label="Recovery">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+      <path d="M3 3v5h5"/>
+    </svg>
+    <span class="bnav-label">Recovery</span>
+  </button>
+
+  <button class="bnav-item" id="bnav-mimi" data-section="mimi-inka" aria-label="Mimi Inka">
+    <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
+      <circle cx="9" cy="13" r="1" fill="currentColor"/><circle cx="15" cy="13" r="1" fill="currentColor"/>
+      <path d="M10 17a3 3 0 0 0 4 0"/>
+    </svg>
+    <span class="bnav-label">Mimi</span>
+  </button>
+
+  <button class="bnav-item" id="bnav-more" aria-label="Menu lainnya" onclick="toggleSidebar()">
+    <svg class="bnav-icon" id="bnav-more-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+    <span class="bnav-label">Menu</span>
+  </button>
+
+</nav>
+
 <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
 <div id="toast"></div>
+
 
 <!-- ═══ SCRIPTS ═══ -->
 <script src="../libs/supabase.js"></script>
@@ -1138,6 +1195,7 @@
 <script src="js/admin-config.js" defer></script>
 <script src="js/admin-wa.js" defer></script>
 <script src="js/admin-nav.js" defer></script>
+<script src="js/gestures.js" defer></script>
 <script src="js/admin-wa-template.js" defer></script>
 <script src="js/admin-banner.js" defer></script>
 <script src="js/admin-server-status.js" defer></script>
@@ -1149,8 +1207,10 @@
 <script src="js/admin-collapse.js" defer></script>
 <script src="js/admin-activity-log.js" defer></script>
 <script src="js/admin-topup.js" defer></script>
+<script src="js/admin-glyph-manager.js" defer></script>
+<script src="js/admin-glyph-sheets.js" defer></script>
 <script src="js/admin-recovery.js" defer></script>
-<script src="js/admin-mimi-inka.js" defer></script>
+<script src="js/admin-mimi-inka.js?v=19" defer></script>
 
 <!-- Deps -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
