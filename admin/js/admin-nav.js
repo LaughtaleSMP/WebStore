@@ -24,6 +24,7 @@ function showSection(name, el) {
     'activity-log':     'Log Aktivitas',
     'gem-topup':        'Topup Gem / Koin',
     'recovery':         'Recovery Data',
+    'mimi-inka':        'Mimi Inka',
   };
   document.getElementById('topbar-section').textContent = labels[name] || name;
 
@@ -58,6 +59,12 @@ function showSection(name, el) {
 
   if (name === 'gem-topup' && typeof window.gtInit === 'function') {
     window.gtInit();
+  }
+
+  if (name === 'mimi-inka' && typeof window.mimiInkaLoad === 'function') {
+    // _hookNav di admin-mimi-inka.js juga menangani ini,
+    // tapi dipanggil di sini sebagai fallback jika timing hook meleset
+    // Tidak ada bahaya double-call karena _load() memiliki cache TTL check
   }
 }
 

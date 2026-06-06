@@ -231,6 +231,56 @@
     return '#9ca3af';
   }
 
+  // Render Minecraft PUA glyph characters as sprite tiles from glyph_E7.png
+  // glyph_E7.png is 2304×2304, 16×16 grid → 144px per tile
+  // U+E700–E7FF maps to row/col in the grid
+  var GLYPH_TILE = 144, GLYPH_COLS = 16, GLYPH_DISPLAY = 20;
+  var GLYPH_SCALE = GLYPH_DISPLAY / GLYPH_TILE;
+  var GLYPH_BG_SIZE = Math.round(2304 * GLYPH_SCALE);
+  var GLYPH_LS_KEY = 'rcv_glyph_src';
+  var _glyphSrc = localStorage.getItem(GLYPH_LS_KEY) || 'assets/glyph_E7.png';
+
+  function _setGlyphSrc(dataUrl) {
+    _glyphSrc = dataUrl;
+    localStorage.setItem(GLYPH_LS_KEY, dataUrl);
+    if (_cache) _renderCards(_cache);
+  }
+  function _clearGlyphSrc() {
+    _glyphSrc = 'assets/glyph_E7.png';
+    localStorage.removeItem(GLYPH_LS_KEY);
+    if (_cache) _renderCards(_cache);
+  }
+
+  function _renderGlyph(text) {
+    if (!text) return '';
+    // Strip Minecraft color codes (§x)
+    var clean = text.replace(/\u00a7[0-9a-fk-or]/gi, '');
+    var out = '';
+    for (var i = 0; i < clean.length; i++) {
+      var cp = clean.codePointAt(i);
+      if (cp >= 0xE700 && cp <= 0xE7FF) {
+        var idx = cp - 0xE700;
+        var col = idx % GLYPH_COLS;
+        var row = Math.floor(idx / GLYPH_COLS);
+        var bx = -(col * GLYPH_DISPLAY);
+        var by = -(row * GLYPH_DISPLAY);
+        var src = _glyphSrc.indexOf('data:') === 0 ? _glyphSrc : 'assets/glyph_E7.png';
+        out += '<span style="display:inline-block;width:' + GLYPH_DISPLAY + 'px;height:' + GLYPH_DISPLAY + 'px;' +
+          'background:url(' + src + ') ' + bx + 'px ' + by + 'px;' +
+          'background-size:' + GLYPH_BG_SIZE + 'px ' + GLYPH_BG_SIZE + 'px;image-rendering:pixelated;vertical-align:middle' +
+          '" title="U+' + cp.toString(16).toUpperCase() + '"></span>';
+        // Handle surrogate pairs
+        if (cp > 0xFFFF) i++;
+      } else if (clean[i] === '\\' && clean[i+1] === 'n') {
+        out += '<br>';
+        i++;
+      } else {
+        out += '<span style="color:#60a5fa;font-size:10px;vertical-align:middle">' + escHtml(clean[i]) + '</span>';
+      }
+    }
+    return out;
+  }
+
   function _renderCards(backups) {
     var body = document.getElementById('rcv-body');
     if (!body) return;
@@ -245,11 +295,12 @@
       return;
     }
 
-    var totalGems = 0, totalTrails = 0, totalFx = 0;
+    var totalGems = 0, totalTrails = 0, totalFx = 0, totalMimi = 0;
     for (var i = 0; i < backups.length; i++) {
       totalGems += backups[i].gem || 0;
       totalTrails += (backups[i].trails || []).length;
       totalFx += (backups[i].killfx || []).length;
+      if (backups[i].mimi_data) totalMimi++;
     }
 
     var html = '<style>' +
@@ -278,6 +329,7 @@
       _kpiCard('Total Gem', totalGems.toLocaleString('id-ID'), 'rgba(167, 139, 250, 0.1)', '#a78bfa', 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4') +
       _kpiCard('Total Trails', totalTrails, 'rgba(52, 211, 153, 0.1)', '#34d399', 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z') +
       _kpiCard('Kill Effects', totalFx, 'rgba(248, 113, 113, 0.1)', '#f87171', 'M13 10V3L4 14h7v7l9-11h-7z') +
+      _kpiCard('Mimi Inka', totalMimi, 'rgba(74, 143, 255, 0.1)', '#4a8fff', 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z') +
       '</div>';
 
     var lastSyncDate = _lastBackupTs ? new Date(_lastBackupTs).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', second:'2-digit'}) : 'Belum sync';
@@ -290,10 +342,15 @@
         '</button>' +
         '<span id="rcv-restore-status" style="font-size:11.5px;color:var(--text-faint);font-weight:500"></span>' +
       '</div>' +
-      '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;font-size:11px;color:var(--text-faint)">' +
+      '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:11px;color:var(--text-faint)">' +
         '<div style="display:flex;align-items:center;gap:5px;background:rgba(52,211,153,.1);padding:4px 8px;border-radius:20px;border:1px solid rgba(52,211,153,.2)"><div style="width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399;animation:pulse 2s infinite"></div> <span style="color:#34d399;font-weight:600">Backup Safe</span></div>' +
-        '<span style="opacity:0.3;display:none;@media(min-width:600px){display:inline}">|</span>' +
         '<span>Last Sync: <strong style="color:var(--text);font-variant-numeric:tabular-nums">' + lastSyncDate + '</strong></span>' +
+        '<input type="file" id="rcv-glyph-upload" accept=".png" style="display:none">' +
+        '<button id="rcv-glyph-btn" style="font-size:10px;padding:4px 10px;border-radius:6px;display:flex;align-items:center;gap:4px;background:rgba(74,143,255,.1);color:#60a5fa;border:1px solid rgba(74,143,255,.25);cursor:pointer;font-weight:600;transition:all 0.2s" onmouseover="this.style.background=\'rgba(74,143,255,.2)\'" onmouseout="this.style.background=\'rgba(74,143,255,.1)\'">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+          'Glyph' +
+        '</button>' +
+        (_glyphSrc !== 'assets/glyph_E7.png' ? '<button id="rcv-glyph-clear" style="font-size:10px;padding:4px 8px;border-radius:6px;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.25);cursor:pointer;font-weight:600;transition:all 0.2s" title="Hapus glyph custom">&times;</button>' : '') +
       '</div>' +
     '</div>';
 
@@ -366,11 +423,20 @@
     }
 
     var mimiHtml = '';
-    var mimiTags = b.mimi || [];
-    if (mimiTags.length) {
+    var md = b.mimi_data;
+    if (md && (md.ct || md.cn || md.it || md.in)) {
       mimiHtml += '<div style="display:flex;flex-wrap:wrap;gap:4px">';
-      for (var m = 0; m < mimiTags.length; m++) {
-         mimiHtml += '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(74,143,255,.1);color:#60a5fa;border:1px solid rgba(74,143,255,.2);white-space:nowrap;font-weight:500">' + escHtml(mimiTags[m]) + '</span>';
+      var mimiEntries = [];
+      if (md.ct) mimiEntries.push({label:'Title Chat', val:md.ct});
+      if (md.cn) mimiEntries.push({label:'Nametag Chat', val:md.cn});
+      if (md.it) mimiEntries.push({label:'Title IG', val:md.it});
+      if (md.in) mimiEntries.push({label:'Nametag IG', val:md.in});
+      for (var mi = 0; mi < mimiEntries.length; mi++) {
+        var me = mimiEntries[mi];
+        mimiHtml += '<div style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(74,143,255,.1);border:1px solid rgba(74,143,255,.2)">' +
+          '<span style="color:rgba(96,165,250,.6);font-weight:600;font-size:8.5px;text-transform:uppercase;letter-spacing:.3px">' + escHtml(me.label) + '</span>' +
+          _renderGlyph(me.val) +
+        '</div>';
       }
       mimiHtml += '</div>';
     } else {
@@ -431,6 +497,35 @@
       allBtn.addEventListener('click', function () {
         var entries = filtered.map(function (b) { return { name: b.name, data: b.data }; });
         _confirmRestore(entries, allBtn);
+      });
+    }
+
+    // Glyph upload handler
+    var glyphBtn = document.getElementById('rcv-glyph-btn');
+    var glyphInput = document.getElementById('rcv-glyph-upload');
+    if (glyphBtn && glyphInput) {
+      glyphBtn.addEventListener('click', function () { glyphInput.click(); });
+      glyphInput.addEventListener('change', function () {
+        var file = this.files && this.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var img = new Image();
+          img.onload = function () {
+            GLYPH_BG_SIZE = Math.round(img.width * (GLYPH_DISPLAY / (img.width / GLYPH_COLS)));
+            _setGlyphSrc(e.target.result);
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+        this.value = '';
+      });
+    }
+    var glyphClear = document.getElementById('rcv-glyph-clear');
+    if (glyphClear) {
+      glyphClear.addEventListener('click', function () {
+        GLYPH_BG_SIZE = Math.round(2304 * GLYPH_SCALE);
+        _clearGlyphSrc();
       });
     }
   }

@@ -225,7 +225,7 @@
     var min = Infinity, max = 0;
     for (var i = 0; i < items.length; i++) {
       // item = [label, qty, baseW]
-      var price1x = Math.max(1, Math.round(items[i][2] * _basis)) * items[i][1];
+      var price1x = Math.max(1, Math.round(items[i][2] * _basis));
       if (price1x < min) min = price1x;
       if (price1x > max) max = price1x;
     }
@@ -269,7 +269,7 @@
       var it = items[i]; // [label, qty, baseW]
       var label = it[0], qty = it[1], baseW = it[2];
       var perUnit = Math.max(1, Math.round(baseW * _basis));
-      var price1x = perUnit * qty;
+      var price1x = perUnit; // 1 unit in store already means `qty` blocks
 
       parts.push('<tr data-label="' + escAttr(label.toLowerCase()) + '">'
         + '<td class="name">' + escHtml(label) + ' <span class="qty">×' + qty + '</span></td>'

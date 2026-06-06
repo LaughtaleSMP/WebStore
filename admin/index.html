@@ -532,30 +532,32 @@
 
       <!-- ── MIMI INKA ── -->
       <div class="section" id="sec-mimi-inka">
-        <div class="page-header">
-          <div class="page-title">Mimi Inka</div>
-          <div class="page-sub">Manajemen bot asisten server & integrasi data chat</div>
+        <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div>
+            <div class="page-title">Mimi Inka</div>
+            <div class="page-sub">Daftar semua title &amp; nametag player — termasuk tampilan glyph</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="text" id="mimi-search" placeholder="Cari player..."
+              style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-md);
+                     color:var(--text);padding:6px 12px;font-size:12px;outline:none;font-family:inherit;width:175px">
+            <!-- Auto-refresh countdown -->
+            <div id="mimi-timer" style="display:flex;align-items:center;gap:6px;background:rgba(52,211,153,.08);padding:4px 10px;border-radius:20px;border:1px solid rgba(52,211,153,.2)" title="Auto-refresh">
+              <svg width="14" height="14" viewBox="0 0 24 24" style="transform:rotate(-90deg)">
+                <circle cx="12" cy="12" r="10" stroke="var(--border)" stroke-width="3" fill="none"/>
+                <circle id="mimi-timer-ring" cx="12" cy="12" r="10" stroke="#34d399" stroke-width="3" fill="none"
+                  stroke-dasharray="62.8" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear"/>
+              </svg>
+              <span id="mimi-timer-txt" style="font-size:10px;color:#34d399;font-weight:700;font-variant-numeric:tabular-nums;width:22px;text-align:right">60s</span>
+            </div>
+            <button id="mimi-refresh" class="btn-ghost" style="font-size:11.5px;padding:5px 12px;display:inline-flex;align-items:center;gap:5px">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Refresh
+            </button>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">Dashboard Mimi Inka</div>
-            <div class="card-icon" style="background:rgba(52,211,153,.1);color:#34d399">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
-              </svg>
-            </div>
-          </div>
-          <div style="padding:20px;text-align:center;color:var(--text-faint);font-size:12.5px">
-            <div style="margin-bottom:12px;opacity:0.6">
-              <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                <line x1="12" y1="22.08" x2="12" y2="12"/>
-              </svg>
-            </div>
-            Modul pengumpulan dan analitik data dari bot <strong>Mimi Inka</strong> sedang disiapkan.<br>
-            Ruang ini disediakan untuk integrasi data penyimpanan dan log aktivitas.
-          </div>
+        <div id="mimi-body" style="margin-top:4px">
+          <div class="empty-state">Klik Refresh atau buka halaman ini untuk memuat data.</div>
         </div>
       </div>
 
@@ -1148,6 +1150,7 @@
 <script src="js/admin-activity-log.js" defer></script>
 <script src="js/admin-topup.js" defer></script>
 <script src="js/admin-recovery.js" defer></script>
+<script src="js/admin-mimi-inka.js" defer></script>
 
 <!-- Deps -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>

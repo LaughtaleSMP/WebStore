@@ -173,9 +173,10 @@
     .st-cat.open .st-body{display:block}
     .st-tbl{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.5rem;margin-top:4px}
     .st-tbl th{text-align:left;color:var(--mute);font-weight:600;padding:6px 10px;border-bottom:1px solid var(--border);font-size:.38rem;text-transform:uppercase;letter-spacing:.5px;background:rgba(0,0,0,.15)}
+    .st-tbl th.num{text-align:center}
     .st-tbl td{padding:5px 10px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text);vertical-align:middle}
     .st-tbl tr:hover td{background:rgba(255,255,255,.015)}
-    .st-tbl td.num{text-align:right;font-family:'JetBrains Mono',monospace}
+    .st-tbl td.num{text-align:center;font-family:'JetBrains Mono',monospace}
     .st-tbl .name{color:var(--text);font-family:'Inter',sans-serif;font-size:.52rem;font-weight:500}
     .st-tbl .qty{color:var(--mute);font-size:.42rem}
     .st-tbl .price-1x{color:var(--green);font-weight:700}
@@ -381,6 +382,13 @@
             <tbody></tbody>
           </table>
           </div>
+          <div style="margin-top:12px;display:flex;align-items:flex-start;gap:8px;font-family:'JetBrains Mono',monospace;font-size:.34rem;color:var(--mute);">
+            <svg style="width:14px;height:14px;color:var(--ac);opacity:0.8;margin-top:1px;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <div style="flex:1;line-height:1.5">
+              <span style="color:var(--dim);font-weight:600;margin-right:4px">MACRO TREND</span>
+              Persentase ▲/▼ mengukur pergeseran ekuilibrium harga terhadap awal periode. Nilai <span style="color:var(--text)">0.0%</span> menandakan inflasi/deflasi stabil.
+            </div>
+          </div>
         </div>
 
         <div class="cd">
@@ -391,13 +399,40 @@
 <div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16h16"/><path d="M4 14l4-4 4 2 4-6 4 4"/></svg>TREND & INSIGHT</span><div class="dvl"></div></div>
 
         <div class="cd" id="trend-card" style="padding-bottom:1rem">
-          <div class="sec-hd"><span class="sec-title">ECONOMY TREND</span>
-            <div class="tabs" id="trend-tabs" style="margin:0;border:0;padding:0;gap:2px">
-              <button class="tab a" data-range="day">24j</button>
-              <button class="tab" data-range="week">7h</button>
-              <button class="tab" data-range="month">30h</button>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
+            <div class="sec-hd" style="margin-bottom:0;border:none;display:flex;justify-content:space-between;align-items:center">
+              <span class="sec-title" style="display:flex;align-items:center;gap:8px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>ECONOMY TREND
+              </span>
+            </div>
+            
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%">
+              <div id="metric-tabs" style="display:flex;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:3px;gap:2px;flex:1">
+                <style>
+                  #metric-tabs .tab{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Inter',sans-serif;font-size:10px;font-weight:600;padding:6px 0;border-radius:6px;letter-spacing:0.5px;border:1px solid transparent;background:transparent;color:var(--mute);cursor:pointer;transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1)}
+                  #metric-tabs .tab:hover{color:var(--text);background:rgba(255,255,255,0.02)}
+                  #metric-tabs .tab.a{color:#fff;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.12);box-shadow:0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)}
+                  #metric-tabs .tab svg{opacity:0.6;transition:opacity 0.2s}
+                  #metric-tabs .tab.a svg{opacity:1;color:var(--ac)}
+                </style>
+                <button class="tab a" data-metric="coin_total">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M9 9.5h6M9 14.5h6"/></svg>
+                  KOIN
+                </button>
+                <button class="tab" data-metric="gem_rate">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13"/><path d="M12 3v19"/></svg>
+                  GEM
+                </button>
+              </div>
+
+              <div class="tabs" id="trend-tabs" style="margin:0;border:1px solid rgba(255,255,255,0.06);padding:3px;gap:2px;background:rgba(0,0,0,0.2);border-radius:8px">
+                <button class="tab a" data-range="day" style="border-radius:6px">24j</button>
+                <button class="tab" data-range="week" style="border-radius:6px">7h</button>
+                <button class="tab" data-range="month" style="border-radius:6px">30h</button>
+              </div>
             </div>
           </div>
+
           <div id="trend-hdr" class="trend-ohlc-bar"></div>
           <div id="trend-info" class="trend-info-line"></div>
           <div class="trend-canvas-wrap">
@@ -406,20 +441,55 @@
             </div>
             <div class="trend-minimap" id="trend-minimap"><div class="trend-minimap-thumb" id="trend-minimap-thumb"></div></div>
           </div>
-          <div class="trend-toolbar">
-            <div id="candle-countdown" style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:.38rem;color:var(--mute)">
-              <span id="candle-cd-label">Next candle: —</span>
-              <div style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.04);min-width:60px;max-width:140px;overflow:hidden;border:1px solid rgba(255,255,255,0.03)">
-                <div id="candle-cd-bar" style="height:100%;border-radius:2px;width:0%;background:linear-gradient(90deg,rgba(168,85,247,0.6),rgba(34,211,238,0.5));transition:width 1s linear;box-shadow:0 0 6px rgba(168,85,247,0.2)"></div>
+
+          <style>
+            .trend-btm-panel { display: inline-flex; align-items: center; gap: 14px; padding: 6px 16px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 99px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+            .trend-btm-divider { width: 1px; height: 12px; background: rgba(255,255,255,0.1); }
+            @media(max-width: 900px) {
+              .trend-btm-panel { flex-direction: column; border-radius: 12px; padding: 12px; width: 100%; box-sizing: border-box; }
+              .trend-btm-divider { display: none; }
+            }
+          </style>
+          <div style="display:flex;justify-content:center;margin-top:20px;margin-bottom:8px">
+            <div class="trend-btm-panel">
+              
+              <!-- Countdown Sync Status -->
+              <div id="candle-countdown" style="display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span id="candle-cd-label">NEXT: —</span>
+                <div style="width:40px;height:3px;border-radius:2px;background:rgba(255,255,255,0.06);overflow:hidden;margin-left:2px">
+                  <div id="candle-cd-bar" style="height:100%;border-radius:2px;width:0%;background:var(--ac);transition:width 1s linear;box-shadow:0 0 4px rgba(168,85,247,0.4)"></div>
+                </div>
               </div>
-            </div>
-            <button id="trend-reset-btn" style="font-family:'JetBrains Mono',monospace;font-size:.36rem;font-weight:700;padding:5px 12px;border-radius:6px;background:rgba(239,83,80,0.08);border:1px solid rgba(239,83,80,0.2);color:#ef5350;cursor:pointer;transition:all .2s;letter-spacing:.3px" title="Hapus semua data chart">🗑 RESET</button>
-            <div class="trend-zoom">
-              <button id="trend-zoom-out" title="Zoom Out">−</button>
-              <span id="trend-zoom-label">100%</span>
-              <button id="trend-zoom-in" title="Zoom In">+</button>
-              <button id="trend-zoom-fit" title="Fit to View">FIT</button>
-              <button id="trend-zoom-reset" title="Reset">1:1</button>
+
+              <div class="trend-btm-divider"></div>
+
+              <!-- Legend Centered -->
+              <div style="display:flex;justify-content:center;align-items:center;gap:12px;font-family:'Inter',sans-serif;font-size:9px;font-weight:600;color:var(--mute);letter-spacing:0.5px">
+                <div onclick="openEcoDict('up')" style="display:flex;align-items:center;gap:4px;cursor:pointer;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--mute)'"><span style="width:6px;height:6px;border-radius:50%;background:#26a69a"></span> NAIK</div>
+                <div onclick="openEcoDict('down')" style="display:flex;align-items:center;gap:4px;cursor:pointer;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--mute)'"><span style="width:6px;height:6px;border-radius:50%;background:#ef5350"></span> TURUN</div>
+                <div onclick="openEcoDict('sma')" style="display:flex;align-items:center;gap:4px;cursor:pointer;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--mute)'"><span style="width:12px;height:2px;background:#a855f7"></span> SMA</div>
+                <div onclick="openEcoDict('bb')" style="display:flex;align-items:center;gap:4px;cursor:pointer;transition:color .2s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--mute)'"><span style="width:12px;height:6px;background:rgba(168,85,247,0.2);border-top:1px dashed rgba(168,85,247,0.5)"></span> VOLATILITAS</div>
+              </div>
+
+              <div class="trend-btm-divider"></div>
+
+              <!-- Tools Zoom & Reset -->
+              <div style="display:flex;align-items:center;gap:6px">
+                <div class="trend-zoom" style="margin:0;padding:2px;border-radius:99px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05)">
+                  <button id="trend-zoom-out" title="Zoom Out" style="padding:4px 8px;font-size:12px;line-height:1;border-radius:99px">−</button>
+                  <span id="trend-zoom-label" style="font-size:9px;min-width:32px;padding:0 4px">100%</span>
+                  <button id="trend-zoom-in" title="Zoom In" style="padding:4px 8px;font-size:12px;line-height:1;border-radius:99px">+</button>
+                  <div style="width:1px;height:12px;background:rgba(255,255,255,0.06);margin:0 2px"></div>
+                  <button id="trend-zoom-fit" title="Fit to View" style="padding:4px 8px;font-size:9px;border-radius:99px">FIT</button>
+                  <button id="trend-zoom-reset" title="Reset" style="padding:4px 8px;font-size:9px;border-radius:99px">1:1</button>
+                </div>
+                
+                <button id="trend-reset-btn" style="display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:rgba(239,83,80,0.05);border:1px solid rgba(239,83,80,0.1);color:#ef5350;cursor:pointer;transition:all .2s" title="Hapus Cache Data" onmouseover="this.style.background='rgba(239,83,80,0.15)'" onmouseout="this.style.background='rgba(239,83,80,0.05)'">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                </button>
+              </div>
+              
             </div>
           </div>
           <div class="eco-grid" id="trend-vitals" style="margin-top:10px;grid-template-columns:repeat(4,1fr)"></div>
@@ -790,6 +860,77 @@
 <script src="js/store-page.js" defer></script>
 <script src="js/page-nav.js"></script>
 <script src="js/auto-refresh.js"></script>
+<div id="eco-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);z-index:9999;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity 0.2s">
+  <div style="background:rgba(15,15,15,0.85);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;max-width:380px;width:100%;box-shadow:0 24px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);transform:translateY(20px);transition:transform 0.2s" id="eco-modal-box">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <svg style="width:18px;height:18px;color:rgba(255,255,255,0.6)" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <div id="eco-modal-title" style="font-family:'Inter',sans-serif;font-size:14px;font-weight:700;color:#fff;letter-spacing:0.5px">INFO</div>
+    </div>
+    <div id="eco-modal-body" style="font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.7);line-height:1.6;margin-bottom:24px"></div>
+    <div style="text-align:right">
+      <button onclick="hideEcoModal()" style="font-family:'Inter',sans-serif;font-size:12px;font-weight:600;padding:8px 16px;background:rgba(255,255,255,0.05);color:#fff;border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#fff';this.style.color='#000'" onmouseout="this.style.background='rgba(255,255,255,0.05)';this.style.color='#fff'">Mengerti</button>
+    </div>
+  </div>
+</div>
+<script>
+function showEcoModal(title, bodyHtml) {
+  document.getElementById('eco-modal-title').textContent = title;
+  document.getElementById('eco-modal-body').innerHTML = bodyHtml;
+  var m = document.getElementById('eco-modal');
+  m.style.display = 'flex';
+  m.offsetHeight; // trigger reflow
+  m.style.opacity = '1';
+  document.getElementById('eco-modal-box').style.transform = 'translateY(0)';
+}
+function hideEcoModal() {
+  var m = document.getElementById('eco-modal');
+  m.style.opacity = '0';
+  document.getElementById('eco-modal-box').style.transform = 'translateY(20px)';
+  setTimeout(function(){ m.style.display = 'none'; }, 200);
+}
+
+const ECO_DICT = {
+  'up': {
+    title: 'Candle Hijau (Harga Mahal)',
+    body: '<div style="margin-bottom:16px"><span style="display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:rgba(255,255,255,0.6)">APA ARTINYA?</span><div style="line-height:1.6">Uang pemain di server sedang banyak (Inflasi). Otomatis, harga Lahan & Gacha di <b style="color:rgba(255,255,255,0.9)">Server Store ikut NAIK (Mahal).</b></div></div><div><span style="display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:#fff">HARUS NGAPAIN?</span><div style="line-height:1.6"><b style="color:#26a69a">✓ JUAL BARANG!</b> Pemain lain sedang kaya. Pasang harga mahal di <i>Auction</i>, pasti laku!<br><b style="color:#ef5350">✗ JANGAN BELI</b> dari Server Store karena harganya sedang sangat mahal.</div></div>'
+  },
+  'down': {
+    title: 'Candle Merah (Harga Murah)',
+    body: '<div style="margin-bottom:16px"><span style="display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:rgba(255,255,255,0.6)">APA ARTINYA?</span><div style="line-height:1.6">Uang pemain di server sedang menipis (Deflasi). Otomatis, harga Lahan & Gacha di <b style="color:rgba(255,255,255,0.9)">Server Store ikut TURUN (Murah).</b></div></div><div><span style="display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:#fff">HARUS NGAPAIN?</span><div style="line-height:1.6"><b style="color:#26a69a">✓ BORONG STORE!</b> Beli Lahan dan Gacha sekarang karena lagi DISKON!<br><b style="color:#ef5350">✗ JANGAN JUALAN</b> di <i>Auction</i> karena pemain lain lagi miskin.</div></div>'
+  },
+  'sma': {
+    title: 'Garis Rata-rata (SMA)',
+    body: '<div style="margin-bottom:16px"><span style="display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:rgba(255,255,255,0.6)">APA ARTINYA?</span><div style="line-height:1.6">Garis ungu ini melacak rata-rata pergerakan jangka panjang. Anggap garis ini sebagai patokan <b style="color:rgba(255,255,255,0.9)">"Harga Wajar"</b>.</div></div><div><span style="display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:#fff">HARUS NGAPAIN?</span><div style="line-height:1.6"><b style="color:#26a69a">✓ JUAL DI PUNCAK:</b> Jika grafik melesat jauh <b>DI ATAS</b> garis ungu, harga sedang <i>overheat</i>. Segera JUAL barangmu sebelum tren turun!<br><b style="color:#ef5350">✗ JANGAN PANIK JUAL:</b> Jika grafik jatuh <b>DI BAWAH</b> garis ungu, jangan jual barang (rugi bandar). Waktunya memborong!</div></div>'
+  },
+  'bb': {
+    title: 'Pita Volatilitas',
+    body: '<div style="margin-bottom:16px"><span style="display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:rgba(255,255,255,0.6)">APA ARTINYA?</span><div style="line-height:1.6">Awan bayangan ungu ini mengukur seberapa <b style="color:rgba(255,255,255,0.9)">kacau atau stabilnya</b> ekonomi server saat ini.</div></div><div><span style="display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:#fff">HARUS NGAPAIN?</span><div style="line-height:1.6">Jika pitanya <b>SANGAT LEBAR</b>, waspada! Harga bisa berubah drastis dalam sekejap.<br>Jika pitanya <b>SEMPIT</b>, artinya harga sangat stabil dan aman untuk berbelanja santai.</div></div>'
+  },
+  'gem_up': {
+    title: 'Nilai Gem Naik',
+    body: '<div style="margin-bottom:16px"><span style="display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:rgba(255,255,255,0.6)">APA ARTINYA?</span><div style="line-height:1.6">Nilai Gem sedang <b style="color:rgba(255,255,255,0.9)">NAIK</b> dibandingkan Koin. Gem sedang langka atau Koin sedang melimpah (inflasi).</div></div><div><span style="display:inline-block;padding:3px 8px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:#60a5fa">HARUS NGAPAIN?</span><div style="line-height:1.6"><b style="color:#60a5fa">✓ PAKAI GEM DI MIMI LAND!</b> Karena nilai Gem sedang tinggi, lebih untung pakai Gem sebagai pengganti Koin untuk bayar fitur-fitur di Mimi Land.<br><b style="color:#f97316">✗ SIMPAN KOIN-MU!</b> Daya beli Koin sedang lemah, gunakan Gem-mu selagi berharga mahal.</div></div>'
+  },
+  'gem_down': {
+    title: 'Nilai Gem Turun',
+    body: '<div style="margin-bottom:16px"><span style="display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:rgba(255,255,255,0.6)">APA ARTINYA?</span><div style="line-height:1.6">Nilai Gem sedang <b style="color:rgba(255,255,255,0.9)">TURUN</b> dibandingkan Koin. Gem sedang melimpah di server atau Koin sedang sangat langka.</div></div><div><span style="display:inline-block;padding:3px 8px;background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.3);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:#fb923c">HARUS NGAPAIN?</span><div style="line-height:1.6"><b style="color:#60a5fa">✓ PAKAI KOIN DI MIMI LAND!</b> Koin sedang sangat berharga, jadi lebih untung pakai Koin untuk transaksi di Mimi Land.<br><b style="color:#f97316">✗ JANGAN PAKAI GEM!</b> Simpan Gem-mu sekarang, jangan digunakan untuk membayar di Mimi Land sampai nilainya kembali naik.</div></div>'
+  },
+  'gem_sma': {
+    title: 'Garis Rata-rata Nilai Gem',
+    body: '<div style="margin-bottom:16px"><span style="display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:rgba(255,255,255,0.6)">APA ARTINYA?</span><div style="line-height:1.6">Garis ungu ini adalah patokan <b style="color:rgba(255,255,255,0.9)">"Nilai Wajar" Gem</b> terhadap Koin dalam jangka panjang.</div></div><div><span style="display:inline-block;padding:3px 8px;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:#c084fc">HARUS NGAPAIN?</span><div style="line-height:1.6"><b style="color:#60a5fa">✓ PAKAI GEM SAAT DI PUNCAK:</b> Jika grafik jauh <b>DI ATAS</b> garis ungu, belanjakan Gem-mu di Mimi Land!<br><b style="color:#f97316">✓ PAKAI KOIN SAAT DI LEMBAH:</b> Jika grafik jatuh <b>DI BAWAH</b> garis ungu, simpan Gem-mu dan gunakan Koin saja.</div></div>'
+  },
+  'gem_bb': {
+    title: 'Volatilitas Nilai Gem',
+    body: '<div style="margin-bottom:16px"><span style="display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:rgba(255,255,255,0.6)">APA ARTINYA?</span><div style="line-height:1.6">Awan bayangan ungu mengukur seberapa <b style="color:rgba(255,255,255,0.9)">tidak stabil</b> perbandingan nilai Gem dan Koin saat ini.</div></div><div><span style="display:inline-block;padding:3px 8px;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);border-radius:6px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:8px;color:#c084fc">HARUS NGAPAIN?</span><div style="line-height:1.6">Pita <b>LEBAR</b> = Rasio Gem/Koin sangat labil, berhati-hatilah saat memutuskan metode pembayaran di Mimi Land.<br>Pita <b>SEMPIT</b> = Nilai stabil, aman untuk bertransaksi dalam jumlah besar.</div></div>'
+  }
+};
+function openEcoDict(key) {
+  // Resolve to GEM-specific entry if GEM metric is active — §5.4 transparent conversion
+  var activeMetric = (document.querySelector('#metric-tabs .tab.a') || {}).dataset && document.querySelector('#metric-tabs .tab.a').dataset.metric;
+  var resolvedKey = (activeMetric === 'gem_rate' && ECO_DICT['gem_' + key]) ? 'gem_' + key : key;
+  var entry = ECO_DICT[resolvedKey];
+  if (entry) showEcoModal(entry.title, entry.body);
+}
+</script>
 </body>
 
 </html>

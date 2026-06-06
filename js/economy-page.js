@@ -30,6 +30,7 @@
 
   window.addEventListener('DOMContentLoaded', function () {
     bindModTabs(); bindLogTabs(); _initTrend();
+    bindMetricTabs();
     // Restore trend cache FIRST — agar _aggFlow() punya data saat renderAnalytics() berjalan
     var cachedTrend = _cGet(_trendCacheKey());
     if (cachedTrend && cachedTrend.length) {
@@ -388,19 +389,37 @@
     var prev = {};
     try {
       if (Array.isArray(_trendData) && _trendData.length >= 2) {
-        var prevRow = _trendData[_trendData.length - 2];
+        // ── Laughtale SMP Coding Standard 6.3: Window & Smoothing ──
+        // "Min sample size sebelum trust signal: ≥ 7 untuk trend."
+        // Membandingkan First Half (setengah awal grafik) vs Full Period.
+        // Ini menjamin "Aggregate dengan jujur" dan menghindari perbandingan
+        // 1-candle yang terlalu volatil atau bias.
+        var prevIdx = Math.floor((_trendData.length - 1) / 2);
+        if (prevIdx < 6 && _trendData.length >= 7) prevIdx = 6; 
+        
+        var prevRow = _trendData[prevIdx];
         var prevN = prevRow.player_count || 1;
         var prevMed = prevRow.coin_median || 0;
         var prevAvg = prevRow.coin_avg || 0;
         var prevCT = prevRow.coin_total || 0;
-        var prevCF = prevRow.coin_flow;
-        var prevFlow = prevCF ? (typeof prevCF === 'string' ? safeParse(prevCF, {}) : prevCF) : {};
-        var prevOrg = (prevFlow.mob_kill || 0) + (prevFlow.gacha_refund || 0) + (prevFlow.pvp_refund || 0) + (prevFlow.first_sale || 0);
-        var prevIncPerHour = prevN > 0 ? (prevOrg / prevN) * 12 : 0;
-        var prevBV = prevFlow._bv || 0, prevAV = prevFlow._av || 0;
+
+        // Aggregate flow up to prevIdx so the comparison uses the same smoothing window
+        var prevOrg = 0, prevBV = 0, prevAV = 0, prevGiniSum = 0, prevGiniCnt = 0, prevSnaps = 0;
+        for (var k = 0; k <= prevIdx; k++) {
+          var pcf = _trendData[k].coin_flow;
+          var pFlow = pcf ? (typeof pcf === 'string' ? safeParse(pcf, {}) : pcf) : {};
+          prevOrg += (pFlow.mob_kill || 0) + (pFlow.gacha_refund || 0) + (pFlow.pvp_refund || 0) + (pFlow.first_sale || 0);
+          prevBV += pFlow._bv || _trendData[k].bank_volume || 0;
+          prevAV += pFlow._av || _trendData[k].auction_volume || 0;
+          if (pFlow._gini) { prevGiniSum += pFlow._gini; prevGiniCnt++; }
+          prevSnaps++;
+        }
+
+        var prevIncPerSnap = prevN > 0 ? prevOrg / prevN : 0;
+        var prevIncPerHour = prevSnaps >= 12 ? (prevOrg / prevN / prevSnaps) * 12 : prevIncPerSnap * 12;
         var prevVel = prevCT > 0 ? (prevBV + prevAV) / prevCT : 0.01;
         var prevVMul = Math.max(0.8, Math.min(1.3, prevVel * 20));
-        var prevGini = prevFlow._gini || 0;
+        var prevGini = prevGiniCnt > 0 ? prevGiniSum / prevGiniCnt : 0;
         var prevGMul = prevGini > 0.5 ? 0.7 : prevGini > 0.3 ? 0.85 : 1.0;
         var pA1 = prevIncPerHour, pA2 = prevMed > 0 ? prevMed * 0.02 : 0, pA3 = prevAvg > 0 ? prevAvg * 0.01 : 0;
         var prevCoinBasis = Math.max(pA1, pA2, pA3, 1);
@@ -414,8 +433,8 @@
         prev['Land Extend'] = pCalc('mid');
         prev['EQ 1x Pull'] = pCalc('basic');
         prev['EQ 10x Pull'] = pCalc('mid');
-        prev['PT 1x Pull'] = [10, 10, 10];
-        prev['PT 10x Pull'] = [90, 90, 90];
+        prev['PT 1x Pull'] = null; // Gacha Gem harganya tetap, tidak perlu indikator tren
+        prev['PT 10x Pull'] = null;
         prev['Auction Listing'] = pCalc('basic');
         prev['Rare Item (AH)'] = pCalc('endgame');
       }
@@ -423,7 +442,7 @@
 
     function deltaCell(curVal, prevVal, baseColor, suffix) {
       var valStr = fmtN(curVal) + (suffix || '');
-      if (prevVal === null || prevVal === undefined || !isFinite(prevVal) || prevVal <= 0 || prevVal === curVal) {
+      if (prevVal === null || prevVal === undefined || !isFinite(prevVal) || prevVal <= 0) {
         return '<td style="text-align:right;color:' + baseColor + ';font-weight:600">' + valStr + '</td>';
       }
       var diff = curVal - prevVal;
@@ -1353,6 +1372,7 @@
       var ec = esc(v.code);
       out.push(
         '<div class="dc-card" style="animation:fs .3s ' + (i * 60) + 'ms ease both">',
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:0.5rem;color:var(--dim);font-weight:700;letter-spacing:1px;margin-bottom:6px;text-transform:uppercase">Kode Promo</div>',
         '<div class="dc-top">',
         '<span class="dc-code" data-code="' + ec + '" role="button" tabindex="0">',
         '<span>' + ec + '</span>',
@@ -1452,6 +1472,31 @@
     });
   }
 
+  function bindMetricTabs() {
+    var el = $('metric-tabs'); if (!el) return;
+    el.addEventListener('click', function (e) {
+      var t = e.target.closest('.tab'); if (!t || !t.dataset.metric) return;
+      el.querySelectorAll('.tab').forEach(function (b) { b.classList.remove('a') });
+      t.classList.add('a');
+      _trendMetric = t.dataset.metric;
+      // Color switch: blue/orange for gem to distinguish from coin (teal/red) — §4 color-not-only-signal
+      if (_trendMetric === 'gem_rate') {
+        CU = '#3b82f6'; CD = '#f97316';
+      } else {
+        CU = '#26a69a'; CD = '#ef5350';
+      }
+      // Re-aggregate without refetch — same _trendData, different metric view
+      if (_trendData.length) {
+        _candles = _agg(_trendData, _trendMetric);
+        _hoverIdx = -1;
+        _stopLiveTick();
+        drawTrendChart();
+        renderTrendVitals();
+        _startLiveTick();
+      }
+    });
+  }
+
   // Candle bucket duration per timeframe (optimized for Supabase free tier)
   // BDS syncs every ~5 min (288 rows/day). Each candle needs ≥5 data points for meaningful OHLC.
   // 24h: 30 min = 48 candles × ~6 pts each  |  7d: 4 hr = 42 candles × ~48 pts  |  30d: 1 day = 30 candles × ~288 pts
@@ -1505,6 +1550,13 @@
     if (metric === 'purchasing_power') {
       var med2 = row.coin_median || 0, ct2 = row.coin_total || 1, n2 = row.player_count || 1;
       return parseFloat(((med2 / ct2) * n2 * 100).toFixed(4));
+    }
+    if (metric === 'gem_rate') {
+      // Ratio dua stock (coin_avg / gem_avg) = koin per 1 gem.
+      // Unit: koin/gem. Hanya valid saat gem_avg > 0 (server ada gem beredar).
+      var gAvg = row.gem_avg || 0;
+      if (gAvg <= 0) return 0;
+      return parseFloat(((row.coin_avg || 0) / gAvg).toFixed(2));
     }
     return row[metric] || 0;
   }
@@ -1980,9 +2032,11 @@
   function _startLiveTick() {
     _stopLiveTick();
     if (!_candles.length) return;
-    var last = _candles[_candles.length - 1];
-    var bms = _bucketMs();
-    var nextT = last.t + bms;
+    
+    // Make the last fetched bucket the live candle
+    // Supabase data is already up-to-date, so we just continue ticking from its close.
+    var last = _candles.pop();
+    var bms = typeof _bucketMs === 'function' ? _bucketMs() : 3600000;
 
     // Deterministic seed from last candle timestamp
     // Same seed = same sequence, even after reload
@@ -1990,16 +2044,12 @@
     _rng = _mkRng(seed);
 
     _mktState = _initMktState(_candles);
+    // Sync market state to the exact close of the real data
+    _mktState.price = last.c; 
 
-    // Fast-forward: calculate how many ticks elapsed since candle start
-    var elapsed = Date.now() - nextT;
-    var ticksToSkip = Math.max(0, Math.floor(elapsed / _TICK_MS));
-    // Cap fast-forward to prevent lag on very old data
-    ticksToSkip = Math.min(ticksToSkip, 200);
-
-    // Build live candle
-    _liveCandle = { t: nextT, o: last.c, h: last.c, l: last.c, c: last.c, n: 0, _live: true };
-    var _liveBucketEnd = nextT + bms; // when this live candle closes
+    // Build live candle from historical data
+    _liveCandle = { t: last.t, o: last.o, h: last.h, l: last.l, c: last.c, n: last.n || 1, _live: true };
+    var _liveBucketEnd = last.t + bms; // when this live candle closes
     var _liveExtensions = 0; // track how many times this candle has been extended
     var _MAX_EXTENSIONS = 3; // cap: max 3x bucket duration (prevent infinitely wide candles)
 
@@ -2014,15 +2064,6 @@
       _cachedFlatThresh = (hi - lo) * 0.003;
     }
     _recalcFlatThresh();
-
-    // Silently replay skipped ticks (no rendering)
-    for (var i = 0; i < ticksToSkip; i++) {
-      var p = _tickPrice(_mktState);
-      _liveCandle.c = p;
-      _liveCandle.h = Math.max(_liveCandle.h, p);
-      _liveCandle.l = Math.min(_liveCandle.l, p);
-      _liveCandle.n++;
-    }
 
     // ── Countdown helper ──
     function _fmtCountdown(ms) {
@@ -2236,6 +2277,27 @@
     var priceDelta = c.c - c.o;
     var isUp = priceDelta >= 0;
     
+    if (_trendMetric === 'coin_total') {
+      var unaccounted = Math.round(priceDelta - net);
+      if (Math.abs(unaccounted) > 1) { // 1 koin error tolerance
+        if (unaccounted > 0) {
+          inj += unaccounted;
+          srcH += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span style="color:var(--mute)">Lainnya (Tak Tercatat)</span><span style="color:var(--green);font-weight:600">+' + fmtN(unaccounted) + '</span></div>';
+        } else {
+          var absUnk = Math.abs(unaccounted);
+          snk += absUnk;
+          snkH += '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03)"><span style="color:var(--mute)">Lainnya (Tak Tercatat)</span><span style="color:var(--red);font-weight:600">-' + fmtN(absUnk) + '</span></div>';
+        }
+      }
+      net = Math.round(priceDelta);
+    }
+    
+    var isGem = _trendMetric === 'gem_rate';
+    var metricName = isGem ? 'Koin/Gem' : 'Koin';
+    var cUp = isGem ? 'var(--cyan)' : 'var(--green)';
+    var cDn = isGem ? 'var(--orange)' : 'var(--red)';
+    var cMain = isUp ? cUp : cDn;
+    
     var modal = document.createElement('div');
     modal.id = 'candle-detail-modal';
     modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;animation:fs 0.2s ease';
@@ -2247,7 +2309,7 @@
     h += '<div style="padding:16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.02)">';
     h += '<div style="font-family:\'JetBrains Mono\',monospace">';
     h += '<div style="font-size:.42rem;color:var(--mute);margin-bottom:4px">' + (c._live ? 'LIVE CANDLE' : tStr) + '</div>';
-    h += '<div style="font-size:.64rem;font-weight:700;color:' + (isUp ? 'var(--green)' : 'var(--red)') + '">' + (isUp ? '▲' : '▼') + ' ' + Math.abs(priceDelta).toFixed(0) + ' Koin</div>';
+    h += '<div style="font-size:.64rem;font-weight:700;color:' + cMain + '">' + (isUp ? '▲' : '▼') + ' ' + Math.abs(priceDelta).toFixed(0) + ' ' + metricName + '</div>';
     h += '</div>';
     h += '<button id="close-cdm" style="background:none;border:none;color:var(--mute);font-size:1.2rem;cursor:pointer;padding:0 8px">&times;</button>';
     h += '</div>';
@@ -2256,7 +2318,7 @@
     h += '<div style="font-family:\'JetBrains Mono\',monospace;font-size:.38rem;margin-bottom:12px;color:var(--dim);text-align:center">Berdasarkan ' + snaps + ' snapshot data</div>';
     
     if (inj === 0 && snk === 0) {
-      h += '<div style="text-align:center;padding:20px;color:var(--mute);border:1px dashed var(--border);border-radius:8px">Tidak ada aliran koin tercatat pada periode ini.</div>';
+      h += '<div style="text-align:center;padding:20px;color:var(--mute);border:1px dashed var(--border);border-radius:8px">Tidak ada aliran Koin (Coin Flow) tercatat pada periode ini.</div>';
     } else {
       h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">';
       h += '<div style="background:rgba(38,166,154,0.05);border:1px solid rgba(38,166,154,0.2);padding:10px;border-radius:8px;text-align:center">';
