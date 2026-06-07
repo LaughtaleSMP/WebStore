@@ -407,6 +407,48 @@
         background:var(--accent) !important; animation:savePulse 1.5s ease-in-out infinite;
       }
       @keyframes savePulse { 0%,100%{box-shadow:0 0 0 0 rgba(79,125,240,.4)} 50%{box-shadow:0 0 0 6px rgba(79,125,240,0)} }
+
+      /* ── Reorder mode styles ── */
+      .scfg-item-row.reorder-active {
+        cursor: grab;
+        border-color: rgba(52,211,153,0.2);
+        transition: transform .15s, box-shadow .15s, border-color .15s;
+      }
+      .scfg-item-row.reorder-active:hover {
+        border-color: rgba(52,211,153,0.5);
+        background: rgba(52,211,153,0.03);
+      }
+      .scfg-item-row.dragging {
+        opacity: .5;
+        transform: scale(0.98);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        cursor: grabbing;
+      }
+      .scfg-item-row.drag-over {
+        border-color: #34d399 !important;
+        background: rgba(52,211,153,0.08) !important;
+        box-shadow: 0 0 0 2px rgba(52,211,153,0.3);
+        transform: scale(1.01);
+      }
+      .shop-drag-handle {
+        color: var(--text-faint);
+        cursor: grab;
+        padding: 4px 6px;
+        flex-shrink: 0;
+        border-radius: 4px;
+        transition: color .15s, background .15s;
+      }
+      .shop-drag-handle:hover { color: var(--text-muted); background: var(--surface3); }
+      .shop-order-btn {
+        padding: 2px 7px; font-size: 10px; line-height: 1;
+        background: var(--surface2); border: 1px solid var(--border);
+        border-radius: 4px; color: var(--text-muted); cursor: pointer;
+        transition: all .12s;
+      }
+      .shop-order-btn:not([disabled]):hover {
+        background: var(--accent-muted); border-color: rgba(79,125,240,.4); color: var(--accent);
+      }
+
       @media(max-width:600px){
         .scfg-item-row { flex-wrap:wrap; }
         .scfg-item-actions { width:100%; justify-content:flex-end; }
@@ -439,6 +481,8 @@
         window._shopImgRemove = imgRemove;
         window._shopImgMove = imgMove;
         window._shopImgTitle = imgTitle;
+        window._shopToggleReorder = toggleReorderMode;
+        window._shopSaveSortOrder = saveSortOrder;
         window._shopRetryStorage = async function() {
             const sb = getSb();
             if (!sb) { toast('Supabase belum siap.', 'error'); return; }
@@ -599,12 +643,127 @@
         renderItemList();
     }
 
+    /* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+     REORDER MODE
+    \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+    let reorderMode = false;
+    let _dragSrcIdx = null;
+    let _saveDebounce = null;
+
+    function toggleReorderMode() {
+        reorderMode = !reorderMode;
+        const btn = document.getElementById('shop-reorder-btn');
+        if (btn) {
+            if (reorderMode) {
+                btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>\u2713 Selesai &amp; Simpan`;
+                btn.style.background = 'rgba(52,211,153,0.15)';
+                btn.style.borderColor = 'rgba(52,211,153,0.4)';
+                btn.style.color = '#34d399';
+            } else {
+                // Simpan urutan saat keluar mode reorder
+                if (_saveDebounce) clearTimeout(_saveDebounce);
+                saveSortOrder();
+                btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><polyline points="8 5 3 9 8 13"/><polyline points="16 11 21 15 16 19"/></svg>\u21c5 Atur Urutan`;
+                btn.style.background = '';
+                btn.style.borderColor = '';
+                btn.style.color = '';
+            }
+        }
+        renderItemList();
+    }
+
+    function moveItem(id, dir) {
+        const idx = items.findIndex(i => i.id === id);
+        if (idx < 0) return;
+        const swapIdx = dir === 'up' ? idx - 1 : idx + 1;
+        if (swapIdx < 0 || swapIdx >= items.length) return;
+        // Swap array positions
+        [items[idx], items[swapIdx]] = [items[swapIdx], items[idx]];
+        // Reassign sort_order values
+        items.forEach((item, i) => { item.sort_order = i; });
+        renderItemList();
+        // Debounce save: tunggu 600ms sebelum save agar tidak spam API saat klik cepat
+        if (_saveDebounce) clearTimeout(_saveDebounce);
+        _saveDebounce = setTimeout(() => { saveSortOrder(); _saveDebounce = null; }, 600);
+    }
+
+    async function saveSortOrder() {
+        const sb = getSb();
+        if (!sb) return;
+
+        // Gunakan UPDATE (bukan upsert) agar tidak mencoba INSERT baru
+        // upsert dengan data partial menyebabkan "null value in column name" error
+        const results = await Promise.all(
+            items.map((item, i) =>
+                sb.from('shop_items')
+                  .update({ sort_order: i })
+                  .eq('id', item.id)
+            )
+        );
+
+        const failed = results.find(r => r.error);
+        if (failed) {
+            toast('Gagal simpan urutan: ' + failed.error.message, 'error');
+        } else {
+            toast('✅ Urutan item berhasil disimpan!');
+            window.logAdminActivity?.('shop_reorder', 'shop_items', null, {
+                count: items.length,
+                order: items.map(i => i.name).join(', ').slice(0, 80)
+            });
+        }
+    }
+
+    function _initDragDrop(el) {
+        const rows = el.querySelectorAll('[data-drag-id]');
+        rows.forEach(row => {
+            row.addEventListener('dragstart', e => {
+                _dragSrcIdx = parseInt(row.dataset.dragIdx, 10);
+                row.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            row.addEventListener('dragend', () => {
+                row.classList.remove('dragging');
+                el.querySelectorAll('[data-drag-id]').forEach(r => r.classList.remove('drag-over'));
+            });
+            row.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                el.querySelectorAll('[data-drag-id]').forEach(r => r.classList.remove('drag-over'));
+                row.classList.add('drag-over');
+            });
+            row.addEventListener('drop', e => {
+                e.preventDefault();
+                const destIdx = parseInt(row.dataset.dragIdx, 10);
+                if (_dragSrcIdx === null || _dragSrcIdx === destIdx) return;
+                // Reorder items array
+                const src = items.splice(_dragSrcIdx, 1)[0];
+                items.splice(destIdx, 0, src);
+                items.forEach((item, i) => { item.sort_order = i; });
+                _dragSrcIdx = null;
+                renderItemList();
+                saveSortOrder();
+            });
+        });
+    }
+
     function renderItemList() {
         const el = document.getElementById("shop-item-list");
         if (!el) return;
 
+        // Tambah tombol "Atur Urutan" ke toolbar jika belum ada
+        const toolbar = document.querySelector('.shop-cfg-toolbar');
+        if (toolbar && !document.getElementById('shop-reorder-btn')) {
+            const btn = document.createElement('button');
+            btn.id = 'shop-reorder-btn';
+            btn.className = 'btn-ghost';
+            btn.style.cssText = 'font-size:12.5px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;padding:6px 13px;transition:all .2s;';
+            btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><polyline points="8 5 3 9 8 13"/><polyline points="16 11 21 15 16 19"/></svg>Atur Urutan`;
+            btn.onclick = () => window._shopToggleReorder();
+            toolbar.appendChild(btn);
+        }
+
         let list = items;
-        if (itemSearch.trim()) {
+        if (itemSearch.trim() && !reorderMode) {
             const q = itemSearch.toLowerCase();
             list = list.filter(
                 i => (i.name || "").toLowerCase().includes(q) || (i.category || "").toLowerCase().includes(q),
@@ -621,8 +780,16 @@
         const hint = document.getElementById("ef-category-hint");
         if (hint) hint.textContent = cats.length ? "Kategori yang ada: " + cats.join(", ") : "";
 
-        el.innerHTML = list
-            .map(item => {
+        // Banner info mode reorder
+        const reorderBanner = reorderMode
+            ? `<div style="background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.25);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#34d399;display:flex;align-items:center;gap:8px">
+                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M15 19l3-3-3-3"/><path d="M19 9l3 3-3 3"/></svg>
+                 <div><strong>Mode Atur Urutan aktif</strong> — Drag baris ke posisi baru, atau klik ▲▼. Klik <strong>"✓ Selesai &amp; Simpan"</strong> untuk menyimpan.</div>
+               </div>`
+            : '';
+
+        el.innerHTML = reorderBanner + list
+            .map((item, listIdx) => {
                 const priceStr = "Rp " + Number(item.price || 0).toLocaleString("id-ID");
                 const origStr = item.original_price
                     ? ' <span style="text-decoration:line-through;opacity:.5">Rp ' +
@@ -649,11 +816,36 @@
                        </div>`
                     : `<div class="scfg-item-emoji">${esc(item.emoji || "🛒")}</div>`;
 
+                // Elemen khusus reorder mode
+                const dragHandle = reorderMode
+                    ? `<div class="shop-drag-handle" title="Drag untuk pindah posisi">
+                         <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                           <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+                           <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                           <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+                         </svg>
+                       </div>` : '';
+
+                const upDownBtns = reorderMode
+                    ? `<div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
+                         <button class="shop-order-btn" onclick="window._shopMoveItem(${item.id},'up')" title="Naik" ${listIdx === 0 ? 'disabled style="opacity:.3;cursor:not-allowed"' : ''}>▲</button>
+                         <button class="shop-order-btn" onclick="window._shopMoveItem(${item.id},'down')" title="Turun" ${listIdx === list.length - 1 ? 'disabled style="opacity:.3;cursor:not-allowed"' : ''}>▼</button>
+                       </div>` : '';
+
+                const posTag = reorderMode
+                    ? `<span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-muted);padding:1px 7px;border-radius:20px;margin-left:5px">#${listIdx + 1}</span>`
+                    : '';
+
                 return `
-        <div class="scfg-item-row${item.active === false ? " inactive" : ""}" id="srow-${item.id}">
+        <div class="scfg-item-row${item.active === false ? " inactive" : ""}${reorderMode ? ' reorder-active' : ''}"
+             id="srow-${item.id}"
+             data-drag-id="${item.id}"
+             data-drag-idx="${listIdx}"
+             ${reorderMode ? 'draggable="true"' : ''}>
+          ${dragHandle}
           ${thumbHtml}
           <div class="scfg-item-info">
-            <div class="scfg-item-name">${esc(item.name || "(tanpa nama)")}</div>
+            <div class="scfg-item-name">${esc(item.name || "(tanpa nama)")}${posTag}</div>
             <div class="scfg-item-meta">
               <span>${esc(item.category || "—")}</span>
               <span><strong>${priceStr}</strong>${origStr}</span>
@@ -663,13 +855,17 @@
             </div>
           </div>
           <div class="scfg-item-actions">
-            <button class="btn-edit" onclick="window._shopEditItem(${item.id})">✏️ Edit</button>
-            <button class="btn-del"  onclick="window._shopDeleteItem(${item.id})" title="Hapus">🗑</button>
+            ${upDownBtns}
+            ${!reorderMode ? `<button class="btn-edit" onclick="window._shopEditItem(${item.id})">✏️ Edit</button>` : ''}
+            ${!reorderMode ? `<button class="btn-del" onclick="window._shopDeleteItem(${item.id})" title="Hapus">🗑</button>` : ''}
           </div>
         </div>`;
             })
             .join("");
+
+        if (reorderMode) _initDragDrop(el);
     }
+
 
     /* ════════════════════════════════════════════
      GENERAL TAB
