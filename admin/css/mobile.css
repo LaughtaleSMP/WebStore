@@ -225,6 +225,9 @@
     min-height: 100vh;
     justify-content: center !important;
   }
+
+  /* ── PC-only elements: hide on mobile ── */
+  .dash-sidebar { display: none !important; }
 }
 
 /* ── Responsive: Phone (≤ 480px) ───────────────────────── */
@@ -435,5 +438,238 @@
   .bottom-nav { height: 56px; }
   .bnav-icon  { width: 20px; height: 20px; }
   .bnav-label { font-size: 9px; }
+}
+
+
+/* ============================================================
+   PC / DESKTOP LAYOUT — Menghilangkan ruang kosong di kanan
+   Breakpoints: 1024px, 1280px, 1440px, 1600px+
+   ============================================================ */
+
+/* ── Grid class defaults (mobile: single column) ──────────── */
+.dash-pc-grid,
+.wa-cards-grid,
+.season-pc-layout,
+.maint-pc-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Desktop base (≥769px): sidebar always visible ────────── */
+@media (min-width: 769px) {
+  /* Section: lebih lebar dari 860px default */
+  .section { max-width: 100%; }
+
+  /* Main content: padding lebih konsisten */
+  .main-content {
+    padding: 2rem 2.5rem;
+  }
+
+  /* WA cards: 2-column on desktop */
+  .wa-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+}
+
+/* ── Medium desktop (≥1024px) ─────────────────────────────── */
+@media (min-width: 1024px) {
+  :root { --sidebar-w: 220px; }
+
+  .section { max-width: 100%; }
+
+  .main-content {
+    padding: 2rem 2.5rem;
+  }
+
+  /* Dashboard: stats strip 4-col + wider */
+  .orders-stats-strip {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  /* Dashboard: 2-col layout for content area */
+  .dash-pc-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 16px;
+    margin-top: 12px;
+  }
+
+  /* Season / WA: 2-col on medium desktop+ */
+  .season-pc-layout,
+  .wa-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  /* Finance summary: 3-col */
+  .finance-summary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* KPI panels: 4-col */
+  .pnl-stat-grid { grid-template-columns: repeat(4, 1fr); }
+  .mi-kpi-grid   { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ── Large desktop (≥1280px): wider content areas ─────────── */
+@media (min-width: 1280px) {
+  :root { --sidebar-w: 230px; }
+
+  .main-content {
+    padding: 2rem 3rem;
+  }
+
+  /* Section: no max-width, use full available space */
+  .section { max-width: 100%; }
+
+  /* Server config: 2-column side-by-side */
+  #sec-server .server-pc-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  /* Season: wider 2-column with preview panel */
+  .season-pc-layout {
+    grid-template-columns: 1.2fr 1fr;
+    align-items: start;
+  }
+
+  /* Dashboard sidebar column: wider */
+  .dash-pc-grid {
+    grid-template-columns: 1fr 300px;
+  }
+
+  /* Orders / all-orders: wider stats strip */
+  .orders-stats-strip {
+    gap: 14px;
+  }
+  .ostat-num { font-size: 24px; }
+
+  /* Glyph sheets: 3-col grid on large desktop */
+  .gs-range-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Recovery table: more comfortable */
+  .rcv-tbl { min-width: unset; width: 100%; }
+
+  /* Finance summary: 3-col, bigger numbers */
+  .fin-card-val { font-size: 22px; }
+
+  /* Topbar: show breadcrumb always */
+  .topbar-sep,
+  .topbar-breadcrumb { display: flex; }
+}
+
+/* ── XL desktop (≥1440px): maximize data density ──────────── */
+@media (min-width: 1440px) {
+  :root { --sidebar-w: 240px; }
+
+  .main-content {
+    padding: 2.25rem 3.5rem;
+  }
+
+  /* Orders: 4-stat strip even bigger */
+  .ostat-num { font-size: 26px; }
+
+  /* KPI grids: more spacing */
+  .pnl-stat-grid { gap: 12px; }
+  .mi-kpi-grid   { gap: 12px; }
+  .pnl-stat-val  { font-size: 22px; }
+
+  /* Glyph sheets: 3-col with more gap */
+  .gs-range-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  /* Player chip grid: more columns */
+  .gs-player-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 6px;
+  }
+
+  /* Mimi Inka: show all columns */
+  .mi-hdr { display: grid; }
+  .mi-row { grid-template-columns: 36px 1fr 95px 95px 95px 80px; }
+  .mi-row > *:nth-child(3),
+  .mi-row > *:nth-child(4),
+  .mi-row > *:nth-child(5) { display: block; }
+  .mi-hdr > *:nth-child(3),
+  .mi-hdr > *:nth-child(4),
+  .mi-hdr > *:nth-child(5) { display: block; }
+
+  /* Page header: bigger title */
+  .page-title { font-size: 1.25rem; }
+}
+
+/* ── 2K / Ultra-wide (≥1600px) ────────────────────────────── */
+@media (min-width: 1600px) {
+  :root { --sidebar-w: 256px; }
+
+  .main-content {
+    padding: 2.5rem 4rem;
+  }
+
+  /* Dashboard: 3-column stats + wider layout */
+  .orders-stats-strip {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .ostat-card { padding: 18px 20px; }
+  .ostat-num  { font-size: 28px; }
+
+  /* Glyph sheets: 4-col on ultra-wide */
+  .gs-range-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* Chips: auto-fill at 180px */
+  .gs-player-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  /* Card padding */
+  .card { padding: 1.5rem 1.75rem; }
+  .card-header { padding-bottom: 1.25rem; margin-bottom: 1.25rem; }
+
+  /* Nav item bigger */
+  .nav-item { font-size: 13px; padding: 8px 14px; }
+  .nav-group-label { font-size: 10px; }
+}
+
+/* ── Sidebar: Desktop reset ─────────────────────────────────── */
+@media (min-width: 769px) {
+  /*
+   * Sidebar is already correctly sized by the flex layout:
+   * #app { flex-direction: column }
+   * .app-body { flex: 1; overflow: hidden; display: flex }
+   * .sidebar { flex-shrink: 0; overflow-y: auto }
+   * So we only need to reset the mobile transform + positioning.
+   */
+  .sidebar {
+    position: relative !important;
+    transform: none !important;
+    box-shadow: none !important;
+    transition: none;
+    width: var(--sidebar-w);
+  }
+
+  /* Hamburger always hidden on desktop */
+  .hamburger { display: none !important; }
+
+  /* Sidebar backdrop never shown on desktop */
+  #sidebar-backdrop { display: none !important; }
+
+  /* Bottom nav never shown on desktop */
+  .bottom-nav { display: none !important; }
 }
 

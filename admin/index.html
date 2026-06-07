@@ -602,25 +602,48 @@
             <div class="ostat-label">Request Akses</div>
           </div>
         </div>
-        <div class="card" style="margin-top:12px">
-          <div class="card-header">
-            <div class="card-title">Pesanan Terbaru</div>
-            <button class="btn-ghost" style="font-size:11px;padding:4px 10px;display:inline-flex;align-items:center;gap:4px" onclick="showSection('orders',document.getElementById('nav-orders'))">
-              Lihat Semua
-              <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
+        <div class="dash-pc-grid">
+          <!-- Kolom kiri: recent orders -->
+          <div class="card" style="margin-top:12px">
+            <div class="card-header">
+              <div class="card-title">Pesanan Terbaru</div>
+              <button class="btn-ghost" style="font-size:11px;padding:4px 10px;display:inline-flex;align-items:center;gap:4px" onclick="showSection('orders',document.getElementById('nav-orders'))">
+                Lihat Semua
+                <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+            <div id="dash-recent-orders"><div class="empty-state">Memuat...</div></div>
           </div>
-          <div id="dash-recent-orders"><div class="empty-state">Memuat...</div></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
-          <button class="btn-ghost" style="padding:10px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="showSection('finance-v2',document.getElementById('nav-finance-v2'))">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            Keuangan
-          </button>
-          <button class="btn-ghost" style="padding:10px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px" onclick="showSection('gem-topup',document.getElementById('nav-gem-topup'))">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M6 3l6 6 6-6"/><path d="M2 9h20"/></svg>
-            Topup Gem
-          </button>
+          <!-- Kolom kanan: quick actions (hanya tampil di PC via CSS) -->
+          <div class="dash-sidebar" style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
+            <div class="card" style="margin:0">
+              <div class="card-header" style="margin-bottom:10px;padding-bottom:10px">
+                <div class="card-title">Navigasi Cepat</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <button class="btn-ghost" style="padding:10px;font-size:12px;display:flex;align-items:center;gap:8px;width:100%;justify-content:flex-start" onclick="showSection('finance-v2',document.getElementById('nav-finance-v2'))">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  Keuangan
+                </button>
+                <button class="btn-ghost" style="padding:10px;font-size:12px;display:flex;align-items:center;gap:8px;width:100%;justify-content:flex-start" onclick="showSection('gem-topup',document.getElementById('nav-gem-topup'))">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M6 3l6 6 6-6"/><path d="M2 9h20"/></svg>
+                  Topup Gem
+                </button>
+                <button class="btn-ghost" style="padding:10px;font-size:12px;display:flex;align-items:center;gap:8px;width:100%;justify-content:flex-start" onclick="showSection('orders',document.getElementById('nav-orders'))">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                  Pesanan Masuk
+                </button>
+                <button class="btn-ghost" style="padding:10px;font-size:12px;display:flex;align-items:center;gap:8px;width:100%;justify-content:flex-start" onclick="showSection('glyph-sheets',document.getElementById('nav-glyph-sheets'))">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                  Glyph Sheets
+                </button>
+                <button class="btn-ghost" style="padding:10px;font-size:12px;display:flex;align-items:center;gap:8px;width:100%;justify-content:flex-start" onclick="showSection('mimi-inka',document.getElementById('nav-mimi-inka'))">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>
+                  Mimi Inka
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -768,27 +791,45 @@
       <!-- ── SEASON ── -->
       <div class="section" id="sec-season">
         <div class="page-header"><div class="page-title">Season &amp; World</div><div class="page-sub">Informasi season dan dunia saat ini</div></div>
-        <div class="card">
-          <div class="card-header"><div class="card-title">Info Season</div></div>
-          <div class="field-group">
-            <div class="field"><label>Nomor Season</label><input id="cfg-season" type="number" min="1" placeholder="1"></div>
-            <div class="field"><label>World Seed</label><input id="cfg-seed" placeholder="1234567890"></div>
+        <div class="season-pc-layout">
+          <div class="card" style="margin-bottom:0">
+            <div class="card-header"><div class="card-title">Info Season</div></div>
+            <div class="field-group">
+              <div class="field"><label>Nomor Season</label><input id="cfg-season" type="number" min="1" placeholder="1"></div>
+              <div class="field"><label>World Seed</label><input id="cfg-seed" placeholder="1234567890"></div>
+            </div>
+            <div class="field-group">
+              <div class="field"><label>Tanggal Mulai Season</label><input id="cfg-season_start" type="date"></div>
+              <div class="field"><label>Status Season</label><select id="cfg-season_status"><option value="active">Aktif</option><option value="hiatus">Hiatus</option><option value="ended">Selesai</option></select></div>
+            </div>
+            <div class="field-group full"><div class="field"><label>Deskripsi Season</label><textarea id="cfg-season_desc" placeholder="Season 1 — Dunia survival baru dimulai!..."></textarea></div></div>
           </div>
-          <div class="field-group">
-            <div class="field"><label>Tanggal Mulai Season</label><input id="cfg-season_start" type="date"></div>
-            <div class="field"><label>Status Season</label><select id="cfg-season_status"><option value="active">Aktif</option><option value="hiatus">Hiatus</option><option value="ended">Selesai</option></select></div>
+          <!-- Preview panel (PC sidebar) -->
+          <div class="card" style="margin-bottom:0">
+            <div class="card-header"><div class="card-title">Pratinjau Season</div></div>
+            <div class="preview-box" style="margin-top:0">
+              <div class="preview-row"><span class="preview-key">Nomor Season</span><span class="preview-val" id="pv-season-num">—</span></div>
+              <div class="preview-row"><span class="preview-key">World Seed</span><span class="preview-val" id="pv-season-seed">—</span></div>
+              <div class="preview-row"><span class="preview-key">Tanggal Mulai</span><span class="preview-val" id="pv-season-start">—</span></div>
+              <div class="preview-row"><span class="preview-key">Status</span><span class="preview-val" id="pv-season-status">—</span></div>
+            </div>
+            <div style="margin-top:12px">
+              <div class="field"><label>Deskripsi</label><div id="pv-season-desc" style="font-size:12.5px;color:var(--text-muted);line-height:1.6;min-height:40px">—</div></div>
+            </div>
           </div>
-          <div class="field-group full"><div class="field"><label>Deskripsi Season</label><textarea id="cfg-season_desc" placeholder="Season 1 — Dunia survival baru dimulai!..."></textarea></div></div>
         </div>
-        <div class="save-bar"><span class="save-bar-hint">Info season tampil di halaman utama dan about.</span><button class="save-btn" onclick="saveSection('season')">Simpan Season</button></div>
+        <div class="save-bar" style="margin-top:16px"><span class="save-bar-hint">Info season tampil di halaman utama dan about.</span><button class="save-btn" onclick="saveSection('season')">Simpan Season</button></div>
       </div>
 
       <!-- ── ADMIN WA ── -->
       <div class="section" id="sec-admins-wa">
         <div class="page-header"><div class="page-title">Admin WhatsApp</div><div class="page-sub">Nomor WhatsApp admin untuk pemesanan di toko</div></div>
-        <div class="card"><div class="card-header"><div class="card-title">Admin Utama (Shop)</div><button class="btn-add" onclick="addAdminWA('main')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tambah</button></div><div id="wa-main-list"><div class="empty-state">Memuat data...</div></div></div>
-        <div class="card"><div class="card-header"><div class="card-title">Admin Gem Coins</div><button class="btn-add" onclick="addAdminWA('gem')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tambah</button></div><div id="wa-gem-list"><div class="empty-state">Memuat data...</div></div></div>
-        <div class="card" id="wa-add-form" style="display:none">
+        <!-- PC: 2 kartu side by side -->
+        <div class="wa-cards-grid">
+          <div class="card" style="margin-bottom:0"><div class="card-header"><div class="card-title">Admin Utama (Shop)</div><button class="btn-add" onclick="addAdminWA('main')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tambah</button></div><div id="wa-main-list"><div class="empty-state">Memuat data...</div></div></div>
+          <div class="card" style="margin-bottom:0"><div class="card-header"><div class="card-title">Admin Gem Coins</div><button class="btn-add" onclick="addAdminWA('gem')"><svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tambah</button></div><div id="wa-gem-list"><div class="empty-state">Memuat data...</div></div></div>
+        </div>
+        <div class="card" id="wa-add-form" style="display:none;margin-top:12px">
           <div class="card-header"><div class="card-title" id="wa-add-title">Tambah Admin</div></div>
           <div class="field-group">
             <div class="field"><label>Nama Admin</label><input id="wa-new-name" placeholder="Blackdamen"></div>
@@ -1328,6 +1369,65 @@
     if (banner) banner.remove();
     localStorage.setItem(DISMISS_KEY, String(Date.now() + 365 * 24 * 3600 * 1000));
   });
+})();
+</script>
+
+<script>
+/* ── Season Preview Live Sync (PC 2-col layout) ── */
+(function () {
+  function syncSeasonPreview() {
+    var num   = document.getElementById('cfg-season');
+    var seed  = document.getElementById('cfg-seed');
+    var start = document.getElementById('cfg-season_start');
+    var stat  = document.getElementById('cfg-season_status');
+    var desc  = document.getElementById('cfg-season_desc');
+
+    var pvNum   = document.getElementById('pv-season-num');
+    var pvSeed  = document.getElementById('pv-season-seed');
+    var pvStart = document.getElementById('pv-season-start');
+    var pvStat  = document.getElementById('pv-season-status');
+    var pvDesc  = document.getElementById('pv-season-desc');
+
+    if (!pvNum) return; /* preview panel not in DOM */
+
+    if (pvNum)   pvNum.textContent   = (num   && num.value)   ? 'Season ' + num.value : '—';
+    if (pvSeed)  pvSeed.textContent  = (seed  && seed.value)  ? seed.value  : '—';
+    if (pvStart) pvStart.textContent = (start && start.value) ? new Date(start.value).toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'}) : '—';
+    if (pvStat)  {
+      var statMap = { active:'🟢 Aktif', hiatus:'🟡 Hiatus', ended:'🔴 Selesai' };
+      pvStat.textContent = stat ? (statMap[stat.value] || stat.value) : '—';
+    }
+    if (pvDesc)  pvDesc.textContent  = (desc  && desc.value)  ? desc.value  : '—';
+  }
+
+  /* Attach listeners once section is visible */
+  function attachSeasonListeners() {
+    ['cfg-season','cfg-seed','cfg-season_start','cfg-season_status','cfg-season_desc'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', syncSeasonPreview);
+      if (el) el.addEventListener('change', syncSeasonPreview);
+    });
+    syncSeasonPreview();
+  }
+
+  /* Run after DOM ready */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachSeasonListeners);
+  } else {
+    attachSeasonListeners();
+  }
+
+  /* Also sync when section becomes active */
+  var _origShowSection = window.showSection;
+  if (typeof _origShowSection === 'function') {
+    window.showSection = function(name, el) {
+      _origShowSection(name, el);
+      if (name === 'season') setTimeout(syncSeasonPreview, 100);
+    };
+  }
+
+  /* Expose globally so saveSection can call it */
+  window.syncSeasonPreview = syncSeasonPreview;
 })();
 </script>
 

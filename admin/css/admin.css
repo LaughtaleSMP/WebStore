@@ -506,7 +506,7 @@ input[type="password"]::-ms-clear {
 .main-content::-webkit-scrollbar-thumb { background: var(--surface4); border-radius: 2px; }
 
 /* ── Sections ── */
-.section { display: none; animation: sectionIn .2s var(--t-normal); max-width: 860px; }
+.section { display: none; animation: sectionIn .2s var(--t-normal); max-width: 100%; }
 .section.active { display: block; }
 
 @keyframes sectionIn {
@@ -942,12 +942,12 @@ input[type="password"]::-ms-clear {
 }
 .sidebar-backdrop.visible { display: block; opacity: 1; }
 
-@media (max-width: 1024px) {
+@media (max-width: 1024px) and (min-width: 769px) {
   :root { --sidebar-w: 200px; }
   .main-content { padding: 1.5rem 1.75rem; }
-  /* Section max-width: loosen for medium screens */
+  /* Section max-width: full on medium desktop */
   .section { max-width: 100%; }
-  /* Dashboard stats: still 4-col but slightly smaller */
+  /* Dashboard stats: still 4-col */
   .orders-stats-strip { gap: 8px; }
   .ostat-num { font-size: 19px; }
 }
@@ -960,9 +960,9 @@ input[type="password"]::-ms-clear {
   .fv2-summary { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* ── Large desktop (>1280px): allow section to breathe ── */
+/* ── Large desktop (>1280px): section full width, use all space ── */
 @media (min-width: 1281px) {
-  .section { max-width: 980px; }
+  .section { max-width: 100%; }
   .fv2-summary { grid-template-columns: repeat(4, 1fr); }
 }
 
