@@ -8,6 +8,31 @@
 
 ---
 
+## 📋 Document Metadata
+
+**Last Updated:** 2026-06-07  
+**Auto-sync Status:** ✅ Enabled (via Kiro hooks)  
+**Trigger Files:**
+- `js/supabase-sync.js` → Singleton client changes
+- `admin/js/admin-config.js` → Admin config module changes
+- `index.html`, `admin/index.html` → Page structure changes
+- Hook: `sync-web-docs` + `post-task-doc-check`
+
+**Update Protocol:**
+1. Hooks auto-trigger AI review saat file kunci berubah
+2. AI update bagian relevan (halaman baru, script baru, schema changes)
+3. Iron rules tetap minimal di `project-guide.md`, detail di sini
+4. Changelog di bawah mencatat perubahan major
+
+### 📝 Recent Changes
+```
+2026-06-07: Added auto-sync metadata and hooks system
+            - Hook sync-web-docs: triggers on supabase-sync.js/admin-config/index.html
+            - Hook post-task-doc-check: safety net after any task
+```
+
+---
+
 ## 0. Aturan emas saat edit
 
 1. **Vanilla stack** — HTML/CSS/JS tanpa framework, tanpa bundler. Tambah `<script src="…">` di file HTML yang relevan.
