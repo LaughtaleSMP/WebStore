@@ -9,78 +9,78 @@
    shop_config, jadi perubahan admin langsung terlihat.
 ════════════════════════════════════════════════════════════════ */
 (function () {
-    "use strict";
+  "use strict";
 
-    /* ── State ── */
-    let items = []; // array item dari shop_items
-    let shopMeta = {}; // {title, subtitle, admins, gemAdmins} dari shop_config
-    let editingId = null; // id item yang sedang di-edit (null = tambah baru)
-    let dirty = false;
-    let formImages = []; // current images array for the item being edited
-    let formAssignedAdmins = []; // per-item admin assignment [{name,number},...]
-    let dirtyMeta = false;
-    let storageBucketOk = false; // apakah bucket shop-images sudah siap
+  /* ── State ── */
+  let items = []; // array item dari shop_items
+  let shopMeta = {}; // {title, subtitle, admins, gemAdmins} dari shop_config
+  let editingId = null; // id item yang sedang di-edit (null = tambah baru)
+  let dirty = false;
+  let formImages = []; // current images array for the item being edited
+  let formAssignedAdmins = []; // per-item admin assignment [{name,number},...]
+  let dirtyMeta = false;
+  let storageBucketOk = false; // apakah bucket shop-images sudah siap
 
-    function getSb() {
-        return window._adminSb;
-    }
+  function getSb() {
+    return window._adminSb;
+  }
 
-    /* ════════════════════════════════════════════
-     INIT
-  ════════════════════════════════════════════ */
-    document.addEventListener("DOMContentLoaded", () => {
-        injectNav();
-        injectSection();
-    });
+  /* ════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════ */
+  document.addEventListener("DOMContentLoaded", () => {
+    injectNav();
+    injectSection();
+  });
 
-    /* ── Sidebar nav ── */
-    function injectNav() {
-        const sidebar = document.querySelector(".sidebar");
-        if (!sidebar) return;
-        const grp = document.createElement("div");
-        grp.className = "nav-group-label";
-        grp.textContent = "Toko";
-        sidebar.appendChild(grp);
-        const item = document.createElement("div");
-        item.className = "nav-item";
-        item.id = "nav-shop";
-        item.innerHTML = `
+  /* ── Sidebar nav ── */
+  function injectNav() {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) return;
+    const grp = document.createElement("div");
+    grp.className = "nav-group-label";
+    grp.textContent = "Toko";
+    sidebar.appendChild(grp);
+    const item = document.createElement("div");
+    item.className = "nav-item";
+    item.id = "nav-shop";
+    item.innerHTML = `
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
         <line x1="3" y1="6" x2="21" y2="6"/>
         <path d="M16 10a4 4 0 01-8 0"/>
       </svg>
       Shop`;
-        item.onclick = () => showShopSection(item);
-        sidebar.appendChild(item);
+    item.onclick = () => showShopSection(item);
+    sidebar.appendChild(item);
+  }
+
+  function showShopSection(el) {
+    if (typeof showSection === "function") {
+      showSection("shop", el);
+    } else {
+      document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+      document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+      const sec = document.getElementById("sec-shop");
+      if (sec) sec.classList.add("active");
+      if (el) el.classList.add("active");
+      const bc = document.getElementById("topbar-section");
+      if (bc) bc.textContent = "Shop";
     }
+    loadData();
+  }
 
-    function showShopSection(el) {
-        if (typeof showSection === "function") {
-            showSection("shop", el);
-        } else {
-            document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
-            document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
-            const sec = document.getElementById("sec-shop");
-            if (sec) sec.classList.add("active");
-            if (el) el.classList.add("active");
-            const bc = document.getElementById("topbar-section");
-            if (bc) bc.textContent = "Shop";
-        }
-        loadData();
-    }
+  /* ════════════════════════════════════════════
+   INJECT HTML SECTION
+════════════════════════════════════════════ */
+  function injectSection() {
+    const main = document.querySelector(".main-content");
+    if (!main) return;
 
-    /* ════════════════════════════════════════════
-     INJECT HTML SECTION
-  ════════════════════════════════════════════ */
-    function injectSection() {
-        const main = document.querySelector(".main-content");
-        if (!main) return;
-
-        const sec = document.createElement("div");
-        sec.className = "section";
-        sec.id = "sec-shop";
-        sec.innerHTML = `
+    const sec = document.createElement("div");
+    sec.className = "section";
+    sec.id = "sec-shop";
+    sec.innerHTML = `
       <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div>
           <div class="page-title">Konfigurasi Shop</div>
@@ -321,17 +321,17 @@
       </div>
     `;
 
-        injectStyles();
-        main.appendChild(sec);
-        registerGlobals();
-    }
+    injectStyles();
+    main.appendChild(sec);
+    registerGlobals();
+  }
 
-    /* ════════════════════════════════════════════
-     STYLES
-  ════════════════════════════════════════════ */
-    function injectStyles() {
-        const s = document.createElement("style");
-        s.textContent = `
+  /* ════════════════════════════════════════════
+   STYLES
+════════════════════════════════════════════ */
+  function injectStyles() {
+    const s = document.createElement("style");
+    s.textContent = `
       .shop-cfg-tabs { display:flex; gap:6px; margin-bottom:1.2rem; flex-wrap:wrap; }
       .scfg-tab {
         padding:7px 16px; border-radius:20px; font-size:12.5px;
@@ -454,130 +454,130 @@
         .scfg-item-actions { width:100%; justify-content:flex-end; }
       }
     `;
-        document.head.appendChild(s);
+    document.head.appendChild(s);
+  }
+
+  /* ════════════════════════════════════════════
+   GLOBALS
+════════════════════════════════════════════ */
+  function registerGlobals() {
+    window._shopTab = switchTab;
+    window._shopItemSearch = filterItems;
+    window._shopNewItem = newItem;
+    window._shopEditItem = editItem;
+    window._shopDeleteItem = deleteItem;
+    window._shopMoveItem = moveItem;
+    window._shopCloseForm = closeForm;
+    window._shopApplyItem = applyItem;
+    window._shopSaveMeta = saveMeta;
+    window._shopMetaDirty = markMetaDirty;
+    window._shopToggleMaxQty = toggleMaxQty;
+    window._shopAddAdmin = addAdminRow;
+    window._shopRemoveAdmin = removeAdminRow;
+    window._shopAdminChange = adminChange;
+    window._shopImgUpload = imgUploadFile;
+    window._shopImgDrop = imgHandleDrop;
+    window._shopImgAddUrl = imgAddUrl;
+    window._shopImgRemove = imgRemove;
+    window._shopImgMove = imgMove;
+    window._shopImgTitle = imgTitle;
+    window._shopToggleReorder = toggleReorderMode;
+    window._shopSaveSortOrder = saveSortOrder;
+    window._shopRetryStorage = async function () {
+      const sb = getSb();
+      if (!sb) { toast('Supabase belum siap.', 'error'); return; }
+      toast('Mengecek ulang storage…');
+      await checkStorageBucket(sb);
+      if (storageBucketOk) toast('Storage siap! ✅ Bucket shop-images ditemukan.');
+    };
+  }
+
+  /* ════════════════════════════════════════════
+   LOAD DATA — dari shop_items + shop_config
+════════════════════════════════════════════ */
+  async function loadData() {
+    const loadEl = document.getElementById("shop-loading");
+    loadEl.style.display = "block";
+    loadEl.textContent = "Memuat konfigurasi…";
+    document.getElementById("shop-tab-items").style.display = "none";
+    document.getElementById("shop-tab-general").style.display = "none";
+
+    const sb = getSb();
+    if (!sb) {
+      loadEl.textContent = "⚠️ Supabase belum siap.";
+      return;
     }
 
-    /* ════════════════════════════════════════════
-     GLOBALS
-  ════════════════════════════════════════════ */
-    function registerGlobals() {
-        window._shopTab = switchTab;
-        window._shopItemSearch = filterItems;
-        window._shopNewItem = newItem;
-        window._shopEditItem = editItem;
-        window._shopDeleteItem = deleteItem;
-        window._shopMoveItem = moveItem;
-        window._shopCloseForm = closeForm;
-        window._shopApplyItem = applyItem;
-        window._shopSaveMeta = saveMeta;
-        window._shopMetaDirty = markMetaDirty;
-        window._shopToggleMaxQty = toggleMaxQty;
-        window._shopAddAdmin = addAdminRow;
-        window._shopRemoveAdmin = removeAdminRow;
-        window._shopAdminChange = adminChange;
-        window._shopImgUpload = imgUploadFile;
-        window._shopImgDrop = imgHandleDrop;
-        window._shopImgAddUrl = imgAddUrl;
-        window._shopImgRemove = imgRemove;
-        window._shopImgMove = imgMove;
-        window._shopImgTitle = imgTitle;
-        window._shopToggleReorder = toggleReorderMode;
-        window._shopSaveSortOrder = saveSortOrder;
-        window._shopRetryStorage = async function() {
-            const sb = getSb();
-            if (!sb) { toast('Supabase belum siap.', 'error'); return; }
-            toast('Mengecek ulang storage…');
-            await checkStorageBucket(sb);
-            if (storageBucketOk) toast('Storage siap! ✅ Bucket shop-images ditemukan.');
-        };
+    /* Fetch shop_items */
+    const { data: itemRows, error: itemErr } = await sb
+      .from("shop_items")
+      .select("*")
+      .order("sort_order", { ascending: true });
+
+    if (itemErr) {
+      loadEl.textContent = "⚠️ Gagal memuat item: " + itemErr.message;
+      return;
     }
+    items = itemRows || [];
 
-    /* ════════════════════════════════════════════
-     LOAD DATA — dari shop_items + shop_config
-  ════════════════════════════════════════════ */
-    async function loadData() {
-        const loadEl = document.getElementById("shop-loading");
-        loadEl.style.display = "block";
-        loadEl.textContent = "Memuat konfigurasi…";
-        document.getElementById("shop-tab-items").style.display = "none";
-        document.getElementById("shop-tab-general").style.display = "none";
+    /* Fetch shop_config (meta: title, subtitle, admins WA) */
+    const { data: cfgRow } = await sb.from("shop_config").select("value").eq("key", "main").single();
 
-        const sb = getSb();
-        if (!sb) {
-            loadEl.textContent = "⚠️ Supabase belum siap.";
-            return;
-        }
-
-        /* Fetch shop_items */
-        const { data: itemRows, error: itemErr } = await sb
-            .from("shop_items")
-            .select("*")
-            .order("sort_order", { ascending: true });
-
-        if (itemErr) {
-            loadEl.textContent = "⚠️ Gagal memuat item: " + itemErr.message;
-            return;
-        }
-        items = itemRows || [];
-
-        /* Fetch shop_config (meta: title, subtitle, admins WA) */
-        const { data: cfgRow } = await sb.from("shop_config").select("value").eq("key", "main").single();
-
-        try {
-            shopMeta = cfgRow?.value ? JSON.parse(cfgRow.value) : {};
-        } catch (e) {
-            shopMeta = {};
-        }
-        if (!shopMeta.admins) shopMeta.admins = [];
-        if (!shopMeta.gemAdmins) shopMeta.gemAdmins = [];
-        if (!shopMeta.title) shopMeta.title = "Laughtale Store";
-        if (!shopMeta.subtitle) shopMeta.subtitle = "";
-
-        dirty = false;
-        dirtyMeta = false;
-        updateMetaBtn();
-
-        /* ── Cek apakah bucket storage sudah siap ── */
-        await checkStorageBucket(sb);
-
-        loadEl.style.display = "none";
-        switchTab("items", document.querySelector('.scfg-tab[data-tab="items"]'));
+    try {
+      shopMeta = cfgRow?.value ? JSON.parse(cfgRow.value) : {};
+    } catch (e) {
+      shopMeta = {};
     }
+    if (!shopMeta.admins) shopMeta.admins = [];
+    if (!shopMeta.gemAdmins) shopMeta.gemAdmins = [];
+    if (!shopMeta.title) shopMeta.title = "Laughtale Store";
+    if (!shopMeta.subtitle) shopMeta.subtitle = "";
 
-    /* ════════════════════════════════════════════
-     CHECK STORAGE BUCKET — auto-detect apakah 'shop-images' sudah ada
-  ════════════════════════════════════════════ */
-    async function checkStorageBucket(sb) {
-        try {
-            const { data, error } = await sb.storage.from('shop-images').list('', { limit: 1 });
-            if (error) {
-                const msg = (error.message || '').toLowerCase();
-                if (msg.includes('bucket') || msg.includes('not found') || msg.includes('does not exist')) {
-                    storageBucketOk = false;
-                    showStorageWarning();
-                    return;
-                }
-                // Policy error = bucket exists tapi policy belum di-set
-                if (msg.includes('policy') || msg.includes('permission') || msg.includes('denied') || msg.includes('security')) {
-                    storageBucketOk = false;
-                    showStoragePolicyWarning();
-                    return;
-                }
-            }
-            storageBucketOk = true;
-            hideStorageWarning();
-        } catch (e) {
-            storageBucketOk = false;
-            showStorageWarning();
+    dirty = false;
+    dirtyMeta = false;
+    updateMetaBtn();
+
+    /* ── Cek apakah bucket storage sudah siap ── */
+    await checkStorageBucket(sb);
+
+    loadEl.style.display = "none";
+    switchTab("items", document.querySelector('.scfg-tab[data-tab="items"]'));
+  }
+
+  /* ════════════════════════════════════════════
+   CHECK STORAGE BUCKET — auto-detect apakah 'shop-images' sudah ada
+════════════════════════════════════════════ */
+  async function checkStorageBucket(sb) {
+    try {
+      const { data, error } = await sb.storage.from('shop-images').list('', { limit: 1 });
+      if (error) {
+        const msg = (error.message || '').toLowerCase();
+        if (msg.includes('bucket') || msg.includes('not found') || msg.includes('does not exist')) {
+          storageBucketOk = false;
+          showStorageWarning();
+          return;
         }
+        // Policy error = bucket exists tapi policy belum di-set
+        if (msg.includes('policy') || msg.includes('permission') || msg.includes('denied') || msg.includes('security')) {
+          storageBucketOk = false;
+          showStoragePolicyWarning();
+          return;
+        }
+      }
+      storageBucketOk = true;
+      hideStorageWarning();
+    } catch (e) {
+      storageBucketOk = false;
+      showStorageWarning();
     }
+  }
 
-    function showStorageWarning() {
-        hideStorageWarning();
-        const banner = document.createElement('div');
-        banner.id = 'shop-storage-warning';
-        banner.style.cssText = 'background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12.5px;color:#fca5a5;line-height:1.7;';
-        banner.innerHTML = `
+  function showStorageWarning() {
+    hideStorageWarning();
+    const banner = document.createElement('div');
+    banner.id = 'shop-storage-warning';
+    banner.style.cssText = 'background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12.5px;color:#fca5a5;line-height:1.7;';
+    banner.innerHTML = `
             <div style="display:flex;align-items:flex-start;gap:10px">
                 <span style="font-size:1.3rem;flex-shrink:0">⚠️</span>
                 <div>
@@ -590,16 +590,16 @@
                     <button onclick="window._shopRetryStorage()" style="margin-top:8px;padding:5px 14px;border-radius:7px;border:1px solid rgba(74,143,255,0.3);background:rgba(74,143,255,0.1);color:#4a8fff;font-size:12px;font-weight:600;cursor:pointer">🔄 Cek Ulang</button>
                 </div>
             </div>`;
-        const tabItems = document.getElementById('shop-tab-items');
-        if (tabItems) tabItems.prepend(banner);
-    }
+    const tabItems = document.getElementById('shop-tab-items');
+    if (tabItems) tabItems.prepend(banner);
+  }
 
-    function showStoragePolicyWarning() {
-        hideStorageWarning();
-        const banner = document.createElement('div');
-        banner.id = 'shop-storage-warning';
-        banner.style.cssText = 'background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12.5px;color:#fbbf24;line-height:1.7;';
-        banner.innerHTML = `
+  function showStoragePolicyWarning() {
+    hideStorageWarning();
+    const banner = document.createElement('div');
+    banner.id = 'shop-storage-warning';
+    banner.style.cssText = 'background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:12.5px;color:#fbbf24;line-height:1.7;';
+    banner.innerHTML = `
             <div style="display:flex;align-items:flex-start;gap:10px">
                 <span style="font-size:1.3rem;flex-shrink:0">🔒</span>
                 <div>
@@ -609,216 +609,216 @@
                     <button onclick="window._shopRetryStorage()" style="margin-top:8px;padding:5px 14px;border-radius:7px;border:1px solid rgba(74,143,255,0.3);background:rgba(74,143,255,0.1);color:#4a8fff;font-size:12px;font-weight:600;cursor:pointer">🔄 Cek Ulang</button>
                 </div>
             </div>`;
-        const tabItems = document.getElementById('shop-tab-items');
-        if (tabItems) tabItems.prepend(banner);
-    }
+    const tabItems = document.getElementById('shop-tab-items');
+    if (tabItems) tabItems.prepend(banner);
+  }
 
-    function hideStorageWarning() {
-        const el = document.getElementById('shop-storage-warning');
-        if (el) el.remove();
-    }
+  function hideStorageWarning() {
+    const el = document.getElementById('shop-storage-warning');
+    if (el) el.remove();
+  }
 
-    /* ════════════════════════════════════════════
-     TABS
-  ════════════════════════════════════════════ */
-    let currentTab = "items";
-    let itemSearch = "";
+  /* ════════════════════════════════════════════
+   TABS
+════════════════════════════════════════════ */
+  let currentTab = "items";
+  let itemSearch = "";
 
-    function switchTab(tab, btn) {
-        currentTab = tab;
-        document.querySelectorAll(".scfg-tab").forEach(b => b.classList.remove("active"));
-        if (btn) btn.classList.add("active");
-        document.querySelectorAll(".shop-tab-content").forEach(el => (el.style.display = "none"));
-        const el = document.getElementById("shop-tab-" + tab);
-        if (el) el.style.display = "block";
-        if (tab === "items") renderItemList();
-        if (tab === "general") renderGeneral();
-    }
+  function switchTab(tab, btn) {
+    currentTab = tab;
+    document.querySelectorAll(".scfg-tab").forEach(b => b.classList.remove("active"));
+    if (btn) btn.classList.add("active");
+    document.querySelectorAll(".shop-tab-content").forEach(el => (el.style.display = "none"));
+    const el = document.getElementById("shop-tab-" + tab);
+    if (el) el.style.display = "block";
+    if (tab === "items") renderItemList();
+    if (tab === "general") renderGeneral();
+  }
 
-    /* ════════════════════════════════════════════
-     ITEM LIST
-  ════════════════════════════════════════════ */
-    function filterItems(q) {
-        itemSearch = q;
-        renderItemList();
-    }
+  /* ════════════════════════════════════════════
+   ITEM LIST
+════════════════════════════════════════════ */
+  function filterItems(q) {
+    itemSearch = q;
+    renderItemList();
+  }
 
-    /* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-     REORDER MODE
-    \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-    let reorderMode = false;
-    let _dragSrcIdx = null;
-    let _saveDebounce = null;
+  /* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   REORDER MODE
+  \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+  let reorderMode = false;
+  let _dragSrcIdx = null;
+  let _saveDebounce = null;
 
-    function toggleReorderMode() {
-        reorderMode = !reorderMode;
-        const btn = document.getElementById('shop-reorder-btn');
-        if (btn) {
-            if (reorderMode) {
-                btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>\u2713 Selesai &amp; Simpan`;
-                btn.style.background = 'rgba(52,211,153,0.15)';
-                btn.style.borderColor = 'rgba(52,211,153,0.4)';
-                btn.style.color = '#34d399';
-            } else {
-                // Simpan urutan saat keluar mode reorder
-                if (_saveDebounce) clearTimeout(_saveDebounce);
-                saveSortOrder();
-                btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><polyline points="8 5 3 9 8 13"/><polyline points="16 11 21 15 16 19"/></svg>\u21c5 Atur Urutan`;
-                btn.style.background = '';
-                btn.style.borderColor = '';
-                btn.style.color = '';
-            }
-        }
-        renderItemList();
-    }
-
-    function moveItem(id, dir) {
-        const idx = items.findIndex(i => i.id === id);
-        if (idx < 0) return;
-        const swapIdx = dir === 'up' ? idx - 1 : idx + 1;
-        if (swapIdx < 0 || swapIdx >= items.length) return;
-        // Swap array positions
-        [items[idx], items[swapIdx]] = [items[swapIdx], items[idx]];
-        // Reassign sort_order values
-        items.forEach((item, i) => { item.sort_order = i; });
-        renderItemList();
-        // Debounce save: tunggu 600ms sebelum save agar tidak spam API saat klik cepat
+  function toggleReorderMode() {
+    reorderMode = !reorderMode;
+    const btn = document.getElementById('shop-reorder-btn');
+    if (btn) {
+      if (reorderMode) {
+        btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>\u2713 Selesai &amp; Simpan`;
+        btn.style.background = 'rgba(52,211,153,0.15)';
+        btn.style.borderColor = 'rgba(52,211,153,0.4)';
+        btn.style.color = '#34d399';
+      } else {
+        // Simpan urutan saat keluar mode reorder
         if (_saveDebounce) clearTimeout(_saveDebounce);
-        _saveDebounce = setTimeout(() => { saveSortOrder(); _saveDebounce = null; }, 600);
+        saveSortOrder();
+        btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><polyline points="8 5 3 9 8 13"/><polyline points="16 11 21 15 16 19"/></svg>\u21c5 Atur Urutan`;
+        btn.style.background = '';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }
+    }
+    renderItemList();
+  }
+
+  function moveItem(id, dir) {
+    const idx = items.findIndex(i => i.id === id);
+    if (idx < 0) return;
+    const swapIdx = dir === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= items.length) return;
+    // Swap array positions
+    [items[idx], items[swapIdx]] = [items[swapIdx], items[idx]];
+    // Reassign sort_order values
+    items.forEach((item, i) => { item.sort_order = i; });
+    renderItemList();
+    // Debounce save: tunggu 600ms sebelum save agar tidak spam API saat klik cepat
+    if (_saveDebounce) clearTimeout(_saveDebounce);
+    _saveDebounce = setTimeout(() => { saveSortOrder(); _saveDebounce = null; }, 600);
+  }
+
+  async function saveSortOrder() {
+    const sb = getSb();
+    if (!sb) return;
+
+    // Gunakan UPDATE (bukan upsert) agar tidak mencoba INSERT baru
+    // upsert dengan data partial menyebabkan "null value in column name" error
+    const results = await Promise.all(
+      items.map((item, i) =>
+        sb.from('shop_items')
+          .update({ sort_order: i })
+          .eq('id', item.id)
+      )
+    );
+
+    const failed = results.find(r => r.error);
+    if (failed) {
+      toast('Gagal simpan urutan: ' + failed.error.message, 'error');
+    } else {
+      toast('✅ Urutan item berhasil disimpan!');
+      window.logAdminActivity?.('shop_reorder', 'shop_items', null, {
+        count: items.length,
+        order: items.map(i => i.name).join(', ').slice(0, 80)
+      });
+    }
+  }
+
+  function _initDragDrop(el) {
+    const rows = el.querySelectorAll('[data-drag-id]');
+    rows.forEach(row => {
+      row.addEventListener('dragstart', e => {
+        _dragSrcIdx = parseInt(row.dataset.dragIdx, 10);
+        row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      row.addEventListener('dragend', () => {
+        row.classList.remove('dragging');
+        el.querySelectorAll('[data-drag-id]').forEach(r => r.classList.remove('drag-over'));
+      });
+      row.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        el.querySelectorAll('[data-drag-id]').forEach(r => r.classList.remove('drag-over'));
+        row.classList.add('drag-over');
+      });
+      row.addEventListener('drop', e => {
+        e.preventDefault();
+        const destIdx = parseInt(row.dataset.dragIdx, 10);
+        if (_dragSrcIdx === null || _dragSrcIdx === destIdx) return;
+        // Reorder items array
+        const src = items.splice(_dragSrcIdx, 1)[0];
+        items.splice(destIdx, 0, src);
+        items.forEach((item, i) => { item.sort_order = i; });
+        _dragSrcIdx = null;
+        renderItemList();
+        saveSortOrder();
+      });
+    });
+  }
+
+  function renderItemList() {
+    const el = document.getElementById("shop-item-list");
+    if (!el) return;
+
+    // Tambah tombol "Atur Urutan" ke toolbar jika belum ada
+    const toolbar = document.querySelector('.shop-cfg-toolbar');
+    if (toolbar && !document.getElementById('shop-reorder-btn')) {
+      const btn = document.createElement('button');
+      btn.id = 'shop-reorder-btn';
+      btn.className = 'btn-ghost';
+      btn.style.cssText = 'font-size:12.5px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;padding:6px 13px;transition:all .2s;';
+      btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><polyline points="8 5 3 9 8 13"/><polyline points="16 11 21 15 16 19"/></svg>Atur Urutan`;
+      btn.onclick = () => window._shopToggleReorder();
+      toolbar.appendChild(btn);
     }
 
-    async function saveSortOrder() {
-        const sb = getSb();
-        if (!sb) return;
-
-        // Gunakan UPDATE (bukan upsert) agar tidak mencoba INSERT baru
-        // upsert dengan data partial menyebabkan "null value in column name" error
-        const results = await Promise.all(
-            items.map((item, i) =>
-                sb.from('shop_items')
-                  .update({ sort_order: i })
-                  .eq('id', item.id)
-            )
-        );
-
-        const failed = results.find(r => r.error);
-        if (failed) {
-            toast('Gagal simpan urutan: ' + failed.error.message, 'error');
-        } else {
-            toast('✅ Urutan item berhasil disimpan!');
-            window.logAdminActivity?.('shop_reorder', 'shop_items', null, {
-                count: items.length,
-                order: items.map(i => i.name).join(', ').slice(0, 80)
-            });
-        }
+    let list = items;
+    if (itemSearch.trim() && !reorderMode) {
+      const q = itemSearch.toLowerCase();
+      list = list.filter(
+        i => (i.name || "").toLowerCase().includes(q) || (i.category || "").toLowerCase().includes(q),
+      );
     }
 
-    function _initDragDrop(el) {
-        const rows = el.querySelectorAll('[data-drag-id]');
-        rows.forEach(row => {
-            row.addEventListener('dragstart', e => {
-                _dragSrcIdx = parseInt(row.dataset.dragIdx, 10);
-                row.classList.add('dragging');
-                e.dataTransfer.effectAllowed = 'move';
-            });
-            row.addEventListener('dragend', () => {
-                row.classList.remove('dragging');
-                el.querySelectorAll('[data-drag-id]').forEach(r => r.classList.remove('drag-over'));
-            });
-            row.addEventListener('dragover', e => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-                el.querySelectorAll('[data-drag-id]').forEach(r => r.classList.remove('drag-over'));
-                row.classList.add('drag-over');
-            });
-            row.addEventListener('drop', e => {
-                e.preventDefault();
-                const destIdx = parseInt(row.dataset.dragIdx, 10);
-                if (_dragSrcIdx === null || _dragSrcIdx === destIdx) return;
-                // Reorder items array
-                const src = items.splice(_dragSrcIdx, 1)[0];
-                items.splice(destIdx, 0, src);
-                items.forEach((item, i) => { item.sort_order = i; });
-                _dragSrcIdx = null;
-                renderItemList();
-                saveSortOrder();
-            });
-        });
+    if (!list.length) {
+      el.innerHTML = '<div class="empty-state">Tidak ada item ditemukan.</div>';
+      return;
     }
 
-    function renderItemList() {
-        const el = document.getElementById("shop-item-list");
-        if (!el) return;
+    /* update hint kategori di form */
+    const cats = [...new Set(items.map(i => i.category).filter(Boolean))];
+    const hint = document.getElementById("ef-category-hint");
+    if (hint) hint.textContent = cats.length ? "Kategori yang ada: " + cats.join(", ") : "";
 
-        // Tambah tombol "Atur Urutan" ke toolbar jika belum ada
-        const toolbar = document.querySelector('.shop-cfg-toolbar');
-        if (toolbar && !document.getElementById('shop-reorder-btn')) {
-            const btn = document.createElement('button');
-            btn.id = 'shop-reorder-btn';
-            btn.className = 'btn-ghost';
-            btn.style.cssText = 'font-size:12.5px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;padding:6px 13px;transition:all .2s;';
-            btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><polyline points="8 5 3 9 8 13"/><polyline points="16 11 21 15 16 19"/></svg>Atur Urutan`;
-            btn.onclick = () => window._shopToggleReorder();
-            toolbar.appendChild(btn);
-        }
-
-        let list = items;
-        if (itemSearch.trim() && !reorderMode) {
-            const q = itemSearch.toLowerCase();
-            list = list.filter(
-                i => (i.name || "").toLowerCase().includes(q) || (i.category || "").toLowerCase().includes(q),
-            );
-        }
-
-        if (!list.length) {
-            el.innerHTML = '<div class="empty-state">Tidak ada item ditemukan.</div>';
-            return;
-        }
-
-        /* update hint kategori di form */
-        const cats = [...new Set(items.map(i => i.category).filter(Boolean))];
-        const hint = document.getElementById("ef-category-hint");
-        if (hint) hint.textContent = cats.length ? "Kategori yang ada: " + cats.join(", ") : "";
-
-        // Banner info mode reorder
-        const reorderBanner = reorderMode
-            ? `<div style="background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.25);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#34d399;display:flex;align-items:center;gap:8px">
+    // Banner info mode reorder
+    const reorderBanner = reorderMode
+      ? `<div style="background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.25);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#34d399;display:flex;align-items:center;gap:8px">
                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 9l-3 3 3 3"/><path d="M9 5l3-3 3 3"/><path d="M15 19l3-3-3-3"/><path d="M19 9l3 3-3 3"/></svg>
-                 <div><strong>Mode Atur Urutan aktif</strong> — Drag baris ke posisi baru, atau klik ▲▼. Klik <strong>"✓ Selesai &amp; Simpan"</strong> untuk menyimpan.</div>
+                 <div><strong>Mode Atur Urutan aktif</strong> — Drag baris ke posisi baru, atau klik ▲▼. Klik <strong>"Selesai &amp; Simpan"</strong> untuk menyimpan.</div>
                </div>`
-            : '';
+      : '';
 
-        el.innerHTML = reorderBanner + list
-            .map((item, listIdx) => {
-                const priceStr = "Rp " + Number(item.price || 0).toLocaleString("id-ID");
-                const origStr = item.original_price
-                    ? ' <span style="text-decoration:line-through;opacity:.5">Rp ' +
-                      Number(item.original_price).toLocaleString("id-ID") +
-                      "</span>"
-                    : "";
-                const badgeCls = item.badge_color ? `scfg-badge-${item.badge_color}` : "scfg-badge-empty";
-                const badgeHtml = item.badge
-                    ? `<span class="scfg-badge-preview ${badgeCls}">${esc(item.badge)}</span>`
-                    : `<span class="scfg-badge-preview scfg-badge-empty" style="opacity:.4">no badge</span>`;
-                const stockHtml =
-                    item.stock === "Habis"
-                        ? `<span class="scfg-stock-out">❌ Habis</span>`
-                        : `<span class="scfg-stock-ok">✅ Tersedia</span>`;
-                const activeTag =
-                    item.active === false ? `<span style="color:var(--text-faint)">👁 Tersembunyi</span>` : "";
+    el.innerHTML = reorderBanner + list
+      .map((item, listIdx) => {
+        const priceStr = "Rp " + Number(item.price || 0).toLocaleString("id-ID");
+        const origStr = item.original_price
+          ? ' <span style="text-decoration:line-through;opacity:.5">Rp ' +
+          Number(item.original_price).toLocaleString("id-ID") +
+          "</span>"
+          : "";
+        const badgeCls = item.badge_color ? `scfg-badge-${item.badge_color}` : "scfg-badge-empty";
+        const badgeHtml = item.badge
+          ? `<span class="scfg-badge-preview ${badgeCls}">${esc(item.badge)}</span>`
+          : `<span class="scfg-badge-preview scfg-badge-empty" style="opacity:.4">no badge</span>`;
+        const stockHtml =
+          item.stock === "Habis"
+            ? `<span class="scfg-stock-out">❌ Habis</span>`
+            : `<span class="scfg-stock-ok">✅ Tersedia</span>`;
+        const activeTag =
+          item.active === false ? `<span style="color:var(--text-faint)">👁 Tersembunyi</span>` : "";
 
-                const thumbUrl = Array.isArray(item.images) && item.images[0] && (typeof item.images[0] === 'string' ? item.images[0] : item.images[0].url);
-                const imgCount = Array.isArray(item.images) ? item.images.length : 0;
-                const thumbHtml = thumbUrl
-                    ? `<div style="position:relative;width:44px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0;border:1px solid var(--border);background:var(--surface3)">
+        const thumbUrl = Array.isArray(item.images) && item.images[0] && (typeof item.images[0] === 'string' ? item.images[0] : item.images[0].url);
+        const imgCount = Array.isArray(item.images) ? item.images.length : 0;
+        const thumbHtml = thumbUrl
+          ? `<div style="position:relative;width:44px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0;border:1px solid var(--border);background:var(--surface3)">
                          <img src="${esc(thumbUrl)}" alt="" style="width:100%;height:100%;object-fit:cover">
                          ${imgCount > 1 ? `<div style="position:absolute;bottom:1px;right:1px;background:rgba(0,0,0,.7);color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:4px;line-height:1.2">${imgCount}</div>` : ''}
                        </div>`
-                    : `<div class="scfg-item-emoji">${esc(item.emoji || "🛒")}</div>`;
+          : `<div class="scfg-item-emoji">${esc(item.emoji || "🛒")}</div>`;
 
-                // Elemen khusus reorder mode
-                const dragHandle = reorderMode
-                    ? `<div class="shop-drag-handle" title="Drag untuk pindah posisi">
+        // Elemen khusus reorder mode
+        const dragHandle = reorderMode
+          ? `<div class="shop-drag-handle" title="Drag untuk pindah posisi">
                          <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
                            <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
                            <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
@@ -826,17 +826,17 @@
                          </svg>
                        </div>` : '';
 
-                const upDownBtns = reorderMode
-                    ? `<div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
+        const upDownBtns = reorderMode
+          ? `<div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
                          <button class="shop-order-btn" onclick="window._shopMoveItem(${item.id},'up')" title="Naik" ${listIdx === 0 ? 'disabled style="opacity:.3;cursor:not-allowed"' : ''}>▲</button>
                          <button class="shop-order-btn" onclick="window._shopMoveItem(${item.id},'down')" title="Turun" ${listIdx === list.length - 1 ? 'disabled style="opacity:.3;cursor:not-allowed"' : ''}>▼</button>
                        </div>` : '';
 
-                const posTag = reorderMode
-                    ? `<span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-muted);padding:1px 7px;border-radius:20px;margin-left:5px">#${listIdx + 1}</span>`
-                    : '';
+        const posTag = reorderMode
+          ? `<span style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-muted);padding:1px 7px;border-radius:20px;margin-left:5px">#${listIdx + 1}</span>`
+          : '';
 
-                return `
+        return `
         <div class="scfg-item-row${item.active === false ? " inactive" : ""}${reorderMode ? ' reorder-active' : ''}"
              id="srow-${item.id}"
              data-drag-id="${item.id}"
@@ -860,33 +860,33 @@
             ${!reorderMode ? `<button class="btn-del" onclick="window._shopDeleteItem(${item.id})" title="Hapus">🗑</button>` : ''}
           </div>
         </div>`;
-            })
-            .join("");
+      })
+      .join("");
 
-        if (reorderMode) _initDragDrop(el);
-    }
+    if (reorderMode) _initDragDrop(el);
+  }
 
 
-    /* ════════════════════════════════════════════
-     GENERAL TAB
-  ════════════════════════════════════════════ */
-    function renderGeneral() {
-        document.getElementById("g-title").value = shopMeta.title || "";
-        document.getElementById("g-subtitle").value = shopMeta.subtitle || "";
-        renderAdminList("main");
-        renderAdminList("gem");
-    }
+  /* ════════════════════════════════════════════
+   GENERAL TAB
+════════════════════════════════════════════ */
+  function renderGeneral() {
+    document.getElementById("g-title").value = shopMeta.title || "";
+    document.getElementById("g-subtitle").value = shopMeta.subtitle || "";
+    renderAdminList("main");
+    renderAdminList("gem");
+  }
 
-    function renderAdminList(type) {
-        const listId = type === "main" ? "g-admins-list" : "g-gem-admins-list";
-        const arrKey = type === "main" ? "admins" : "gemAdmins";
-        const el = document.getElementById(listId);
-        if (!el) return;
-        const arr = shopMeta[arrKey] || [];
-        el.innerHTML =
-            arr
-                .map(
-                    (a, i) => `
+  function renderAdminList(type) {
+    const listId = type === "main" ? "g-admins-list" : "g-gem-admins-list";
+    const arrKey = type === "main" ? "admins" : "gemAdmins";
+    const el = document.getElementById(listId);
+    if (!el) return;
+    const arr = shopMeta[arrKey] || [];
+    el.innerHTML =
+      arr
+        .map(
+          (a, i) => `
       <div class="scfg-admin-row">
         <input placeholder="Nama admin" value="${esc(a.name || "")}"
           oninput="window._shopAdminChange('${type}',${i},'name',this.value)">
@@ -895,383 +895,383 @@
           style="flex:1.5">
         <button class="btn-del" onclick="window._shopRemoveAdmin('${type}',${i})" title="Hapus">🗑</button>
       </div>`,
-                )
-                .join("") || '<div style="color:var(--text-faint);font-size:12px;padding:4px 0">Belum ada admin.</div>';
+        )
+        .join("") || '<div style="color:var(--text-faint);font-size:12px;padding:4px 0">Belum ada admin.</div>';
+  }
+
+  function adminChange(type, idx, field, val) {
+    const arrKey = type === "main" ? "admins" : "gemAdmins";
+    shopMeta[arrKey][idx][field] = val;
+    markMetaDirty();
+  }
+
+  function addAdminRow(type) {
+    const arrKey = type === "main" ? "admins" : "gemAdmins";
+    shopMeta[arrKey].push({ name: "", number: "" });
+    markMetaDirty();
+    renderAdminList(type);
+  }
+
+  function removeAdminRow(type, idx) {
+    const arrKey = type === "main" ? "admins" : "gemAdmins";
+    shopMeta[arrKey].splice(idx, 1);
+    markMetaDirty();
+    renderAdminList(type);
+  }
+
+  /* ════════════════════════════════════════════
+   ITEM FORM — TAMBAH / EDIT
+════════════════════════════════════════════ */
+  function newItem() {
+    editingId = null;
+    document.getElementById("scfg-modal-title").textContent = "Tambah Item Baru";
+    clearForm();
+    openModal();
+  }
+
+  function editItem(id) {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    editingId = id;
+    document.getElementById("scfg-modal-title").textContent = "Edit Item";
+    document.getElementById("ef-name").value = item.name || "";
+    document.getElementById("ef-emoji").value = item.emoji || "";
+    document.getElementById("ef-category").value = item.category || "";
+    document.getElementById("ef-price").value = item.price ?? "";
+    document.getElementById("ef-price-orig").value = item.original_price || "";
+    document.getElementById("ef-badge").value = item.badge || "";
+    document.getElementById("ef-badge-color").value = item.badge_color || "";
+    document.getElementById("ef-sort-order").value = item.sort_order ?? "";
+    document.getElementById("ef-stock").value = item.stock || "Tersedia";
+    document.getElementById("ef-desc").value = item.description || "";
+    document.getElementById("ef-features").value = (item.features || []).join("\n");
+    setToggle("ef-active", item.active !== false);
+    setToggle("ef-requires-design", !!item.requires_design);
+    setToggle("ef-needs-username", item.needs_username !== false);
+    setToggle("ef-can-multi", item.can_buy_multiple !== false);
+    document.getElementById("ef-max-qty").value = item.max_quantity || "";
+    formImages = Array.isArray(item.images) ? item.images.map(function (img) {
+      if (typeof img === 'string') return { url: img, title: '' };
+      return { url: img.url || '', title: img.title || '' };
+    }) : [];
+    formAssignedAdmins = Array.isArray(item.assigned_admins) ? [...item.assigned_admins] : [];
+    renderFormImages();
+    renderAssignedAdmins();
+    toggleMaxQty();
+    openModal();
+  }
+
+  function clearForm() {
+    [
+      "ef-name",
+      "ef-emoji",
+      "ef-category",
+      "ef-price",
+      "ef-price-orig",
+      "ef-badge",
+      "ef-sort-order",
+      "ef-desc",
+      "ef-features",
+      "ef-max-qty",
+      "ef-img-url",
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    document.getElementById("ef-badge-color").value = "";
+    document.getElementById("ef-stock").value = "Tersedia";
+    setToggle("ef-active", true);
+    setToggle("ef-requires-design", false);
+    setToggle("ef-needs-username", true);
+    setToggle("ef-can-multi", true);
+    formImages = [];
+    formAssignedAdmins = [];
+    renderFormImages();
+    renderAssignedAdmins();
+    toggleMaxQty();
+  }
+
+  /* ── Simpan satu item ke Supabase (upsert) ── */
+  async function applyItem() {
+    const name = document.getElementById("ef-name").value.trim();
+    const price = document.getElementById("ef-price").value.trim();
+    if (!name) {
+      toast("Nama item wajib diisi.", "error");
+      return;
+    }
+    if (price === "") {
+      toast("Harga wajib diisi.", "error");
+      return;
     }
 
-    function adminChange(type, idx, field, val) {
-        const arrKey = type === "main" ? "admins" : "gemAdmins";
-        shopMeta[arrKey][idx][field] = val;
-        markMetaDirty();
+    const sb = getSb();
+    if (!sb) {
+      toast("Supabase belum siap.", "error");
+      return;
     }
 
-    function addAdminRow(type) {
-        const arrKey = type === "main" ? "admins" : "gemAdmins";
-        shopMeta[arrKey].push({ name: "", number: "" });
-        markMetaDirty();
-        renderAdminList(type);
+    /* Cek duplikat nama (hanya saat tambah baru) */
+    if (editingId === null) {
+      const { data: dup } = await sb
+        .from("shop_items")
+        .select("id")
+        .ilike("name", name)
+        .maybeSingle();
+      if (dup) {
+        toast("Item dengan nama \"" + name + "\" sudah ada.", "error");
+        return;
+      }
     }
 
-    function removeAdminRow(type, idx) {
-        const arrKey = type === "main" ? "admins" : "gemAdmins";
-        shopMeta[arrKey].splice(idx, 1);
-        markMetaDirty();
-        renderAdminList(type);
+    const canMulti = document.getElementById("ef-can-multi").classList.contains("on");
+
+    /* Tentukan id: edit = id lama, tambah baru = DB max(id)+1 untuk hindari race condition */
+    let newId = editingId;
+    if (editingId === null) {
+      const { data: maxRow } = await sb
+        .from("shop_items")
+        .select("id")
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      newId = (maxRow && maxRow.id ? maxRow.id : 0) + 1;
     }
 
-    /* ════════════════════════════════════════════
-     ITEM FORM — TAMBAH / EDIT
-  ════════════════════════════════════════════ */
-    function newItem() {
-        editingId = null;
-        document.getElementById("scfg-modal-title").textContent = "Tambah Item Baru";
-        clearForm();
-        openModal();
+    const row = {
+      id: newId,
+      name,
+      emoji: document.getElementById("ef-emoji").value.trim() || "🛒",
+      category: document.getElementById("ef-category").value.trim() || "Lainnya",
+      price: Number(price),
+      original_price: Number(document.getElementById("ef-price-orig").value) || 0,
+      badge: document.getElementById("ef-badge").value.trim(),
+      badge_color: document.getElementById("ef-badge-color").value,
+      sort_order: Number(document.getElementById("ef-sort-order").value) || 0,
+      stock: document.getElementById("ef-stock").value,
+      active: document.getElementById("ef-active").classList.contains("on"),
+      description: document.getElementById("ef-desc").value.trim(),
+      features: document
+        .getElementById("ef-features")
+        .value.split("\n")
+        .map(s => s.trim())
+        .filter(Boolean),
+      requires_design: document.getElementById("ef-requires-design").classList.contains("on"),
+      needs_username: document.getElementById("ef-needs-username").classList.contains("on"),
+      can_buy_multiple: canMulti,
+      max_quantity: canMulti ? Number(document.getElementById("ef-max-qty").value) || 99 : 1,
+      images: formImages.length ? formImages.map(function (img) { return { url: img.url, title: img.title || '' }; }) : [],
+      assigned_admins: formAssignedAdmins.length ? formAssignedAdmins : [],
+    };
+
+    const saveBtn = document.getElementById("ef-save-btn");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Menyimpan…";
+
+    const { error } = await sb.from("shop_items").upsert(row, { onConflict: "id" });
+
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Simpan Item";
+
+    if (error) {
+      toast("Gagal: " + error.message, "error");
+      return;
     }
 
-    function editItem(id) {
-        const item = items.find(i => i.id === id);
-        if (!item) return;
-        editingId = id;
-        document.getElementById("scfg-modal-title").textContent = "Edit Item";
-        document.getElementById("ef-name").value = item.name || "";
-        document.getElementById("ef-emoji").value = item.emoji || "";
-        document.getElementById("ef-category").value = item.category || "";
-        document.getElementById("ef-price").value = item.price ?? "";
-        document.getElementById("ef-price-orig").value = item.original_price || "";
-        document.getElementById("ef-badge").value = item.badge || "";
-        document.getElementById("ef-badge-color").value = item.badge_color || "";
-        document.getElementById("ef-sort-order").value = item.sort_order ?? "";
-        document.getElementById("ef-stock").value = item.stock || "Tersedia";
-        document.getElementById("ef-desc").value = item.description || "";
-        document.getElementById("ef-features").value = (item.features || []).join("\n");
-        setToggle("ef-active", item.active !== false);
-        setToggle("ef-requires-design", !!item.requires_design);
-        setToggle("ef-needs-username", item.needs_username !== false);
-        setToggle("ef-can-multi", item.can_buy_multiple !== false);
-        document.getElementById("ef-max-qty").value = item.max_quantity || "";
-        formImages = Array.isArray(item.images) ? item.images.map(function(img) {
-            if (typeof img === 'string') return { url: img, title: '' };
-            return { url: img.url || '', title: img.title || '' };
-        }) : [];
-        formAssignedAdmins = Array.isArray(item.assigned_admins) ? [...item.assigned_admins] : [];
-        renderFormImages();
-        renderAssignedAdmins();
-        toggleMaxQty();
-        openModal();
-    }
-
-    function clearForm() {
-        [
-            "ef-name",
-            "ef-emoji",
-            "ef-category",
-            "ef-price",
-            "ef-price-orig",
-            "ef-badge",
-            "ef-sort-order",
-            "ef-desc",
-            "ef-features",
-            "ef-max-qty",
-            "ef-img-url",
-        ].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = "";
+    /* Audit trail: log perubahan harga & item baru */
+    if (editingId !== null) {
+      const prevItem = items.find(i => i.id === editingId);
+      if (prevItem && prevItem.price !== row.price) {
+        window.logAdminActivity?.('shop_price_change', 'shop_item', row.id, {
+          item: row.name,
+          old_price: 'Rp ' + Number(prevItem.price || 0).toLocaleString('id-ID'),
+          new_price: 'Rp ' + Number(row.price).toLocaleString('id-ID'),
         });
-        document.getElementById("ef-badge-color").value = "";
-        document.getElementById("ef-stock").value = "Tersedia";
-        setToggle("ef-active", true);
-        setToggle("ef-requires-design", false);
-        setToggle("ef-needs-username", true);
-        setToggle("ef-can-multi", true);
-        formImages = [];
-        formAssignedAdmins = [];
-        renderFormImages();
-        renderAssignedAdmins();
-        toggleMaxQty();
+      }
+    } else {
+      window.logAdminActivity?.('shop_item_create', 'shop_item', row.id, {
+        item: row.name,
+        price: 'Rp ' + Number(row.price).toLocaleString('id-ID'),
+        category: row.category,
+      });
     }
 
-    /* ── Simpan satu item ke Supabase (upsert) ── */
-    async function applyItem() {
-        const name = document.getElementById("ef-name").value.trim();
-        const price = document.getElementById("ef-price").value.trim();
-        if (!name) {
-            toast("Nama item wajib diisi.", "error");
-            return;
+    /* Update local state */
+    if (editingId !== null) {
+      const idx = items.findIndex(i => i.id === editingId);
+      if (idx !== -1) items[idx] = row;
+    } else {
+      items.push(row);
+    }
+    /* Re-sort by sort_order */
+    items.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+    closeForm();
+    renderItemList();
+    toast(editingId !== null ? "Item berhasil diperbarui" : "Item baru berhasil ditambahkan");
+  }
+
+  /* ── Hapus item dari Supabase ── */
+  async function deleteItem(id) {
+    const item = items.find(i => i.id === id);
+    const itemName = item ? item.name : 'item';
+
+    function _doDelete() {
+      const sb = getSb();
+      if (!sb) {
+        toast("Supabase belum siap.", "error");
+        return;
+      }
+      sb.from("shop_items").delete().eq("id", id).then(function (res) {
+        if (res.error) {
+          toast("Gagal hapus: " + res.error.message, "error");
+          return;
         }
-        if (price === "") {
-            toast("Harga wajib diisi.", "error");
-            return;
-        }
-
-        const sb = getSb();
-        if (!sb) {
-            toast("Supabase belum siap.", "error");
-            return;
-        }
-
-        /* Cek duplikat nama (hanya saat tambah baru) */
-        if (editingId === null) {
-            const { data: dup } = await sb
-                .from("shop_items")
-                .select("id")
-                .ilike("name", name)
-                .maybeSingle();
-            if (dup) {
-                toast("Item dengan nama \"" + name + "\" sudah ada.", "error");
-                return;
-            }
-        }
-
-        const canMulti = document.getElementById("ef-can-multi").classList.contains("on");
-
-        /* Tentukan id: edit = id lama, tambah baru = DB max(id)+1 untuk hindari race condition */
-        let newId = editingId;
-        if (editingId === null) {
-            const { data: maxRow } = await sb
-                .from("shop_items")
-                .select("id")
-                .order("id", { ascending: false })
-                .limit(1)
-                .maybeSingle();
-            newId = (maxRow && maxRow.id ? maxRow.id : 0) + 1;
-        }
-
-        const row = {
-            id: newId,
-            name,
-            emoji: document.getElementById("ef-emoji").value.trim() || "🛒",
-            category: document.getElementById("ef-category").value.trim() || "Lainnya",
-            price: Number(price),
-            original_price: Number(document.getElementById("ef-price-orig").value) || 0,
-            badge: document.getElementById("ef-badge").value.trim(),
-            badge_color: document.getElementById("ef-badge-color").value,
-            sort_order: Number(document.getElementById("ef-sort-order").value) || 0,
-            stock: document.getElementById("ef-stock").value,
-            active: document.getElementById("ef-active").classList.contains("on"),
-            description: document.getElementById("ef-desc").value.trim(),
-            features: document
-                .getElementById("ef-features")
-                .value.split("\n")
-                .map(s => s.trim())
-                .filter(Boolean),
-            requires_design: document.getElementById("ef-requires-design").classList.contains("on"),
-            needs_username: document.getElementById("ef-needs-username").classList.contains("on"),
-            can_buy_multiple: canMulti,
-            max_quantity: canMulti ? Number(document.getElementById("ef-max-qty").value) || 99 : 1,
-            images: formImages.length ? formImages.map(function(img) { return { url: img.url, title: img.title || '' }; }) : [],
-            assigned_admins: formAssignedAdmins.length ? formAssignedAdmins : [],
-        };
-
-        const saveBtn = document.getElementById("ef-save-btn");
-        saveBtn.disabled = true;
-        saveBtn.textContent = "Menyimpan…";
-
-        const { error } = await sb.from("shop_items").upsert(row, { onConflict: "id" });
-
-        saveBtn.disabled = false;
-        saveBtn.textContent = "Simpan Item";
-
-        if (error) {
-            toast("Gagal: " + error.message, "error");
-            return;
-        }
-
-        /* Audit trail: log perubahan harga & item baru */
-        if (editingId !== null) {
-            const prevItem = items.find(i => i.id === editingId);
-            if (prevItem && prevItem.price !== row.price) {
-                window.logAdminActivity?.('shop_price_change', 'shop_item', row.id, {
-                    item: row.name,
-                    old_price: 'Rp ' + Number(prevItem.price || 0).toLocaleString('id-ID'),
-                    new_price: 'Rp ' + Number(row.price).toLocaleString('id-ID'),
-                });
-            }
-        } else {
-            window.logAdminActivity?.('shop_item_create', 'shop_item', row.id, {
-                item: row.name,
-                price: 'Rp ' + Number(row.price).toLocaleString('id-ID'),
-                category: row.category,
-            });
-        }
-
-        /* Update local state */
-        if (editingId !== null) {
-            const idx = items.findIndex(i => i.id === editingId);
-            if (idx !== -1) items[idx] = row;
-        } else {
-            items.push(row);
-        }
-        /* Re-sort by sort_order */
-        items.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-
-        closeForm();
+        items = items.filter(i => i.id !== id);
         renderItemList();
-        toast(editingId !== null ? "Item berhasil diperbarui" : "Item baru berhasil ditambahkan");
+        toast("Item \"" + itemName + "\" dihapus.");
+      });
     }
 
-    /* ── Hapus item dari Supabase ── */
-    async function deleteItem(id) {
-        const item = items.find(i => i.id === id);
-        const itemName = item ? item.name : 'item';
+    if (typeof window.showMgrConfirm === 'function') {
+      window.showMgrConfirm({
+        title: 'Hapus Item',
+        message: 'Yakin ingin menghapus <strong>' + escHtml(itemName) + '</strong>?<br><small style="color:var(--text-faint)">Tindakan ini tidak bisa dibatalkan.</small>',
+        confirmText: 'Hapus',
+        danger: true,
+        onConfirm: _doDelete,
+      });
+    } else {
+      if (!confirm('Hapus item "' + itemName + '"?\nTindakan ini tidak bisa dibatalkan.')) return;
+      _doDelete();
+    }
+  }
 
-        function _doDelete() {
-            const sb = getSb();
-            if (!sb) {
-                toast("Supabase belum siap.", "error");
-                return;
-            }
-            sb.from("shop_items").delete().eq("id", id).then(function (res) {
-                if (res.error) {
-                    toast("Gagal hapus: " + res.error.message, "error");
-                    return;
-                }
-                items = items.filter(i => i.id !== id);
-                renderItemList();
-                toast("Item \"" + itemName + "\" dihapus.");
-            });
-        }
+  /* ── Pindah urutan sort_order ── */
+  async function moveItem(id, dir) {
+    const idx = items.findIndex(i => i.id === id);
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= items.length) return;
+    const sb = getSb();
+    if (!sb) return;
 
-        if (typeof window.showMgrConfirm === 'function') {
-            window.showMgrConfirm({
-                title: 'Hapus Item',
-                message: 'Yakin ingin menghapus <strong>' + escHtml(itemName) + '</strong>?<br><small style="color:var(--text-faint)">Tindakan ini tidak bisa dibatalkan.</small>',
-                confirmText: 'Hapus',
-                danger: true,
-                onConfirm: _doDelete,
-            });
-        } else {
-            if (!confirm('Hapus item "' + itemName + '"?\nTindakan ini tidak bisa dibatalkan.')) return;
-            _doDelete();
-        }
+    /* Tukar sort_order dua item */
+    const a = items[idx];
+    const b = items[newIdx];
+    const tmpSort = a.sort_order;
+    a.sort_order = b.sort_order;
+    b.sort_order = tmpSort;
+
+    /* Upsert keduanya */
+    await sb.from("shop_items").upsert(
+      [
+        { id: a.id, sort_order: a.sort_order },
+        { id: b.id, sort_order: b.sort_order },
+      ],
+      { onConflict: "id" },
+    );
+
+    /* Tukar posisi di array lokal */
+    [items[idx], items[newIdx]] = [items[newIdx], items[idx]];
+    renderItemList();
+  }
+
+  /* ════════════════════════════════════════════
+   SIMPAN META (title, subtitle, admins WA)
+   → shop_config key='main'
+════════════════════════════════════════════ */
+  async function saveMeta() {
+    if (!dirtyMeta) return;
+    const sb = getSb();
+    if (!sb) {
+      toast("Supabase belum siap.", "error");
+      return;
     }
 
-    /* ── Pindah urutan sort_order ── */
-    async function moveItem(id, dir) {
-        const idx = items.findIndex(i => i.id === id);
-        const newIdx = idx + dir;
-        if (newIdx < 0 || newIdx >= items.length) return;
-        const sb = getSb();
-        if (!sb) return;
+    /* Baca dari DOM sebelum simpan */
+    const gTitle = document.getElementById("g-title");
+    const gSubtitle = document.getElementById("g-subtitle");
+    if (gTitle) shopMeta.title = gTitle.value.trim() || shopMeta.title;
+    if (gSubtitle) shopMeta.subtitle = gSubtitle.value.trim() || "";
 
-        /* Tukar sort_order dua item */
-        const a = items[idx];
-        const b = items[newIdx];
-        const tmpSort = a.sort_order;
-        a.sort_order = b.sort_order;
-        b.sort_order = tmpSort;
+    const btn = document.getElementById("shop-save-meta-btn");
+    btn.disabled = true;
+    btn.textContent = "Menyimpan…";
 
-        /* Upsert keduanya */
-        await sb.from("shop_items").upsert(
-            [
-                { id: a.id, sort_order: a.sort_order },
-                { id: b.id, sort_order: b.sort_order },
-            ],
-            { onConflict: "id" },
-        );
+    const { error } = await sb.from("shop_config").upsert(
+      {
+        key: "main",
+        value: JSON.stringify(shopMeta),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "key" },
+    );
 
-        /* Tukar posisi di array lokal */
-        [items[idx], items[newIdx]] = [items[newIdx], items[idx]];
-        renderItemList();
+    btn.disabled = false;
+    btn.innerHTML = metaBtnInner();
+
+    if (error) {
+      toast("Gagal: " + error.message, "error");
+      markMetaDirty();
+      return;
     }
 
-    /* ════════════════════════════════════════════
-     SIMPAN META (title, subtitle, admins WA)
-     → shop_config key='main'
-  ════════════════════════════════════════════ */
-    async function saveMeta() {
-        if (!dirtyMeta) return;
-        const sb = getSb();
-        if (!sb) {
-            toast("Supabase belum siap.", "error");
-            return;
-        }
+    dirtyMeta = false;
+    btn.classList.remove("dirty");
+    btn.disabled = true;
+    toast("Pengaturan shop berhasil disimpan ✅");
+  }
 
-        /* Baca dari DOM sebelum simpan */
-        const gTitle = document.getElementById("g-title");
-        const gSubtitle = document.getElementById("g-subtitle");
-        if (gTitle) shopMeta.title = gTitle.value.trim() || shopMeta.title;
-        if (gSubtitle) shopMeta.subtitle = gSubtitle.value.trim() || "";
+  function metaBtnInner() {
+    return `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Simpan Pengaturan`;
+  }
 
-        const btn = document.getElementById("shop-save-meta-btn");
-        btn.disabled = true;
-        btn.textContent = "Menyimpan…";
+  function markMetaDirty() {
+    dirtyMeta = true;
+    updateMetaBtn();
+  }
 
-        const { error } = await sb.from("shop_config").upsert(
-            {
-                key: "main",
-                value: JSON.stringify(shopMeta),
-                updated_at: new Date().toISOString(),
-            },
-            { onConflict: "key" },
-        );
-
-        btn.disabled = false;
-        btn.innerHTML = metaBtnInner();
-
-        if (error) {
-            toast("Gagal: " + error.message, "error");
-            markMetaDirty();
-            return;
-        }
-
-        dirtyMeta = false;
-        btn.classList.remove("dirty");
-        btn.disabled = true;
-        toast("Pengaturan shop berhasil disimpan ✅");
+  function updateMetaBtn() {
+    const btn = document.getElementById("shop-save-meta-btn");
+    if (!btn) return;
+    if (dirtyMeta) {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+      btn.style.cursor = "pointer";
+      btn.classList.add("dirty");
+    } else {
+      btn.disabled = true;
+      btn.style.opacity = ".4";
+      btn.style.cursor = "not-allowed";
+      btn.classList.remove("dirty");
     }
+  }
 
-    function metaBtnInner() {
-        return `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Simpan Pengaturan`;
+  /* ════════════════════════════════════════════
+   PER-ITEM ADMIN ASSIGNMENT — checkbox list
+════════════════════════════════════════════ */
+  function _getAllAdminsFlat() {
+    const all = [];
+    const seen = new Set();
+    for (const a of [...(shopMeta.admins || []), ...(shopMeta.gemAdmins || [])]) {
+      const num = (a.number || "").replace(/\D/g, "");
+      if (!num || seen.has(num)) continue;
+      seen.add(num);
+      all.push({ name: a.name || "", number: num });
     }
+    return all;
+  }
 
-    function markMetaDirty() {
-        dirtyMeta = true;
-        updateMetaBtn();
+  function renderAssignedAdmins() {
+    const el = document.getElementById("ef-assigned-admins");
+    if (!el) return;
+    const allAdmins = _getAllAdminsFlat();
+    if (!allAdmins.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text-faint);padding:4px 0">Belum ada admin WA di tab General.</div>';
+      return;
     }
-
-    function updateMetaBtn() {
-        const btn = document.getElementById("shop-save-meta-btn");
-        if (!btn) return;
-        if (dirtyMeta) {
-            btn.disabled = false;
-            btn.style.opacity = "1";
-            btn.style.cursor = "pointer";
-            btn.classList.add("dirty");
-        } else {
-            btn.disabled = true;
-            btn.style.opacity = ".4";
-            btn.style.cursor = "not-allowed";
-            btn.classList.remove("dirty");
-        }
-    }
-
-    /* ════════════════════════════════════════════
-     PER-ITEM ADMIN ASSIGNMENT — checkbox list
-  ════════════════════════════════════════════ */
-    function _getAllAdminsFlat() {
-        const all = [];
-        const seen = new Set();
-        for (const a of [...(shopMeta.admins || []), ...(shopMeta.gemAdmins || [])]) {
-            const num = (a.number || "").replace(/\D/g, "");
-            if (!num || seen.has(num)) continue;
-            seen.add(num);
-            all.push({ name: a.name || "", number: num });
-        }
-        return all;
-    }
-
-    function renderAssignedAdmins() {
-        const el = document.getElementById("ef-assigned-admins");
-        if (!el) return;
-        const allAdmins = _getAllAdminsFlat();
-        if (!allAdmins.length) {
-            el.innerHTML = '<div style="font-size:12px;color:var(--text-faint);padding:4px 0">Belum ada admin WA di tab General.</div>';
-            return;
-        }
-        el.innerHTML = allAdmins.map((a, i) => {
-            const isOn = formAssignedAdmins.some(fa => (fa.number || "").replace(/\D/g, "") === a.number);
-            return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;
+    el.innerHTML = allAdmins.map((a, i) => {
+      const isOn = formAssignedAdmins.some(fa => (fa.number || "").replace(/\D/g, "") === a.number);
+      return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;
                 border:1px solid ${isOn ? 'var(--accent)' : 'var(--border)'};
                 background:${isOn ? 'rgba(168,85,247,0.06)' : 'var(--surface2)'};
                 cursor:pointer;transition:all .15s;font-size:13px;color:var(--text)">
@@ -1283,342 +1283,342 @@
               </div>
               ${isOn ? '<svg width="16" height="16" fill="none" stroke="var(--accent)" stroke-width="2.5" viewBox="0 0 24 24" style="flex-shrink:0"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
             </label>`;
-        }).join("");
+    }).join("");
+  }
+
+  window._shopToggleItemAdmin = function (idx) {
+    const allAdmins = _getAllAdminsFlat();
+    const admin = allAdmins[idx];
+    if (!admin) return;
+    const eIdx = formAssignedAdmins.findIndex(fa => (fa.number || "").replace(/\D/g, "") === admin.number);
+    if (eIdx >= 0) formAssignedAdmins.splice(eIdx, 1);
+    else formAssignedAdmins.push({ name: admin.name, number: admin.number });
+    renderAssignedAdmins();
+  };
+
+  /* ════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════ */
+  function openModal() {
+    document.getElementById("scfg-backdrop").classList.add("open");
+    document.getElementById("scfg-modal").classList.add("open");
+    document.getElementById("ef-name").focus();
+  }
+
+  function closeForm() {
+    document.getElementById("scfg-backdrop").classList.remove("open");
+    document.getElementById("scfg-modal").classList.remove("open");
+    formImages = [];
+    editingId = null;
+  }
+
+  function toggleMaxQty() {
+    const canMulti = document.getElementById("ef-can-multi").classList.contains("on");
+    document.getElementById("ef-max-qty-wrap").style.display = canMulti ? "" : "none";
+  }
+
+  function setToggle(id, on) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    on ? el.classList.add("on") : el.classList.remove("on");
+  }
+
+  function esc(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function toast(msg, type = "success") {
+    if (typeof window.showAdminToast === "function") {
+      window.showAdminToast(msg, type); return;
     }
-
-    window._shopToggleItemAdmin = function(idx) {
-        const allAdmins = _getAllAdminsFlat();
-        const admin = allAdmins[idx];
-        if (!admin) return;
-        const eIdx = formAssignedAdmins.findIndex(fa => (fa.number || "").replace(/\D/g, "") === admin.number);
-        if (eIdx >= 0) formAssignedAdmins.splice(eIdx, 1);
-        else formAssignedAdmins.push({ name: admin.name, number: admin.number });
-        renderAssignedAdmins();
-    };
-
-    /* ════════════════════════════════════════════
-     HELPERS
-  ════════════════════════════════════════════ */
-    function openModal() {
-        document.getElementById("scfg-backdrop").classList.add("open");
-        document.getElementById("scfg-modal").classList.add("open");
-        document.getElementById("ef-name").focus();
+    const el = document.createElement("div");
+    el.className = "toast-item toast-" + type;
+    el.textContent = msg;
+    const c = document.getElementById("toast");
+    if (c) {
+      c.appendChild(el);
+      setTimeout(() => el.remove(), 3200);
     }
+  }
 
-    function closeForm() {
-        document.getElementById("scfg-backdrop").classList.remove("open");
-        document.getElementById("scfg-modal").classList.remove("open");
-        formImages = [];
-        editingId = null;
+  /* ════════════════════════════════════════════
+   IMAGE MANAGEMENT — upload to Supabase Storage
+   Bucket: 'shop-images' (public)
+════════════════════════════════════════════ */
+
+  function renderFormImages() {
+    const el = document.getElementById("ef-images-list");
+    if (!el) return;
+    if (!formImages.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text-faint);padding:4px 0">Belum ada foto.</div>';
+      return;
     }
+    el.innerHTML = formImages.map(function (img, i) {
+      var u = typeof img === 'string' ? img : (img.url || '');
+      var t = typeof img === 'string' ? '' : (img.title || '');
+      return '<div style="display:flex;flex-direction:column;gap:4px;width:100px;flex-shrink:0">' +
+        '<div style="position:relative;width:100px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--surface3)">' +
+        '<img src="' + esc(u) + '" alt="img ' + (i + 1) + '" style="width:100%;height:100%;object-fit:cover">' +
+        '<div style="position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;background:linear-gradient(rgba(0,0,0,.6),transparent);padding:2px 3px">' +
+        (i > 0 ? '<button onclick="window._shopImgMove(' + i + ',-1)" style="background:none;border:none;color:#fff;font-size:11px;cursor:pointer;padding:1px 3px" title="Geser kiri">&#9664;</button>' : '<span></span>') +
+        (i < formImages.length - 1 ? '<button onclick="window._shopImgMove(' + i + ',1)" style="background:none;border:none;color:#fff;font-size:11px;cursor:pointer;padding:1px 3px" title="Geser kanan">&#9654;</button>' : '<span></span>') +
+        '</div>' +
+        '<button onclick="window._shopImgRemove(' + i + ')" style="position:absolute;bottom:3px;right:3px;background:rgba(239,68,68,.85);border:none;border-radius:4px;color:#fff;font-size:10px;font-weight:700;padding:2px 5px;cursor:pointer" title="Hapus">&#10005;</button>' +
+        (i === 0 ? '<div style="position:absolute;bottom:3px;left:3px;background:rgba(79,125,240,.85);border-radius:3px;padding:1px 5px;font-size:9px;color:#fff;font-weight:700">UTAMA</div>' : '') +
+        '</div>' +
+        '<input type="text" value="' + esc(t) + '" placeholder="Judul foto..." oninput="window._shopImgTitle(' + i + ',this.value)" style="width:100%;padding:3px 6px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:10px;outline:none;font-family:inherit">' +
+        '</div>';
+    }).join("");
+  }
 
-    function toggleMaxQty() {
-        const canMulti = document.getElementById("ef-can-multi").classList.contains("on");
-        document.getElementById("ef-max-qty-wrap").style.display = canMulti ? "" : "none";
+  function imgRemove(idx) {
+    formImages.splice(idx, 1);
+    renderFormImages();
+  }
+
+  function imgMove(idx, dir) {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= formImages.length) return;
+    [formImages[idx], formImages[newIdx]] = [formImages[newIdx], formImages[idx]];
+    renderFormImages();
+  }
+
+  function imgTitle(idx, val) {
+    if (formImages[idx]) {
+      if (typeof formImages[idx] === 'string') formImages[idx] = { url: formImages[idx], title: val };
+      else formImages[idx].title = val;
     }
+  }
+  function imgAddUrl() {
+    const inp = document.getElementById("ef-img-url");
+    const url = (inp?.value || "").trim();
+    if (!url) { toast("URL kosong.", "error"); return; }
+    if (!url.startsWith("http")) { toast("URL harus diawali http:// atau https://", "error"); return; }
+    formImages.push({ url: url, title: '' });
+    renderFormImages();
+    inp.value = "";
+    toast("Foto ditambahkan ✅");
+  }
 
-    function setToggle(id, on) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        on ? el.classList.add("on") : el.classList.remove("on");
-    }
+  /* ════════════════════════════════════════════
+   IMAGE UPLOAD — via Supabase Storage bucket 'shop-images' (public)
+   Includes client-side compress/resize (Canvas API) sebelum upload.
+   Target: max 1200px, JPEG/WebP quality 0.82, ~500KB max.
+════════════════════════════════════════════ */
 
-    function esc(s) {
-        return String(s || "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;");
-    }
+  var IMG_MAX_SIDE = 1200;     // max width/height px
+  var IMG_QUALITY = 0.82;     // JPEG/WebP quality
+  var IMG_SKIP_BELOW = 200 * 1024; // skip compress jika < 200KB
 
-    function toast(msg, type = "success") {
-        if (typeof window.showAdminToast === "function") {
-            window.showAdminToast(msg, type); return;
+  /**
+   * Compress & resize gambar via Canvas API.
+   * @param {File} file — file gambar asli
+   * @returns {Promise<{blob: Blob, ext: string, originalSize: number, compressedSize: number}>}
+   */
+  function _compressImage(file) {
+    return new Promise(function (resolve, reject) {
+      /* Skip non-raster formats */
+      if (file.type === 'image/svg+xml' || file.type === 'image/gif') {
+        resolve({ blob: file, ext: file.name.split('.').pop() || 'gif', originalSize: file.size, compressedSize: file.size, skipped: true });
+        return;
+      }
+      /* Skip jika sudah kecil */
+      if (file.size <= IMG_SKIP_BELOW) {
+        resolve({ blob: file, ext: file.name.split('.').pop() || 'jpg', originalSize: file.size, compressedSize: file.size, skipped: true });
+        return;
+      }
+
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+
+        var w = img.naturalWidth;
+        var h = img.naturalHeight;
+
+        /* Hitung dimensi baru (maintain aspect ratio) */
+        if (w > IMG_MAX_SIDE || h > IMG_MAX_SIDE) {
+          if (w >= h) {
+            h = Math.round(h * (IMG_MAX_SIDE / w));
+            w = IMG_MAX_SIDE;
+          } else {
+            w = Math.round(w * (IMG_MAX_SIDE / h));
+            h = IMG_MAX_SIDE;
+          }
         }
-        const el = document.createElement("div");
-        el.className = "toast-item toast-" + type;
-        el.textContent = msg;
-        const c = document.getElementById("toast");
-        if (c) {
-            c.appendChild(el);
-            setTimeout(() => el.remove(), 3200);
+
+        var canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, w, h);
+
+        /* Prefer WebP, fallback JPEG */
+        var outputType = 'image/webp';
+        var ext = 'webp';
+        if (!canvas.toDataURL('image/webp').startsWith('data:image/webp')) {
+          outputType = 'image/jpeg';
+          ext = 'jpg';
         }
-    }
 
-    /* ════════════════════════════════════════════
-     IMAGE MANAGEMENT — upload to Supabase Storage
-     Bucket: 'shop-images' (public)
-  ════════════════════════════════════════════ */
-
-    function renderFormImages() {
-        const el = document.getElementById("ef-images-list");
-        if (!el) return;
-        if (!formImages.length) {
-            el.innerHTML = '<div style="font-size:12px;color:var(--text-faint);padding:4px 0">Belum ada foto.</div>';
+        canvas.toBlob(function (blob) {
+          if (!blob) {
+            reject(new Error('Canvas toBlob gagal'));
             return;
-        }
-        el.innerHTML = formImages.map(function(img, i) {
-          var u = typeof img === 'string' ? img : (img.url || '');
-          var t = typeof img === 'string' ? '' : (img.title || '');
-          return '<div style="display:flex;flex-direction:column;gap:4px;width:100px;flex-shrink:0">' +
-            '<div style="position:relative;width:100px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--surface3)">' +
-            '<img src="' + esc(u) + '" alt="img ' + (i+1) + '" style="width:100%;height:100%;object-fit:cover">' +
-            '<div style="position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;background:linear-gradient(rgba(0,0,0,.6),transparent);padding:2px 3px">' +
-            (i > 0 ? '<button onclick="window._shopImgMove(' + i + ',-1)" style="background:none;border:none;color:#fff;font-size:11px;cursor:pointer;padding:1px 3px" title="Geser kiri">&#9664;</button>' : '<span></span>') +
-            (i < formImages.length-1 ? '<button onclick="window._shopImgMove(' + i + ',1)" style="background:none;border:none;color:#fff;font-size:11px;cursor:pointer;padding:1px 3px" title="Geser kanan">&#9654;</button>' : '<span></span>') +
-            '</div>' +
-            '<button onclick="window._shopImgRemove(' + i + ')" style="position:absolute;bottom:3px;right:3px;background:rgba(239,68,68,.85);border:none;border-radius:4px;color:#fff;font-size:10px;font-weight:700;padding:2px 5px;cursor:pointer" title="Hapus">&#10005;</button>' +
-            (i === 0 ? '<div style="position:absolute;bottom:3px;left:3px;background:rgba(79,125,240,.85);border-radius:3px;padding:1px 5px;font-size:9px;color:#fff;font-weight:700">UTAMA</div>' : '') +
-            '</div>' +
-            '<input type="text" value="' + esc(t) + '" placeholder="Judul foto..." oninput="window._shopImgTitle(' + i + ',this.value)" style="width:100%;padding:3px 6px;border-radius:5px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:10px;outline:none;font-family:inherit">' +
-            '</div>';
-        }).join("");
-    }
+          }
+          resolve({
+            blob: blob,
+            ext: ext,
+            originalSize: file.size,
+            compressedSize: blob.size,
+            skipped: false,
+          });
+        }, outputType, IMG_QUALITY);
+      };
 
-    function imgRemove(idx) {
-        formImages.splice(idx, 1);
-        renderFormImages();
-    }
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error('Gagal membaca gambar: ' + file.name));
+      };
 
-    function imgMove(idx, dir) {
-        const newIdx = idx + dir;
-        if (newIdx < 0 || newIdx >= formImages.length) return;
-        [formImages[idx], formImages[newIdx]] = [formImages[newIdx], formImages[idx]];
-        renderFormImages();
-    }
+      img.src = url;
+    });
+  }
 
-    function imgTitle(idx, val) {
-        if (formImages[idx]) {
-            if (typeof formImages[idx] === 'string') formImages[idx] = { url: formImages[idx], title: val };
-            else formImages[idx].title = val;
-        }
-    }
-    function imgAddUrl() {
-        const inp = document.getElementById("ef-img-url");
-        const url = (inp?.value || "").trim();
-        if (!url) { toast("URL kosong.", "error"); return; }
-        if (!url.startsWith("http")) { toast("URL harus diawali http:// atau https://", "error"); return; }
-        formImages.push({ url: url, title: '' });
-        renderFormImages();
-        inp.value = "";
-        toast("Foto ditambahkan ✅");
-    }
+  function _fmtBytes(b) {
+    if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+    if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
+    return b + ' B';
+  }
 
-    /* ════════════════════════════════════════════
-     IMAGE UPLOAD — via Supabase Storage bucket 'shop-images' (public)
-     Includes client-side compress/resize (Canvas API) sebelum upload.
-     Target: max 1200px, JPEG/WebP quality 0.82, ~500KB max.
-  ════════════════════════════════════════════ */
+  async function imgUploadFile(fileOrFiles) {
+    // Support single file or FileList (multi-file)
+    const files = fileOrFiles instanceof FileList ? [...fileOrFiles] : [fileOrFiles];
+    if (!files.length || !files[0]) return;
 
-    var IMG_MAX_SIDE = 1200;     // max width/height px
-    var IMG_QUALITY  = 0.82;     // JPEG/WebP quality
-    var IMG_SKIP_BELOW = 200 * 1024; // skip compress jika < 200KB
+    const sb = getSb();
+    if (!sb) { toast("Supabase belum siap.", "error"); return; }
 
-    /**
-     * Compress & resize gambar via Canvas API.
-     * @param {File} file — file gambar asli
-     * @returns {Promise<{blob: Blob, ext: string, originalSize: number, compressedSize: number}>}
-     */
-    function _compressImage(file) {
-        return new Promise(function (resolve, reject) {
-            /* Skip non-raster formats */
-            if (file.type === 'image/svg+xml' || file.type === 'image/gif') {
-                resolve({ blob: file, ext: file.name.split('.').pop() || 'gif', originalSize: file.size, compressedSize: file.size, skipped: true });
-                return;
+    const prog = document.getElementById("ef-img-progress");
+    const bar = document.getElementById("ef-img-bar");
+    const stat = document.getElementById("ef-img-status");
+
+    prog.style.display = "block";
+    const total = files.length;
+    let done = 0;
+
+    for (const file of files) {
+      if (file.size > 32 * 1024 * 1024) {
+        toast(`${file.name}: terlalu besar (maks 32 MB)`, "error");
+        continue;
+      }
+      if (!file.type.startsWith("image/")) {
+        toast(`${file.name}: bukan file gambar`, "error");
+        continue;
+      }
+
+      /* ── Step 1: Compress/resize ── */
+      stat.textContent = total > 1
+        ? `Kompres ${done + 1}/${total}: ${file.name}…`
+        : `Kompres: ${file.name}…`;
+      bar.style.width = `${Math.round((done / total) * 100)}%`;
+
+      let compressed;
+      try {
+        compressed = await _compressImage(file);
+      } catch (e) {
+        toast(`Gagal kompres ${file.name}: ${e.message}`, "error");
+        continue;
+      }
+
+      var sizeInfo = compressed.skipped
+        ? ''
+        : ` (${_fmtBytes(compressed.originalSize)} → ${_fmtBytes(compressed.compressedSize)})`;
+
+      /* ── Step 2: Upload ── */
+      stat.textContent = total > 1
+        ? `Upload ${done + 1}/${total}: ${file.name}${sizeInfo}…`
+        : `Upload: ${file.name}${sizeInfo}…`;
+
+      try {
+        const fileName = `shop_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${compressed.ext}`;
+
+        const { error: uploadError } = await sb.storage
+          .from("shop-images")
+          .upload(fileName, compressed.blob, { cacheControl: '3600', contentType: compressed.blob.type });
+
+        if (uploadError) {
+          const errMsg = (uploadError.message || '').toLowerCase();
+          if (errMsg.includes('bucket') || errMsg.includes('not found') || errMsg.includes('does not exist')) {
+            toast('Bucket "shop-images" belum ada! Jalankan supabase-setup.sql di SQL Editor, atau buat manual: Storage → New Bucket → "shop-images" → Public.', "error");
+            storageBucketOk = false;
+            showStorageWarning();
+            break;
+          }
+          if (errMsg.includes('policy') || errMsg.includes('security') || errMsg.includes('permission') || errMsg.includes('denied') || errMsg.includes('row-level')) {
+            toast('Upload ditolak RLS policy. Jalankan supabase-setup.sql untuk menambah policy upload.', "error");
+            storageBucketOk = false;
+            showStoragePolicyWarning();
+            break;
+          }
+          if (errMsg.includes('duplicate') || errMsg.includes('already exists')) {
+            // Retry dengan nama baru
+            const retryName = `shop_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${compressed.ext}`;
+            const { error: retryErr } = await sb.storage
+              .from("shop-images")
+              .upload(retryName, compressed.blob, { cacheControl: '3600', contentType: compressed.blob.type });
+            if (retryErr) {
+              toast(`Upload gagal (${file.name}): ${retryErr.message}`, "error");
+              continue;
             }
-            /* Skip jika sudah kecil */
-            if (file.size <= IMG_SKIP_BELOW) {
-                resolve({ blob: file, ext: file.name.split('.').pop() || 'jpg', originalSize: file.size, compressedSize: file.size, skipped: true });
-                return;
+            const { data: retryUrl } = sb.storage.from("shop-images").getPublicUrl(retryName);
+            if (retryUrl?.publicUrl) {
+              formImages.push({ url: retryUrl.publicUrl, title: '' });
+              renderFormImages();
+              done++;
             }
-
-            var img = new Image();
-            var url = URL.createObjectURL(file);
-
-            img.onload = function () {
-                URL.revokeObjectURL(url);
-
-                var w = img.naturalWidth;
-                var h = img.naturalHeight;
-
-                /* Hitung dimensi baru (maintain aspect ratio) */
-                if (w > IMG_MAX_SIDE || h > IMG_MAX_SIDE) {
-                    if (w >= h) {
-                        h = Math.round(h * (IMG_MAX_SIDE / w));
-                        w = IMG_MAX_SIDE;
-                    } else {
-                        w = Math.round(w * (IMG_MAX_SIDE / h));
-                        h = IMG_MAX_SIDE;
-                    }
-                }
-
-                var canvas = document.createElement('canvas');
-                canvas.width = w;
-                canvas.height = h;
-                var ctx = canvas.getContext('2d');
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-                ctx.drawImage(img, 0, 0, w, h);
-
-                /* Prefer WebP, fallback JPEG */
-                var outputType = 'image/webp';
-                var ext = 'webp';
-                if (!canvas.toDataURL('image/webp').startsWith('data:image/webp')) {
-                    outputType = 'image/jpeg';
-                    ext = 'jpg';
-                }
-
-                canvas.toBlob(function (blob) {
-                    if (!blob) {
-                        reject(new Error('Canvas toBlob gagal'));
-                        return;
-                    }
-                    resolve({
-                        blob: blob,
-                        ext: ext,
-                        originalSize: file.size,
-                        compressedSize: blob.size,
-                        skipped: false,
-                    });
-                }, outputType, IMG_QUALITY);
-            };
-
-            img.onerror = function () {
-                URL.revokeObjectURL(url);
-                reject(new Error('Gagal membaca gambar: ' + file.name));
-            };
-
-            img.src = url;
-        });
-    }
-
-    function _fmtBytes(b) {
-        if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
-        if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
-        return b + ' B';
-    }
-
-    async function imgUploadFile(fileOrFiles) {
-        // Support single file or FileList (multi-file)
-        const files = fileOrFiles instanceof FileList ? [...fileOrFiles] : [fileOrFiles];
-        if (!files.length || !files[0]) return;
-
-        const sb = getSb();
-        if (!sb) { toast("Supabase belum siap.", "error"); return; }
-
-        const prog = document.getElementById("ef-img-progress");
-        const bar  = document.getElementById("ef-img-bar");
-        const stat = document.getElementById("ef-img-status");
-
-        prog.style.display = "block";
-        const total = files.length;
-        let done = 0;
-
-        for (const file of files) {
-            if (file.size > 32 * 1024 * 1024) {
-                toast(`${file.name}: terlalu besar (maks 32 MB)`, "error");
-                continue;
-            }
-            if (!file.type.startsWith("image/")) {
-                toast(`${file.name}: bukan file gambar`, "error");
-                continue;
-            }
-
-            /* ── Step 1: Compress/resize ── */
-            stat.textContent = total > 1
-                ? `Kompres ${done + 1}/${total}: ${file.name}…`
-                : `Kompres: ${file.name}…`;
-            bar.style.width = `${Math.round((done / total) * 100)}%`;
-
-            let compressed;
-            try {
-                compressed = await _compressImage(file);
-            } catch (e) {
-                toast(`Gagal kompres ${file.name}: ${e.message}`, "error");
-                continue;
-            }
-
-            var sizeInfo = compressed.skipped
-                ? ''
-                : ` (${_fmtBytes(compressed.originalSize)} → ${_fmtBytes(compressed.compressedSize)})`;
-
-            /* ── Step 2: Upload ── */
-            stat.textContent = total > 1
-                ? `Upload ${done + 1}/${total}: ${file.name}${sizeInfo}…`
-                : `Upload: ${file.name}${sizeInfo}…`;
-
-            try {
-                const fileName = `shop_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${compressed.ext}`;
-
-                const { error: uploadError } = await sb.storage
-                    .from("shop-images")
-                    .upload(fileName, compressed.blob, { cacheControl: '3600', contentType: compressed.blob.type });
-
-                if (uploadError) {
-                    const errMsg = (uploadError.message || '').toLowerCase();
-                    if (errMsg.includes('bucket') || errMsg.includes('not found') || errMsg.includes('does not exist')) {
-                        toast('Bucket "shop-images" belum ada! Jalankan supabase-setup.sql di SQL Editor, atau buat manual: Storage → New Bucket → "shop-images" → Public.', "error");
-                        storageBucketOk = false;
-                        showStorageWarning();
-                        break;
-                    }
-                    if (errMsg.includes('policy') || errMsg.includes('security') || errMsg.includes('permission') || errMsg.includes('denied') || errMsg.includes('row-level')) {
-                        toast('Upload ditolak RLS policy. Jalankan supabase-setup.sql untuk menambah policy upload.', "error");
-                        storageBucketOk = false;
-                        showStoragePolicyWarning();
-                        break;
-                    }
-                    if (errMsg.includes('duplicate') || errMsg.includes('already exists')) {
-                        // Retry dengan nama baru
-                        const retryName = `shop_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${compressed.ext}`;
-                        const { error: retryErr } = await sb.storage
-                            .from("shop-images")
-                            .upload(retryName, compressed.blob, { cacheControl: '3600', contentType: compressed.blob.type });
-                        if (retryErr) {
-                            toast(`Upload gagal (${file.name}): ${retryErr.message}`, "error");
-                            continue;
-                        }
-                        const { data: retryUrl } = sb.storage.from("shop-images").getPublicUrl(retryName);
-                        if (retryUrl?.publicUrl) {
-                            formImages.push({ url: retryUrl.publicUrl, title: '' });
-                            renderFormImages();
-                            done++;
-                        }
-                        continue;
-                    }
-                    toast(`Upload gagal (${file.name}): ${uploadError.message}`, "error");
-                    continue;
-                }
-
-                const { data: urlData } = sb.storage.from("shop-images").getPublicUrl(fileName);
-                const publicUrl = urlData?.publicUrl;
-
-                if (publicUrl) {
-                    formImages.push({ url: publicUrl, title: '' });
-                    renderFormImages();
-                    done++;
-                } else {
-                    toast(`Gagal mendapat URL publik: ${file.name}`, "error");
-                }
-            } catch (e) {
-                toast(`Error upload ${file.name}: ${e.message}`, "error");
-            }
+            continue;
+          }
+          toast(`Upload gagal (${file.name}): ${uploadError.message}`, "error");
+          continue;
         }
 
-        bar.style.width = "100%";
-        stat.textContent = done > 0
-            ? `${done} foto berhasil diupload!`
-            : "Tidak ada foto yang berhasil diupload.";
-        setTimeout(() => { prog.style.display = "none"; }, 2000);
-        if (done > 0) toast(`${done} foto diupload (auto-compressed)`);
+        const { data: urlData } = sb.storage.from("shop-images").getPublicUrl(fileName);
+        const publicUrl = urlData?.publicUrl;
+
+        if (publicUrl) {
+          formImages.push({ url: publicUrl, title: '' });
+          renderFormImages();
+          done++;
+        } else {
+          toast(`Gagal mendapat URL publik: ${file.name}`, "error");
+        }
+      } catch (e) {
+        toast(`Error upload ${file.name}: ${e.message}`, "error");
+      }
     }
 
-    function imgHandleDrop(event) {
-        event.preventDefault();
-        const zone = document.getElementById("ef-img-drop");
-        if (zone) { zone.style.borderColor = "var(--border2)"; zone.style.background = "var(--surface2)"; }
-        const files = event.dataTransfer?.files;
-        if (files && files.length) imgUploadFile(files);
-    }
+    bar.style.width = "100%";
+    stat.textContent = done > 0
+      ? `${done} foto berhasil diupload!`
+      : "Tidak ada foto yang berhasil diupload.";
+    setTimeout(() => { prog.style.display = "none"; }, 2000);
+    if (done > 0) toast(`${done} foto diupload (auto-compressed)`);
+  }
+
+  function imgHandleDrop(event) {
+    event.preventDefault();
+    const zone = document.getElementById("ef-img-drop");
+    if (zone) { zone.style.borderColor = "var(--border2)"; zone.style.background = "var(--surface2)"; }
+    const files = event.dataTransfer?.files;
+    if (files && files.length) imgUploadFile(files);
+  }
 
 })();
