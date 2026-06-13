@@ -22,7 +22,7 @@
   };
 
   // ── localStorage cache helpers ──
-  var CACHE_KEY = 'eco_data', CACHE_TREND_PFX = 'eco_trend_v3_', CACHE_TTL = 90000, TREND_TTL = 120000;
+  var CACHE_KEY = 'eco_data', CACHE_TREND_PFX = 'eco_trend_v4_', CACHE_TTL = 90000, TREND_TTL = 120000;
   function _trendCacheKey() { return CACHE_TREND_PFX + _trendRange; }
   function _cGet(k) { try { var r = JSON.parse(localStorage.getItem(k)); if (r && r.t && Date.now() - r.t < (k.indexOf(CACHE_TREND_PFX) === 0 ? TREND_TTL : CACHE_TTL)) return r.d; } catch (e) { } return null; }
   function _cSet(k, v) { try { localStorage.setItem(k, JSON.stringify({ t: Date.now(), d: v })); } catch (e) { } }
@@ -1645,43 +1645,55 @@
     for (var i = 0; i < ks.length; i++) {
       var b = bk[ks[i]], v = b.v, hi = v[0], lo = v[0];
       for (var j = 1; j < v.length; j++) { if (v[j] > hi) hi = v[j]; if (v[j] < lo) lo = v[j] }
-      r.push({ t: b.t, o: v[0], c: v[v.length - 1], h: hi, l: lo, n: v.length });
+      // Store tEnd so _showCandleDetails can find ALL snapshots within this candle's span
+      r.push({ t: b.t, tEnd: b.t + bms, o: v[0], c: v[v.length - 1], h: hi, l: lo, n: v.length, realO: v[0] });
     }
     // ── Continuity enforcement ──
     // Each candle's Open MUST equal the previous candle's Close
     // to prevent visual gaps/disconnects in the chart.
+    // Store original open in realO for accurate flow calculation in detail modal.
     for (var i = 1; i < r.length; i++) {
+      r[i].realO = r[i].o; // preserve original data-derived open
       r[i].o = r[i - 1].c;
     }
 
-    // ── Flat candle suppression ──
-    // Merge consecutive candles with insignificant price movement.
-    // Threshold = 0.3% of global range — keeps chart clean during low activity.
+    // ── Smart flat candle merging ──
+    // Saat server sepi (tidak ada pemain), data tidak berubah dan candle jadi "papan tipis".
+    // Merge consecutive flat candles agar chart lebih readable — tapi TRACK tEnd
+    // supaya detail modal tetap bisa menemukan SEMUA snapshot di seluruh periode gabungan.
+    // Max merge = 5 candle berturut-turut (prevent 1 candle terlalu lebar).
     if (r.length > 2) {
       var gMin = Infinity, gMax = -Infinity;
       for (var i = 0; i < r.length; i++) {
         if (r[i].l < gMin) gMin = r[i].l;
         if (r[i].h > gMax) gMax = r[i].h;
       }
-      var flatThresh = (gMax - gMin) * 0.003;
+      var flatThresh = (gMax - gMin) * 0.005; // 0.5% of range = "no meaningful change"
+      var MAX_MERGE = 5; // max 5 buckets digabung
       if (flatThresh > 0) {
         var merged = [r[0]];
+        merged[0]._mergeCount = 1;
         for (var i = 1; i < r.length; i++) {
           var prev = merged[merged.length - 1];
           var cur = r[i];
           var prevFlat = Math.abs(prev.c - prev.o) < flatThresh;
           var curFlat  = Math.abs(cur.c - cur.o) < flatThresh;
-          // Merge into previous if BOTH are flat (preserve at least 1 candle per movement)
-          if (prevFlat && curFlat) {
+          // Merge if BOTH are flat AND haven't hit max merge cap
+          if (prevFlat && curFlat && (prev._mergeCount || 1) < MAX_MERGE) {
             prev.c = cur.c;
             prev.h = Math.max(prev.h, cur.h);
             prev.l = Math.min(prev.l, cur.l);
             prev.n += cur.n;
+            prev.tEnd = cur.tEnd; // ← KEY FIX: extend time window to cover merged period
+            prev._mergeCount = (prev._mergeCount || 1) + 1;
           } else {
             cur.o = prev.c; // continuity
+            cur._mergeCount = 1;
             merged.push(cur);
           }
         }
+        // Clean up temp property
+        for (var i = 0; i < merged.length; i++) delete merged[i]._mergeCount;
         r = merged;
       }
     }
@@ -2050,7 +2062,7 @@
     _mktState.price = last.c; 
 
     // Build live candle from historical data
-    _liveCandle = { t: last.t, o: last.o, h: last.h, l: last.l, c: last.c, n: last.n || 1, _live: true };
+    _liveCandle = { t: last.t, o: last.o, h: last.h, l: last.l, c: last.c, n: last.n || 1, _live: true, realO: last.realO || last.o, tEnd: last.t + bms };
     var _liveBucketEnd = last.t + bms; // when this live candle closes
     var _liveExtensions = 0; // track how many times this candle has been extended
     var _MAX_EXTENSIONS = 3; // cap: max 3x bucket duration (prevent infinitely wide candles)
@@ -2063,7 +2075,7 @@
         if (_candles[ci].h > hi) hi = _candles[ci].h;
         if (_candles[ci].l < lo) lo = _candles[ci].l;
       }
-      _cachedFlatThresh = (hi - lo) * 0.003;
+      _cachedFlatThresh = (hi - lo) * 0.005; // same threshold as _agg
     }
     _recalcFlatThresh();
 
@@ -2100,29 +2112,28 @@
     function tick() {
       if (!_liveCandle || !_mktState) return;
 
-      // ── Check if bucket time expired → transition to new candle ──
+      // ── Check if bucket time expired ──
+      // Live candle SELALU extend sampai data REAL datang dari Supabase.
+      // Alasan: _tickPrice() adalah simulator — selalu menghasilkan gerakan,
+      // jadi pengecekan body size TIDAK BISA mendeteksi "server sepi".
+      // Data real hanya bisa datang via fetchTrend() → yang memanggil _startLiveTick()
+      // ulang dari awal. Jadi di sini, cukup extend terus.
+      // Safety cap: 24x bucket duration (misal 24 × 30min = 12 jam) agar tidak infinite.
       var now = Date.now();
       if (now >= _liveBucketEnd) {
-        // ── Flat candle suppression (uses cached threshold, not O(n) per tick) ──
-        var liveBodySize = Math.abs(_liveCandle.c - _liveCandle.o);
-
-        if (_cachedFlatThresh > 0 && liveBodySize < _cachedFlatThresh && _liveCandle.n > 0 && _liveExtensions < _MAX_EXTENSIONS) {
-          // Extend current candle — just push the bucket end forward (capped)
+        if (_liveExtensions < 24) {
           _liveBucketEnd += bms;
           _liveExtensions++;
+          _liveCandle.tEnd = _liveBucketEnd;
         } else {
-          // Archive live candle as historical
-          var archived = { t: _liveCandle.t, o: _liveCandle.o, h: _liveCandle.h, l: _liveCandle.l, c: _liveCandle.c, n: _liveCandle.n };
+          // Safety fallback — archive candle setelah extend sangat lama
+          var archived = { t: _liveCandle.t, o: _liveCandle.o, h: _liveCandle.h, l: _liveCandle.l, c: _liveCandle.c, n: _liveCandle.n, realO: _liveCandle.realO || _liveCandle.o, tEnd: _liveBucketEnd };
           _candles.push(archived);
-
-          // Recalc flat threshold now that we have a new candle in history
           _recalcFlatThresh();
-
-          // Start new live candle (continuity: open = previous close)
           var newT = _liveBucketEnd;
           _liveBucketEnd = newT + bms;
-          _liveExtensions = 0; // reset extension counter
-          _liveCandle = { t: newT, o: archived.c, h: archived.c, l: archived.c, c: archived.c, n: 0, _live: true };
+          _liveExtensions = 0;
+          _liveCandle = { t: newT, o: archived.c, h: archived.c, l: archived.c, c: archived.c, n: 0, _live: true, realO: archived.c, tEnd: newT + bms };
         }
       }
 
@@ -2218,9 +2229,11 @@
     if (!c) return;
     var bms = _bucketMs();
     var tStart = c.t;
-    var tEnd = c.t + bms;
+    // Use tEnd from candle if available (covers full span including merged periods),
+    // otherwise fall back to single bucket duration.
+    var tEnd = c.tEnd || (c.t + bms);
     
-    var flow = { mob_kill: 0, topup: 0, topup_first_bonus: 0, gacha_refund: 0, pvp_refund: 0, weekly_reward: 0, first_sale: 0, land_refund: 0, tax_distribute: 0, ubi_injection: 0, gacha_cost: 0, bank_tax: 0, mob_penalty: 0, pvp_penalty: 0, auction_fee: 0, wealth_tax: 0, demurrage: 0, land_buy: 0, land_ppn: 0, store_sink: 0 };
+    var flow = { mob_kill: 0, topup: 0, topup_first_bonus: 0, gacha_refund: 0, pvp_refund: 0, weekly_reward: 0, first_sale: 0, land_refund: 0, tax_distribute: 0, ubi_injection: 0, gacha_cost: 0, bank_tax: 0, mob_penalty: 0, pvp_penalty: 0, auction_fee: 0, wealth_tax: 0, demurrage: 0, land_buy: 0, land_ppn: 0, store_sink: 0, land_expand: 0, land_expand_ppn: 0, land_expand_gem: 0, land_buy_gem: 0 };
     
     var snaps = 0;
     for (var i = 0; i < _trendData.length; i++) {
@@ -2276,8 +2289,11 @@
     }
     
     var net = inj - snk;
-    var priceDelta = c.c - c.o;
-    var isUp = priceDelta >= 0;
+    // Use realO (original data-derived open) for accurate flow comparison,
+    // since c.o may have been adjusted by continuity enforcement.
+    var dataOpen = c.realO !== undefined ? c.realO : c.o;
+    var priceDelta = c.c - dataOpen;
+    var isUp = c.c >= c.o; // visual direction uses display open
     
     if (_trendMetric === 'coin_total') {
       var unaccounted = Math.round(priceDelta - net);

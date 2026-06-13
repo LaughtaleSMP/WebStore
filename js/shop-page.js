@@ -397,6 +397,84 @@
   /* ── Payment proof upload — via Supabase Storage ── */
   let _proofUrl = '';
 
+  /* ── Client-side image compress/resize (Canvas API) ── */
+  var PROOF_MAX_SIDE   = 1200;       // max width/height px
+  var PROOF_QUALITY    = 0.82;       // JPEG/WebP quality
+  var PROOF_SKIP_BELOW = 200 * 1024; // skip compress jika < 200KB
+
+  function _compressProofImage(file) {
+    return new Promise(function (resolve, reject) {
+      /* Skip non-raster formats */
+      if (file.type === 'image/svg+xml' || file.type === 'image/gif') {
+        resolve({ blob: file, ext: file.name.split('.').pop() || 'gif', originalSize: file.size, compressedSize: file.size, skipped: true });
+        return;
+      }
+      /* Skip jika sudah kecil */
+      if (file.size <= PROOF_SKIP_BELOW) {
+        resolve({ blob: file, ext: file.name.split('.').pop() || 'jpg', originalSize: file.size, compressedSize: file.size, skipped: true });
+        return;
+      }
+
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+
+        var w = img.naturalWidth;
+        var h = img.naturalHeight;
+
+        /* Hitung dimensi baru (maintain aspect ratio) */
+        if (w > PROOF_MAX_SIDE || h > PROOF_MAX_SIDE) {
+          if (w >= h) {
+            h = Math.round(h * (PROOF_MAX_SIDE / w));
+            w = PROOF_MAX_SIDE;
+          } else {
+            w = Math.round(w * (PROOF_MAX_SIDE / h));
+            h = PROOF_MAX_SIDE;
+          }
+        }
+
+        var canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, w, h);
+
+        /* Prefer WebP, fallback JPEG */
+        var outputType = 'image/webp';
+        var ext = 'webp';
+        if (!canvas.toDataURL('image/webp').startsWith('data:image/webp')) {
+          outputType = 'image/jpeg';
+          ext = 'jpg';
+        }
+
+        canvas.toBlob(function (blob) {
+          if (!blob) {
+            reject(new Error('Canvas toBlob gagal'));
+            return;
+          }
+          resolve({
+            blob: blob,
+            ext: ext,
+            originalSize: file.size,
+            compressedSize: blob.size,
+            skipped: false,
+          });
+        }, outputType, PROOF_QUALITY);
+      };
+
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error('Gagal membaca gambar'));
+      };
+
+      img.src = url;
+    });
+  }
+
   window._spProofChanged = function(input) {
     const file = input.files?.[0];
     if (!file) return;
@@ -438,20 +516,36 @@
     const waBtn    = document.getElementById('sp-wa-btn');
 
     if (progress) progress.style.display = 'block';
-    if (bar)      bar.style.width = '20%';
-    if (status)   status.textContent = 'Mengupload bukti…';
+    if (bar)      bar.style.width = '10%';
+    if (status)   { status.textContent = 'Mengompres gambar…'; status.style.color = ''; }
     if (waBtn)  { waBtn.disabled = true; waBtn.style.opacity = '.5'; }
 
     try {
-      const ext      = (file.name.split('.').pop() || 'jpg').toLowerCase();
-      const filename = `proof-${Date.now()}-${Math.random().toString(36).slice(2,6)}.${ext}`;
+      /* ── Step 1: Compress/resize ── */
+      let compressed;
+      try {
+        compressed = await _compressProofImage(file);
+      } catch (compErr) {
+        console.warn('[ShopPage] Compress failed, uploading raw:', compErr);
+        compressed = { blob: file, ext: (file.name.split('.').pop() || 'jpg').toLowerCase(), originalSize: file.size, compressedSize: file.size, skipped: true };
+      }
 
-      if (bar) bar.style.width = '50%';
+      var sizeInfo = compressed.skipped
+        ? ''
+        : ` (${_fmtProofBytes(compressed.originalSize)} → ${_fmtProofBytes(compressed.compressedSize)})`;
+
+      if (bar) bar.style.width = '40%';
+      if (status) status.textContent = 'Mengupload bukti…' + sizeInfo;
+
+      /* ── Step 2: Upload compressed blob ── */
+      const filename = `proof-${Date.now()}-${Math.random().toString(36).slice(2,6)}.${compressed.ext}`;
+
+      if (bar) bar.style.width = '60%';
 
       const sb = _getSb();
       const { data, error } = await sb.storage
         .from('proofs')
-        .upload(filename, file, { contentType: file.type, upsert: true });
+        .upload(filename, compressed.blob, { contentType: compressed.blob.type, upsert: true });
 
       if (error) throw error;
 
@@ -462,7 +556,7 @@
       if (!_proofUrl) throw new Error('Gagal mendapat URL publik');
 
       if (bar)    bar.style.width = '100%';
-      if (status) { status.textContent = '✓ Bukti berhasil diupload!'; status.style.color = 'var(--sp-green)'; }
+      if (status) { status.textContent = '✓ Bukti berhasil diupload!' + sizeInfo; status.style.color = 'var(--sp-green)'; }
     } catch (e) {
       console.warn('[ShopPage] Proof upload failed:', e);
       // Coba tunjukkan pesan yang lebih spesifik
@@ -475,6 +569,12 @@
     } finally {
       if (waBtn) { waBtn.disabled = false; waBtn.style.opacity = '1'; }
     }
+  }
+
+  function _fmtProofBytes(b) {
+    if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+    if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
+    return b + ' B';
   }
 
   /* ── Order ID: UUID untuk DB, kode pendek untuk display ── */
