@@ -1214,8 +1214,8 @@
 
         /* Simpan ke tabel orders (anon insert, RLS allow) */
         try {
-            const SUPABASE_URL = "https://jlxtnbnrirxhwuyqjlzw.supabase.co";
-            const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI";
+            const SUPABASE_URL = window.SB_URL;
+            const SUPABASE_KEY = window.SB_KEY;
             await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
                 method: "POST",
                 headers: {

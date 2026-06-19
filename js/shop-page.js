@@ -6,8 +6,8 @@
 (function () {
   'use strict';
 
-  const SB_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
-  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI';
+  const SB_URL = window.SB_URL;
+  const SB_KEY = window.SB_KEY;
   const CACHE_KEY = 'sp_shop_data';
   const CACHE_TTL = 90_000; // 90s
 
@@ -668,15 +668,8 @@
         console.log('[ShopPage] Order saved via REST fallback');
       } else {
         insertOk = true;
-        // Auto-decrement stock
-        if (item.id) {
-          sb.from('shop_items').select('stock').eq('id', item.id).single().then(({ data: row }) => {
-            if (row && row.stock !== null && row.stock !== undefined) {
-              const newStock = Math.max(0, (row.stock || 0) - qty);
-              sb.from('shop_items').update({ stock: newStock }).eq('id', item.id).then(() => {});
-            }
-          });
-        }
+        // Stock otomatis berkurang via database trigger (trg_auto_decrement_stock)
+        // Tidak perlu update dari client — lebih aman dan tidak bisa dimanipulasi
       }
     } catch(e) {
       console.error('[ShopPage] Order save error:', e);

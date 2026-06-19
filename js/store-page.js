@@ -18,8 +18,8 @@
   'use strict';
 
   // ═══ Config ═══
-  var SB_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
-  var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI';
+  var SB_URL = window.SB_URL;
+  var SB_KEY = window.SB_KEY;
   var CACHE_KEY = 'st_basis';
   var CACHE_TTL = 5 * 60 * 1000; // 5 menit
   var DEFAULT_BASIS = 57;

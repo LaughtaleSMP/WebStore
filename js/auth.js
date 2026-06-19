@@ -2,8 +2,8 @@
    auth.js — Login + Register (Admin Panel)
    ══════════════════════════════════════════════════════════════ */
 
-const SUPABASE_URL = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq';
+const SUPABASE_URL = window.SB_URL;
+const SUPABASE_KEY = window.SB_KEY;
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 

@@ -1,5 +1,5 @@
-const SB = 'https://jlxtnbnrirxhwuyqjlzw.supabase.co',
-  SK = 'sb_publishable_03NmsAMGsfN63vFBmrgw9A_nB9uVVdq';
+const SB = window.SB_URL,
+  SK = window.SB_KEY;
 const EP = `${SB}/rest/v1/topup_queue`;
 const $ = id => document.getElementById(id);
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML }

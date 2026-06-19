@@ -1,9 +1,14 @@
+/* status-page.js — Server Status & Leaderboard Page
+ * Fallback chain: mcsrvstat → Supabase synced_at < 2 min ("CACHED") → OFFLINE.
+ * Matches monitor-page.js pattern for reliable status detection. */
 const HOST='laughtale.my.id',PORT=19214,
 API=`https://api.mcsrvstat.us/bedrock/3/${HOST}:${PORT}`,
-SB='https://jlxtnbnrirxhwuyqjlzw.supabase.co',
-SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI',
+SB=window.SB_URL,
+SK=window.SB_KEY,
 CD=10000,AI=60000;
+const CACHE_FRESH_MS=120000; // Supabase < 2 menit = dianggap "live"
 let last=0,tmr=null,lbE=[],lbM={},gD={};
+let _sbPlayers=[],_sbSyncTs=0,_sbMetrics=null; // Supabase realtime state
 const $=id=>document.getElementById(id);
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('sh');setTimeout(()=>t.classList.remove('sh'),2200)}
@@ -20,18 +25,35 @@ list.innerHTML=names.map((n,i)=>`<span class="ptg" style="animation-delay:${i*35
 card.style.display='';
 }
 
-async function sbPlayers(card,list,cnt,ac){
+// ── Fetch Supabase BDS sync data (same pattern as monitor-page.js) ──
+async function fetchSBSync(){
 try{
-const r=await fetch(`${SB}/rest/v1/leaderboard_sync?id=eq.current&select=online_players`,{headers:{apikey:SK,Authorization:`Bearer ${SK}`}});
+const r=await fetch(`${SB}/rest/v1/leaderboard_sync?id=eq.current&select=online_players,synced_at,server_metrics`,{headers:{apikey:SK,Authorization:`Bearer ${SK}`}});
 const d=await r.json();
-if(d&&d[0]&&d[0].online_players){
-const p=typeof d[0].online_players==='string'?JSON.parse(d[0].online_players):d[0].online_players;
-if(p.length>0){tags(p,card,list,cnt);return}
+if(d&&d[0]){
+const row=d[0];
+// Parse online players
+try{_sbPlayers=JSON.parse(row.online_players||'[]');}catch{_sbPlayers=[];}
+// Parse sync timestamp
+if(row.synced_at)_sbSyncTs=new Date(row.synced_at).getTime()||0;
+// Parse server_metrics (for players_online / player_details)
+if(row.server_metrics){
+try{_sbMetrics=typeof row.server_metrics==='string'?JSON.parse(row.server_metrics):row.server_metrics;}catch{_sbMetrics=null;}
 }
-}catch{}
-cnt.textContent=ac;
-list.innerHTML='<div class="np">Memuat nama pemain...</div>';
-card.style.display='';
+}
+}catch(e){console.warn('[SB Sync]',e);}
+}
+
+// ── Determine best player count from Supabase data ──
+function getSBPlayerCount(){
+// Prefer player_details length (same as monitor), fallback to online_players
+if(_sbMetrics&&Array.isArray(_sbMetrics.player_details))return _sbMetrics.player_details.length;
+if(_sbMetrics&&typeof _sbMetrics.players_online==='number')return _sbMetrics.players_online;
+return _sbPlayers.length;
+}
+
+function isSBFresh(){
+return _sbSyncTs>0&&(Date.now()-_sbSyncTs)<CACHE_FRESH_MS;
 }
 
 async function fetchStatus(){
@@ -39,32 +61,86 @@ const now=Date.now(),btn=$('rbtn');
 if(now-last<CD&&last!==0){toast(`Tunggu ${Math.ceil((CD-(now-last))/1000)}s...`);return}
 last=now;btn.disabled=true;btn.classList.add('sp');
 $('s-label').textContent='MEMUAT...';$('s-label').className='sl ld';$('s-orb').className='orb ld';
+
+// Fetch Supabase in parallel (same as monitor-page.js §7.4)
+const sbPromise=fetchSBSync();
+
 const t0=Date.now(),ctrl=new AbortController(),to=setTimeout(()=>ctrl.abort(),8000);
+let mcsOK=false;
 try{
 const res=await fetch(API,{signal:ctrl.signal});clearTimeout(to);
 const lat=Date.now()-t0,data=await res.json();
 $('s-lat').textContent=lat;
 document.querySelectorAll('.sk').forEach(e=>e.classList.remove('sk'));
+
+// Wait for Supabase data to be ready
+try{await sbPromise;}catch{}
+
 if(data.online){
 $('s-orb').className='orb on';$('s-label').textContent='ONLINE';$('s-label').className='sl on';
 $('s-addr').textContent=`${HOST}:${PORT}`;
-const on=data.players?.online??0,mx=data.players?.max??'?',ver=data.version??'Bedrock';
+const mx=data.players?.max??'?',ver=data.version??'Bedrock';
+// Player count: prefer Supabase (BDS = ground truth), fallback to mcsrvstat
+const sbCount=getSBPlayerCount();
+const apiCount=data.players?.online??0;
+const on=isSBFresh()&&sbCount>0?sbCount:apiCount;
 $('s-on').textContent=on;$('s-max').textContent=mx;$('s-ver').textContent=ver;
+// Player list: prefer Supabase player names (always fresh from BDS sync)
 const pc=$('p-card'),pl=$('p-list'),pn=$('p-cnt');
-if(data.players?.list&&data.players.list.length>0)tags(data.players.list,pc,pl,pn);
-else if(on>0)sbPlayers(pc,pl,pn,on);
+const sbNames=_sbPlayers.length>0?_sbPlayers:(data.players?.list??[]);
+if(sbNames.length>0)tags(sbNames,pc,pl,pn);
+else if(on>0){pn.textContent=on;pl.innerHTML='<div class="np">Nama pemain tidak tersedia</div>';pc.style.display='';}
 else pc.style.display='none';
+mcsOK=true;
 }else{
+// mcsrvstat says offline — check Supabase fallback (same as monitor-page.js)
+try{await sbPromise;}catch{}
+if(isSBFresh()){
+// Supabase data fresh < 2 min → server is actually ONLINE (mcsrvstat unreliable)
+const sbCount=getSBPlayerCount();
+$('s-orb').className='orb on';$('s-label').textContent='ONLINE';$('s-label').className='sl on';
+$('s-addr').textContent=`${HOST}:${PORT} (cached)`;
+const mx=data.players?.max??'?',ver=data.version??'Bedrock';
+$('s-on').textContent=sbCount;$('s-max').textContent=mx;$('s-ver').textContent=ver;
+// Show player list from Supabase
+const pc=$('p-card'),pl=$('p-list'),pn=$('p-cnt');
+if(_sbPlayers.length>0)tags(_sbPlayers,pc,pl,pn);
+else if(sbCount>0){pn.textContent=sbCount;pl.innerHTML='<div class="np">Nama pemain tidak tersedia</div>';pc.style.display='';}
+else pc.style.display='none';
+mcsOK=true;
+}else{
+// Both sources say offline → truly offline
 $('s-orb').className='orb off';$('s-label').textContent='OFFLINE';$('s-label').className='sl off';
 $('s-addr').textContent=`${HOST} — Server sedang mati`;
 $('s-on').textContent='0';$('s-max').textContent='—';$('s-ver').textContent='—';
 $('p-card').style.display='none';
 }
+}
 $('s-upd').textContent=`Diperbarui ${new Date().toLocaleTimeString('id-ID')} WIB · Auto 60s`;
 }catch{
-clearTimeout(to);$('s-orb').className='orb off';$('s-label').textContent='ERROR';
+clearTimeout(to);
+// mcsrvstat transport fail — check Supabase fallback
+try{await sbPromise;}catch{}
+if(isSBFresh()){
+// Supabase is fresh → server likely ONLINE, mcsrvstat just can't reach it
+const sbCount=getSBPlayerCount();
+$('s-orb').className='orb on';$('s-label').textContent='ONLINE';$('s-label').className='sl on';
+$('s-addr').textContent=`${HOST}:${PORT} (cached)`;
+document.querySelectorAll('.sk').forEach(e=>e.classList.remove('sk'));
+$('s-on').textContent=sbCount;$('s-max').textContent='?';$('s-ver').textContent='Bedrock';
+$('s-lat').textContent='—';
+// Show player list from Supabase
+const pc=$('p-card'),pl=$('p-list'),pn=$('p-cnt');
+if(_sbPlayers.length>0)tags(_sbPlayers,pc,pl,pn);
+else if(sbCount>0){pn.textContent=sbCount;pl.innerHTML='<div class="np">Nama pemain tidak tersedia</div>';pc.style.display='';}
+else pc.style.display='none';
+$('s-upd').textContent=`Diperbarui ${new Date().toLocaleTimeString('id-ID')} WIB (cached) · Auto 60s`;
+}else{
+// Both sources failed → truly offline/unreachable
+$('s-orb').className='orb off';$('s-label').textContent='ERROR';
 $('s-label').className='sl off';$('s-upd').textContent='Gagal — coba refresh';
 $('s-addr').textContent='Tidak dapat terhubung';
+}
 }finally{btn.disabled=false;btn.classList.remove('sp')}
 }
 

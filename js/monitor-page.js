@@ -2,8 +2,8 @@
  * SLO: render success ≥ 99%/24h. mcsrvstat fail (transport-only) tidak boleh OFFLINE-flag UI.
  * Fallback chain: live mcsrvstat → Supabase synced_at < 2 min ("CACHED") → OFFLINE banner.
  * Runbook: docs/runbook/leaderboard-sync.md (cek mcsrvstat status & Supabase freshness). */
-var SB_URL='https://jlxtnbnrirxhwuyqjlzw.supabase.co';
-var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpseHRuYm5yaXJ4aHd1eXFqbHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NjYzOTAsImV4cCI6MjA5MTQ0MjM5MH0.MRhoVRDju41J8nWp4WTgiKOvxy7AgwGYH-el2zVsbWI';
+var SB_URL=window.SB_URL;
+var SB_KEY=window.SB_KEY;
 var $=function(id){return document.getElementById(id);};
 var latHistory=[],MAX_HIST=60,chartCanvas=null,chartCtx=null,refreshTimer=null;
 var _radarInteracting=false,_interactEnd=0;
