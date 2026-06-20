@@ -805,6 +805,14 @@ async function fetchStatus(_retryN){
       _srvStatCache=d;_srvStatCacheTs=Date.now();
     }
     var online=!!d.online;
+    var _sbCached=false;
+    // §7.5 mcsrvstat Bedrock query sering false-negative (socket timeout).
+    // Jika mcsrvstat bilang offline, tunggu BDS data Supabase — kalau fresh, server sebenarnya hidup.
+    if(!online){
+      if(_bdsPromise){try{await _bdsPromise;}catch(e){}}
+      var _sbAge2=_lastSBSync?(Date.now()-_lastSBSync):Infinity;
+      if(_sbAge2<_CACHE_FRESH_MS){online=true;_sbCached=true;}
+    }
     var players=d.players?d.players.online||0:0;
     var maxP=d.players?d.players.max||0:0;
     var version=d.version||'\u2014';
@@ -821,7 +829,7 @@ async function fetchStatus(_retryN){
     var displayMax=_lastMaxP||maxP||0;
     safeSet('m-players',displayMax>0?(displayPlayers+'/'+displayMax):String(displayPlayers));
     safeSet('m-version',version);
-    safeSet('m-status',online?'Online':'Offline');safeClass('m-status','m-val '+(online?'good':'bad'));
+    safeSet('m-status',_sbCached?'Cached':(online?'Online':'Offline'));safeClass('m-status','m-val '+(_sbCached?'warn':(online?'good':'bad')));
     // Latency quality
     var li=$('lat-indicator');
     if(li){
