@@ -355,13 +355,13 @@ function _switchServer(idx){
   serverIP=srv.ip||serverIP;
   localStorage.setItem('lt_srv_idx',String(idx));
   // Reset all state for clean switch
-  latHistory=[];mhData=[];radarPlayers=[];radarLands=[];radarHistory=[];
+  latHistory=[];mhData=[];radarPlayers=[];radarLands=[];radarZoneBorders=[];radarHistory=[];
   _tpsBuf=[];_hmGrid=null;_hmDirty=true;_hmMax=1;
   _uptimeLog=null;lastMetrics=null;
   _msBuf={tps:[],lat:[],players:[]};_animVals={};
   _srvStatCache=null;_srvStatCacheTs=0;_lastBDSHash='';_fetchFails=0;_headCache={};
   _cb={fails:0,until:0};_lastSBSync=0;
-  _lastDP=null;radarLands=[];radarPlayers=[];
+  _lastDP=null;radarLands=[];radarPlayers=[];radarZoneBorders=[];
   _expSet.clear();_afkTracker={}; // [FIX] reset map exploration & AFK tracker antar server
   _entBudgetLastHash='';_lagPredBuf=[];_lagPredDismissed=false;_hideLagPredict(); // reset anti-lag features
   _lagLogActive=null;_tpsCorrLastLen=0; // reset lag log + TPS correlation
@@ -575,7 +575,8 @@ function applyBDSMetrics(m){
   _updateAfkTracker();
   // Preserve existing radarLands if this sync doesn't include land_claims
   if(m.land_claims&&m.land_claims.length)radarLands=m.land_claims;
-  if(radarPlayers.length||radarLands.length){
+  radarZoneBorders=m.zone_borders||[];
+  if(radarPlayers.length||radarLands.length||radarZoneBorders.length){
     drawRadar();
     var pdc=$('player-details-card');if(pdc)pdc.style.display='block';
   }
@@ -1130,7 +1131,7 @@ function drawMHChart(){
   fetchMH();
 })();
 
-var radarPlayers=[],radarLands=[],radarDim='overworld',radarZoom=500;
+var radarPlayers=[],radarLands=[],radarZoneBorders=[],radarDim='overworld',radarZoom=500;
 var radarPanX=0,radarPanZ=0,radarDrag=false,radarDragStart={x:0,z:0,px:0,pz:0};
 var radarHistory=[],radarTimeIdx=-1,radarRaf=0,radarAnimId=0,rSel=null,rFollow=true;
 // [FILTER] Radar filters — toggle UI di HTML, state direstore dari localStorage.
@@ -1563,6 +1564,55 @@ function drawRadar(){
       }
     }
     ctx.globalAlpha=1;}}
+  // ── Zone Borders (Purge / Dragon Territory / Dragon Fight Arena) ──
+  if(radarZoneBorders&&radarZoneBorders.length){
+    var _zbPulse=_reduceMotion?0.7:(Math.sin(Date.now()/600)+1)/2;
+    for(var zbi=0;zbi<radarZoneBorders.length;zbi++){
+      var zb=radarZoneBorders[zbi];if(!zb||!zb.active)continue;
+      // Map dimension keys: sync sends 'the_end', 'overworld', 'nether'
+      if(zb.dim!==radarDim)continue;
+      var zbCx=cX+(zb.cx-radarPanX)*sc,zbCz=cY+(zb.cz-radarPanZ)*sc;
+      var zbR=zb.radius*sc;if(zbR<2)continue;
+      var zbCol=zb.color||'#f87171';
+      // Fill (very subtle) — skip if border covers entire viewport (no visual benefit)
+      var zbMaxDim=Math.max(W,H);
+      if(zbR<zbMaxDim*1.5){
+        ctx.globalAlpha=0.04+_zbPulse*0.04;
+        ctx.fillStyle=zbCol;
+        if(zb.shape==='circle'){
+          ctx.beginPath();ctx.arc(zbCx,zbCz,zbR,0,Math.PI*2);ctx.fill();
+        }else{
+          ctx.fillRect(zbCx-zbR,zbCz-zbR,zbR*2,zbR*2);
+        }
+      }
+      // Border line (pulsing)
+      ctx.globalAlpha=0.35+_zbPulse*0.45;
+      ctx.strokeStyle=zbCol;
+      ctx.lineWidth=zb.type==='purge'?2.5:1.5;
+      if(zb.type==='end_territory')ctx.setLineDash([6,4]);
+      else if(zb.type==='dragon_fight')ctx.setLineDash([3,3]);
+      else ctx.setLineDash([]);
+      if(zb.shape==='circle'){
+        ctx.beginPath();ctx.arc(zbCx,zbCz,zbR,0,Math.PI*2);ctx.stroke();
+      }else{
+        ctx.strokeRect(zbCx-zbR,zbCz-zbR,zbR*2,zbR*2);
+      }
+      ctx.setLineDash([]);
+      // Label
+      if(!isInteract&&zbR>25){
+        var _zbFs=Math.min(12,Math.max(8,Math.floor(zbR/20)));
+        ctx.globalAlpha=0.6+_zbPulse*0.3;
+        ctx.font='600 '+_zbFs+'px JetBrains Mono,monospace';
+        ctx.textAlign='center';ctx.fillStyle=zbCol;
+        ctx.fillText(zb.label||zb.type,zbCx,zbCz-zbR-6);
+        // Radius info
+        ctx.globalAlpha=0.4;
+        ctx.font='500 '+Math.max(7,_zbFs-2)+'px JetBrains Mono,monospace';
+        ctx.fillText(zb.radius+'b radius',zbCx,zbCz-zbR-6+_zbFs+2);
+      }
+      ctx.globalAlpha=1;
+    }
+  }
   if(!isLive&&radarTimeIdx>0){
     var tr={},st=Math.max(0,radarTimeIdx-24);
     for(var t=st;t<=radarTimeIdx;t++){var sn=radarHistory[t];if(!sn||!sn._pos)continue;for(var j=0;j<sn._pos.length;j++){var tp=sn._pos[j];if((DIM_SHORT[tp.d]||'overworld')!==radarDim)continue;if(!tr[tp.n])tr[tp.n]=[];tr[tp.n].push({x:tp.x,z:tp.z,t:t});}}
