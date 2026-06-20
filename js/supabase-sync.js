@@ -100,7 +100,7 @@
       });
     }
 
-    console.log('[supabase-sync] Grid shop di-render ulang penuh (' + items.length + ' item).');
+    /* [PROD] debug log removed */
   }
 
   /* ── Terapkan config ke DOM ── */
@@ -345,7 +345,7 @@
         document.dispatchEvent(new CustomEvent('shopItemsReady', { detail: { items: mapped } }));
         document.dispatchEvent(new CustomEvent('shopDataReady'));
 
-        console.log('[supabase-sync] Shop items berhasil disync dari shop_items (' + mapped.length + ' item).');
+        /* [PROD] debug log removed */
       } else {
         console.warn('[supabase-sync] shop_items kosong atau error:', itemErr?.message);
       }
@@ -353,7 +353,7 @@
       console.warn('[supabase-sync] Gagal baca shop data:', e);
     }
 
-    console.log('[supabase-sync] Config berhasil diterapkan.');
+    /* [PROD] debug log removed */
 
   } catch (e) {
     console.warn('[supabase-sync] Error tidak terduga:', e);

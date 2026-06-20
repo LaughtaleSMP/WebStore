@@ -1125,5 +1125,5 @@
   _initNotifs();
 
   if (location.hash === '#chat') { isOpen = true; panel.classList.add('open'); _fetchAll(); }
-  console.log('[LiveChat] v2 initialized (accounts, 10s background poll)');
+  /* [PROD] LiveChat v2 initialized */
 })();

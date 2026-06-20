@@ -55,7 +55,7 @@ window.forceUpdateAssets = function() {
           return caches.delete(name);
         }));
       }).then(function() {
-        console.log('[Cache] Caches cleared.');
+        /* [PROD] cache cleared */
       });
     }
     if ('serviceWorker' in navigator) {

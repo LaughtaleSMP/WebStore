@@ -1326,7 +1326,7 @@
             });
         }
         _shopRendered = true;
-        console.log("[shop.js] ✅ Grid & SHOP_CONFIG sinkron dari DB (" + items.length + " item).");
+        /* [PROD] debug log removed */
     });
 
     /* ── Fallback: 4 detik tanpa response DB → pakai harga statis ── */

@@ -665,7 +665,7 @@
           throw new Error(`${restRes.status}: ${errBody}`);
         }
         insertOk = true;
-        console.log('[ShopPage] Order saved via REST fallback');
+        /* [PROD] REST fallback succeeded */
       } else {
         insertOk = true;
         // Stock otomatis berkurang via database trigger (trg_auto_decrement_stock)
