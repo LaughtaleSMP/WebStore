@@ -1605,10 +1605,13 @@ function drawRadar(){
         ctx.font='600 '+_zbFs+'px JetBrains Mono,monospace';
         ctx.textAlign='center';ctx.fillStyle=zbCol;
         ctx.fillText(zb.label||zb.type,zbCx,zbCz-zbR-6);
-        // Radius info
+        // Radius + dragon stats info
         ctx.globalAlpha=0.4;
         ctx.font='500 '+Math.max(7,_zbFs-2)+'px JetBrains Mono,monospace';
-        ctx.fillText(zb.radius+'b radius',zbCx,zbCz-zbR-6+_zbFs+2);
+        var _zbSub=zb.radius+'b radius';
+        if(zb.kills>0)_zbSub+=' \u00b7 Kill #'+zb.kills;
+        if(zb.best_time>0){var _btm=Math.floor(zb.best_time/60),_bts=zb.best_time%60;_zbSub+=' \u00b7 Best '+_btm+':'+String(_bts).padStart(2,'0');}
+        ctx.fillText(_zbSub,zbCx,zbCz-zbR-6+_zbFs+2);
       }
       ctx.globalAlpha=1;
     }
