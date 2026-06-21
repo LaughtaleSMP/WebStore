@@ -2,7 +2,7 @@
 
 > **Tujuan file ini:** AI baca ini dulu sebelum menyentuh kode. Berisi peta singkat
 > halaman, script, schema Supabase, dan kontrak data dari behavior pack.
-> Companion: `d:\BDS\worlds\DWELVE\behavior_packs\AI_GUIDE.md`.
+> Companion: `d:\BDS\worlds\THRIVEN\behavior_packs\AI_GUIDE.md`.
 >
 > Standar koding & dewan pakar 8-perspektif: lihat `CODING_STANDARDS.md`.
 
@@ -281,7 +281,7 @@ Semua aggregate ikut `CODING_STANDARDS §6` — winsorize, median + p25/p75, jus
 
 ## 12. Cross-link
 
-- Sisi addon (producer data): `d:\BDS\worlds\DWELVE\behavior_packs\AI_GUIDE.md`
+- Sisi addon (producer data): `d:\BDS\worlds\THRIVEN\behavior_packs\AI_GUIDE.md`
 - Standar koding 8-perspektif: `CODING_STANDARDS.md`
 - Tech stack & deployment: `README.md`
 - SQL maintenance: `cleanup_economy_history.sql`

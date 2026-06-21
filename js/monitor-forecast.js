@@ -6,8 +6,8 @@
 'use strict';
 
 // ───────────── Config / Priors ─────────────
-var LS_STATE='dwelve_atmo_wx_v2',LS_HIST='dwelve_atmo_hist_v1',LS_HIST_CAP=200;
-var SUPA_HIST_CACHE_KEY='dwelve_wx_supa_v1',SUPA_HIST_TTL_MS=5*60*1000;
+var LS_STATE='thriven_atmo_wx_v2',LS_HIST='thriven_atmo_hist_v1',LS_HIST_CAP=200;
+var SUPA_HIST_CACHE_KEY='thriven_wx_supa_v1',SUPA_HIST_TTL_MS=5*60*1000;
 var FORECAST_HORIZON_MS=60*60*1000,FORECAST_INTERVAL_MS=5*60*1000;
 var MC_SIM_COUNT=200,MC_MAX_STEPS=12;
 

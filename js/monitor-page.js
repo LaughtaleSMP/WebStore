@@ -3294,7 +3294,7 @@ function _drawTpsCorrelation(){
  * Standards §1.3: localStorage capped at 50 entries + 24h TTL.
  * Standards §5.2: _prefix internal, UPPER_SNAKE constants.
  */
-var _LAG_LOG_LS_KEY='dwelve_lag_log_v1';
+var _LAG_LOG_LS_KEY='thriven_lag_log_v1';
 var _LAG_LOG_MAX=50;
 var _LAG_LOG_TTL_MS=86400000; // 24 hours
 var _lagLogActive=null; // current lag event being tracked {start,minTps,maxEnt,maxMob,maxItem,samples}
@@ -4404,12 +4404,12 @@ if('serviceWorker' in navigator){
    state. Multi-step rolling prediction sampai 60 menit / 5 step.
 
    localStorage:
-     dwelve_atmo_wx_v2  → current state {wx, sinceMs}
-     dwelve_atmo_hist_v1 → array history [{wx, startMs, endMs, dur}], cap 200
+     thriven_atmo_wx_v2  → current state {wx, sinceMs}
+     thriven_atmo_hist_v1 → array history [{wx, startMs, endMs, dur}], cap 200
 ═══════════════════════════════════════════════════════════════════════ */
 
-var _ATMO_LS_STATE='dwelve_atmo_wx_v2';
-var _ATMO_LS_HIST='dwelve_atmo_hist_v1';
+var _ATMO_LS_STATE='thriven_atmo_wx_v2';
+var _ATMO_LS_HIST='thriven_atmo_hist_v1';
 var _ATMO_HIST_CAP=200;
 var _ATMO_FORECAST_HORIZON_MS=60*60*1000; // 60 menit
 var _ATMO_FORECAST_MAX_STEPS=5;
