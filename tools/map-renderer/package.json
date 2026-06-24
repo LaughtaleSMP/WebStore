@@ -1,0 +1,14 @@
+{
+  "name": "laughtale-map-renderer",
+  "version": "1.0.0",
+  "description": "Laughtale SMP — World Map Renderer Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "bedrock-protocol": "^3.57.0",
+    "express": "^4.21.0"
+  }
+}

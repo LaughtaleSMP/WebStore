@@ -22,7 +22,7 @@
   };
 
   // ── localStorage cache helpers ──
-  var CACHE_KEY = 'eco_data', CACHE_TREND_PFX = 'eco_trend_v4_', CACHE_TTL = 90000, TREND_TTL = 120000;
+  var CACHE_KEY = 'eco_data', CACHE_TREND_PFX = 'eco_trend_v4_', CACHE_TTL = 120000, TREND_TTL = 120000;
   function _trendCacheKey() { return CACHE_TREND_PFX + _trendRange; }
   function _cGet(k) { try { var r = JSON.parse(localStorage.getItem(k)); if (r && r.t && Date.now() - r.t < (k.indexOf(CACHE_TREND_PFX) === 0 ? TREND_TTL : CACHE_TTL)) return r.d; } catch (e) { } return null; }
   function _cSet(k, v) { try { localStorage.setItem(k, JSON.stringify({ t: Date.now(), d: v })); } catch (e) { } }
@@ -77,11 +77,14 @@
         fetchTrend();
         return;
       }
-      // Fetch main sync + permanent auction history in parallel
+      // Fetch main sync + permanent auction history + price index in parallel
       var mainP = fetch(SB_URL + '/rest/v1/leaderboard_sync?id=eq.current&select=gacha_lb,bank_log,auction_log,gacha_log,topup_log,disc_codes,synced_at', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
-      // Permanent table — fetch up to 10k rows for full market analytics.
-      // PostgREST default limit is 1000; Range header overrides it.
-      var aucP  = fetch(SB_URL + '/rest/v1/auction_history?select=tx_time,tx_type,item_name,item_id,qty,seller,buyer,price&order=tx_time.desc', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, Range: '0-9999', Prefer: 'count=exact' } }).catch(function() { return null; });
+      // Permanent table — last 500 rows for log display + trend calculation.
+      // Full item coverage comes from auction_price_index (permanent, ~5KB).
+      var aucP  = fetch(SB_URL + '/rest/v1/auction_history?select=tx_time,tx_type,item_name,item_id,qty,seller,buyer,price&order=tx_time.desc', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, Range: '0-499' } }).catch(function() { return null; });
+      // Permanent price index — aggregated min/avg/max per item, never pruned.
+      // Lightweight (~5KB for 125 items vs ~1MB for 10K raw rows).
+      var piP = fetch(SB_URL + '/rest/v1/auction_price_index?select=item_id,item_name,tx_count,avg_price,min_price,max_price,avg_qty,total_volume,last_sold_at&order=tx_count.desc', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } }).catch(function() { return null; });
 
       var r = await mainP;
       var d = await r.json(); if (!d || !d[0]) return;
@@ -105,6 +108,16 @@
         }
       } catch(e) { /* auction_history table belum ada, pakai fallback */ }
 
+      // Fetch permanent price index (aggregated summaries, never pruned)
+      var priceIndex = [];
+      try {
+        var piRes = await piP;
+        if (piRes && piRes.ok) {
+          var piRows = await piRes.json();
+          if (Array.isArray(piRows)) priceIndex = piRows;
+        }
+      } catch(e) { /* auction_price_index belum ada */ }
+
       // Deduplicate — safety net for overlapping sync/permanent data
       auctionData = _dedup(auctionData);
 
@@ -113,7 +126,8 @@
         bank: safeParse(row.bank_log, []), auction: auctionData,
         gacha: safeParse(row.gacha_log, []), topup: safeParse(row.topup_log, []),
         land: safeParse(lbParsed.land_log, []),
-        disc: safeParse(row.disc_codes, {}), synced: row.synced_at
+        disc: safeParse(row.disc_codes, {}), synced: row.synced_at,
+        priceIndex: priceIndex
       };
       _cSet(CACHE_KEY, _data);
       _mktCache = null; // invalidate market cache karena data baru
@@ -1078,7 +1092,8 @@
 
   function _mktAggregate() {
     var logs = _data && _data.auction;
-    if (!Array.isArray(logs) || logs.length === 0) return null;
+    var pi = _data && _data.priceIndex;
+    if ((!Array.isArray(logs) || logs.length === 0) && (!Array.isArray(pi) || pi.length === 0)) return null;
     var now = Date.now();
     if (_mktCache && (now - _mktCacheTs) < _MKT_TTL) return _mktCache;
 
@@ -1153,6 +1168,37 @@
         it.trendPct = 999; // marker for "new"
       }
       arr.push(it);
+    }
+
+    // Merge permanent price index — items whose raw logs were pruned
+    // still appear with their aggregated summary data.
+    if (Array.isArray(pi) && pi.length > 0) {
+      for (var p = 0; p < pi.length; p++) {
+        var pr = pi[p];
+        if (!pr || !pr.item_name) continue;
+        var pName = String(pr.item_name).trim();
+        if (!pName || pName === '?') continue;
+        var pKey = pName.toLowerCase();
+        if (agg[pKey]) continue; // already covered by raw logs
+        var pCat = _mktCat(pr.item_id || '');
+        var pAvg = Number(pr.avg_price) || 0;
+        var pMin = Number(pr.min_price) || 0;
+        var pMax = Number(pr.max_price) || 0;
+        var pTx = Number(pr.tx_count) || 0;
+        var pQty = Number(pr.avg_qty) || 1;
+        var pVol = Number(pr.total_volume) || 0;
+        var pCount = pTx * pQty;
+        arr.push({
+          name: pName, itemId: pr.item_id || '', cat: pCat.id, catLabel: pCat.label, catCls: pCat.cls,
+          count: pCount, total: pVol, min: pMin, max: pMax, txCount: pTx,
+          avg: pAvg, spread: pMax > 0 ? Math.round((pMax - pMin) / pMax * 100) : 0,
+          recent: 0, old: 0, recentSum: 0, oldSum: 0, trendPct: 0,
+          fromIndex: true
+        });
+        totalTx += pTx;
+        totalVol += pVol;
+        totalUnits += pCount;
+      }
     }
 
     // Count categories

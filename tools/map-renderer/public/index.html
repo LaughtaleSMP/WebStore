@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Laughtale SMP Map Renderer Dashboard — One-click world map rendering with real-time progress tracking">
+  <meta name="referrer" content="no-referrer">
+  <title>Laughtale Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div>
+          <h1>Map Renderer</h1>
+          <span class="subtitle">Laughtale SMP</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <label class="section-label">WORLDS</label>
+      <div id="worldList" class="world-list">
+        <div class="loading-placeholder">Memuat worlds...</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <label class="section-label">RENDER HISTORY</label>
+      <div id="historyList" class="history-list">
+        <div class="loading-placeholder">Memuat history...</div>
+      </div>
+    </div>
+
+        <div class="sidebar-section system-monitor-section">
+      <label class="section-label">SYSTEM MONITOR</label>
+      <div class="system-monitor" id="systemMonitor">
+        <!-- CPU -->
+        <div class="sys-metric">
+          <div class="sys-metric-header">
+            <span class="sys-metric-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+            </span>
+            <span class="sys-metric-label">CPU</span>
+            <span class="sys-metric-value" id="cpuPercent">--%</span>
+          </div>
+          <div class="sys-bar-track"><div class="sys-bar-fill cpu" id="cpuBar"></div></div>
+          <div class="sys-metric-sub" id="cpuModel">--</div>
+        </div>
+        <!-- RAM -->
+        <div class="sys-metric">
+          <div class="sys-metric-header">
+            <span class="sys-metric-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="6" x2="6" y2="2"/><line x1="10" y1="6" x2="10" y2="2"/><line x1="14" y1="6" x2="14" y2="2"/><line x1="18" y1="6" x2="18" y2="2"/></svg>
+            </span>
+            <span class="sys-metric-label">RAM</span>
+            <span class="sys-metric-value" id="ramPercent">--%</span>
+          </div>
+          <div class="sys-bar-track"><div class="sys-bar-fill ram" id="ramBar"></div></div>
+          <div class="sys-metric-sub" id="ramDetail">-- / --</div>
+        </div>
+        <!-- Dashboard Process -->
+        <div class="sys-metric">
+          <div class="sys-metric-header">
+            <span class="sys-metric-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </span>
+            <span class="sys-metric-label">Dashboard</span>
+            <span class="sys-metric-value" id="procMem">--</span>
+          </div>
+          <div class="sys-metric-sub" id="procUptime">Uptime: --</div>
+        </div>
+      </div>
+    </div>
+
+<div class="sidebar-section shortcuts-section">
+      <label class="section-label">SHORTCUTS</label>
+      <div class="shortcuts-grid">
+        <kbd>S</kbd><span>Spawn</span>
+        <kbd>G</kbd><span>Grid</span>
+        <kbd>F</kbd><span>Fullscreen</span>
+        <kbd>/</kbd><span>Console</span>
+        <kbd>1</kbd><span>Overworld</span>
+        <kbd>2</kbd><span>Nether</span>
+        <kbd>3</kbd><span>The End</span>
+        <kbd>Esc</kbd><span>Close</span>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="status-indicator" id="statusDot">
+        <span class="dot idle"></span>
+        <span id="statusText">Ready</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <main class="main">
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="icon-btn" onclick="toggleSidebar()" title="Toggle sidebar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h2 id="worldTitle">Select a World</h2>
+      </div>
+      <div class="dimension-tabs" id="dimTabs">
+        <button class="dim-tab active" data-dim="overworld" onclick="switchDimension('overworld')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          Overworld
+        </button>
+        <button class="dim-tab" data-dim="nether" onclick="switchDimension('nether')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Nether
+        </button>
+        <button class="dim-tab" data-dim="end" onclick="switchDimension('end')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          The End
+        </button>
+      </div>
+    </header>
+
+    <!-- Map Viewer -->
+    <div class="map-container">
+      <div id="map" class="map-view"></div>
+      <div class="map-overlay" id="mapOverlay">
+        <div class="overlay-content">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <p>Pilih world di sidebar untuk melihat map</p>
+          <span class="hint">atau render baru dengan tombol di bawah</span>
+        </div>
+      </div>
+
+      <!-- Coverage Mini-Map -->
+      <div class="coverage-panel" id="coveragePanel" style="display:none">
+        <div class="coverage-header">
+          <span>Coverage</span>
+          <button class="icon-btn-sm" onclick="toggleCoverage()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <canvas id="coverageCanvas" width="200" height="200"></canvas>
+        <div class="coverage-stats" id="coverageStats"></div>
+      </div>
+
+      <!-- Map Toolbar (floating) -->
+      <div class="map-toolbar" id="mapToolbar">
+        <button class="map-tool-btn" onclick="goToSpawn()" title="Go to Spawn [S]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+        </button>
+        <button class="map-tool-btn" onclick="refreshTiles()" title="Refresh tiles">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+        </button>
+        <button class="map-tool-btn" onclick="toggleFullscreen()" title="Fullscreen [F]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        </button>
+      </div>
+
+      <!-- Coordinate Display (bottom-left) -->
+      <div class="map-coords" id="mapCoords">
+        <span class="coords-label">X:</span> <span id="coordX">0</span>
+        <span class="coords-sep">|</span>
+        <span class="coords-label">Z:</span> <span id="coordZ">0</span>
+        <span class="coords-sep">|</span>
+        <span class="coords-label">Zoom:</span> <span id="coordZoom">0</span>
+      </div>
+    </div>
+
+    <!-- Bottom Control Panel -->
+    <div class="control-panel">
+      <!-- Progress Bar -->
+      <div class="progress-section" id="progressSection" style="display:none">
+        <div class="progress-header">
+          <span class="progress-label" id="progressLabel">Rendering...</span>
+          <span class="progress-pct" id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progressFill"></div>
+          <div class="progress-bar-glow" id="progressGlow"></div>
+        </div>
+        <div class="progress-details" id="progressDetails">
+          <span id="progressRegions">—</span>
+          <span id="progressSpeed">—</span>
+          <span id="progressEta">—</span>
+        </div>
+        <div class="progress-log" id="progressLog"></div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="actions" id="actionBar">
+        <div class="action-group">
+          <button class="btn btn-primary" id="btnRenderWeb" onclick="startRender('web')" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Render Web Tiles
+          </button>
+          <button class="btn btn-secondary" id="btnRenderImage" onclick="startRender('image')" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Quick Image
+          </button>
+          <button class="btn btn-accent" id="btnSafeRender" onclick="startSafeRender()" disabled title="WAL compact + Render + Coverage check + Fill gaps">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Safe Render
+          </button>
+          <select class="autoregen-select" id="renderArea" title="Render area radius">
+            <option value="1000">2k x 2k</option>
+            <option value="2500">5k x 5k</option>
+            <option value="5000" selected>10k x 10k</option>
+            <option value="10000">20k x 20k</option>
+            <option value="25000">50k x 50k</option>
+            <option value="0">Unlimited</option>
+          </select>
+        </div>
+        <div class="action-group">
+          <button class="btn btn-ghost" id="btnCoverage" onclick="showCoverage()" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Coverage
+          </button>
+          <button class="btn btn-ghost" id="btnFillGaps" onclick="fillGaps()" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Fill Gaps
+          </button>
+          <button class="btn btn-ghost" id="btnGrid" onclick="toggleChunkGrid()" title="Toggle chunk grid [G]">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="3" x2="3" y2="21"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/><line x1="21" y1="3" x2="21" y2="21"/><line x1="3" y1="3" x2="21" y2="3"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="3" y1="21" x2="21" y2="21"/></svg>
+            Grid
+          </button>
+          <button class="btn btn-danger" id="btnCancel" onclick="cancelRender()" style="display:none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
+            Cancel
+          </button>
+        </div>
+        <div class="pregen-cov-panel" id="pregenCovPanel" style="display:none"></div>
+      </div>
+
+      <!-- Auto Regen Bar -->
+      <div class="autoregen-bar" id="autoregenBar">
+        <div class="autoregen-left">
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoregenToggle" onchange="toggleAutoRegen()">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="autoregen-label">Auto Regen</span>
+          <select class="autoregen-select" id="autoregenInterval" onchange="updateAutoRegenInterval()">
+            <option value="5">5 min</option>
+            <option value="10" selected>10 min</option>
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+            <option value="60">60 min</option>
+          </select>
+        </div>
+        <div class="autoregen-right">
+          <span class="autoregen-countdown" id="autoregenCountdown">—</span>
+        </div>
+      </div>
+
+      <div class="pregen-bar" id="pregenBar">
+        <div class="pregen-left">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-dim)"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span class="pregen-label">Pre-Gen</span>
+          <select class="autoregen-select" id="pregenRadius">
+            <option value="500">1000x1000</option>
+            <option value="1000">2000x2000</option>
+            <option value="2500">5000x5000</option>
+            <option value="5000" selected>10000x10000</option>
+            <option value="10000">20000x20000</option>
+            <option value="25000">50000x50000</option>
+            <option value="50000">100000x100000</option>
+            <option value="100000">200000x200000</option>
+          </select>
+          <select class="autoregen-select" id="pregenDimension">
+            <option value="overworld" selected>Overworld</option>
+            <option value="nether">Nether</option>
+            <option value="the_end">The End</option>
+          </select>
+        </div>
+        <div class="pregen-right">
+          <span class="pregen-status" id="pregenStatus">&mdash;</span>
+          <button class="btn-pregen" id="btnPregen" onclick="startPregen()">Generate</button>
+          <button class="btn-pregen stop" id="btnPregenStop" onclick="stopPregen()" style="display:none">Stop</button>
+        </div>
+      </div>
+
+      <!-- World Info Bar -->
+      <div class="info-bar" id="infoBar">
+        <span id="infoWorld">No world selected</span>
+        <span id="infoDimension">—</span>
+        <span id="infoTiles">—</span>
+        <span id="infoLastRender">—</span>
+      </div>
+    </div>
+
+    <!-- BDS Server Panel -->
+    <div class="bds-console" id="bdsConsole">
+      <div class="bds-header" onclick="toggleBdsPanel()">
+        <div class="bds-header-left">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span>Server Console</span>
+          <span class="bds-status-dot" id="bdsDot"></span>
+          <span class="bds-status-text" id="bdsStatusText">Offline</span>
+          <span class="bds-server-info" id="bdsServerInfo" style="display:none;margin-left:8px;padding:2px 8px;background:rgba(255,255,255,0.08);border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);cursor:pointer;user-select:all" title="Tap to copy" onclick="navigator.clipboard.writeText(this.textContent)"></span>
+        </div>
+        <div class="bds-header-right">
+          <div class="power-controls" onclick="event.stopPropagation()">
+            <button class="power-btn power-start" id="btnBdsStart" onclick="bdsStart()" title="Start Server">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+            <button class="power-btn power-restart" id="btnBdsRestart" onclick="bdsRestart()" title="Restart Server">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+            </button>
+            <button class="power-btn power-stop" id="btnBdsStop" onclick="bdsStop()" title="Stop Server">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+            </button>
+          </div>
+          <button class="icon-btn" onclick="event.stopPropagation(); toggleBdsPanel()" id="bdsChevron">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="bds-body" id="bdsBody" style="display:none">
+        <div class="bds-logs" id="bdsLogs">
+          <div class="bds-empty">Server belum dijalankan. Klik Start untuk mulai.</div>
+        </div>
+        <div class="bds-input-row">
+          <span class="bds-prompt">$</span>
+          <input type="text" class="bds-input" id="bdsInput" placeholder="Ketik command... (press / to focus)" onkeydown="if(event.key==='Enter')bdsSendCommand()">
+          <button class="btn-bds btn-bds-send" onclick="bdsSendCommand()" title="Send">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
