@@ -18,8 +18,10 @@
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
       </div>
       <h2>Infrastructure Dashboard</h2>
-      <p>Season reset tool dengan monitoring infrastruktur Supabase. Operasi ini destruktif dan permanen.</p>
-      <input type="password" class="auth-input" id="pw-input" placeholder="Password admin" autocomplete="current-password">
+      <p>Season reset tool dengan monitoring infrastruktur Supabase. Login sebagai superadmin untuk melanjutkan.</p>
+      <input type="email" class="auth-input" id="email-input" placeholder="Email admin" autocomplete="email">
+      <input type="password" class="auth-input" id="pw-input" placeholder="Password" autocomplete="current-password">
+      <div id="auth-error" style="display:none;color:#f87171;font-size:12px;margin-bottom:10px;text-align:left"></div>
       <button class="btn btn-danger" style="width:100%;justify-content:center" id="auth-btn">Authenticate</button>
     </div>
   </div>
@@ -224,6 +226,7 @@
     </main>
   </div>
 
+  <script src="../libs/supabase.js"></script>
   <script src="../js/config.js"></script>
   <script src="js/season-reset.js"></script>
 </body>

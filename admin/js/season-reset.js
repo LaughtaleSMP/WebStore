@@ -1,11 +1,17 @@
 // ═══════════════════════════════════════════════════════
-// Season Reset — Infrastructure Dashboard v5.0
-// SLO: admin tool, auth-gated, destructive ops
+// Season Reset — Infrastructure Dashboard v5.1
+// SLO: admin tool, Supabase Auth-gated, destructive ops
+// Auth: uses Supabase signInWithPassword → authenticated role
+//       RLS policies require superadmin in admin_roles
 // ═══════════════════════════════════════════════════════
 
 const SB_URL = window.SB_URL;
 const SB_KEY = window.SB_KEY;
-const ADMIN_HASH = 'bd063bb85b4fecc24e977030b7cf007b5e23d01ba622c3d6f8bff8b1856e16f8';
+
+// Supabase client — persistent session so token auto-refreshes
+const sb = supabase.createClient(SB_URL, SB_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true },
+});
 
 // ── Table Registry ──
 // tier: safe = auto-repopulate, warn = permanent but not critical, danger = critical permanent
@@ -24,22 +30,102 @@ const TABLES = [
 let tableData = {};  // { tableId: { rows, totalSize, tableSize, indexSize, totalSizeBytes } }
 let infraData = {};  // DB-level metrics
 let storageData = []; // Bucket info
+let accessToken = null; // JWT access token from Supabase Auth
 
 // ═══════════════════════════════════════════
-//  AUTH
+//  AUTH — Supabase signInWithPassword
 // ═══════════════════════════════════════════
 document.getElementById('auth-btn').addEventListener('click', authenticate);
 document.getElementById('pw-input').addEventListener('keydown', e => { if (e.key === 'Enter') authenticate(); });
+document.getElementById('email-input').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('pw-input').focus(); });
 
 async function authenticate() {
+  const email = document.getElementById('email-input').value.trim();
   const pw = document.getElementById('pw-input').value;
-  if (!pw) return;
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
-  const h = Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join('');
-  if (h !== ADMIN_HASH) { alert('Password salah.'); return; }
-  document.getElementById('gate').style.display = 'none';
-  document.getElementById('main-ui').style.display = 'flex';
-  boot();
+  const errEl = document.getElementById('auth-error');
+  const btn = document.getElementById('auth-btn');
+
+  if (!email || !pw) {
+    errEl.textContent = 'Masukkan email dan password.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Authenticating...';
+  errEl.style.display = 'none';
+
+  try {
+    // 1. Sign in with Supabase Auth
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (error) throw error;
+
+    // 2. Verify superadmin role
+    const userId = data.user.id;
+    const { data: roleData, error: roleErr } = await sb
+      .from('admin_roles')
+      .select('role, active')
+      .eq('user_id', userId)
+      .single();
+
+    if (roleErr || !roleData || roleData.role !== 'superadmin' || !roleData.active) {
+      await sb.auth.signOut();
+      throw new Error('Akun tidak memiliki akses superadmin.');
+    }
+
+    // 3. Store access token for fetch calls
+    accessToken = data.session.access_token;
+
+    // 4. Show main UI
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('main-ui').style.display = 'flex';
+    boot();
+  } catch (e) {
+    errEl.textContent = e.message || 'Login gagal.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Authenticate';
+  }
+}
+
+// Auto-login if session exists
+(async function checkExistingSession() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+
+    // Verify superadmin
+    const { data: roleData } = await sb
+      .from('admin_roles')
+      .select('role, active')
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (!roleData || roleData.role !== 'superadmin' || !roleData.active) return;
+
+    accessToken = session.access_token;
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('main-ui').style.display = 'flex';
+    boot();
+  } catch { /* no session, show login */ }
+})();
+
+// Keep accessToken fresh on refresh
+sb.auth.onAuthStateChange((event, session) => {
+  if (session) accessToken = session.access_token;
+});
+
+/**
+ * Build auth headers for PostgREST fetch calls.
+ * Uses the authenticated session token, not the anon key.
+ */
+function authHeaders(extra) {
+  const h = {
+    apikey: SB_KEY,
+    Authorization: 'Bearer ' + (accessToken || SB_KEY),
+  };
+  if (extra) Object.assign(h, extra);
+  return h;
 }
 
 // ═══════════════════════════════════════════
@@ -56,12 +142,68 @@ async function boot() {
 }
 
 // ═══════════════════════════════════════════
-//  INFRASTRUCTURE METRICS (via PostgREST RPC)
+//  INFRASTRUCTURE METRICS (via PostgREST + live SQL)
 // ═══════════════════════════════════════════
+
+// Live table size cache — populated by fetchLiveTableSizes()
+let liveTableSizes = {};  // { table_name: { total_bytes, index_bytes, est_rows } }
+let liveDbSizeMB = 0;
+
+/**
+ * Fetch real table sizes from PostgreSQL catalog via Supabase RPC.
+ * This replaces all hardcoded size values with live data.
+ */
+async function fetchLiveTableSizes() {
+  try {
+    // Single-line query to pass RPC 'select %' prefix check
+    const query = "SELECT c.relname as name, pg_total_relation_size(c.oid) as total_bytes, pg_indexes_size(c.oid) as index_bytes FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind = 'r' ORDER BY pg_total_relation_size(c.oid) DESC";
+
+    const r = await fetch(`${SB_URL}/rest/v1/rpc/exec_sql`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!r.ok) {
+      console.warn('[SeasonReset] exec_sql RPC not available:', r.status);
+      return false;
+    }
+
+    // PostgREST returns the json result directly from our function
+    const data = await r.json();
+    // data is the JSON array returned by json_agg in the RPC
+    const rows = Array.isArray(data) ? data : [];
+    liveTableSizes = {};
+    for (const row of rows) {
+      liveTableSizes[row.name] = {
+        total_bytes: Number(row.total_bytes) || 0,
+        index_bytes: Number(row.index_bytes) || 0,
+      };
+    }
+
+    // Also get DB size
+    const dbR = await fetch(`${SB_URL}/rest/v1/rpc/exec_sql`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: "SELECT pg_database_size(current_database()) as bytes" }),
+    });
+    if (dbR.ok) {
+      const dbData = await dbR.json();
+      const dbRows = Array.isArray(dbData) ? dbData : [];
+      if (dbRows[0]) {
+        liveDbSizeMB = Math.round(Number(dbRows[0].bytes) / 1048576);
+      }
+    }
+
+    return true;
+  } catch (e) {
+    console.warn('[SeasonReset] live table sizes error:', e?.message);
+    return false;
+  }
+}
+
 async function fetchInfraMetrics() {
   try {
-    // We use HEAD requests + content-range to count all tables
-    // and measure DB-level stats from the data we already get
     const allTables = [
       'economy_history','metrics_history','auction_history','weather_history',
       'chat_messages','topup_queue','admin_activity_log','recovery_queue',
@@ -71,6 +213,9 @@ async function fetchInfraMetrics() {
       'admin_pending_requests','mimi_commands','shop_categories'
     ];
 
+    // Try fetching live sizes first
+    await fetchLiveTableSizes();
+
     let totalRows = 0;
     const sizes = {};
 
@@ -79,7 +224,7 @@ async function fetchInfraMetrics() {
       try {
         const r = await fetch(`${SB_URL}/rest/v1/${t}?select=*&limit=1`, {
           method: 'HEAD',
-          headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, Prefer: 'count=exact', Range: '0-0' },
+          headers: { ...authHeaders(), Prefer: 'count=exact', Range: '0-0' },
         });
         const cr = r.headers.get('content-range');
         const num = cr ? parseInt(cr.split('/').pop(), 10) : 0;
@@ -100,18 +245,17 @@ async function fetchInfraMetrics() {
 
 function renderInfraCards() {
   const d = infraData;
-  // Known from DB query: 62 MB, 25 tables, 500 MB free tier limit
-  const dbSizeMB = 62;
   const freeCapMB = 500;
+  // Use live DB size if available, else rough estimate from table sizes
+  const dbSizeMB = liveDbSizeMB || _estimateDbSizeMB();
   const usagePct = ((dbSizeMB / freeCapMB) * 100).toFixed(1);
-  const cacheHitRatio = 99.99; // from our query: 907M hits vs 1575 reads
 
   setVal('infra-db-size', dbSizeMB + ' MB');
   setVal('infra-db-cap', usagePct + '%');
   setVal('infra-tables', d.tableCount || 25);
   setVal('infra-total-rows', (d.totalRows || 0).toLocaleString('id-ID'));
-  setVal('infra-cache-hit', cacheHitRatio + '%');
-  setVal('infra-connections', '19 / 60');
+  setVal('infra-cache-hit', '—'); // Not fetched live; avoid stale values
+  setVal('infra-connections', '—');
   setVal('infra-pg-version', '17.6');
   setVal('infra-region', 'ap-southeast-1');
 
@@ -127,16 +271,51 @@ function renderInfraCards() {
   renderDonutChart();
 }
 
+/** Fallback estimate when live query is unavailable */
+function _estimateDbSizeMB() {
+  let total = 0;
+  for (const v of Object.values(liveTableSizes)) total += v.total_bytes;
+  // Public tables are ~60-70% of total DB (rest is system catalogs, WAL, etc.)
+  return total > 0 ? Math.round(total / 1048576 / 0.65) : 40;
+}
+
 function renderDonutChart() {
-  // Top tables by estimated size contribution (from our query data)
-  const segments = [
-    { name: 'auction_history', size: 21, color: '#f87171' },
-    { name: 'metrics_history', size: 2.4, color: '#fbbf24' },
-    { name: 'economy_history', size: 0.9, color: '#4a8fff' },
-    { name: 'chat_messages',   size: 0.8, color: '#a78bfa' },
-    { name: 'leaderboard_sync',size: 0.4, color: '#22d3ee' },
-    { name: 'Other (20 tables)', size: 1.5, color: '#2e3848' },
+  // Build segments from live data if available, else use rough estimates
+  const targetTables = [
+    { name: 'metrics_history',  color: '#fbbf24' },
+    { name: 'economy_history',  color: '#4a8fff' },
+    { name: 'chat_messages',    color: '#a78bfa' },
+    { name: 'auction_history',  color: '#f87171' },
+    { name: 'weather_history',  color: '#34d399' },
+    { name: 'admin_activity_log', color: '#22d3ee' },
   ];
+
+  const segments = [];
+  let otherBytes = 0;
+  const hasLiveData = Object.keys(liveTableSizes).length > 0;
+
+  if (hasLiveData) {
+    const targetNames = new Set(targetTables.map(t => t.name));
+    for (const t of targetTables) {
+      const bytes = liveTableSizes[t.name]?.total_bytes || 0;
+      if (bytes > 0) {
+        segments.push({ name: t.name, size: bytes / 1048576, color: t.color });
+      }
+    }
+    // Sum all other public tables
+    for (const [name, data] of Object.entries(liveTableSizes)) {
+      if (!targetNames.has(name)) otherBytes += data.total_bytes;
+    }
+    if (otherBytes > 0) {
+      segments.push({ name: 'Other tables', size: otherBytes / 1048576, color: '#2e3848' });
+    }
+  } else {
+    // Minimal fallback — will be replaced on next refresh
+    segments.push({ name: 'Loading...', size: 1, color: '#2e3848' });
+  }
+
+  // Sort by size descending
+  segments.sort((a, b) => b.size - a.size);
 
   const total = segments.reduce((s, x) => s + x.size, 0);
   const R = 40, C = 2 * Math.PI * R;
@@ -149,7 +328,7 @@ function renderDonutChart() {
     const dash = pct * C;
     svgParts += `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${seg.color}" stroke-width="14" stroke-dasharray="${dash} ${C - dash}" stroke-dashoffset="${-offset}" opacity="0.85"/>`;
     offset += dash;
-    legendParts += `<div class="donut-legend-item"><span class="donut-legend-dot" style="background:${seg.color}"></span>${seg.name}<span class="donut-legend-val">${seg.size >= 1 ? seg.size.toFixed(0) + ' MB' : (seg.size * 1024).toFixed(0) + ' KB'}</span></div>`;
+    legendParts += `<div class="donut-legend-item"><span class="donut-legend-dot" style="background:${seg.color}"></span>${seg.name}<span class="donut-legend-val">${seg.size >= 1 ? seg.size.toFixed(1) + ' MB' : (seg.size * 1024).toFixed(0) + ' KB'}</span></div>`;
   }
 
   const container = document.getElementById('donut-chart');
@@ -157,7 +336,7 @@ function renderDonutChart() {
     container.innerHTML = `
       <div class="donut-wrap">
         <svg class="donut-svg" viewBox="0 0 100 100">${svgParts}
-          <text x="50" y="48" text-anchor="middle" fill="var(--text-main)" font-size="12" font-weight="800" style="transform:rotate(90deg);transform-origin:50% 50%">${total.toFixed(0)}</text>
+          <text x="50" y="48" text-anchor="middle" fill="var(--text-main)" font-size="12" font-weight="800" style="transform:rotate(90deg);transform-origin:50% 50%">${total.toFixed(1)}</text>
           <text x="50" y="58" text-anchor="middle" fill="var(--text-faint)" font-size="6" style="transform:rotate(90deg);transform-origin:50% 50%">MB</text>
         </svg>
         <div class="donut-legend">${legendParts}</div>
@@ -225,12 +404,6 @@ function renderTables() {
 //  ROW COUNTS + TABLE SIZES
 // ═══════════════════════════════════════════
 async function refreshCounts() {
-  const knownSizes = {
-    auction_history: '21 MB', metrics_history: '2.4 MB', economy_history: '944 KB',
-    chat_messages: '800 KB', weather_history: '200 KB', topup_queue: '32 KB',
-    admin_activity_log: '256 KB', recovery_queue: '48 KB',
-  };
-
   let total = 0;
   for (const t of TABLES) {
     const countEl = document.getElementById('count-' + t.id);
@@ -240,7 +413,7 @@ async function refreshCounts() {
     try {
       const r = await fetch(`${SB_URL}/rest/v1/${t.id}?select=*&limit=1`, {
         method: 'HEAD',
-        headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, Prefer: 'count=exact', Range: '0-0' },
+        headers: { ...authHeaders(), Prefer: 'count=exact', Range: '0-0' },
       });
       const cr = r.headers.get('content-range');
       const num = cr ? parseInt(cr.split('/').pop(), 10) : NaN;
@@ -250,7 +423,15 @@ async function refreshCounts() {
         total += num;
         tableData[t.id] = { rows: num };
       } else { countEl.textContent = '? rows'; }
-      if (sizeEl && knownSizes[t.id]) sizeEl.textContent = knownSizes[t.id];
+      // Use live size data if available
+      if (sizeEl) {
+        const live = liveTableSizes[t.id];
+        if (live && live.total_bytes > 0) {
+          sizeEl.textContent = formatBytes(live.total_bytes);
+        } else {
+          sizeEl.textContent = '—';
+        }
+      }
     } catch { countEl.textContent = '- err'; }
   }
   document.getElementById('sum-total').textContent = total.toLocaleString('id-ID');
@@ -288,22 +469,14 @@ function updateSummary() {
 
 function updateImpactAnalysis() {
   const checked = [...document.querySelectorAll('input[data-table]:checked')].map(cb => cb.dataset.table);
-  const sizeMap = {
-    auction_history: 21_610_496, metrics_history: 2_490_368, economy_history: 966_656,
-    chat_messages: 819_200, weather_history: 204_800, topup_queue: 32_768,
-    admin_activity_log: 262_144, recovery_queue: 49_152,
-  };
 
   let totalBytes = 0, totalRows = 0, indexBytes = 0;
-  const indexMap = {
-    auction_history: 7_937_024, metrics_history: 581_632, economy_history: 131_072,
-    chat_messages: 409_600, weather_history: 98_304, topup_queue: 16_384,
-    admin_activity_log: 106_496, recovery_queue: 32_768,
-  };
 
   for (const id of checked) {
-    totalBytes += sizeMap[id] || 0;
-    indexBytes += indexMap[id] || 0;
+    // Use live data if available, else zero
+    const live = liveTableSizes[id];
+    totalBytes += live?.total_bytes || 0;
+    indexBytes += live?.index_bytes || 0;
     totalRows += tableData[id]?.rows || 0;
   }
 
@@ -329,7 +502,7 @@ async function exportSelectedTables() {
   for (const tableId of checked) {
     try {
       const r = await fetch(`${SB_URL}/rest/v1/${tableId}?select=*&limit=10000`, {
-        headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY },
+        headers: authHeaders(),
       });
       if (r.ok) backup.tables[tableId] = await r.json();
       else backup.tables[tableId] = { error: r.status };
@@ -377,6 +550,12 @@ document.getElementById('execute-btn').addEventListener('click', async () => {
   const checked = [...document.querySelectorAll('input[data-table]:checked')].map(cb => cb.dataset.table);
   if (!checked.length) return;
 
+  // Verify we still have a valid token
+  if (!accessToken) {
+    alert('Sesi expired. Silakan refresh halaman dan login ulang.');
+    return;
+  }
+
   const labelList = checked.map(id => TABLES.find(t => t.id === id)?.label || id).join('\n  - ');
   const willDelete = document.getElementById('sum-delete').textContent;
 
@@ -401,7 +580,7 @@ document.getElementById('execute-btn').addEventListener('click', async () => {
   };
 
   writeLog(`=== SEASON RESET INITIATED ===`, 'warn');
-  writeLog(`Target: ${checked.length} tables | Operator: admin`, 'info');
+  writeLog(`Target: ${checked.length} tables | Auth: Supabase (superadmin)`, 'info');
   writeLog(`Timestamp: ${new Date().toISOString()}`, 'info');
   writeLog('─'.repeat(50), 'info');
 
@@ -416,9 +595,14 @@ document.getElementById('execute-btn').addEventListener('click', async () => {
 
     try {
       writeLog(`  [${i + 1}/${checked.length}] DELETE ${tableId} (filter: ${meta.filter})...`, 'info');
+
+      // Refresh token if needed before destructive op
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) accessToken = session.access_token;
+
       const r = await fetch(`${SB_URL}/rest/v1/${tableId}?${meta.filter}`, {
         method: 'DELETE',
-        headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', Prefer: 'count=exact' },
+        headers: authHeaders({ 'Content-Type': 'application/json', Prefer: 'count=exact' }),
       });
       if (!r.ok) {
         let body = ''; try { body = await r.text(); } catch { /* silent */ }
