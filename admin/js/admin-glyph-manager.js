@@ -60,7 +60,7 @@
       var { error: upErr } = await sb.storage
         .from(SB_BUCKET)
         .upload(path, blob, {
-          contentType: 'image/png',
+          contentType: blob.type || 'image/png',
           upsert: true,
           cacheControl: '86400',
         });

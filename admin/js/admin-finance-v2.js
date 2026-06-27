@@ -400,7 +400,7 @@
     html += '</div>';
     html += '</div>';
 
-    html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:520px">';
+    html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:520px">';
     html += '<thead><tr style="border-bottom:2px solid var(--border);text-align:left">';
     html += '<th style="padding:10px 8px;color:var(--text-faint);font-size:11px;font-weight:600">#</th>';
     html += '<th style="padding:10px 8px;color:var(--text-faint);font-size:11px;font-weight:600">Produk</th>';
