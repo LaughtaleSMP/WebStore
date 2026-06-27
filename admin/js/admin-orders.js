@@ -325,6 +325,7 @@ window.ordersLoad = async function () {
         ${o.username    ? `<span class="order-tag">👤 ${escHtml(o.username)}</span>`  : ''}
         ${o.qty         ? `<span class="order-tag">×${escHtml(String(o.qty))}</span>` : ''}
         ${o.total_price ? `<span class="order-tag price-tag">Rp ${Number(o.total_price).toLocaleString('id-ID')}</span>` : ''}
+        ${o.payment_method ? `<span class="order-tag" style="background:rgba(168,85,247,.12);color:#c084fc;border-color:rgba(168,85,247,.25)">💳 ${escHtml(o.payment_method)}</span>` : ''}
         ${o.wa_admin_name ? `<span class="order-tag">💬 ${escHtml(o.wa_admin_name)}</span>` : ''}
       </div>
       ${o.customer_note ? `<div class="order-note">"${escHtml(o.customer_note)}"</div>` : ''}

@@ -1124,10 +1124,16 @@
         const msg = _lines.join("\n");
         const totalAmount = fmtPlain(item.price * qty);
 
+        /* Generate order UUID + short code */
+        const _orderUUID = crypto.randomUUID();
+        const _orderRef = 'LT-' + _orderUUID.replace(/-/g, '').slice(-6).toUpperCase();
+
         /* Simpan pending order (url + data untuk Supabase), lalu tampilkan QRIS step */
         window._pendingWAOrder = {
             url: "https://wa.me/" + admin.number.replace(/\D/g, "") + "?text=" + encodeURIComponent(msg),
             orderData: {
+                id:             _orderUUID,
+                order_ref:      _orderRef,
                 item_id:        String(item.id),
                 item_name:      item.name,
                 item_emoji:     item.emoji || "🛒",
@@ -1138,7 +1144,7 @@
                 username:       un || null,
                 customer_note:  note || null,
                 wa_admin_name:  admin.name,
-                wa_admin_number: admin.number,
+                wa_admin_number: admin.number.replace(/\D/g, ""),
                 status:         "pending",
             },
         };

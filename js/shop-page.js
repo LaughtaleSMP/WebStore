@@ -600,7 +600,10 @@
       alert('Username Minecraft wajib diisi.'); return;
     }
 
-    if (!_proofUrl) {
+    const isFree = item.price === 0;
+
+    // Bukti bayar wajib hanya untuk item berbayar
+    if (!isFree && !_proofUrl) {
       alert('Silakan upload bukti pembayaran terlebih dahulu.'); return;
     }
 
@@ -635,12 +638,21 @@
       const sb = _getSb();
       const orderPayload = {
         id: orderUUID,
+        order_ref: orderCode,
         username: username || 'Anonim',
+        item_id: String(item.id),
         item_name: item.name,
+        item_emoji: item.emoji || '🛒',
+        item_category: item.category || '',
         qty: qty,
+        unit_price: item.price,
         total_price: total,
         status: 'pending',
-        customer_note: `Bayar: ${_selectedPayMethod}${_proofUrl ? ' | Bukti: ' + _proofUrl : ''}`,
+        customer_note: [
+          `Metode: ${_selectedPayMethod}`,
+          _proofUrl ? `Bukti: ${_proofUrl}` : (isFree ? 'Item GRATIS - tanpa bukti' : ''),
+        ].filter(Boolean).join(' | '),
+        payment_method: _selectedPayMethod,
         wa_admin_number: phone,
         wa_admin_name: admin.name || 'Admin',
       };
@@ -686,7 +698,11 @@
     msg += `💰 Total: *Rp ${total.toLocaleString('id-ID')}*\n`;
     if (username) msg += `🎮 IGN: *${username}*\n`;
     msg += `💳 Bayar via: *${_selectedPayMethod}*\n`;
-    msg += `\n🧾 *Bukti Pembayaran:*\n${_proofUrl}\n`;
+    if (_proofUrl) {
+      msg += `\n🧾 *Bukti Pembayaran:*\n${_proofUrl}\n`;
+    } else if (isFree) {
+      msg += `\n🆓 Item GRATIS — tanpa bukti pembayaran.\n`;
+    }
     msg += `━━━━━━━━━━━━━━━━━\n`;
     msg += `Mohon diproses ya kak. Terima kasih! 🙏`;
 
@@ -816,18 +832,25 @@
 
       let data = null;
 
-      // Jika input LT-XXXXXX → suffix 6 char terakhir dari UUID (tanpa dash)
       const ltMatch = raw.match(/^LT-([A-Z0-9]{6})$/);
       if (ltMatch) {
-        const wantSuffix = ltMatch[1].toUpperCase();
-        // Ambil orders terbaru (30 hari), cocokkan suffix di client — lebih reliable dari ilike
-        const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
-        const { data: rows, error } = await sb.from('orders').select('*')
-          .gte('created_at', since)
-          .order('created_at', { ascending: false })
-          .limit(200);
-        if (error) throw error;
-        data = (rows || []).find(o => o.id && o.id.replace(/-/g, '').slice(-6).toUpperCase() === wantSuffix) || null;
+        // Cari by order_ref dulu (paling cepat & akurat)
+        const { data: d1, error: e1 } = await sb.from('orders').select('*')
+          .eq('order_ref', raw).maybeSingle();
+        if (e1) throw e1;
+        if (d1) {
+          data = d1;
+        } else {
+          // Fallback: suffix match dari UUID (untuk order lama sebelum order_ref ada)
+          const wantSuffix = ltMatch[1].toUpperCase();
+          const since = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+          const { data: rows, error: e2 } = await sb.from('orders').select('*')
+            .gte('created_at', since)
+            .order('created_at', { ascending: false })
+            .limit(500);
+          if (e2) throw e2;
+          data = (rows || []).find(o => o.id && o.id.replace(/-/g, '').slice(-6).toUpperCase() === wantSuffix) || null;
+        }
       } else {
         // Input UUID penuh
         const { data: d, error } = await sb.from('orders').select('*').eq('id', raw.toLowerCase()).maybeSingle();
