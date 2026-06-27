@@ -117,8 +117,8 @@ async function _gtLoadHistory() {
     _gtUpdateBadge(pendingCount);
 
     el.innerHTML = `
-      <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:680px">
         <thead><tr>
           <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">STATUS</th>
           <th style="padding:8px 10px;color:var(--text-faint);font-size:11px;border-bottom:1px solid var(--border);text-align:left">PLAYER</th>

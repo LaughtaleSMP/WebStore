@@ -862,7 +862,7 @@ window.allOrdersLoad = async function () {
         Export Excel
       </button>
     </div>
-    <div style="overflow-x:auto">
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y">
       <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:780px;">
         <thead style="background:var(--surface2)">
           <tr>

@@ -149,7 +149,7 @@
         '<div class="gs-add-bar-right">' +
           '<input id="gs-new-range" type="text" maxlength="4" placeholder="E8" class="gs-input-range">' +
           '<input id="gs-new-label" type="text" maxlength="30" placeholder="Nama label (opsional)" class="gs-input-label">' +
-          '<input type="file" id="gs-new-file" accept=".png" style="display:none">' +
+          '<input type="file" id="gs-new-file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" style="display:none">' +
           '<button id="gs-new-upload" class="gs-add-btn">' +
             '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
             'Upload &amp; Tambah' +
@@ -198,7 +198,7 @@
           '<div class="gs-head-right">' +
             '<span class="pnl-pill ' + statusCls + '">' + statusLabel + '</span>' +
             _syncBadge(meta) +
-            '<input type="file" id="gs-file-' + r + '" accept=".png" style="display:none">' +
+            '<input type="file" id="gs-file-' + r + '" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" style="display:none">' +
             // Upload spinner slot
             '<span class="gs-upload-spinner" id="gs-spinner-' + r + '" style="display:none">' +
               '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a8fff" stroke-width="2.5" class="gs-spin"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>' +

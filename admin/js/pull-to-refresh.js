@@ -1,16 +1,23 @@
 // pull-to-refresh.js — Mobile Pull-to-Refresh for Admin Panel
 // Native-like pull-to-refresh experience untuk update data
+// v2: direction lock, scrollable-child awareness, stricter activation
 
 (function() {
   'use strict';
 
   var pullThreshold = 80; // Distance to trigger refresh
   var maxPull = 120; // Maximum pull distance
+  var DIRECTION_LOCK_PX = 12; // Min movement before locking direction
+  var ANGLE_LOCK = 35; // Degrees — must be more vertical than this to count as pull
+
   var startY = 0;
+  var startX = 0;
   var currentY = 0;
   var isPulling = false;
   var isRefreshing = false;
-  var scrollTop = 0;
+  var dirLocked = false; // true once we decided H vs V
+  var isVertical = false; // locked to vertical direction
+  var aborted = false; // true if touch started in scrollable child or horizontal gesture
 
   var indicator = null;
   var spinner = null;
@@ -61,6 +68,36 @@
         '@media (prefers-reduced-motion: reduce) { #pull-refresh-indicator * { animation: none !important; transition: none !important; } }';
       document.head.appendChild(style);
     }
+  }
+
+  // Check if an element or any ancestor is horizontally scrollable
+  function _isInScrollableX(el) {
+    while (el && el !== document.body && el !== document.documentElement) {
+      if (el.scrollWidth > el.clientWidth + 2) {
+        var style = window.getComputedStyle(el);
+        var overflowX = style.overflowX;
+        if (overflowX === 'auto' || overflowX === 'scroll') {
+          return true;
+        }
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }
+
+  // Check if an element or any ancestor is vertically scrollable AND not at top
+  function _isInScrollableYNotAtTop(el) {
+    while (el && el !== document.body && el !== document.documentElement) {
+      if (el.scrollTop > 0 && el.scrollHeight > el.clientHeight + 2) {
+        var style = window.getComputedStyle(el);
+        var overflowY = style.overflowY;
+        if (overflowY === 'auto' || overflowY === 'scroll') {
+          return true;
+        }
+      }
+      el = el.parentElement;
+    }
+    return false;
   }
 
   // Update indicator based on pull distance
@@ -179,7 +216,7 @@
         break;
       default:
         // Generic refresh - just reload page data
-        console.log('[PTR] Generic refresh for:', sectionId);
+        break;
     }
 
     // Hide indicator after refresh
@@ -194,23 +231,63 @@
   // Touch event handlers
   function handleTouchStart(e) {
     if (isRefreshing) return;
+    if (e.touches.length !== 1) return; // Only single finger
 
-    scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    
+    var pageScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
     // Only allow pull at top of page
-    if (scrollTop > 0) return;
+    if (pageScrollTop > 0) { aborted = true; return; }
+
+    var target = e.touches[0].target || e.target;
+
+    // Abort if touch starts inside a scrollable-Y child that isn't at its top
+    if (_isInScrollableYNotAtTop(target)) { aborted = true; return; }
+
+    // Mark if touch starts inside horizontally scrollable area
+    // (we'll use this to avoid blocking horizontal scroll)
+    aborted = false;
+    dirLocked = false;
+    isVertical = false;
+    isPulling = false;
+
+    // If inside a horizontal scrollable, abort PTR entirely
+    // to let the browser handle horizontal scroll natively
+    if (_isInScrollableX(target)) { aborted = true; return; }
 
     startY = e.touches[0].clientY;
-    isPulling = false;
+    startX = e.touches[0].clientX;
   }
 
   function handleTouchMove(e) {
-    if (isRefreshing || scrollTop > 0) return;
+    if (isRefreshing || aborted) return;
+    if (e.touches.length !== 1) return;
 
     currentY = e.touches[0].clientY;
+    var currentX = e.touches[0].clientX;
     var deltaY = currentY - startY;
+    var deltaX = currentX - startX;
 
-    // Only pull down
+    // Direction lock: decide H vs V once we have enough movement
+    if (!dirLocked && (Math.abs(deltaY) > DIRECTION_LOCK_PX || Math.abs(deltaX) > DIRECTION_LOCK_PX)) {
+      var angle = Math.atan2(Math.abs(deltaY), Math.abs(deltaX)) * 180 / Math.PI;
+      isVertical = angle > (90 - ANGLE_LOCK); // Must be clearly vertical
+      dirLocked = true;
+
+      // If horizontal or diagonal — abort PTR, let browser handle scroll
+      if (!isVertical) {
+        aborted = true;
+        if (isPulling) {
+          hideIndicator();
+          isPulling = false;
+        }
+        return;
+      }
+    }
+
+    // Not locked yet — don't do anything
+    if (!dirLocked) return;
+
+    // Only pull down (not up)
     if (deltaY <= 0) {
       if (isPulling) {
         hideIndicator();
@@ -219,7 +296,7 @@
       return;
     }
 
-    // Check if we should prevent scroll
+    // Re-check page scroll position (could have changed)
     var currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
     if (currentScrollTop > 0) return;
 
@@ -230,11 +307,9 @@
     var resistance = 0.5;
     var pullDistance = Math.min(deltaY * resistance, maxPull);
 
-    // Prevent default scroll when pulling (fix iOS bounce conflict)
+    // Prevent default scroll when pulling far enough
     if (pullDistance > 10) {
       e.preventDefault();
-      // Also prevent body scroll
-      document.body.style.overflow = 'hidden';
     }
 
     updateIndicator(pullDistance);
@@ -242,9 +317,6 @@
 
   function handleTouchEnd(e) {
     if (!isPulling || isRefreshing) return;
-
-    // Restore body scroll
-    document.body.style.overflow = '';
 
     var deltaY = currentY - startY;
     var resistance = 0.5;
@@ -263,29 +335,22 @@
     }
 
     isPulling = false;
+    dirLocked = false;
+    isVertical = false;
+    aborted = false;
   }
 
   // Initialize
   function init() {
     createIndicator();
 
-    // Bind touch events to main content
+    // Bind touch events to main content only (not #app — avoids double-fire)
     var mainContent = document.querySelector('.main-content');
     if (mainContent) {
       mainContent.addEventListener('touchstart', handleTouchStart, { passive: true });
       mainContent.addEventListener('touchmove', handleTouchMove, { passive: false });
       mainContent.addEventListener('touchend', handleTouchEnd, { passive: true });
     }
-
-    // Also bind to app container as fallback
-    var app = document.getElementById('app');
-    if (app) {
-      app.addEventListener('touchstart', handleTouchStart, { passive: true });
-      app.addEventListener('touchmove', handleTouchMove, { passive: false });
-      app.addEventListener('touchend', handleTouchEnd, { passive: true });
-    }
-
-    console.log('[PTR] Pull-to-Refresh initialized');
   }
 
   // Expose refresh function globally
@@ -305,7 +370,6 @@
       return;
     }
     window['_' + panelId + 'Refresh'] = refreshFn;
-    console.log('[PTR] Registered refresh handler for:', panelId);
   };
 
 })();
