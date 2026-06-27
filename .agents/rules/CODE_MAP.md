@@ -68,7 +68,8 @@ scripts/
 │   └── utils/
 │       ├── storage.js       # Listing persistence (DP chunking)
 │       ├── items.js         # Item serialization/deserialization
-│       └── helpers.js       # Price formatting, filtering
+│       ├── helpers.js       # Price formatting, filtering
+│       └── pricing.js       # Smart pricing engine (EWMA, Bayesian, enchant/durability)
 │
 ├── store/                   # In-game shop (admin-managed catalog)
 │   ├── config.js            # Store config, categories

@@ -294,7 +294,7 @@
             <div id="sp-pay-holder" style="font-size:.75rem;color:var(--sp-green);margin-top:5px;font-weight:700"></div>
             <div id="sp-pay-name" style="font-size:.72rem;color:var(--sp-purple-l);margin-top:2px;font-weight:600"></div>
             <div id="sp-qris-wrap" style="display:none;margin-top:10px;text-align:center;width:100%">
-              <img src="assets/Laughtale-Qris-Payment.jpeg" alt="QRIS Laughtale SMP" style="width:100%;max-width:280px;margin:0 auto;display:block;border-radius:10px;border:1px solid var(--sp-border)">
+              <img src="assets/qris1.1.jpeg" alt="QRIS Laughtale SMP" style="width:100%;max-width:280px;margin:0 auto;display:block;border-radius:10px;border:1px solid var(--sp-border)">
               <div style="font-size:.68rem;color:var(--sp-muted);margin-top:6px;text-align:center">Screenshot QR lalu scan di aplikasi e-wallet / m-banking kamu</div>
             </div>
           </div>

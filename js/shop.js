@@ -1157,10 +1157,10 @@
             for (const s of scripts) {
                 if (s.src && s.src.includes("shop.js")) {
                     const base = s.src.replace(/js\/shop\.js.*$/, "");
-                    return base + "assets/Laughtale-Qris-Payment.jpeg";
+                    return base + "assets/qris1.1.jpeg";
                 }
             }
-            return "assets/Laughtale-Qris-Payment.jpeg";
+            return "assets/qris1.1.jpeg";
         })();
 
         const freeNote = `<div class="shop-qris-note">Item ini <strong>GRATIS</strong> — tidak perlu pembayaran.<br>Langsung kirim konfirmasi ke WhatsApp Admin.</div>`;
