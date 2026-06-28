@@ -789,10 +789,10 @@ window.allOrdersLoad = async function () {
   } catch (e) { /* silent */ }
 
   var _ds = {
-    gem: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M2 9h20"/></svg>',
-    box: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>',
-    hr: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
-    no: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="vertical-align:-1px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+    gem: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M2 9h20"/></svg>',
+    box: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>',
+    hr: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+    no: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
   };
   function _dlvBadge(o) {
     var n = (o.item_name || '').toLowerCase();
@@ -804,11 +804,11 @@ window.allOrdersLoad = async function () {
     if (!t) return '<span style="color:var(--text-faint);font-size:11px">&mdash;</span>';
     if (t.status === 'done') {
       return t.result_msg.includes('(online')
-        ? '<span style="background:rgba(45,212,191,.12);color:#2dd4bf;border:1px solid rgba(45,212,191,.25);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600">' + _ds.gem + ' Masuk</span>'
-        : '<span style="background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.2);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600">' + _ds.box + ' Antri</span>';
+        ? '<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(45,212,191,.12);color:#2dd4bf;border:1px solid rgba(45,212,191,.25);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;white-space:nowrap">' + _ds.gem + ' Masuk</span>'
+        : '<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.2);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;white-space:nowrap">' + _ds.box + ' Antri</span>';
     }
-    if (t.status === 'failed') return '<span style="background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600">' + _ds.no + ' Gagal</span>';
-    return '<span style="background:rgba(250,204,21,.08);color:#facc15;border:1px solid rgba(250,204,21,.2);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;animation:pulse 2s infinite">' + _ds.hr + ' Proses</span>';
+    if (t.status === 'failed') return '<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;white-space:nowrap">' + _ds.no + ' Gagal</span>';
+    return '<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(250,204,21,.08);color:#facc15;border:1px solid rgba(250,204,21,.2);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:600;white-space:nowrap;animation:pulse 2s infinite">' + _ds.hr + ' Proses</span>';
   }
 
   var _stSvg = {
