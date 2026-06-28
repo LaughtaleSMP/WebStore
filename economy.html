@@ -57,7 +57,7 @@
       border:1px solid rgba(255,255,255,0.06);
       box-shadow:inset 0 2px 12px rgba(0,0,0,0.5),0 0 0 1px rgba(168,85,247,0.06),0 8px 32px rgba(0,0,0,0.3);
       background:linear-gradient(180deg,rgba(15,15,26,0.7) 0%,rgba(9,9,15,0.9) 100%)}
-    #trend-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab;user-select:none;position:relative}
+    #trend-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none;cursor:grab;user-select:none;position:relative}
     #trend-scroll::-webkit-scrollbar{display:none}
     #trend-scroll.grabbing{cursor:grabbing}
     #trend-scroll canvas{display:block}
@@ -81,7 +81,8 @@
     .trend-metric-bar .tab{font-size:.42rem;padding:4px 10px;transition:all .2s}
     .trend-metric-bar .tab.a{box-shadow:0 0 10px rgba(168,85,247,0.12)}
     #health-content{font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);line-height:1.7}
-    .ptbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .ptbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none;-ms-overflow-style:none}
+    .ptbl-wrap::-webkit-scrollbar{display:none}
     @keyframes fs{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
     @media(max-width:700px){
       .eco-grid{grid-template-columns:repeat(2,1fr)}
@@ -113,6 +114,20 @@
       .trend-ohlc-bar{font-size:.36rem;gap:3px}
       .trend-ohlc-bar span{padding:2px 5px !important}
       .guide-grid{grid-template-columns:1fr;gap:8px}
+      /* Pricing table — autofit kolom, scroll jika overflow */
+      #tbl-price{width:max-content;min-width:100%}
+      #tbl-price th,#tbl-price td{white-space:nowrap;padding:4px 5px;font-size:.36rem}
+      #tbl-price th{font-size:.3rem}
+      /* Pricing basis text wrapping */
+      #pricing-basis{font-size:.32rem !important;word-break:break-all}
+      /* Tax KPI row responsive */
+      .ts-kpi-row{grid-template-columns:repeat(2,1fr) !important;gap:4px}
+      .ts-kpi-val{font-size:.48rem !important}
+      .ts-kpi-lbl{font-size:.28rem}
+      /* Inflation flow tags compact */
+      #inf-flows span{font-size:.3rem !important}
+      /* Trend bottom panel compact */
+      .trend-btm-panel{padding:10px !important;gap:10px !important}
     }
 
     /* ════ STORE TAB — Compact, Professional ════ */
@@ -133,11 +148,11 @@
     .ts-col .ptbl td{padding:4px 6px}
     .ts-col .sec-title{font-size:.48rem}
     /* Tax & Simulation tables can scroll horizontally if too wide */
-    .ts-col .cd > table.ptbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+    .ts-col .cd > table.ptbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;white-space:nowrap}
     .ts-col .cd > table.ptbl thead,
     .ts-col .cd > table.ptbl tbody{display:table;width:100%;table-layout:fixed}
     /* Store tables in narrow column — horizontal scroll if needed */
-    .ts-col .st-body{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .ts-col .st-body{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x}
     .ts-col .st-tbl{min-width:100%;font-size:.42rem}
     .ts-col .st-tbl th{font-size:.32rem;padding:4px 6px;white-space:nowrap}
     .ts-col .st-tbl td{padding:4px 6px}
@@ -154,9 +169,16 @@
     .ts-col .st-search{min-width:100px;max-width:none;flex:1;font-size:.52rem;padding:5px 10px}
     .ts-col .st-btn{font-size:.4rem;padding:4px 10px}
     .ts-col .st-legend{font-size:.38rem;padding:6px 10px;line-height:1.5}
-    /* Dalam grid kanan/kiri, hide tier tengah untuk hemat space */
+    /* Dalam grid kanan/kiri desktop, hide tier tengah untuk hemat space */
     .ts-col .st-tbl .tier-mid{display:none}
     .ts-col .st-tbl .per-unit-col{display:none}
+    /* Mobile stacked (1-col): tampilkan semua data karena ada ruang penuh */
+    @media(max-width:700px){
+      .ts-col .st-tbl .tier-mid{display:table-cell}
+      .ts-col .st-tbl .per-unit-col{display:table-cell}
+      .ts-col .st-tbl{width:max-content;min-width:100%}
+      .ts-col .cd>table.ptbl thead,.ts-col .cd>table.ptbl tbody{table-layout:auto}
+    }
     .st-hdr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm)}
     .st-search{flex:1;min-width:180px;max-width:300px;font-family:'Inter',sans-serif;font-size:.6rem;padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);outline:none;transition:border-color .2s}
     .st-search:focus{border-color:var(--ac)}
@@ -214,9 +236,10 @@
       .st-search{min-width:140px}
     }
     @media(max-width:480px){
-      .st-tbl .per-unit{display:none}
-      .st-tbl th.per-unit-col,.st-tbl td.per-unit-col{display:none}
       .st-stat-val{font-size:.64rem}
+      .st-body{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none}
+      .st-body::-webkit-scrollbar{display:none}
+      .st-tbl{width:max-content;min-width:100%}
     }
 
     /* ═══ MARKET ANALYTICS v2 — Advanced ═══ */
@@ -251,14 +274,24 @@
     .mkt-vol{color:var(--gold);font-weight:600}
     .mkt-spread{font-family:'JetBrains Mono',monospace;font-size:.32rem;color:var(--dim);margin-top:1px;display:block}
     @media(max-width:700px){
-      .mkt-kpi-row{grid-template-columns:repeat(3,1fr)}
+      .mkt-kpi-row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:4px}
+      .mkt-kpi-row::-webkit-scrollbar{display:none}
+      .mkt-kpi{min-width:100px;flex:0 0 auto}
       .mkt-kpi-val{font-size:.48rem}
       .mkt-kpi-lbl{font-size:.26rem}
-      #tbl-top-items .mkt-col-vol{display:none}
-      #tbl-top-items .mkt-col-cat{display:none}
+      #tbl-top-items{width:max-content;min-width:100%}
+      #tbl-top-items th,#tbl-top-items td{white-space:nowrap;padding:5px 6px;font-size:.36rem}
+      #tbl-top-items th{font-size:.3rem}
+      .mkt-toolbar{gap:6px}
+      .mkt-search{min-width:120px;font-size:.46rem;padding:6px 12px}
+      .mkt-btn{font-size:.36rem;padding:5px 10px}
+      .mkt-cats{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none;flex-wrap:nowrap;padding-bottom:2px}
+      .mkt-cats::-webkit-scrollbar{display:none}
     }
     @media(max-width:480px){
-      .mkt-kpi-row{grid-template-columns:1fr 1fr}
+      .mkt-kpi{min-width:90px}
+      #tbl-top-items th,#tbl-top-items td{font-size:.32rem;padding:4px 5px}
+      #tbl-top-items th{font-size:.28rem}
     }
   </style>
 </head>
