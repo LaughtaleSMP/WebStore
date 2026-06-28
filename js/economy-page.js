@@ -296,14 +296,28 @@
     }
     var fd = $('inf-flows');
     if (fd && hasFlow) {
+      var _fLabels = {
+        mob_kill:'Mob Kill',topup:'Topup',topup_first_bonus:'1st Topup',gacha_refund:'Gacha Ref',pvp_refund:'PvP Ref',
+        weekly_reward:'Weekly LB',first_sale:'1st Sale',land_refund:'Land Ref',tax_distribute:'Tax Distrib',
+        ubi_injection:'UBI',daily_wisdom:'Wisdom',login_reward:'Login',quest_reward:'Quest',achievement_reward:'Achieve',
+        lucky_wheel:'Wheel',pvp_kill_transfer:'PvP Loot',gacha_gem_refund:'Gacha Ref(G)',
+        gacha_cost:'Gacha',bank_tax:'Bank Tax',mob_penalty:'Anti-Stack',pvp_penalty:'PvP Pen',
+        auction_fee:'Auc Fee',wealth_tax:'W.Tax',demurrage:'Demurrage',
+        land_buy:'Land',land_ppn:'Land PPN',land_buy_gem:'Land(G)',
+        land_expand:'Expand',land_expand_ppn:'Exp PPN',land_expand_gem:'Exp(G)',
+        store_sink:'Store',alice_buff:'Alice',lucky_wheel_fee:'Wheel Fee',
+        gacha_gem_cost:'Gacha(G)',killfx_purchase:'Kill FX',killfx_purchase_gem:'KFX(G)',
+        pvp_alt_farm_penalty:'Alt Farm',admin_give:'Admin Give',admin_deduct:'Admin Deduct'
+      };
       var srcH = '', snkH = '';
-      for (var i = 0; i < sources.length; i++) {
-        var v = flow[sources[i].k] || 0; if (v === 0) continue;
-        srcH += '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:rgba(52,211,153,0.08);margin:2px"><span style="color:var(--green);font-weight:600">+' + fmtN(v) + '</span><span style="color:var(--mute)">' + sources[i].label + '</span></span>';
-      }
-      for (var i = 0; i < sinks.length; i++) {
-        var v = flow[sinks[i].k] || 0; if (v === 0) continue;
-        snkH += '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:rgba(239,68,68,0.08);margin:2px"><span style="color:var(--red)">' + fmtN(v) + '</span><span style="color:var(--mute)">' + sinks[i].label + '</span></span>';
+      for (var fk in flow) {
+        var v = flow[fk] || 0; if (v === 0) continue;
+        var lb = _fLabels[fk] || fk.replace(/_/g,' ');
+        if (v > 0) {
+          srcH += '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:rgba(52,211,153,0.08);margin:2px"><span style="color:var(--green);font-weight:600">+' + fmtN(v) + '</span><span style="color:var(--mute)">' + lb + '</span></span>';
+        } else {
+          snkH += '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;background:rgba(239,68,68,0.08);margin:2px"><span style="color:var(--red)">' + fmtN(v) + '</span><span style="color:var(--mute)">' + lb + '</span></span>';
+        }
       }
       fd.innerHTML = (srcH || snkH) ? '<div style="display:flex;flex-wrap:wrap;gap:2px;font-family:\'JetBrains Mono\',monospace;font-size:.38rem">' + srcH + snkH + '</div>' : '';
     }
@@ -2290,7 +2304,7 @@
       daily_wisdom: 'Daily Wisdom', login_reward: 'Login Reward',
       quest_reward: 'Quest Reward', achievement_reward: 'Achievement',
       lucky_wheel: 'Lucky Wheel', pvp_kill_transfer: 'PvP Loot',
-      gacha_gem_refund: 'Gacha Refund (Gem)',
+      gacha_gem_refund: 'Gacha Refund (Gem)', admin_give: 'Admin Give',
       // Sinks (negative)
       gacha_cost: 'Gacha Cost', bank_tax: 'Bank Tax',
       mob_penalty: 'Anti-Stack', pvp_penalty: 'PvP Penalty',
@@ -2301,7 +2315,7 @@
       store_sink: 'Store Buy', alice_buff: 'Alice Buff',
       lucky_wheel_fee: 'Wheel Fee', gacha_gem_cost: 'Gacha Cost (Gem)',
       killfx_purchase: 'Kill FX', killfx_purchase_gem: 'Kill FX (Gem)',
-      pvp_alt_farm_penalty: 'Alt Farm Penalty'
+      pvp_alt_farm_penalty: 'Alt Farm Penalty', admin_deduct: 'Admin Deduct'
     };
     // Auto-build sources & sinks from actual flow data
     var sources = [], sinks = [];
@@ -3031,13 +3045,37 @@
     }
     if (totalIn > 0 || totalOut > 0) {
       infDesc.push('');
-      var srcLabel = { mob_kill: 'Farming', gacha_refund: 'Refund Gacha', pvp_refund: 'Refund PvP', first_sale: 'First Sale Bonus', topup: 'Admin Topup', weekly_reward: 'Reward Mingguan', ubi_injection: 'UBI Pemain Baru' };
-      var snkLabel = { gacha_cost: 'Gacha', bank_tax: 'Pajak Transfer', mob_penalty: 'Anti-Stack', pvp_penalty: 'Penalti PvP', auction_fee: 'Fee Auction', store_sink: 'Store Beli' };
-      infDesc.push('Sumber penciptaan koin (injection):');
-      for (var i = 0; i < srcKeys.length; i++) { var v = fl[srcKeys[i]] || 0; if (v > 0) infDesc.push('  • ' + (srcLabel[srcKeys[i]] || srcKeys[i]) + ': ' + tag(sevC.g, '+' + fmtN(v))); }
-      if (totalOut > 0) {
+      var _fLabels = {
+        mob_kill:'Mob Kill',topup:'Topup',topup_first_bonus:'1st Topup',gacha_refund:'Gacha Ref',pvp_refund:'PvP Ref',
+        weekly_reward:'Weekly LB',first_sale:'1st Sale',land_refund:'Land Ref',tax_distribute:'Tax Distrib',
+        ubi_injection:'UBI',daily_wisdom:'Wisdom',login_reward:'Login',quest_reward:'Quest',achievement_reward:'Achieve',
+        lucky_wheel:'Wheel',pvp_kill_transfer:'PvP Loot',gacha_gem_refund:'Gacha Ref(G)',
+        gacha_cost:'Gacha',bank_tax:'Bank Tax',mob_penalty:'Anti-Stack',pvp_penalty:'PvP Pen',
+        auction_fee:'Auc Fee',wealth_tax:'W.Tax',demurrage:'Demurrage',
+        land_buy:'Land',land_ppn:'Land PPN',land_buy_gem:'Land(G)',
+        land_expand:'Expand',land_expand_ppn:'Exp PPN',land_expand_gem:'Exp(G)',
+        store_sink:'Store',alice_buff:'Alice',lucky_wheel_fee:'Wheel Fee',
+        gacha_gem_cost:'Gacha(G)',killfx_purchase:'Kill FX',killfx_purchase_gem:'KFX(G)',
+        pvp_alt_farm_penalty:'Alt Farm',admin_give:'Admin Give',admin_deduct:'Admin Deduct'
+      };
+      
+      var srcLines = [];
+      var snkLines = [];
+      
+      for (var fk in fl) {
+        var v = fl[fk] || 0; if (v === 0) continue;
+        var lb = _fLabels[fk] || fk.replace(/_/g,' ');
+        if (v > 0) srcLines.push('  • ' + lb + ': ' + tag(sevC.g, '+' + fmtN(v)));
+        else snkLines.push('  • ' + lb + ': ' + tag(sevC.r, fmtN(v)));
+      }
+      
+      if (srcLines.length > 0) {
+        infDesc.push('Sumber penciptaan koin (injection):');
+        for (var i = 0; i < srcLines.length; i++) infDesc.push(srcLines[i]);
+      }
+      if (snkLines.length > 0) {
         infDesc.push('Mekanisme penyerapan koin (sink):');
-        for (var i = 0; i < snkKeys.length; i++) { var v = fl[snkKeys[i]] || 0; if (v !== 0) infDesc.push('  • ' + (snkLabel[snkKeys[i]] || snkKeys[i]) + ': ' + tag(sevC.r, fmtN(v))); }
+        for (var i = 0; i < snkLines.length; i++) infDesc.push(snkLines[i]);
       }
       var sinkRatio = totalIn > 0 ? (totalOut / totalIn * 100).toFixed(0) : 0;
       infDesc.push('Rasio sink/source: ' + tag(sinkRatio > 70 ? sevC.g : sinkRatio > 40 ? sevC.y : sevC.r, sinkRatio + '%') + '. ' + (sinkRatio > 80 ? 'Keseimbangan fiskal sangat baik.' : sinkRatio > 50 ? 'Cukup seimbang.' : 'Koin masuk jauh lebih banyak dari yang diserap. Tekanan inflasi tinggi.'));
