@@ -72,8 +72,13 @@
 
   // Check if an element or any ancestor is horizontally scrollable
   function _isInScrollableX(el) {
+    if (el && typeof el.closest === 'function') {
+      if (el.closest('.fv2-table-wrap') || el.closest('[style*="overflow-x:auto"]') || el.closest('[style*="overflow-x: auto"]')) {
+        return true;
+      }
+    }
     while (el && el !== document.body && el !== document.documentElement) {
-      if (el.scrollWidth > el.clientWidth + 2) {
+      if (el.scrollWidth > el.clientWidth) {
         var style = window.getComputedStyle(el);
         var overflowX = style.overflowX;
         if (overflowX === 'auto' || overflowX === 'scroll') {
