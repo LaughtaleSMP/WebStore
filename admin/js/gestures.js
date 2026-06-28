@@ -128,6 +128,20 @@
     if (icon) icon.innerHTML = '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>';
   }
 
+  function _isInScrollableX(el) {
+    while (el && el !== document.body && el !== document.documentElement) {
+      if (el.scrollWidth > el.clientWidth + 2) {
+        var style = window.getComputedStyle(el);
+        var overflowX = style.overflowX;
+        if (overflowX === 'auto' || overflowX === 'scroll') {
+          return true;
+        }
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }
+
   /* ── Touch handlers ── */
   function _onTouchStart(e) {
     // Only single-finger gestures
@@ -143,6 +157,19 @@
     _isHoriz     = false;
     _fromEdge    = _startX <= EDGE_ZONE;
     _sidebarWasOpen = _isOpen();
+
+    // If sidebar is closed and touch didn't start at the edge, abort gesture tracking entirely
+    if (!_sidebarWasOpen && !_fromEdge) {
+      _dragging = false;
+      return;
+    }
+
+    // Also abort if touch starts inside a horizontally scrollable element (like tables) when sidebar is closed
+    var target = t.target || e.target;
+    if (!_sidebarWasOpen && _isInScrollableX(target)) {
+      _dragging = false;
+      return;
+    }
 
     // Prepare GPU layer for sidebar if we might drag it
     if (_fromEdge || _sidebarWasOpen) {

@@ -57,7 +57,7 @@
       border:1px solid rgba(255,255,255,0.06);
       box-shadow:inset 0 2px 12px rgba(0,0,0,0.5),0 0 0 1px rgba(168,85,247,0.06),0 8px 32px rgba(0,0,0,0.3);
       background:linear-gradient(180deg,rgba(15,15,26,0.7) 0%,rgba(9,9,15,0.9) 100%)}
-    #trend-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none;cursor:grab;user-select:none;position:relative}
+    #trend-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:grab;user-select:none;position:relative}
     #trend-scroll::-webkit-scrollbar{display:none}
     #trend-scroll.grabbing{cursor:grabbing}
     #trend-scroll canvas{display:block}
@@ -81,7 +81,7 @@
     .trend-metric-bar .tab{font-size:.42rem;padding:4px 10px;transition:all .2s}
     .trend-metric-bar .tab.a{box-shadow:0 0 10px rgba(168,85,247,0.12)}
     #health-content{font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);line-height:1.7}
-    .ptbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none;-ms-overflow-style:none}
+    .ptbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}
     .ptbl-wrap::-webkit-scrollbar{display:none}
     @keyframes fs{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
     @media(max-width:700px){
@@ -148,11 +148,11 @@
     .ts-col .ptbl td{padding:4px 6px}
     .ts-col .sec-title{font-size:.48rem}
     /* Tax & Simulation tables can scroll horizontally if too wide */
-    .ts-col .cd > table.ptbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;white-space:nowrap}
+    .ts-col .cd > table.ptbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
     .ts-col .cd > table.ptbl thead,
     .ts-col .cd > table.ptbl tbody{display:table;width:100%;table-layout:fixed}
     /* Store tables in narrow column — horizontal scroll if needed */
-    .ts-col .st-body{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x}
+    .ts-col .st-body{overflow-x:auto;-webkit-overflow-scrolling:touch}
     .ts-col .st-tbl{min-width:100%;font-size:.42rem}
     .ts-col .st-tbl th{font-size:.32rem;padding:4px 6px;white-space:nowrap}
     .ts-col .st-tbl td{padding:4px 6px}
@@ -237,7 +237,7 @@
     }
     @media(max-width:480px){
       .st-stat-val{font-size:.64rem}
-      .st-body{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none}
+      .st-body{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
       .st-body::-webkit-scrollbar{display:none}
       .st-tbl{width:max-content;min-width:100%}
     }
@@ -274,7 +274,7 @@
     .mkt-vol{color:var(--gold);font-weight:600}
     .mkt-spread{font-family:'JetBrains Mono',monospace;font-size:.32rem;color:var(--dim);margin-top:1px;display:block}
     @media(max-width:700px){
-      .mkt-kpi-row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:4px}
+      .mkt-kpi-row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:4px}
       .mkt-kpi-row::-webkit-scrollbar{display:none}
       .mkt-kpi{min-width:100px;flex:0 0 auto}
       .mkt-kpi-val{font-size:.48rem}
@@ -285,7 +285,7 @@
       .mkt-toolbar{gap:6px}
       .mkt-search{min-width:120px;font-size:.46rem;padding:6px 12px}
       .mkt-btn{font-size:.36rem;padding:5px 10px}
-      .mkt-cats{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none;flex-wrap:nowrap;padding-bottom:2px}
+      .mkt-cats{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap;padding-bottom:2px}
       .mkt-cats::-webkit-scrollbar{display:none}
     }
     @media(max-width:480px){
