@@ -203,28 +203,12 @@
     var hasFlow = false;
     for (var k in flow) { if (flow[k] !== 0) { hasFlow = true; break; } }
     var injected = 0, sunk = 0;
-    var sources = [
-      { k: 'mob_kill', label: 'Mob Kill' }, { k: 'topup', label: 'Topup' },
-      { k: 'topup_first_bonus', label: '1st Topup Bonus' },
-      { k: 'gacha_refund', label: 'Gacha Refund' }, { k: 'pvp_refund', label: 'PvP Refund' },
-      { k: 'weekly_reward', label: 'Weekly LB' }, { k: 'first_sale', label: '1st Sale' },
-      { k: 'land_refund', label: 'Land Refund' }, { k: 'tax_distribute', label: 'Tax Distrib' },
-      { k: 'ubi_injection', label: 'UBI Pemain Baru' }
-    ];
-    var sinks = [
-      { k: 'gacha_cost', label: 'Gacha Cost' }, { k: 'bank_tax', label: 'Bank Tax' },
-      { k: 'mob_penalty', label: 'Anti-Stack' }, { k: 'pvp_penalty', label: 'PvP Penalty' },
-      { k: 'auction_fee', label: 'Auction Fee' }, { k: 'wealth_tax', label: 'Wealth Tax' },
-      { k: 'demurrage', label: 'Demurrage' },
-      { k: 'land_buy', label: 'Land Buy' }, { k: 'land_ppn', label: 'Land PPN' },
-      { k: 'land_buy_gem', label: 'Land (Gem)' },
-      { k: 'land_expand', label: 'Land Expand' }, { k: 'land_expand_ppn', label: 'Expand PPN' },
-      { k: 'land_expand_gem', label: 'Expand (Gem)' },
-      { k: 'store_sink', label: 'Store Buy' }
-    ];
     if (hasFlow) {
-      for (var i = 0; i < sources.length; i++) { var v = flow[sources[i].k] || 0; if (v > 0) injected += v; }
-      for (var i = 0; i < sinks.length; i++) { var v = Math.abs(flow[sinks[i].k] || 0); if (v > 0) sunk += v; }
+      for (var fk in flow) {
+        var fv = flow[fk] || 0;
+        if (fv > 0) injected += fv;
+        else if (fv < 0) sunk += Math.abs(fv);
+      }
       // Simpan snapshot non-zero ke localStorage (TTL 48 jam)
       try { localStorage.setItem('_eco_flow_snap', JSON.stringify({ f: flow, inj: injected, snk: sunk, snaps: agg.snapshots, ts: Date.now() })); } catch (e) {}
     } else {
@@ -345,14 +329,14 @@
   }
 
   function _aggFlow() {
-    var f = { mob_kill: 0, gacha_refund: 0, pvp_refund: 0, first_sale: 0, topup: 0, topup_first_bonus: 0, weekly_reward: 0, gacha_cost: 0, gacha_gem_cost: 0, gacha_gem_refund: 0, bank_tax: 0, mob_penalty: 0, pvp_penalty: 0, auction_fee: 0, land_buy: 0, land_ppn: 0, land_buy_gem: 0, land_refund: 0, wealth_tax: 0, tax_distribute: 0, store_sink: 0, ubi_injection: 0, demurrage: 0 };
+    var f = {};
     var bv = 0, av = 0, cnt = 0, gini = 0, giniCnt = 0;
     for (var i = 0; i < _trendData.length; i++) {
       var row = _trendData[i], cf = row.coin_flow;
       if (cf) {
         var p = typeof cf === 'string' ? safeParse(cf, null) : cf;
         if (p) {
-          for (var k in f) { if (p[k]) f[k] += p[k]; }
+          for (var k in p) { if (p[k] && k[0] !== '_') f[k] = (f[k] || 0) + p[k]; }
           bv += (p._bv || 0);
           av += (p._av || 0);
           if (p._gini) { gini += p._gini; giniCnt++; }
@@ -2279,7 +2263,7 @@
     // otherwise fall back to single bucket duration.
     var tEnd = c.tEnd || (c.t + bms);
     
-    var flow = { mob_kill: 0, topup: 0, topup_first_bonus: 0, gacha_refund: 0, pvp_refund: 0, weekly_reward: 0, first_sale: 0, land_refund: 0, tax_distribute: 0, ubi_injection: 0, gacha_cost: 0, bank_tax: 0, mob_penalty: 0, pvp_penalty: 0, auction_fee: 0, wealth_tax: 0, demurrage: 0, land_buy: 0, land_ppn: 0, store_sink: 0, land_expand: 0, land_expand_ppn: 0, land_expand_gem: 0, land_buy_gem: 0 };
+    var flow = {};
     
     var snaps = 0;
     for (var i = 0; i < _trendData.length; i++) {
@@ -2289,31 +2273,45 @@
         var cf = row.coin_flow;
         var p = typeof cf === 'string' ? safeParse(cf, null) : cf;
         if (p) {
-          for (var k in flow) { if (p[k]) flow[k] += p[k]; }
+          for (var k in p) { if (p[k] && k[0] !== '_') flow[k] = (flow[k] || 0) + p[k]; }
         }
         snaps++;
       }
     }
     
-    var sources = [
-      { k: 'mob_kill', label: 'Mob Kill' }, { k: 'topup', label: 'Topup' },
-      { k: 'topup_first_bonus', label: '1st Topup Bonus' },
-      { k: 'gacha_refund', label: 'Gacha Refund' }, { k: 'pvp_refund', label: 'PvP Refund' },
-      { k: 'weekly_reward', label: 'Weekly LB' }, { k: 'first_sale', label: '1st Sale' },
-      { k: 'land_refund', label: 'Land Refund' }, { k: 'tax_distribute', label: 'Tax Distrib' },
-      { k: 'ubi_injection', label: 'UBI Pemain Baru' }
-    ];
-    var sinks = [
-      { k: 'gacha_cost', label: 'Gacha Cost' }, { k: 'bank_tax', label: 'Bank Tax' },
-      { k: 'mob_penalty', label: 'Anti-Stack' }, { k: 'pvp_penalty', label: 'PvP Penalty' },
-      { k: 'auction_fee', label: 'Auction Fee' }, { k: 'wealth_tax', label: 'Wealth Tax' },
-      { k: 'demurrage', label: 'Demurrage' },
-      { k: 'land_buy', label: 'Land Buy' }, { k: 'land_ppn', label: 'Land PPN' },
-      { k: 'land_buy_gem', label: 'Land (Gem)' },
-      { k: 'land_expand', label: 'Land Expand' }, { k: 'land_expand_ppn', label: 'Expand PPN' },
-      { k: 'land_expand_gem', label: 'Expand (Gem)' },
-      { k: 'store_sink', label: 'Store Buy' }
-    ];
+    // Known flow labels — any key NOT listed here will still show (auto-detected)
+    var _flowLabels = {
+      // Sources (positive)
+      mob_kill: 'Mob Kill', topup: 'Topup', topup_first_bonus: '1st Topup Bonus',
+      gacha_refund: 'Gacha Refund', pvp_refund: 'PvP Refund',
+      weekly_reward: 'Weekly LB', first_sale: '1st Sale',
+      land_refund: 'Land Refund', tax_distribute: 'Tax Distrib',
+      ubi_injection: 'UBI Pemain Baru',
+      daily_wisdom: 'Daily Wisdom', login_reward: 'Login Reward',
+      quest_reward: 'Quest Reward', achievement_reward: 'Achievement',
+      lucky_wheel: 'Lucky Wheel', pvp_kill_transfer: 'PvP Loot',
+      gacha_gem_refund: 'Gacha Refund (Gem)',
+      // Sinks (negative)
+      gacha_cost: 'Gacha Cost', bank_tax: 'Bank Tax',
+      mob_penalty: 'Anti-Stack', pvp_penalty: 'PvP Penalty',
+      auction_fee: 'Auction Fee', wealth_tax: 'Wealth Tax',
+      demurrage: 'Demurrage', land_buy: 'Land Buy', land_ppn: 'Land PPN',
+      land_buy_gem: 'Land (Gem)', land_expand: 'Land Expand',
+      land_expand_ppn: 'Expand PPN', land_expand_gem: 'Expand (Gem)',
+      store_sink: 'Store Buy', alice_buff: 'Alice Buff',
+      lucky_wheel_fee: 'Wheel Fee', gacha_gem_cost: 'Gacha Cost (Gem)',
+      killfx_purchase: 'Kill FX', killfx_purchase_gem: 'Kill FX (Gem)',
+      pvp_alt_farm_penalty: 'Alt Farm Penalty'
+    };
+    // Auto-build sources & sinks from actual flow data
+    var sources = [], sinks = [];
+    for (var fk in flow) {
+      var fv = flow[fk] || 0;
+      if (fv === 0) continue;
+      var fLabel = _flowLabels[fk] || fk.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+      if (fv > 0) sources.push({ k: fk, label: fLabel });
+      else sinks.push({ k: fk, label: fLabel });
+    }
     
     var inj = 0, snk = 0;
     var srcH = '', snkH = '';
@@ -2972,10 +2970,11 @@
     var pp = (med / ct) * n * 100;
     var topPct = c.max > 0 ? (c.max / ct * 100) : 0;
     var totalIn = 0, totalOut = 0;
-    var srcKeys = ['mob_kill', 'gacha_refund', 'pvp_refund', 'first_sale', 'topup', 'weekly_reward'];
-    var snkKeys = ['gacha_cost', 'bank_tax', 'mob_penalty', 'pvp_penalty', 'auction_fee', 'store_sink'];
-    for (var i = 0; i < srcKeys.length; i++) totalIn += (fl[srcKeys[i]] || 0);
-    for (var i = 0; i < snkKeys.length; i++) totalOut += Math.abs(fl[snkKeys[i]] || 0);
+    for (var hk in fl) {
+      var hv = fl[hk] || 0;
+      if (hv > 0) totalIn += hv;
+      else if (hv < 0) totalOut += Math.abs(hv);
+    }
     var netAll = totalIn - totalOut;
     var hrs = _trendData.length > 1 ? (new Date(last.ts || 0) - new Date(first.ts || 0)) / 3600000 : 0;
     var supplyDelta = (last.coin_total || 0) - (first.coin_total || 0);
