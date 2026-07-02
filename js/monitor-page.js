@@ -365,6 +365,7 @@ function _switchServer(idx){
   _expSet.clear();_afkTracker={}; // [FIX] reset map exploration & AFK tracker antar server
   _entBudgetLastHash='';_lagPredBuf=[];_lagPredDismissed=false;_hideLagPredict(); // reset anti-lag features
   _lagLogActive=null;_tpsCorrLastLen=0; // reset lag log + TPS correlation
+  window._zbDebugLogged=false; // reset zone border debug flag
   _hideErrBanner();
   // Reset UI to loading state
   _origSafeSet('s-label','MEMUAT...');safeClass('s-label','sl ld');
@@ -576,6 +577,11 @@ function applyBDSMetrics(m){
   // Preserve existing radarLands if this sync doesn't include land_claims
   if(m.land_claims&&m.land_claims.length)radarLands=m.land_claims;
   radarZoneBorders=m.zone_borders||[];
+  // Debug: log zone_borders once
+  if(radarZoneBorders.length && !window._zbDebugLogged){
+    console.log('[Monitor] zone_borders received:', radarZoneBorders);
+    window._zbDebugLogged = true;
+  }
   if(radarPlayers.length||radarLands.length||radarZoneBorders.length){
     drawRadar();
     var pdc=$('player-details-card');if(pdc)pdc.style.display='block';
