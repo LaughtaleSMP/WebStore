@@ -222,7 +222,7 @@
         }
       } catch (e) {}
       if (!hasFlow) {
-        for (var i = 0; i < topup.length; i++) if ((topup[i].x || topup[i].action) === 'add') injected += Math.abs(topup[i].n || topup[i].amount || 0);
+        for (var i = 0; i < topup.length; i++) { var _act = topup[i].x || topup[i].action; if (_act === 'add' || _act === 'topup') injected += Math.abs(topup[i].n || topup[i].amount || 0); }
         for (var i = 0; i < gacha.length; i++) sunk += Math.abs(gacha[i].cost || gacha[i].c || 0);
       }
     }
@@ -1054,7 +1054,8 @@
     var el = $('log-content'); if (!logs.length) { el.innerHTML = '<div class="emp">Belum ada log topup</div>'; return }
     var sorted = logs.slice().sort(function (a, b) { return (b.ts || 0) - (a.ts || 0) });
     el.innerHTML = sorted.map(function (h, i) {
-      var cur = h.c === 'gem' ? 'Gem' : 'Koin', curCls = h.c === 'gem' ? 'gem' : 'coin', act = h.x === 'add' ? '+' : '-', actCls = h.x === 'add' ? 'add' : 'deduct';
+      var isAdd = (h.x === 'add' || h.x === 'topup');
+      var cur = h.c === 'gem' ? 'Gem' : 'Koin', curCls = h.c === 'gem' ? 'gem' : 'coin', act = isAdd ? '+' : '-', actCls = isAdd ? 'add' : 'deduct';
       return '<div class="log-row" style="animation:fs .3s ' + i * 30 + 'ms ease both"><div class="log-icon ' + actCls + '">' + (_ic[actCls] || '') + '</div><div class="log-body"><div class="log-main"><span class="pn admin">' + esc(h.a || 'Admin') + '</span> <span class="arrow">→</span> <span class="pn">' + esc(h.t || '?') + '</span>' + (h.o ? ' <span class="badge offline">Offline</span>' : '') + '</div><div class="log-detail">' + fmt(h.b) + ' → ' + fmt(h.f) + ' ' + cur + ' · <span class="log-time">' + timeAgo(h.ts) + '</span></div></div><div class="log-amount ' + actCls + '">' + act + fmt(h.n) + ' <span class="cur ' + curCls + '">' + cur + '</span></div></div>';
     }).join('');
   }
