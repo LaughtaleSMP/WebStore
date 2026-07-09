@@ -701,9 +701,9 @@
       cards.push(buildCard('Wealth Tax', '#f472b6',
         treasuryBar +
         section('Tier Pajak Harian (Semua Player)') +
-        row('> 5.000', '0.5%/hari', 'ringan') +
-        row('> 20.000', '1.0%/hari', 'sedang') +
-        row('> 50.000', '2.0%/hari', 'tinggi') +
+        row('> 5.000', '1.0%/hari', 'ringan') +
+        row('> 20.000', '3.0%/hari', 'sedang') +
+        row('> 50.000', '6.0%/hari', 'tinggi') +
         note('Dipotong otomatis 1x/hari (20:00 WIB). Treasury didistribusikan gradual via subsidi aktivitas.')
       ));
     }
