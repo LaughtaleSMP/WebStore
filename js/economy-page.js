@@ -370,16 +370,19 @@
     var n = s.n || 1, gini = s.gini || 0;
     var c = s.coin, med = c.median, avg = c.avg;
     var org = (agg.flow.mob_kill || 0) + (agg.flow.gacha_refund || 0) + (agg.flow.pvp_refund || 0) + (agg.flow.first_sale || 0);
-    var incPerSnap = n > 0 ? org / n : 0;
-    var incPerHour = agg.snapshots >= 12 ? (org / n / agg.snapshots) * 12 : incPerSnap * 12;
+    var incPerHour = (n > 0 && agg.snapshots > 0) ? (org / n / agg.snapshots) * 12 : 0;
     var txVol = agg.bankVol + agg.auctionVol;
     var vel = c.total > 0 ? txVol / c.total : 0.01;
     var vMul = Math.max(0.8, Math.min(1.3, vel * 20));
     var gMul = gini > 0.5 ? 0.7 : gini > 0.3 ? 0.85 : 1.0;
     // Coin triple-anchor
     var cA1 = incPerHour, cA2 = med > 0 ? med * 0.02 : 0, cA3 = avg > 0 ? avg * 0.01 : 0;
-    var coinBasis = Math.max(cA1, cA2, cA3, 1);
-    var coinAnchor = coinBasis === cA1 ? 'income' : coinBasis === cA2 ? 'median' : coinBasis === cA3 ? 'avg' : 'floor';
+    var sAnchors = (_data && _data.lb && _data.lb.guide && _data.lb.guide.anchors) ? _data.lb.guide.anchors : [cA1, cA2, cA3];
+    var coinBasis = (_data && _data.lb && _data.lb.guide && Number.isFinite(_data.lb.guide.basis) && _data.lb.guide.basis > 0)
+      ? _data.lb.guide.basis
+      : Math.max(cA1, cA2, cA3, 1);
+    var sMaxAnchor = Math.max(sAnchors[0] || 0, sAnchors[1] || 0, sAnchors[2] || 0, 25);
+    var coinAnchor = (sMaxAnchor === (sAnchors[0] || 0)) ? 'income' : (sMaxAnchor === (sAnchors[1] || 0)) ? 'median' : (sMaxAnchor === (sAnchors[2] || 0)) ? 'avg' : 'floor';
     function calcC(cat) {
       var t = { basic: [0.5, 1, 2], mid: [2, 4, 6], premium: [4, 8, 16], endgame: [12, 24, 48], luxury: [24, 48, 96] }[cat];
       return [Math.round(coinBasis * t[0] * vMul * gMul), Math.round(coinBasis * t[1] * vMul * gMul), Math.round(coinBasis * t[2] * vMul * gMul)];
@@ -429,14 +432,16 @@
           prevSnaps++;
         }
 
-        var prevIncPerSnap = prevN > 0 ? prevOrg / prevN : 0;
-        var prevIncPerHour = prevSnaps >= 12 ? (prevOrg / prevN / prevSnaps) * 12 : prevIncPerSnap * 12;
+        var prevIncPerHour = (prevN > 0 && prevSnaps > 0) ? (prevOrg / prevN / prevSnaps) * 12 : 0;
         var prevVel = prevCT > 0 ? (prevBV + prevAV) / prevCT : 0.01;
         var prevVMul = Math.max(0.8, Math.min(1.3, prevVel * 20));
         var prevGini = prevGiniCnt > 0 ? prevGiniSum / prevGiniCnt : 0;
         var prevGMul = prevGini > 0.5 ? 0.7 : prevGini > 0.3 ? 0.85 : 1.0;
         var pA1 = prevIncPerHour, pA2 = prevMed > 0 ? prevMed * 0.02 : 0, pA3 = prevAvg > 0 ? prevAvg * 0.01 : 0;
-        var prevCoinBasis = Math.max(pA1, pA2, pA3, 1);
+        var prevFlow = prevRow.coin_flow ? (typeof prevRow.coin_flow === 'string' ? safeParse(prevRow.coin_flow, {}) : prevRow.coin_flow) : {};
+        var prevCoinBasis = (prevFlow && Number.isFinite(prevFlow._iph))
+          ? prevFlow._iph
+          : ((prevFlow && Number.isFinite(prevFlow._pi)) ? prevFlow._pi : Math.max(pA1, pA2, pA3, 1));
         var prevTiers = { basic: [0.5, 1, 2], mid: [2, 4, 6], premium: [4, 8, 16], endgame: [12, 24, 48], luxury: [24, 48, 96] };
         function pCalc(cat) {
           var t = prevTiers[cat];

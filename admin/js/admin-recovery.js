@@ -446,10 +446,16 @@
     var md = b.mimi_data;
     if (md && (md.ct || md.cn || md.it || md.in)) {
       var slotCount = [md.ct, md.cn, md.it, md.in].filter(Boolean).length;
-      mimiHtml = '<span class="pnl-pill pnl-pill-purple">' + slotCount + ' slot</span> ' +
-        '<button class="rcv-goto-mimi" data-name="' + escHtml(b.name) + '" style="font-size:9px;font-weight:700;padding:3px 7px;border-radius:var(--r-sm);background:transparent;color:var(--text-faint);border:1px solid var(--border);cursor:pointer" title="Buka di Mimi Inka">' +
+      mimiHtml = '<div style="display:flex;align-items:center;gap:4px">' +
+        '<span class="pnl-pill pnl-pill-purple">' + slotCount + ' slot</span>' +
+        '<button class="rcv-restore-mimi-only-btn" data-name="' + escHtml(b.name) + '" style="font-size:9px;font-weight:700;padding:3px 6px;border-radius:var(--r-sm);background:rgba(167,139,250,0.1);color:#a78bfa;border:1px solid rgba(167,139,250,0.2);cursor:pointer;display:inline-flex;align-items:center;gap:2px" title="Restore Mimi Instan via Queue">' +
+          '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>' +
+          'Restore' +
+        '</button>' +
+        '<button class="rcv-goto-mimi" data-name="' + escHtml(b.name) + '" style="font-size:9px;font-weight:700;padding:3px 6px;border-radius:var(--r-sm);background:transparent;color:var(--text-faint);border:1px solid var(--border);cursor:pointer;display:inline-flex;align-items:center" title="Buka Detail Mimi Inka">' +
           '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>' +
-        '</button>';
+        '</button>' +
+      '</div>';
     } else {
       mimiHtml = '<span class="mi-slot-empty">-</span>';
     }
@@ -569,6 +575,16 @@
       });
     });
 
+    document.querySelectorAll('.rcv-restore-mimi-only-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var name = this.getAttribute('data-name');
+        if (!name) return;
+        var backupItem = filtered.find(function(b) { return b.name === name; });
+        if (!backupItem || !backupItem.mimi_data) return;
+        _confirmRestoreMimiOnly(name, backupItem.mimi_data, this);
+      });
+    });
+
     /* Cross-link → Mimi Inka */
     document.querySelectorAll('.rcv-goto-mimi').forEach(function(btn) {
       btn.addEventListener('click', function() {
@@ -635,6 +651,16 @@
     var sb = window._adminSb;
     if (!sb) { showAdminToast('Supabase belum siap', 'error'); return; }
 
+    function serializeMimiData(mimiData) {
+      if (!mimiData || typeof mimiData !== 'object') return '';
+      var parts = [];
+      if (mimiData.ct) parts.push('ct=' + encodeURIComponent(mimiData.ct));
+      if (mimiData.cn) parts.push('cn=' + encodeURIComponent(mimiData.cn));
+      if (mimiData.it) parts.push('it=' + encodeURIComponent(mimiData.it));
+      if (mimiData.in) parts.push('in=' + encodeURIComponent(mimiData.in));
+      return parts.length > 0 ? 'mimi:' + parts.join('&') : '';
+    }
+
     var origText = btn.textContent;
     btn.disabled = true;
     btn.textContent = 'Mengirim...';
@@ -643,9 +669,19 @@
     var success = 0, fail = 0;
     for (var i = 0; i < entries.length; i++) {
       try {
+        var entry = entries[i];
+        var backupItem = _cache ? _cache.find(function(b) { return b.name === entry.name; }) : null;
+        var importStr = entry.data || 'GS5|gem:0';
+        if (backupItem && backupItem.mimi_data) {
+          var mimiPart = serializeMimiData(backupItem.mimi_data);
+          if (mimiPart) {
+            importStr += '|' + mimiPart;
+          }
+        }
+
         var { error } = await sb.from('recovery_queue').insert({
-          player_name: entries[i].name,
-          import_string: entries[i].data,
+          player_name: entry.name,
+          import_string: importStr,
           status: 'pending',
         });
         if (error) throw error;
@@ -672,7 +708,63 @@
     if (statusEl) statusEl.textContent = success + ' dikirim' + (fail > 0 ? ', ' + fail + ' gagal' : '');
   }
 
-  /* ── Restore All Mimi: bulk push title+nametag ke mimi_commands ──
+  function _confirmRestoreMimiOnly(name, mimiData, btn) {
+    var msg = 'Restore Kustomisasi Mimi untuk player ' + name + '?\n\n' +
+      'Tindakan ini aman dan HANYA memulihkan title/nametag Mimi tanpa mengubah Gem atau Koin player.';
+
+    if (typeof window.showMgrConfirm === 'function') {
+      window.showMgrConfirm({
+        title: 'Restore Mimi Only',
+        message: msg,
+        confirmText: 'Restore Mimi',
+        danger: false,
+        onConfirm: function () { _doRestoreMimiOnly(name, mimiData, btn); },
+      });
+    } else {
+      if (!confirm(msg)) return;
+      _doRestoreMimiOnly(name, mimiData, btn);
+    }
+  }
+
+  async function _doRestoreMimiOnly(name, mimiData, btn) {
+    var sb = window._adminSb;
+    if (!sb) { showAdminToast('Supabase belum siap', 'error'); return; }
+
+    var origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Kirim...';
+
+    try {
+      var parts = [];
+      if (mimiData.ct) parts.push('ct=' + encodeURIComponent(mimiData.ct));
+      if (mimiData.cn) parts.push('cn=' + encodeURIComponent(mimiData.cn));
+      if (mimiData.it) parts.push('it=' + encodeURIComponent(mimiData.it));
+      if (mimiData.in) parts.push('in=' + encodeURIComponent(mimiData.in));
+      
+      if (parts.length === 0) {
+        throw new Error('Data Mimi kosong');
+      }
+      
+      var importStr = 'MIMI_ONLY|mimi:' + parts.join('&');
+
+      var { error } = await sb.from('recovery_queue').insert({
+        player_name: name,
+        import_string: importStr,
+        status: 'pending',
+      });
+      if (error) throw error;
+      
+      showAdminToast('Antrean restore Mimi untuk ' + name + ' berhasil dikirim!', 'success');
+    } catch (e) {
+      console.warn('[Recovery] Mimi restore failed:', name, e);
+      showAdminToast('Gagal mengirim restore Mimi: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
+  }
+
+  /* ── Restore All Mimi: bulk push kustomisasi ke recovery_queue dengan format MIMI_ONLY ──
      silent=true: dipanggil internal dari _doRestore (tanpa toast ganda)  */
   async function _restoreAllMimi(silent) {
     var sb = window._adminSb;
@@ -680,28 +772,24 @@
     if (!_cache || !_cache.length) { showAdminToast('Muat data dulu (klik Refresh)', 'warn'); return; }
 
     // Kumpulkan semua player yang punya mimi_data
-    var SLOT_MAP = [
-      { slot: 'ct', action: 'assign_title'   },
-      { slot: 'cn', action: 'assign_nametag' },
-      { slot: 'it', action: 'assign_title'   },
-      { slot: 'in', action: 'assign_nametag' },
-    ];
-
     var rows = [];
     _cache.forEach(function(p) {
       var md = p.mimi_data;
       if (!md) return;
-      SLOT_MAP.forEach(function(m) {
-        var val = md[m.slot];
-        if (!val) return;
+      
+      var parts = [];
+      if (md.ct) parts.push('ct=' + encodeURIComponent(md.ct));
+      if (md.cn) parts.push('cn=' + encodeURIComponent(md.cn));
+      if (md.it) parts.push('it=' + encodeURIComponent(md.it));
+      if (md.in) parts.push('in=' + encodeURIComponent(md.in));
+      
+      if (parts.length > 0) {
         rows.push({
           player_name: p.name,
-          action: m.action,
-          slot: m.slot,
-          value: val,
+          import_string: 'MIMI_ONLY|mimi:' + parts.join('&'),
           status: 'pending',
         });
-      });
+      }
     });
 
     if (!rows.length) { 
@@ -713,11 +801,11 @@
     if (btn) { btn.disabled = true; btn.textContent = 'Mengirim...'; }
 
     var ok = 0, fail = 0;
-    // Batch 10 rows sekaligus
+    // Batch 10 rows sekaligus ke recovery_queue
     for (var i = 0; i < rows.length; i += 10) {
       var batch = rows.slice(i, i + 10);
       try {
-        var res = await sb.from('mimi_commands').insert(batch);
+        var res = await sb.from('recovery_queue').insert(batch);
         if (res.error) throw res.error;
         ok += batch.length;
       } catch(e) {
@@ -733,13 +821,13 @@
 
     if (!silent) {
       if (fail === 0) {
-        showAdminToast('Restore Mimi: ' + ok + ' command dikirim! Addon proses ~30 detik.', 'success');
+        showAdminToast('Restore Mimi Massal: ' + ok + ' player berhasil dikirim ke antrean!', 'success');
       } else {
-        showAdminToast('Mimi: ' + ok + ' berhasil, ' + fail + ' gagal', 'error');
+        showAdminToast('Mimi Massal: ' + ok + ' berhasil, ' + fail + ' gagal', 'error');
       }
     } else {
       // Dipanggil dari _doRestore — tambahkan info ke toast yang sudah ada
-      if (ok > 0) showAdminToast('+ ' + ok + ' Mimi command dikirim ke server.', 'success');
+      if (ok > 0) showAdminToast('+ ' + ok + ' data Mimi dikirim ke antrean.', 'success');
     }
   }
 
