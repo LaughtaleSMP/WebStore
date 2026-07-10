@@ -1128,25 +1128,28 @@
       var ts = h.ts || 0;
       var rawName = h.item;
       if (!rawName) continue;
-      var name = String(rawName).trim();
+      var name = String(rawName).trim().replace(/§[0-9a-fk-or]/gi, ''); // clean formatting
       if (!name || name === '?') continue;
-      var key = name.toLowerCase();
       var priceRaw = Number(h.price) || 0;
       if (priceRaw <= 0) continue;
       var qty = Number(h.qty) || 1;
       var ppu = priceRaw / qty;
-      var itemId = h.itemId || '';
+      var itemIdRaw = h.itemId || '';
+      var itemId = itemIdRaw.replace('minecraft:', '');
+
+      var key = itemId ? itemId.toLowerCase() : name.toLowerCase();
 
       var s = agg[key];
       if (!s) {
-        var cat = _mktCat(itemId);
+        var cat = _mktCat(itemIdRaw);
+        var dispName = itemId ? itemId.split('_').map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' ') : name;
         s = agg[key] = {
-          name: name, itemId: itemId, cat: cat.id, catLabel: cat.label, catCls: cat.cls,
+          name: dispName, itemId: itemId, cat: cat.id, catLabel: cat.label, catCls: cat.cls,
           count: 0, total: 0, min: ppu, max: ppu, txCount: 0,
           recent: 0, old: 0, recentSum: 0, oldSum: 0, trendPct: 0
         };
       }
-      if (!s.itemId && itemId) { s.itemId = itemId; var c2 = _mktCat(itemId); s.cat = c2.id; s.catLabel = c2.label; s.catCls = c2.cls; }
+      if (!s.itemId && itemId) { s.itemId = itemId; var c2 = _mktCat(itemIdRaw); s.cat = c2.id; s.catLabel = c2.label; s.catCls = c2.cls; }
       s.count += qty;
       s.total += priceRaw;
       s.txCount++;
@@ -1180,11 +1183,12 @@
       for (var p = 0; p < pi.length; p++) {
         var pr = pi[p];
         if (!pr || !pr.item_name) continue;
-        var pName = String(pr.item_name).trim();
+        var pName = String(pr.item_name).trim().replace(/§[0-9a-fk-or]/gi, '');
         if (!pName || pName === '?') continue;
-        var pKey = pName.toLowerCase();
-        if (agg[pKey]) continue; // already covered by raw logs
-        var pCat = _mktCat(pr.item_id || '');
+        var pIdRaw = pr.item_id || '';
+        var pId = pIdRaw.replace('minecraft:', '');
+        var pKey = pId ? pId.toLowerCase() : pName.toLowerCase();
+
         var pAvg = Number(pr.avg_price) || 0;
         var pMin = Number(pr.min_price) || 0;
         var pMax = Number(pr.max_price) || 0;
@@ -1192,13 +1196,29 @@
         var pQty = Number(pr.avg_qty) || 1;
         var pVol = Number(pr.total_volume) || 0;
         var pCount = pTx * pQty;
+
+        if (agg[pKey]) {
+          var e = agg[pKey];
+          if (e.fromIndex) {
+            e.count += pCount;
+            e.total += pVol;
+            e.txCount += pTx;
+            if (pMin > 0 && (e.min === 0 || pMin < e.min)) e.min = pMin;
+            if (pMax > e.max) e.max = pMax;
+          }
+          continue; 
+        }
+
+        var pCat = _mktCat(pIdRaw);
+        var dispName = pId ? pId.split('_').map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' ') : pName;
         arr.push({
-          name: pName, itemId: pr.item_id || '', cat: pCat.id, catLabel: pCat.label, catCls: pCat.cls,
+          name: dispName, itemId: pId, cat: pCat.id, catLabel: pCat.label, catCls: pCat.cls,
           count: pCount, total: pVol, min: pMin, max: pMax, txCount: pTx,
           avg: pAvg, spread: pMax > 0 ? Math.round((pMax - pMin) / pMax * 100) : 0,
           recent: 0, old: 0, recentSum: 0, oldSum: 0, trendPct: 0,
           fromIndex: true
         });
+        agg[pKey] = arr[arr.length - 1];
         totalTx += pTx;
         totalVol += pVol;
         totalUnits += pCount;
