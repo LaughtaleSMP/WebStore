@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="description" content="Laughtale SMP — Dokumentasi lengkap seluruh rumus matematika, formula ekonomi, dan algoritma moneter server.">
+  <meta name="theme-color" content="#a855f7">
+  <title>Rumus Ekonomi — Laughtale SMP</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/pages.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+  <style>
+    .fm{background:rgba(168,85,247,.04);border:1px solid rgba(168,85,247,.12);border-radius:var(--r-sm);padding:1rem 1.2rem;margin:.6rem 0;overflow-x:hidden;overflow-y:hidden}
+    .fm .katex-display{margin:.4em 0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+    .fm .katex-display>.katex{max-width:100%;text-align:left}
+    .fm .katex{font-size:1.05em}
+    .fn{font-size:.72rem;color:var(--dim);line-height:1.7;margin:.5rem 0}
+    .fn b{color:var(--text);font-weight:600}
+    .benefit-box{background:rgba(52,211,153,.04);border-left:3px solid var(--green);border-radius:0 var(--r-xs) var(--r-xs) 0;padding:.6rem 1rem;margin:.5rem 0;font-size:.7rem;color:rgba(52,211,153,.85);line-height:1.6}
+    .warn-box{background:rgba(248,113,113,.04);border-left:3px solid var(--red);border-radius:0 var(--r-xs) var(--r-xs) 0;padding:.6rem 1rem;margin:.5rem 0;font-size:.7rem;color:rgba(248,113,113,.85);line-height:1.6}
+    .note-box{background:rgba(168,85,247,.04);border-left:3px solid var(--ac);border-radius:0 var(--r-xs) var(--r-xs) 0;padding:.6rem 1rem;margin:.5rem 0;font-size:.7rem;color:rgba(168,85,247,.85);line-height:1.6}
+    .ptbl-math{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.65rem}
+    .ptbl-math th{text-align:left;color:var(--dim);font-weight:700;padding:6px 10px;border-bottom:1px solid var(--border2);font-size:.5rem;text-transform:uppercase;letter-spacing:.5px}
+    .ptbl-math td{padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text)}
+    .ptbl-math tr:hover td{background:rgba(168,85,247,.05)}
+    .section-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25);color:var(--ac);font-size:.55rem;font-weight:700;margin-right:6px;flex-shrink:0}
+    @media(max-width:560px){
+      .fm{padding:.7rem .8rem}
+      .fm .katex{font-size:.78em}
+      .ptbl-math{font-size:.55rem}
+      .ptbl-math th{font-size:.42rem;padding:4px 6px}
+      .ptbl-math td{padding:4px 6px}
+    }
+    @media(max-width:380px){
+      .fm .katex{font-size:.7em}
+    }
+  </style>
+</head>
+<body>
+<div class="w">
+
+<header class="hd">
+  <a href="economy.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>KEMBALI KE ECONOMY</a>
+  <div class="logo">LAUGHTALE <b>SMP</b></div>
+  <div class="sub">Cetak Biru Matematika Ekonomi</div>
+</header>
+
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>PARAMETER GLOBAL</span><div class="dvl"></div></div>
+
+<!-- ═══ I. PARAMETER ═══ -->
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title"><span class="section-num">I</span>VARIABEL DASAR</span><span class="pill p">NOTASI</span></div>
+  <table class="ptbl-math">
+    <tr><th>Simbol</th><th>Keterangan</th></tr>
+    <tr><td>$B_i$</td><td>Saldo koin milik pemain ke-$i$</td></tr>
+    <tr><td>$N$</td><td>Jumlah total pemain aktif</td></tr>
+    <tr><td>$\bar{B}$</td><td>Rata-rata saldo server = total koin ÷ jumlah pemain</td></tr>
+    <tr><td>$\tilde{B}$</td><td>Median saldo (nilai tengah urutan saldo — indikator kelas menengah)</td></tr>
+    <tr><td>$T$</td><td>Saldo Kas Negara (Laughtale Treasury)</td></tr>
+  </table>
+</div>
+
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>DYNAMIC PRICING</span><div class="dvl"></div></div>
+
+<!-- ═══ II. DYNAMIC PRICING ═══ -->
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title"><span class="section-num">II</span>HARGA AKHIR</span><span class="pill g">REAL-TIME</span></div>
+  <p class="fn">Semua harga di server (gacha, lahan, toko) <b>tidak tetap</b>. Harga dihitung ulang otomatis setiap detik berdasarkan kondisi ekonomi server saat itu. Tujuannya: harga selalu adil, tidak pernah terlalu murah (inflasi) atau terlalu mahal (pemain kabur).</p>
+  <div class="fm">$$P_{\text{akhir}} = P_{\text{basis}} \times v_{\text{mul}} \times g_{\text{mul}} \times K$$</div>
+  <p class="fn">Penjelasan tiap komponen:</p>
+  <table class="ptbl-math">
+    <tr><th>Komponen</th><th>Arti</th><th>Dari Mana?</th></tr>
+    <tr><td style="color:var(--cyan)">$P_{\text{basis}}$</td><td>Harga dasar</td><td>Dihitung otomatis dari 3 indikator ekonomi server (lihat Triple Anchor di bawah)</td></tr>
+    <tr><td style="color:var(--green)">$v_{\text{mul}}$</td><td>Pengali transaksi</td><td>Dari seberapa ramai jual-beli di server (0,8 sampai 1,3)</td></tr>
+    <tr><td style="color:var(--gold)">$g_{\text{mul}}$</td><td>Pengali kesenjangan</td><td>Dari Skor Gini — ukuran jurang kaya-miskin (0,7 atau 1,0)</td></tr>
+    <tr><td style="color:var(--ac)">$K$</td><td>Pengali kategori</td><td>Angka tetap berbeda per jenis pembelian (gacha, lahan, dll.)</td></tr>
+  </table>
+  <div class="note-box"><b>Contoh:</b> Jika $P_{\text{basis}}$ = 50, transaksi ramai ($v$ = 1,1), kesenjangan rendah ($g$ = 1,0), dan beli Gacha Tunggal ($K$ = 0,5):<br>Harga = 50 × 1,1 × 1,0 × 0,5 = <b>27 koin</b></div>
+</div>
+
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title">TRIPLE ANCHOR</span><span class="pill c">3 INDIKATOR</span></div>
+  <p class="fn"><b>Kenapa perlu Triple Anchor?</b> Kalau harga cuma berdasarkan 1 indikator, gampang dimanipulasi. Misalnya kalau cuma ikut rata-rata saldo, 1 Sultan bisa bikin harga naik gila-gilaan. Makanya sistem pakai 3 indikator dan pilih <b>yang terbesar</b>:</p>
+  <div class="fm">$$P_{\text{basis}} = \max(\text{cA}_1,\;\text{cA}_2,\;\text{cA}_3)$$</div>
+  <table class="ptbl-math">
+    <tr><th>Anchor</th><th>Rumus</th><th>Kenapa Ini Dipilih?</th></tr>
+    <tr><td style="color:var(--cyan)">cA₁</td><td>Koin/jam</td><td>Berapa koin yang didapat pemain per jam dari bunuh mob. Agar harga tidak lebih murah dari penghasilan per jam.</td></tr>
+    <tr><td style="color:var(--green)">cA₂</td><td>Median × 2%</td><td>2% dari saldo pemain "tengah". Agar pemain biasa tetap mampu beli.</td></tr>
+    <tr><td style="color:var(--gold)">cA₃</td><td>Rata-rata × 1%</td><td>1% dari rata-rata saldo semua pemain. Jaring pengaman jika Sultan mendominasi.</td></tr>
+  </table>
+  <div class="note-box"><b>Contoh:</b> Pemain dapat 40 koin/jam (cA₁=40). Median saldo = 3.000, jadi cA₂ = 3.000 × 2% = 60. Rata-rata = 5.000, jadi cA₃ = 5.000 × 1% = 50.<br>$P_{\text{basis}}$ = terbesar dari (40, 60, 50) = <b>60 koin</b></div>
+</div>
+
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title">VELOCITY (KECEPATAN UANG)</span><span class="pill y">PENGALI</span></div>
+  <p class="fn"><b>Kenapa ada pengali ini?</b> Bayangkan pasar tradisional. Kalau sedang rame pembeli, pedagang bisa naikkan harga sedikit. Kalau sepi, kasih diskon biar ada yang beli. Velocity bekerja sama persis:</p>
+  <div class="fm">$$v_{\text{mul}} = \text{antara } 0{,}8 \text{ sampai } 1{,}3$$</div>
+  <table class="ptbl-math">
+    <tr><th>Kondisi Server</th><th>$v_{\text{mul}}$</th><th>Efek</th></tr>
+    <tr><td>Transaksi sangat sepi</td><td style="color:var(--green)">0,8</td><td>Diskon 20% (menarik pembeli)</td></tr>
+    <tr><td>Transaksi normal</td><td>1,0</td><td>Harga normal</td></tr>
+    <tr><td>Transaksi sangat ramai</td><td style="color:var(--red)">1,3</td><td>Markup 30% (rem inflasi)</td></tr>
+  </table>
+</div>
+
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title">GINI (KESENJANGAN)</span><span class="pill y">PENGALI</span></div>
+  <p class="fn"><b>Kenapa ada pengali ini?</b> Jika 2-3 Sultan memegang 90% koin server, pemain biasa tidak mampu beli apa-apa. Gini Index mengukur seberapa timpang distribusi kekayaan (skala 0 sampai 1):</p>
+  <div class="fm">$$G = \frac{\text{total selisih saldo}}{2 \times N^2 \times \bar{B}}$$</div>
+  <table class="ptbl-math">
+    <tr><th>Skor Gini</th><th>$g_{\text{mul}}$</th><th>Artinya</th></tr>
+    <tr><td>$G \le 0{,}5$ (merata)</td><td>1,0</td><td>Harga normal, ekonomi sehat</td></tr>
+    <tr><td style="color:var(--red)">$G > 0{,}5$ (timpang)</td><td style="color:var(--green)">0,7</td><td>Diskon 30% otomatis agar warga miskin tetap bisa belanja</td></tr>
+  </table>
+</div>
+
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title">KOEFISIEN KATEGORI ($K$)</span></div>
+  <p class="fn"><b>Kenapa tiap jenis pembelian beda pengali?</b> Gacha tunggal sengaja dibuat murah (0,5×) agar pemain bisa coba-coba tanpa takut rugi. Lahan dibuat lebih mahal (4×) karena bernilai permanen. Gacha paket 10× di-diskon 10% dari harga 10 tarikan agar pemain terdorong beli sekaligus.</p>
+  <table class="ptbl-math">
+    <tr><th>Jenis</th><th>$K$</th><th>Kenapa Angka Segitu?</th></tr>
+    <tr><td>Gacha 1×</td><td style="color:var(--green)">0,5</td><td>Murah = pemain berani coba. Setengah dari harga dasar.</td></tr>
+    <tr><td>Gacha 10×</td><td style="color:var(--green)">4,5</td><td>Seharusnya 5,0 (10 × 0,5), tapi didiskon 10% jadi 4,5.</td></tr>
+    <tr><td>Klaim Lahan</td><td style="color:var(--gold)">4,0</td><td>Mahal karena permanen — lahan tidak hilang.</td></tr>
+  </table>
+</div>
+
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>REGULASI PERTANAHAN</span><div class="dvl"></div></div>
+
+<!-- ═══ III. LAND ═══ -->
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title"><span class="section-num">III</span>HARGA LAHAN MIMI LAND</span><span class="pill g">PROGRESIF</span></div>
+  <p class="fn"><b>Kenapa lahan makin besar makin mahal per blok?</b> Kalau semua ukuran harganya sama per blok, pemain kaya bisa langsung klaim 100×100 dan monopoli area. Pengali ukuran membuat lahan besar jadi jauh lebih mahal sehingga mendorong klaim secukupnya.</p>
+  <div class="fm">$$P_{\text{land}} = A \times P_{\text{basis}} \times T_{\text{size}}$$</div>
+  <p class="fn">$A$ = luas area (panjang × lebar dalam blok²). $P_{\text{basis}}$ = harga dasar dari Dynamic Pricing (bab II). $T_{\text{size}}$ = pengali ukuran:</p>
+  <table class="ptbl-math">
+    <tr><th>Ukuran Lahan</th><th>Pengali</th><th>Kenapa?</th></tr>
+    <tr><td>≤ 225 blok² (15×15)</td><td>1,0×</td><td>Ukuran rumah biasa, harga wajar</td></tr>
+    <tr><td>226–900 (30×30)</td><td>1,5×</td><td>Mansion, perlu investasi lebih</td></tr>
+    <tr><td>901–2500 (50×50)</td><td>2,0×</td><td>Kompleks besar, butuh komitmen</td></tr>
+    <tr><td>> 2500 blok²</td><td style="color:var(--red)">3,0×</td><td>Area raksasa, sengaja mahal agar langka</td></tr>
+  </table>
+  <div class="note-box"><b>Contoh:</b> Klaim 20×20 (A=400, masuk tier 1,5×), $P_{\text{basis}}$ = 60:<br>Harga = 400 × 60 × 1,5 = <b>36.000 koin</b></div>
+</div>
+
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title">DISKON & PPN LAHAN</span></div>
+  <p class="fn">Setelah harga dasar dihitung, ada 3 modifikasi terakhir. <b>Kenapa ada diskon rumah pertama?</b> Agar semua warga punya tempat tinggal dasar. <b>Kenapa ada PPN hoarding?</b> Agar 1 orang tidak klaim 10 lahan dan jadi tuan tanah.</p>
+  <div class="fm">$$P_{\text{final}} = P_{\text{land}} \times D_1 \times D_g \times (1 + \text{PPN})$$</div>
+  <table class="ptbl-math">
+    <tr><th>Komponen</th><th>Kondisi</th><th>Nilai</th><th>Kenapa?</th></tr>
+    <tr><td>$D_1$</td><td>Lahan ke-1</td><td style="color:var(--green)">0,5</td><td>Diskon 50% agar semua bisa punya rumah</td></tr>
+    <tr><td>$D_1$</td><td>Lahan ke-2+</td><td>1,0</td><td>Tidak ada diskon lagi</td></tr>
+    <tr><td>$D_g$</td><td>Bayar Gem</td><td style="color:var(--cyan)">0,01</td><td>Diskon 99% — insentif beli Gem (pendapatan server)</td></tr>
+    <tr><td>PPN</td><td>Lahan ke-4+</td><td style="color:var(--red)">+5%</td><td>Pajak anti-monopoli tanah per lahan baru</td></tr>
+  </table>
+</div>
+
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9Z"/></svg>GACHA & PITY</span><div class="dvl"></div></div>
+
+<!-- ═══ IV. GACHA ═══ -->
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title"><span class="section-num">IV</span>PROBABILITAS GACHA</span><span class="pill y">BOBOT</span></div>
+  <p class="fn"><b>Cara kerja:</b> Setiap item punya "bobot" (angka berat). Semakin besar bobotnya, semakin sering keluar. Sistem melempar dadu, lalu melihat item mana yang "terpilih" berdasarkan bobot. <b>Kenapa Legendary sangat kecil?</b> Agar item langka tetap berharga di ekonomi server — kalau semua dapat Legendary, nilainya jatuh.</p>
+  <p class="fn"><b>Gacha Partikel</b> (efek visual):</p>
+  <table class="ptbl-math">
+    <tr><th>Rarity</th><th>Bobot</th><th>Peluang</th></tr>
+    <tr><td style="color:#9ca3af">Common</td><td>55</td><td>55%</td></tr>
+    <tr><td style="color:var(--green)">Uncommon</td><td>25</td><td>25%</td></tr>
+    <tr><td style="color:#3b82f6">Rare</td><td>13</td><td>13%</td></tr>
+    <tr><td style="color:var(--ac)">Epic</td><td>6</td><td>6%</td></tr>
+    <tr><td style="color:var(--gold)">Legendary</td><td>1</td><td>1%</td></tr>
+  </table>
+  <p class="fn"><b>Gacha Equipment</b> (senjata/armor) — Legendary jauh lebih langka:</p>
+  <table class="ptbl-math">
+    <tr><th>Rarity</th><th>Bobot</th><th>Peluang</th></tr>
+    <tr><td style="color:#9ca3af">Common</td><td>50</td><td>≈58,1%</td></tr>
+    <tr><td style="color:var(--green)">Uncommon</td><td>30</td><td>≈34,9%</td></tr>
+    <tr><td style="color:#3b82f6">Rare</td><td>5</td><td>≈5,8%</td></tr>
+    <tr><td style="color:var(--ac)">Epic</td><td>1,0</td><td>≈1,2%</td></tr>
+    <tr><td style="color:var(--gold)">Legendary</td><td>0,08</td><td>≈0,09%</td></tr>
+  </table>
+</div>
+
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title">PITY (JAMINAN ANTI-SIAL)</span><span class="pill g">ANTI-SIAL</span></div>
+  <p class="fn"><b>Kenapa ada Pity?</b> Tanpa pity, pemain bisa tarik 500 kali tanpa dapat item bagus. Itu bikin frustrasi dan quit. Pity menjamin: "Kamu pasti dapat setelah sekian tarikan."</p>
+  <table class="ptbl-math">
+    <tr><th>Tipe</th><th>Jaminan</th><th>Penjelasan</th></tr>
+    <tr><td style="color:#3b82f6">Partikel Rare</td><td>300 tarikan</td><td>Setelah 300× tarik tanpa Rare, tarikan ke-301 dijamin Rare</td></tr>
+    <tr><td style="color:#3b82f6">Equipment Rare</td><td>30–80 tarikan</td><td>Batasnya dinamis. Rumus: 2000 ÷ harga per tarikan (minimal 30, maksimal 80)</td></tr>
+    <tr><td style="color:var(--gold)">Equipment Legendary</td><td>60–150 tarikan</td><td>Rumus: 5000 ÷ harga per tarikan (minimal 60, maksimal 150)</td></tr>
+  </table>
+  <div class="note-box"><b>Contoh:</b> Harga gacha = 50 koin/tarikan.<br>Pity Rare = 2000 ÷ 50 = <b>40 tarikan</b> (dalam rentang 30–80, jadi valid).<br>Pity Legendary = 5000 ÷ 50 = <b>100 tarikan</b> (dalam rentang 60–150, jadi valid).<br>Artinya: kamu <b>pasti</b> dapat Legendary sebelum tarikan ke-100.</div>
+</div>
+
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>PERPAJAKAN</span><div class="dvl"></div></div>
+
+<!-- ═══ V. TAX ═══ -->
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title"><span class="section-num">V</span>WEALTH TAX HARIAN</span><span class="pill r">PROGRESIF</span></div>
+  <p class="fn"><b>Kenapa ada pajak?</b> Tanpa pajak, koin hanya bertambah (dari farming) tapi tidak pernah berkurang. Akibatnya harga barang naik terus (inflasi). Pajak menyedot koin kelebihan lalu dibagikan kembali ke pemain miskin melalui Treasury.</p>
+  <p class="fn"><b>Cara hitung:</b> Pajak = Saldo × Tarif. Dipotong otomatis 1× per hari:</p>
+  <table class="ptbl-math">
+    <tr><th>Saldo Kamu</th><th>Tarif/Hari</th><th>Contoh Potongan</th></tr>
+    <tr><td style="color:var(--green)">< 5.000</td><td style="color:var(--green)">0% (BEBAS)</td><td>Rp 0 — pemain baru aman</td></tr>
+    <tr><td>5.000 – 19.999</td><td>1,0%</td><td>Saldo 10.000 → dipotong 100/hari</td></tr>
+    <tr><td>20.000 – 49.999</td><td>3,0%</td><td>Saldo 30.000 → dipotong 900/hari</td></tr>
+    <tr><td style="color:var(--red)">≥ 50.000</td><td style="color:var(--red)">6,0%</td><td>Saldo 100.000 → dipotong 6.000/hari</td></tr>
+  </table>
+  <div class="benefit-box">Uang pajak tidak hilang — masuk ke Treasury dan otomatis dibagikan ke 50% pemain termiskin setiap hari.</div>
+</div>
+
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title">DEMURRAGE (DENDA MENIMBUN)</span><span class="pill" style="color:#c084fc;background:rgba(192,132,252,.08);border:1px solid rgba(192,132,252,.2)">ANTI-HOARD</span></div>
+  <p class="fn"><b>Kenapa ada demurrage?</b> Pajak kekayaan saja tidak cukup. Ada Sultan yang saldo 100.000 tapi tidak pernah belanja — uangnya "mati" dan tidak ikut memutar ekonomi. Demurrage adalah hukuman tambahan khusus untuk mereka. Terinspirasi dari teori ekonom Silvio Gesell (1916).</p>
+  <p class="fn"><b>Syarat kena demurrage:</b> Saldo > 50.000 DAN tidak melakukan transaksi apapun selama 7+ hari.</p>
+  <table class="ptbl-math">
+    <tr><th>Hari Tanpa Transaksi</th><th>Potongan/Hari</th><th>Contoh (saldo 80.000)</th></tr>
+    <tr><td style="color:var(--green)">< 7 hari</td><td style="color:var(--green)">0% (aman)</td><td>Tidak kena</td></tr>
+    <tr><td>7 – 13 hari</td><td>1%</td><td>800 koin/hari</td></tr>
+    <tr><td style="color:var(--red)">≥ 14 hari</td><td style="color:var(--red)">2%</td><td>1.600 koin/hari</td></tr>
+  </table>
+  <div class="warn-box"><b>Cara menghindari:</b> Lakukan 1 transaksi apa saja (gacha 1×, transfer 1 koin, beli di toko, dll.) dan hitungan hari langsung reset ke 0. Sesederhana itu.</div>
+</div>
+
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title">SUBSIDI PENDAPATAN</span><span class="pill g">EARNED INCOME</span></div>
+  <p class="fn">Pemain dengan saldo rendah otomatis mendapat bonus dari Treasury saat bermain aktif:</p>
+  <div class="fm">$$\text{Eligible jika:}\quad B_i < 5.000 \;\wedge\; T > 100$$</div>
+  <table class="ptbl-math">
+    <tr><th>Aktivitas</th><th>Bonus</th><th>Sumber Dana</th></tr>
+    <tr><td>Membunuh monster</td><td style="color:var(--green)">+2 koin/kill</td><td>Treasury</td></tr>
+    <tr><td>Menyelesaikan quest</td><td style="color:var(--green)">+20% reward</td><td>Treasury</td></tr>
+  </table>
+  <div class="benefit-box">Bukan bantuan cuma-cuma — subsidi hanya diberikan saat pemain bermain aktif. Semakin rajin, semakin besar bonus.</div>
+</div>
+
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16h16"/><path d="M4 14l4-4 4 2 4-6 4 4"/></svg>STIMULUS & KESEJAHTERAAN</span><div class="dvl"></div></div>
+
+<!-- ═══ VI. STIMULUS ═══ -->
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title"><span class="section-num">VI</span>UBI PEMAIN BARU</span><span class="pill g">7 HARI</span></div>
+  <div class="fm">$$\text{UBI}(t_{\text{join}}) = \begin{cases} +100\;\text{koin/login} & t_{\text{join}} \le 7\;\text{hari} \\ 0 & t_{\text{join}} > 7\;\text{hari} \end{cases}$$</div>
+  <div class="benefit-box">Modal awal agar pemain baru bisa langsung ikut gacha atau klaim lahan tanpa menunggu berhari-hari. Terinspirasi riset Banerjee-Duflo (Nobel Ekonomi 2019).</div>
+</div>
+
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title">DETEKTOR STAGFLASI</span><span class="pill r">OTOMATIS</span></div>
+  <p class="fn">Tiga kondisi harus terpenuhi <b>bersamaan</b> untuk mengaktifkan Stimulus Week:</p>
+  <div class="fm">$$\begin{aligned} &\text{1. Inflasi: } \Delta M_s > 5\% \\ &\text{2. Pasar lesu: } U > 40\% \\ &\text{3. Pemain: } N \ge 10 \end{aligned}$$</div>
+  <p class="fn">Jika <b>ketiga syarat</b> terpenuhi bersamaan → <b>Stimulus Week aktif 7 hari</b>.</p>
+  <table class="ptbl-math">
+    <tr><th>Efek Stimulus Week (7 Hari)</th><th>Nilai</th></tr>
+    <tr><td>Hadiah Quest</td><td style="color:var(--green)">Reward × 2 (double)</td></tr>
+    <tr><td>Bonus Kill Monster</td><td style="color:var(--green)">Normal + 2 koin</td></tr>
+    <tr><td>UBI Pemain Baru</td><td style="color:var(--green)">100 + 50 = 150 koin/hari</td></tr>
+  </table>
+  <div class="note-box">Cooldown 14 hari setelah Stimulus berakhir sebelum bisa aktif lagi — mencegah stimulus permanen yang justru memperburuk inflasi.</div>
+</div>
+
+<div class="dv"><div class="dvl"></div><span class="dvt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 6v6l4 2"/></svg>ALUR SIRKULASI</span><div class="dvl"></div></div>
+
+<!-- ═══ VII. FLOW ═══ -->
+<div class="cd">
+  <div class="sec-hd"><span class="sec-title"><span class="section-num">VII</span>SIRKULASI UANG SERVER</span></div>
+  <div class="fm">$$\begin{aligned} &\text{Sumber (masuk)} \\ &\quad\text{Kill + Quest + UBI + Subsidi} \\ &\quad\quad\downarrow \\ &\text{Saldo Pemain} \\ &\quad\quad\downarrow \\ &\text{Penyedot (keluar)} \\ &\quad\text{Gacha + Lahan + Pajak + Demurrage} \end{aligned}$$</div>
+  <div class="fm">$$\text{Pajak + Demurrage} \to \text{Treasury} \to \text{Redistribusi}$$</div>
+  <div class="benefit-box">Treasury otomatis mendistribusikan koin ke 50% pemain termiskin dengan bobot terbalik — semakin miskin, semakin besar porsi bantuan. Cadangan minimum 10% selalu ditahan sebagai dana darurat.</div>
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<div class="ft" style="margin-top:1.5rem">
+  <span class="up">Diterbitkan oleh Otoritas Moneter Laughtale Central Bank</span>
+</div>
+<div class="nav-links">
+  <a href="economy.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Economy Dashboard</a>
+  <a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Beranda</a>
+  <a href="dokumentasi.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>Dokumentasi</a>
+</div>
+
+</div>
+</body>
+</html>
