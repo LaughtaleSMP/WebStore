@@ -127,6 +127,13 @@ scripts/
 │   ├── quest.js             # Daily quest system
 │   └── ui.js                # Daily reward UI forms
 │
+├── jobs/                    # Job System (Miner, Woodcutter, Farmer, Hunter, Fisher)
+│   ├── config.js            # Job definitions, rates, levels, titles, SFX
+│   ├── db.js                # Jobs storage, player DP & scoreboard integration
+│   ├── logic.js             # Core math, progressive tax, coordinate hotspots, leveling logic
+│   ├── main.js              # Event registrations, ticking flush orchestrator
+│   └── ui.js                # ActionForm dashboard & detail screens
+│
 ├── Tax/                     # Wealth tax + redistribution
 │   └── tier.js              # Tax bracket definitions + calc
 │
@@ -158,13 +165,15 @@ Mana file yang subscribe ke event apa — untuk hindari konflik listener:
 
 | Event | File | Tujuan |
 |---|---|---|
-| `entityHurt` (after) | `Combat/main.js` | PvP detection, damage tracking, KB override |
-| `entityDie` (after) | `Combat/main.js` | Kill reward, streak, KillFX |
-| `playerLeave` (after) | `Combat/main.js` | Combat log penalty, Map cleanup |
+| `entityHurt` (after) | `Combat/main.js`, `jobs/main.js` | PvP detection, damage tracking, KB override / Last attacker tracking for Hunter |
+| `entityDie` (after) | `Combat/main.js`, `jobs/main.js` | Kill reward, streak, KillFX / Hunter job kills |
+| `playerLeave` (after) | `Combat/main.js`, `jobs/main.js` | Combat log penalty / Job data flush & cache cleanup |
 | `playerSpawn` (after) | `welcome.js` | New player detection |
 | `playerInteractWithEntity` (before) | `npc/market.js` | NPC Market interaction (cancel NPC dialog) |
 | `scriptEventReceive` (after) | `Combat/main.js` | Admin commands (combat:*) |
-| `startup` (before) | `Combat/main.js` | Custom command registration |
+| `startup` (before) | `Combat/main.js`, `jobs/main.js` | Custom command registration (`/lt:jobs`) |
+| `playerBreakBlock` (after) | `jobs/main.js` | Miner, Woodcutter, Farmer activity |
+| `playerFisher` (after) | `jobs/main.js` | Fisher activity |
 
 ### 14.4 Shared Scoreboard Bridge
 
