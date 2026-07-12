@@ -136,29 +136,32 @@
 <!-- ═══ III. LAND ═══ -->
 <div class="cd">
   <div class="sec-hd"><span class="sec-title"><span class="section-num">III</span>HARGA LAHAN MIMI LAND</span><span class="pill g">PROGRESIF</span></div>
-  <p class="fn"><b>Kenapa lahan makin besar makin mahal per blok?</b> Kalau semua ukuran harganya sama per blok, pemain kaya bisa langsung klaim 100×100 dan monopoli area. Pengali ukuran membuat lahan besar jadi jauh lebih mahal sehingga mendorong klaim secukupnya.</p>
-  <div class="fm">$$P_{\text{land}} = A \times P_{\text{basis}} \times T_{\text{size}}$$</div>
-  <p class="fn">$A$ = luas area (panjang × lebar dalam blok²). $P_{\text{basis}}$ = harga dasar dari Dynamic Pricing (bab II). $T_{\text{size}}$ = pengali ukuran:</p>
+  <p class="fn"><b>Kenapa lahan makin besar makin mahal per blok?</b> Kalau semua ukuran harganya sama per blok, pemain kaya bisa langsung klaim 100×100 dan monopoli area. Tarif per blok yang dinamis membuat lahan besar membutuhkan investasi nyata untuk mencegah hoarding.</p>
+  <div class="fm">$$P_{\text{land}} = A \times R$$</div>
+  <p class="fn">$A$ = luas area (panjang × lebar dalam blok²). $R$ = tarif per blok² yang ditentukan secara dinamis berdasarkan tier ukuran lahan dan basis ekonomi server ($P_{\text{basis}}$):</p>
   <table class="ptbl-math">
-    <tr><th>Ukuran Lahan</th><th>Pengali</th><th>Kenapa?</th></tr>
-    <tr><td>≤ 225 blok² (15×15)</td><td>1,0×</td><td>Ukuran rumah biasa, harga wajar</td></tr>
-    <tr><td>226–900 (30×30)</td><td>1,5×</td><td>Mansion, perlu investasi lebih</td></tr>
-    <tr><td>901–2500 (50×50)</td><td>2,0×</td><td>Kompleks besar, butuh komitmen</td></tr>
-    <tr><td>> 2500 blok²</td><td style="color:var(--red)">3,0×</td><td>Area raksasa, sengaja mahal agar langka</td></tr>
+    <tr><th>Ukuran Lahan</th><th>Batas Bawah Tarif ($R_{\text{min}}$)</th><th>Rumus Tarif Dinamis ($R$)</th></tr>
+    <tr><td>≤ 225 blok² (Small: 15×15)</td><td>0,15 koin/blok²</td><td>$\max(0{,}15,\; P_{\text{basis}} \times 0{,}0025)$</td></tr>
+    <tr><td>226–900 (Medium: 30×30)</td><td>0,25 koin/blok²</td><td>$\max(0{,}25,\; P_{\text{basis}} \times 0{,}0028)$</td></tr>
+    <tr><td>901–2500 (Large: 50×50)</td><td>0,35 koin/blok²</td><td>$\max(0{,}35,\; P_{\text{basis}} \times 0{,}0030)$</td></tr>
+    <tr><td>> 2500 blok² (Mega)</td><td style="color:var(--red)">0,45 koin/blok²</td><td>$\max(0{,}45,\; P_{\text{basis}} \times 0{,}0033)$</td></tr>
   </table>
-  <div class="note-box"><b>Contoh:</b> Klaim 20×20 (A=400, masuk tier 1,5×), $P_{\text{basis}}$ = 60:<br>Harga = 400 × 60 × 1,5 = <b>36.000 koin</b></div>
+  <div class="note-box"><b>Contoh:</b> Klaim area 20×20 ($A=400$, masuk tier Medium), $P_{\text{basis}}$ = 250:<br>
+    Tarif per blok² ($R$) = $250 \times 0{,}0028 = 0{,}70$ koin/blok².<br>
+    Harga Lahan = $400 \times 0{,}70$ = <b>280 koin</b>. *(Diskon 50% jika rumah pertama = 140 koin)*
+  </div>
 </div>
 
 <div class="cd">
   <div class="sec-hd"><span class="sec-title">DISKON & PPN LAHAN</span></div>
-  <p class="fn">Setelah harga dasar dihitung, ada 3 modifikasi terakhir. <b>Kenapa ada diskon rumah pertama?</b> Agar semua warga punya tempat tinggal dasar. <b>Kenapa ada PPN hoarding?</b> Agar 1 orang tidak klaim 10 lahan dan jadi tuan tanah.</p>
+  <p class="fn">Setelah harga dasar dihitung, ada 3 modifikasi terakhir. <b>Kenapa ada diskon rumah pertama?</b> Agar semua warga punya tempat tinggal dasar. <b>Kenapa ada PPN hoarding?</b> Agar 1 orang tidak klaim banyak lahan dan menjadi spekulan tanah.</p>
   <div class="fm">$$P_{\text{final}} = P_{\text{land}} \times D_1 \times D_g \times (1 + \text{PPN})$$</div>
   <table class="ptbl-math">
     <tr><th>Komponen</th><th>Kondisi</th><th>Nilai</th><th>Kenapa?</th></tr>
-    <tr><td>$D_1$</td><td>Lahan ke-1</td><td style="color:var(--green)">0,5</td><td>Diskon 50% agar semua bisa punya rumah</td></tr>
-    <tr><td>$D_1$</td><td>Lahan ke-2+</td><td>1,0</td><td>Tidak ada diskon lagi</td></tr>
-    <tr><td>$D_g$</td><td>Bayar Gem</td><td style="color:var(--cyan)">0,01</td><td>Diskon 99% — insentif beli Gem (pendapatan server)</td></tr>
-    <tr><td>PPN</td><td>Lahan ke-4+</td><td style="color:var(--red)">+5%</td><td>Pajak anti-monopoli tanah per lahan baru</td></tr>
+    <tr><td>$D_1$</td><td>Lahan ke-1</td><td style="color:var(--green)">0,5</td><td>Diskon 50% agar semua bisa punya rumah pertama</td></tr>
+    <tr><td>$D_1$</td><td>Lahan ke-2+</td><td>1,0</td><td>Tidak ada diskon lagi untuk properti tambahan</td></tr>
+    <tr><td>$D_g$</td><td>Bayar Gem</td><td style="color:var(--cyan)">0,01</td><td>Diskon 99% — insentif khusus pembayaran Gem</td></tr>
+    <tr><td>PPN</td><td>Lahan ke-4+</td><td style="color:var(--red)">+2% (Ikut Pajak Bank)</td><td>Pajak progresif anti-monopoli tanah per lahan baru</td></tr>
   </table>
 </div>
 
