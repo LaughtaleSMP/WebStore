@@ -293,6 +293,18 @@
       #tbl-top-items th,#tbl-top-items td{font-size:.32rem;padding:4px 5px}
       #tbl-top-items th{font-size:.28rem}
     }
+    /* Wealth classes styling */
+    .wealth-classes-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:15px 0}
+    .wealth-class-card{background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.04);border-radius:8px;padding:12px;text-align:left;position:relative;transition:transform 0.2s,border-color 0.2s}
+    .wealth-class-card:hover{transform:translateY(-2px);border-color:rgba(168,85,247,0.15);background:rgba(255,255,255,0.02)}
+    .wealth-class-badge{font-size:0.32rem;font-weight:700;text-transform:uppercase;padding:2px 6px;border-radius:4px;display:inline-block;margin-bottom:6px;letter-spacing:0.5px;color:#fff}
+    .wealth-class-val{font-family:'JetBrains Mono',monospace;font-size:0.62rem;font-weight:700;color:var(--text);margin-bottom:2px}
+    .wealth-class-range{font-family:'JetBrains Mono',monospace;font-size:0.36rem;color:var(--mute);margin-bottom:6px}
+    .wealth-class-supply{display:flex;align-items:center;gap:6px;font-size:0.38rem;color:var(--dim)}
+    .wealth-class-supply-bar{flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden}
+    .wealth-class-supply-fill{height:100%;border-radius:2px}
+    @media(max-width:900px){.wealth-classes-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:550px){.wealth-classes-grid{grid-template-columns:1fr}}
   </style>
 </head>
 
@@ -349,7 +361,8 @@
               id="gini-pill">—</span></div>
           <div class="wb" id="wealth-bar"></div>
           <div id="wealth-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px"></div>
-          <div id="wealth-detail" style="font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim)">
+          <div class="wealth-classes-grid" id="wealth-classes-grid"></div>
+          <div id="wealth-detail" style="font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--dim);margin-top:10px">
           </div>
         </div>
 
