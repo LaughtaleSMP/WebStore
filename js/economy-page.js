@@ -664,9 +664,9 @@
     var ac = g.auction;
     cards.push(buildCard('Auction', 'var(--cyan)',
       section('Fee Berdasarkan Tier Player') +
-      row('Pemula (<5K)', '0%', 'fee listing gratis') +
-      row('Menengah (5K-50K)', '1%', 'fee ringan') +
-      row('Premium (50K+)', '3%', 'fee penuh') +
+      row('Pemula (<1K)', '0%', 'fee listing gratis') +
+      row('Menengah (1K-5K)', '1%', 'fee ringan') +
+      row('Premium (5K+)', '3%', 'fee penuh') +
       section('Limit & Waktu') +
       row('Range Harga', fmtN(ac.minPrice) + ' — ' + fmtN(ac.maxPrice), '') +
       row('Durasi', ac.durationH + ' jam', '') +
@@ -746,18 +746,18 @@
           section('Subsidi Aktivitas (Earned Income)') +
           row('Kill Mob Bonus', '+' + (wt.subsidy.killBonus || 1) + ' koin/kill', 'dari treasury') +
           row('Quest/Ach Bonus', '+' + Math.round((wt.subsidy.questMult || 0.20) * 100) + '%', 'dari treasury') +
-          row('Syarat Subsidi', 'Saldo < ' + fmtN(wt.subsidy.balanceCap || 5000), 'koin');
+          row('Syarat Subsidi', 'Saldo < ' + fmtN(wt.subsidy.balanceCap || 1500), 'koin');
       }
       var wtContent;
       if (hasTier3 || !wt.tier1) {
         wtContent =
           treasuryBar +
           section('Tier Pajak Harian (Semua Player)') +
-          row('> ' + fmtN(wt.tier1 || 5000),  (wt.rate1 || 0.5) + '%/hari', 'ringan') +
-          row('> ' + fmtN(wt.tier2 || 20000), (wt.rate2 || 1.0) + '%/hari', 'sedang') +
-          row('> ' + fmtN(wt.tier3 || 50000), (wt.rate3 || 2.0) + '%/hari', 'tinggi') +
+          row('> ' + fmtN(wt.tier1 || 5000),  (wt.rate1 || 1.0) + '%/hari', 'ringan') +
+          row('> ' + fmtN(wt.tier2 || 20000), (wt.rate2 || 3.0) + '%/hari', 'sedang') +
+          row('> ' + fmtN(wt.tier3 || 50000), (wt.rate3 || 6.0) + '%/hari', 'tinggi') +
           subsidyNote +
-          note('Dipotong otomatis 1x/hari (20:00 WIB). Treasury didistribusikan gradual via subsidi aktivitas ke player dengan saldo &lt; 5.000.');
+          note('Dipotong otomatis 1x/hari (20:00 WIB). Treasury didistribusikan gradual via subsidi aktivitas ke player dengan saldo &lt; 1.500.');
       } else {
         wtContent =
           treasuryBar +
@@ -875,19 +875,19 @@
         + '<tr>'
         + '<td style="color:var(--green);font-weight:700">1</td>'
         + '<td style="color:var(--gold)">' + fmtN(wt.tier1 || 5000) + '</td>'
-        + '<td style="text-align:right;color:var(--green);font-weight:700">' + (wt.rate1 || 0.5) + '%</td>'
+        + '<td style="text-align:right;color:var(--green);font-weight:700">' + (wt.rate1 || 1.0) + '%</td>'
         + '<td style="text-align:right;color:var(--dim)">' + tier1Count + '</td>'
         + '</tr>'
         + '<tr>'
         + '<td style="color:var(--gold);font-weight:700">2</td>'
         + '<td style="color:var(--gold)">' + fmtN(wt.tier2 || 20000) + '</td>'
-        + '<td style="text-align:right;color:var(--gold);font-weight:700">' + (wt.rate2 || 1) + '%</td>'
+        + '<td style="text-align:right;color:var(--gold);font-weight:700">' + (wt.rate2 || 3.0) + '%</td>'
         + '<td style="text-align:right;color:var(--dim)">' + tier2Count + '</td>'
         + '</tr>'
         + '<tr>'
         + '<td style="color:var(--red);font-weight:700">3</td>'
         + '<td style="color:var(--gold)">' + fmtN(wt.tier3 || 50000) + '</td>'
-        + '<td style="text-align:right;color:var(--red);font-weight:700">' + (wt.rate3 || 2) + '%</td>'
+        + '<td style="text-align:right;color:var(--red);font-weight:700">' + (wt.rate3 || 6.0) + '%</td>'
         + '<td style="text-align:right;color:var(--dim)">' + tier3Count + '</td>'
         + '</tr>';
     }
@@ -896,12 +896,12 @@
     var simBody = document.querySelector('#tbl-tax-sim tbody');
     if (simBody) {
       var samples = [
-        { bal: wt.tier1 || 5000, rate: wt.rate1 || 0.5, color: 'var(--green)' },
-        { bal: 10000, rate: wt.rate1 || 0.5, color: 'var(--green)' },
-        { bal: wt.tier2 || 20000, rate: wt.rate2 || 1, color: 'var(--gold)' },
-        { bal: 35000, rate: wt.rate2 || 1, color: 'var(--gold)' },
-        { bal: wt.tier3 || 50000, rate: wt.rate3 || 2, color: 'var(--red)' },
-        { bal: 100000, rate: wt.rate3 || 2, color: 'var(--red)' }
+        { bal: wt.tier1 || 5000, rate: wt.rate1 || 1.0, color: 'var(--green)' },
+        { bal: 10000, rate: wt.rate1 || 1.0, color: 'var(--green)' },
+        { bal: wt.tier2 || 20000, rate: wt.rate2 || 3.0, color: 'var(--gold)' },
+        { bal: 35000, rate: wt.rate2 || 3.0, color: 'var(--gold)' },
+        { bal: wt.tier3 || 50000, rate: wt.rate3 || 6.0, color: 'var(--red)' },
+        { bal: 100000, rate: wt.rate3 || 6.0, color: 'var(--red)' }
       ];
       var simHtml = '';
       for (var k = 0; k < samples.length; k++) {
