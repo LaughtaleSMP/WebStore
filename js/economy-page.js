@@ -78,13 +78,13 @@
         return;
       }
       // Fetch main sync + permanent auction history + price index in parallel
-      var mainP = fetch(SB_URL + '/rest/v1/leaderboard_sync?id=eq.current&select=gacha_lb,bank_log,auction_log,gacha_log,topup_log,disc_codes,synced_at', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+      var mainP = fetch(SB_URL + '/rest/v1/leaderboard_sync?id=eq.current&select=gacha_lb,bank_log,auction_log,gacha_log,topup_log,disc_codes,synced_at', { cache: 'no-store', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
       // Permanent table — last 500 rows for log display + trend calculation.
       // Full item coverage comes from auction_price_index (permanent, ~5KB).
-      var aucP  = fetch(SB_URL + '/rest/v1/auction_history?select=tx_time,tx_type,item_name,item_id,qty,seller,buyer,price&order=tx_time.desc', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, Range: '0-499' } }).catch(function() { return null; });
+      var aucP  = fetch(SB_URL + '/rest/v1/auction_history?select=tx_time,tx_type,item_name,item_id,qty,seller,buyer,price&order=tx_time.desc', { cache: 'no-store', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, Range: '0-499' } }).catch(function() { return null; });
       // Permanent price index — aggregated min/avg/max per item, never pruned.
       // Lightweight (~5KB for 125 items vs ~1MB for 10K raw rows).
-      var piP = fetch(SB_URL + '/rest/v1/auction_price_index?select=item_id,item_name,tx_count,avg_price,min_price,max_price,avg_qty,total_volume,last_sold_at&order=tx_count.desc', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } }).catch(function() { return null; });
+      var piP = fetch(SB_URL + '/rest/v1/auction_price_index?select=item_id,item_name,tx_count,avg_price,min_price,max_price,avg_qty,total_volume,last_sold_at&order=tx_count.desc', { cache: 'no-store', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } }).catch(function() { return null; });
 
       var r = await mainP;
       var d = await r.json(); if (!d || !d[0]) return;
@@ -2055,7 +2055,7 @@
         rows = [];
         var pg = 0;
         while (pg < 10) {
-          var r = await fetch(SB_URL + '/rest/v1/economy_history?order=ts.asc&limit=1000&offset=' + (pg * 1000), { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+          var r = await fetch(SB_URL + '/rest/v1/economy_history?order=ts.asc&limit=1000&offset=' + (pg * 1000), { cache: 'no-store', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
           if (!r.ok) { alert('Gagal fetch data: HTTP ' + r.status); resetBtn(); return; }
           var batch = await r.json();
           if (!Array.isArray(batch) || batch.length === 0) break;
@@ -2370,7 +2370,7 @@
       while (page < maxPages) {
         var url = SB_URL + '/rest/v1/economy_history?ts=gte.' + since
           + '&order=ts.asc&limit=' + PAGE + '&offset=' + (page * PAGE);
-        var r = await fetch(url, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+        var r = await fetch(url, { cache: 'no-store', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
         var d = await r.json();
         if (!Array.isArray(d) || d.length === 0) break;
         allData = allData.concat(d);
