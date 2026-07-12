@@ -455,16 +455,53 @@
       : Math.max(cA1, cA2, cA3, 1);
     var sMaxAnchor = Math.max(sAnchors[0] || 0, sAnchors[1] || 0, sAnchors[2] || 0, 25);
     var coinAnchor = (sMaxAnchor === (sAnchors[0] || 0)) ? 'income' : (sMaxAnchor === (sAnchors[1] || 0)) ? 'median' : (sMaxAnchor === (sAnchors[2] || 0)) ? 'avg' : 'floor';
+    function getLandPrice(area, basis) {
+      var r = 0.15;
+      if (area <= 225) r = Math.max(0.15, basis * 0.0025);
+      else if (area <= 900) r = Math.max(0.25, basis * 0.0028);
+      else if (area <= 2500) r = Math.max(0.35, basis * 0.0030);
+      else r = Math.max(0.45, basis * 0.0033);
+      return Math.round(area * r);
+    }
+    function getGacha1x(basis) {
+      return Math.max(25, Math.round(basis * 0.25));
+    }
+    function getGacha10x(basis) {
+      return Math.max(225, Math.round(basis * 2.20));
+    }
     function calcC(cat) {
       var t = { basic: [0.5, 1, 2], mid: [2, 4, 6], premium: [4, 8, 16], endgame: [12, 24, 48], luxury: [24, 48, 96] }[cat];
       return [Math.round(coinBasis * t[0] * vMul * gMul), Math.round(coinBasis * t[1] * vMul * gMul), Math.round(coinBasis * t[2] * vMul * gMul)];
     }
+    var g = (_data && _data.lb && _data.lb.guide) ? _data.lb.guide : null;
+    var gGacha = g?.gacha || {};
+    var gLandEx = g?.land?.examples || [];
     var items = [
-      ['Land 10x10', 'Land', calcC('premium'), '2-4j farming (First Home 1-2j)', ''],
-      ['Land 30x30+', 'Land', calcC('luxury'), '14-28j farming', ''],
-      ['Land Extend', 'Land', calcC('mid'), '2-4j farming', ''],
-      ['EQ 1x Pull', 'Gacha', calcC('basic'), '0.5-1j farming', ''],
-      ['EQ 10x Pull', 'Gacha', calcC('mid'), '2-4j farming', ''],
+      ['Land 10x10', 'Land', [
+        getLandPrice(100, 25), 
+        (gLandEx[0] && gLandEx[0].price) || getLandPrice(100, coinBasis), 
+        getLandPrice(100, 300)
+      ], '2-4j farming (First Home 1-2j)', ''],
+      ['Land 30x30+', 'Land', [
+        getLandPrice(900, 25), 
+        (gLandEx[3] && gLandEx[3].price) || getLandPrice(900, coinBasis), 
+        getLandPrice(900, 300)
+      ], '14-28j farming', ''],
+      ['Land Extend', 'Land', [
+        getLandPrice(100, 25), 
+        (gLandEx[0] && gLandEx[0].price) || getLandPrice(100, coinBasis), 
+        getLandPrice(100, 300)
+      ], '2-4j farming', ''],
+      ['EQ 1x Pull', 'Gacha', [
+        getGacha1x(25), 
+        gGacha.eq1 || getGacha1x(coinBasis), 
+        getGacha1x(300)
+      ], '0.5-1j farming', ''],
+      ['EQ 10x Pull', 'Gacha', [
+        getGacha10x(25), 
+        gGacha.eq10 || getGacha10x(coinBasis), 
+        getGacha10x(300)
+      ], '2-4j farming', ''],
       ['PT 1x Pull', 'Gacha', [10, 10, 10], 'tetap (gem)', ''],
       ['PT 10x Pull', 'Gacha', [90, 90, 90], 'tetap (gem)', ''],
       ['Auction Listing', 'Market', calcC('basic'), '0.5-1j farming', ''],
@@ -519,11 +556,11 @@
           var t = prevTiers[cat];
           return [Math.round(prevCoinBasis * t[0] * prevVMul * prevGMul), Math.round(prevCoinBasis * t[1] * prevVMul * prevGMul), Math.round(prevCoinBasis * t[2] * prevVMul * prevGMul)];
         }
-        prev['Land 10x10'] = pCalc('premium');
-        prev['Land 30x30+'] = pCalc('luxury');
-        prev['Land Extend'] = pCalc('mid');
-        prev['EQ 1x Pull'] = pCalc('basic');
-        prev['EQ 10x Pull'] = pCalc('mid');
+        prev['Land 10x10'] = [getLandPrice(100, 25), getLandPrice(100, prevCoinBasis), getLandPrice(100, 300)];
+        prev['Land 30x30+'] = [getLandPrice(900, 25), getLandPrice(900, prevCoinBasis), getLandPrice(900, 300)];
+        prev['Land Extend'] = [getLandPrice(100, 25), getLandPrice(100, prevCoinBasis), getLandPrice(100, 300)];
+        prev['EQ 1x Pull'] = [getGacha1x(25), getGacha1x(prevCoinBasis), getGacha1x(300)];
+        prev['EQ 10x Pull'] = [getGacha10x(25), getGacha10x(prevCoinBasis), getGacha10x(300)];
         prev['PT 1x Pull'] = null; // Gacha Gem harganya tetap, tidak perlu indikator tren
         prev['PT 10x Pull'] = null;
         prev['Auction Listing'] = pCalc('basic');
