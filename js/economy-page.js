@@ -174,20 +174,92 @@
     var pill = $('gini-pill');
     if (pill) { pill.textContent = 'Gini: ' + gini.toFixed(3); pill.className = 'pill ' + (gini < .3 ? 'g' : gini < .5 ? 'y' : 'r') }
 
-    var ranges = [
-      { pct: c.p25 > 0 ? Math.round(c.p25 / c.total * 100 * s.n * .25) : 5, color: '#64748b', label: 'Bottom 25%' },
-      { pct: c.median > 0 ? Math.round((c.median - c.p25) / c.total * 100 * s.n * .25) : 10, color: '#60a5fa', label: 'Lower Mid' },
-      { pct: 20, color: '#34d399', label: 'Middle' },
-      { pct: c.p75 > 0 ? Math.round((c.p75 - c.median) / c.total * 100 * s.n * .25) : 25, color: '#fbbf24', label: 'Upper Mid' },
-      { pct: 40, color: '#f87171', label: 'Top 25%' }
+    // ── Hitung Segmentasi Moneter & Pembagian Player ──
+    var q_n = Math.max(1, Math.floor(s.n * 0.25));
+    var q1_n = q_n, q2_n = q_n, q3_n = q_n, q4_n = Math.max(1, s.n - (q1_n + q2_n + q3_n));
+    if (s.n <= 3) {
+      q1_n = s.n >= 1 ? 1 : 0;
+      q2_n = s.n >= 2 ? 1 : 0;
+      q3_n = s.n >= 3 ? 1 : 0;
+      q4_n = 0;
+    }
+
+    // Estimasi rata-rata koin per kuartil (Pareto/skewed distribution)
+    var avg1 = c.min + (c.p25 - c.min) * 0.45;
+    var avg2 = c.p25 + (c.median - c.p25) * 0.48;
+    var avg3 = c.median + (c.p75 - c.median) * 0.48;
+
+    var sum1 = avg1 * q1_n;
+    var sum2 = avg2 * q2_n;
+    var sum3 = avg3 * q3_n;
+    var sum4 = Math.max(0, c.total - (sum1 + sum2 + sum3));
+
+    // Validasi safety jika hasil estimasi melebihi total koin
+    if (sum1 + sum2 + sum3 > c.total) {
+      var totalEst = sum1 + sum2 + sum3;
+      sum1 = (sum1 / totalEst) * c.total * 0.10;
+      sum2 = (sum2 / totalEst) * c.total * 0.25;
+      sum3 = (sum3 / totalEst) * c.total * 0.35;
+      sum4 = c.total * 0.30;
+    }
+
+    var pct1 = (sum1 / Math.max(1, c.total)) * 100;
+    var pct2 = (sum2 / Math.max(1, c.total)) * 100;
+    var pct3 = (sum3 / Math.max(1, c.total)) * 100;
+    var pct4 = (sum4 / Math.max(1, c.total)) * 100;
+
+    var classes = [
+      { name: 'Kelas Bawah', players: q1_n, range: fmtN(c.min) + ' — ' + fmtN(c.p25), pct: pct1, color: '#64748b', coins: sum1 },
+      { name: 'Semenjana (Mid-Low)', players: q2_n, range: fmtN(c.p25 + 1) + ' — ' + fmtN(c.median), pct: pct2, color: '#60a5fa', coins: sum2 },
+      { name: 'Mampu (Mid-High)', players: q3_n, range: fmtN(c.median + 1) + ' — ' + fmtN(c.p75), pct: pct3, color: '#fbbf24', coins: sum3 },
+      { name: 'Kelas Atas (Top)', players: q4_n, range: fmtN(c.p75 + 1) + ' — ' + fmtN(c.max), pct: pct4, color: '#f87171', coins: sum4 }
     ];
-    var total = ranges.reduce(function (a, b) { return a + b.pct }, 0) || 1;
 
+    var total = classes.reduce(function (a, b) { return a + b.pct }, 0) || 1;
+
+    // Render Wealth Bar (Visual Distribusi Koin)
     var bar = $('wealth-bar');
-    if (bar) { var h = ''; for (var i = 0; i < ranges.length; i++) { h += '<div style="width:' + Math.max(2, Math.round(ranges[i].pct / total * 100)) + '%;background:' + ranges[i].color + '"></div>' } bar.innerHTML = h }
+    if (bar) {
+      var h = '';
+      for (var i = 0; i < classes.length; i++) {
+        h += '<div style="width:' + Math.max(2, Math.round(classes[i].pct / total * 100)) + '%;background:' + classes[i].color + '" title="' + classes[i].name + ' (' + classes[i].pct.toFixed(1) + '%)"></div>';
+      }
+      bar.innerHTML = h;
+    }
 
+    // Render Legend di bawah bar
     var leg = $('wealth-legend');
-    if (leg) { var lh = ''; for (var i = ranges.length - 1; i >= 0; i--) { lh += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.38rem;color:var(--text);display:flex;align-items:center;gap:3px"><span style="width:7px;height:7px;border-radius:2px;background:' + ranges[i].color + ';flex-shrink:0"></span>' + ranges[i].label + '</span>' } leg.innerHTML = lh }
+    if (leg) {
+      var lh = '';
+      for (var i = classes.length - 1; i >= 0; i--) {
+        lh += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.38rem;color:var(--text);display:flex;align-items:center;gap:3px">' +
+              '<span style="width:7px;height:7px;border-radius:2px;background:' + classes[i].color + ';flex-shrink:0"></span>' +
+              classes[i].name + '</span>';
+      }
+      leg.innerHTML = lh;
+    }
+
+    // Render Class Grid (Kartu Informasi Kelas Moneter)
+    var grid = $('wealth-classes-grid');
+    if (grid) {
+      var gh = '';
+      for (var i = 0; i < classes.length; i++) {
+        var cl = classes[i];
+        gh += '<div class="wealth-class-card">' +
+              '<span class="wealth-class-badge" style="background:' + cl.color + '">' + cl.name + '</span>' +
+              '<div class="wealth-class-val">' + cl.players + ' <span style="font-size:.38rem;font-weight:500;color:var(--mute)">Player</span></div>' +
+              '<div class="wealth-class-range">Range: ' + cl.range + '</div>' +
+              '<div class="wealth-class-supply">' +
+                '<span>Supply: ' + cl.pct.toFixed(1) + '%</span>' +
+                '<div class="wealth-class-supply-bar">' +
+                  '<div class="wealth-class-supply-fill" style="width:' + cl.pct + '%;background:' + cl.color + '"></div>' +
+                '</div>' +
+                '<span style="font-size:.32rem;color:var(--mute)" title="Total koin di kelas ini">' + fmtN(Math.round(cl.coins)) + '</span>' +
+              '</div>' +
+              '</div>';
+      }
+      grid.innerHTML = gh;
+    }
 
     var det = $('wealth-detail');
     if (det) {
