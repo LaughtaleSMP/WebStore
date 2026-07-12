@@ -477,30 +477,35 @@
     var gGacha = g?.gacha || {};
     var gLandEx = g?.land?.examples || [];
     var items = [
-      ['Land 10x10', 'Land', [
-        getLandPrice(100, 25), 
-        (gLandEx[0] && gLandEx[0].price) || getLandPrice(100, coinBasis), 
-        getLandPrice(100, 300)
+      ['Mimi Land Small (15x15)', 'Land', [
+        getLandPrice(225, coinBasis * 0.5), 
+        (gLandEx[1] && gLandEx[1].price) || getLandPrice(225, coinBasis), 
+        getLandPrice(225, coinBasis * 2.0)
       ], '2-4j farming (First Home 1-2j)', ''],
-      ['Land 30x30+', 'Land', [
-        getLandPrice(900, 25), 
+      ['Mimi Land Medium (30x30)', 'Land', [
+        getLandPrice(900, coinBasis * 0.5), 
         (gLandEx[3] && gLandEx[3].price) || getLandPrice(900, coinBasis), 
-        getLandPrice(900, 300)
+        getLandPrice(900, coinBasis * 2.0)
       ], '14-28j farming', ''],
-      ['Land Extend', 'Land', [
-        getLandPrice(100, 25), 
-        (gLandEx[0] && gLandEx[0].price) || getLandPrice(100, coinBasis), 
-        getLandPrice(100, 300)
-      ], '2-4j farming', ''],
+      ['Mimi Land Large (50x50)', 'Land', [
+        getLandPrice(2500, coinBasis * 0.5), 
+        (gLandEx[4] && gLandEx[4].price) || getLandPrice(2500, coinBasis), 
+        getLandPrice(2500, coinBasis * 2.0)
+      ], '35-70j farming', ''],
+      ['Mimi Land Mega (100x100)', 'Land', [
+        getLandPrice(10000, coinBasis * 0.5), 
+        getLandPrice(10000, coinBasis), 
+        getLandPrice(10000, coinBasis * 2.0)
+      ], 'grind tinggi', ''],
       ['EQ 1x Pull', 'Gacha', [
-        getGacha1x(25), 
+        getGacha1x(coinBasis * 0.5), 
         gGacha.eq1 || getGacha1x(coinBasis), 
-        getGacha1x(300)
+        getGacha1x(coinBasis * 2.0)
       ], '0.5-1j farming', ''],
       ['EQ 10x Pull', 'Gacha', [
-        getGacha10x(25), 
+        getGacha10x(coinBasis * 0.5), 
         gGacha.eq10 || getGacha10x(coinBasis), 
-        getGacha10x(300)
+        getGacha10x(coinBasis * 2.0)
       ], '2-4j farming', ''],
       ['PT 1x Pull', 'Gacha', [10, 10, 10], 'tetap (gem)', ''],
       ['PT 10x Pull', 'Gacha', [90, 90, 90], 'tetap (gem)', ''],
@@ -518,7 +523,7 @@
         // ── Laughtale SMP Coding Standard 6.3: Window & Smoothing ──
         // "Min sample size sebelum trust signal: ≥ 7 untuk trend."
         // Membandingkan First Half (setengah awal grafik) vs Full Period.
-        // Ini menjamin "Aggregate dengan jujur" dan menghindari perbandingan
+        // Ini menjamin "Aggregate dengan jujur" and menghindari perbandingan
         // 1-candle yang terlalu volatil atau bias.
         var prevIdx = Math.floor((_trendData.length - 1) / 2);
         if (prevIdx < 6 && _trendData.length >= 7) prevIdx = 6; 
@@ -556,11 +561,12 @@
           var t = prevTiers[cat];
           return [Math.round(prevCoinBasis * t[0] * prevVMul * prevGMul), Math.round(prevCoinBasis * t[1] * prevVMul * prevGMul), Math.round(prevCoinBasis * t[2] * prevVMul * prevGMul)];
         }
-        prev['Land 10x10'] = [getLandPrice(100, 25), getLandPrice(100, prevCoinBasis), getLandPrice(100, 300)];
-        prev['Land 30x30+'] = [getLandPrice(900, 25), getLandPrice(900, prevCoinBasis), getLandPrice(900, 300)];
-        prev['Land Extend'] = [getLandPrice(100, 25), getLandPrice(100, prevCoinBasis), getLandPrice(100, 300)];
-        prev['EQ 1x Pull'] = [getGacha1x(25), getGacha1x(prevCoinBasis), getGacha1x(300)];
-        prev['EQ 10x Pull'] = [getGacha10x(25), getGacha10x(prevCoinBasis), getGacha10x(300)];
+        prev['Mimi Land Small (15x15)'] = [getLandPrice(225, prevCoinBasis * 0.5), getLandPrice(225, prevCoinBasis), getLandPrice(225, prevCoinBasis * 2.0)];
+        prev['Mimi Land Medium (30x30)'] = [getLandPrice(900, prevCoinBasis * 0.5), getLandPrice(900, prevCoinBasis), getLandPrice(900, prevCoinBasis * 2.0)];
+        prev['Mimi Land Large (50x50)'] = [getLandPrice(2500, prevCoinBasis * 0.5), getLandPrice(2500, prevCoinBasis), getLandPrice(2500, prevCoinBasis * 2.0)];
+        prev['Mimi Land Mega (100x100)'] = [getLandPrice(10000, prevCoinBasis * 0.5), getLandPrice(10000, prevCoinBasis), getLandPrice(10000, prevCoinBasis * 2.0)];
+        prev['EQ 1x Pull'] = [getGacha1x(prevCoinBasis * 0.5), getGacha1x(prevCoinBasis), getGacha1x(prevCoinBasis * 2.0)];
+        prev['EQ 10x Pull'] = [getGacha10x(prevCoinBasis * 0.5), getGacha10x(prevCoinBasis), getGacha10x(prevCoinBasis * 2.0)];
         prev['PT 1x Pull'] = null; // Gacha Gem harganya tetap, tidak perlu indikator tren
         prev['PT 10x Pull'] = null;
         prev['Auction Listing'] = pCalc('basic');
@@ -655,7 +661,7 @@
     }
 
     // ━━━ 1. MIMI LAND ━━━
-    var ld = g.land, lr = ld.tiers || [], ex = ld.examples || [];
+    var ld = g.land || {}, lr = ld.tiers || [], ex = ld.examples || [];
     var landRows = '';
     for (var i = 0; i < lr.length; i++) {
       var lbl = i === 0 ? '≤15×15' : i === 1 ? '≤30×30' : i === 2 ? '≤50×50' : '>50×50';
@@ -673,7 +679,7 @@
     ));
 
     // ━━━ 2. GACHA ━━━
-    var gc = g.gacha;
+    var gc = g.gacha || {};
     var rateStr = '';
     if (gc.rates) {
       var rItems = [
@@ -689,31 +695,31 @@
     }
     cards.push(buildCard('Gacha', '#c084fc',
       section('Equipment (Koin)') +
-      row('1× Pull', fmtN(gc.eq1), '~' + (cb>0?(gc.eq1/cb).toFixed(1):'?') + 'j') +
-      row('10× Pull', fmtN(gc.eq10), 'hemat ' + fmtN(gc.eq1*10-gc.eq10)) +
+      row('1× Pull', fmtN(gc.eq1 || 25), '~' + (cb>0?((gc.eq1 || 25)/cb).toFixed(1):'?') + 'j') +
+      row('10× Pull', fmtN(gc.eq10 || 225), 'hemat ' + fmtN((gc.eq1 || 25)*10-(gc.eq10 || 225))) +
       section('Partikel (Gem)') +
-      row('1× Pull', gc.pt1 + ' Gem', '') +
-      row('10× Pull', gc.pt10 + ' Gem', 'hemat ' + (gc.pt1*10-gc.pt10)) +
-      note(rateStr + '<br>Pity R: ' + fmtN(gc.pityRare) + ' · Pity L: ' + fmtN(gc.pityLeg) + ' · Dup refund: ' + gc.gemRefund + ' Gem')
+      row('1× Pull', (gc.pt1 || 10) + ' Gem', '') +
+      row('10× Pull', (gc.pt10 || 90) + ' Gem', 'hemat ' + ((gc.pt1 || 10)*10-(gc.pt10 || 90))) +
+      note(rateStr + '<br>Pity R: ' + fmtN(gc.pityRare || 30) + ' · Pity L: ' + fmtN(gc.pityLeg || 80) + ' · Dup refund: ' + (gc.gemRefund || 5) + ' Gem')
     ));
 
     // ━━━ 3. AUCTION ━━━
-    var ac = g.auction;
+    var ac = g.auction || {};
     cards.push(buildCard('Auction', 'var(--cyan)',
       section('Fee Berdasarkan Tier Player') +
       row('Pemula (<1K)', '0%', 'fee listing gratis') +
       row('Menengah (1K-5K)', '1%', 'fee ringan') +
       row('Premium (5K+)', '3%', 'fee penuh') +
       section('Limit & Waktu') +
-      row('Range Harga', fmtN(ac.minPrice) + ' — ' + fmtN(ac.maxPrice), '') +
-      row('Durasi', ac.durationH + ' jam', '') +
-      row('Max Listing', ac.maxPerPlayer + '/player', ac.maxGlobal + ' global') +
-      row('First Sale Bonus', '+' + fmtN(ac.firstSaleBonus), 'sekali') +
-      note('Fee progresif mendukung player baru. Bid increment +' + ac.bidIncrPct + '% (min ' + fmtN(ac.minBidIncr) + ') · Anti-snipe ' + ac.antiSnipeMin + ' menit')
+      row('Range Harga', fmtN(ac.minPrice || 3) + ' — ' + fmtN(ac.maxPrice || 500000), '') +
+      row('Durasi', (ac.durationH || 24) + ' jam', '') +
+      row('Max Listing', (ac.maxPerPlayer || 5) + '/player', (ac.maxGlobal || 30) + ' global') +
+      row('First Sale Bonus', '+' + fmtN(ac.firstSaleBonus || 50), 'sekali') +
+      note('Fee progresif mendukung player baru. Bid increment +' + (ac.bidIncrPct || 10) + '% (min ' + fmtN(ac.minBidIncr || 1) + ') · Anti-snipe ' + (ac.antiSnipeMin || 5) + ' menit')
     ));
 
     // ━━━ 4. BANK ━━━
-    var bk = g.bank, bt = bk.baseTax, adj = bk.policyAdj || 0, eTax = bk.effectiveTax;
+    var bk = g.bank || {}, bt = bk.baseTax || 5, adj = bk.policyAdj || 0, eTax = bk.effectiveTax || 5;
     var adjTxt = adj > 0 ? ' <span style="color:var(--red)">(+' + adj + '% stab)</span>' : adj < 0 ? ' <span style="color:var(--green)">(' + adj + '% stab)</span>' : '';
     // [DYNAMIC] Build bracket rows from server data
     var bkts = bk.brackets || [{ max: 100, extra: 0 }, { max: 1000, extra: 2 }, { max: 3000, extra: 4 }, { max: null, extra: 6 }];
@@ -729,9 +735,9 @@
     for (var fi = 0; fi < bkts.length; fi++) { if (5000 <= (bkts[fi].max === null || bkts[fi].max === Infinity ? 1e9 : bkts[fi].max)) { ex5Extra = bkts[fi].extra; break; } }
     cards.push(buildCard('Bank', 'var(--gold)',
       section('Transfer') +
-      row('Range', fmtN(bk.minTransfer) + ' — ' + fmtN(bk.maxTransfer), '') +
-      row('Limit Harian', fmtN(bk.dailyLimit), '') +
-      row('Free Transfer', bk.freeTransfers + '×/hari', '') +
+      row('Range', fmtN(bk.minTransfer || 10) + ' — ' + fmtN(bk.maxTransfer || 1000000), '') +
+      row('Limit Harian', fmtN(bk.dailyLimit || 5000000), '') +
+      row('Free Transfer', (bk.freeTransfers || 3) + '×/hari', '') +
       section('Pajak — base ' + bt + '%' + adjTxt) +
       bktRows +
       note(
