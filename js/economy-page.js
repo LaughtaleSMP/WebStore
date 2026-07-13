@@ -461,7 +461,10 @@
       else if (area <= 900) r = Math.max(0.25, basis * 0.0028);
       else if (area <= 2500) r = Math.max(0.35, basis * 0.0030);
       else r = Math.max(0.45, basis * 0.0033);
-      return Math.round(area * r);
+      // Sinkron dengan pembulatan integer scoreboard rate * 100 in-game
+      r = Math.round(r * 100) / 100;
+      // Sinkron dengan Math.floor pada removeCoin/addCoin Mimi Land
+      return Math.floor(area * r);
     }
     function getGacha1x(basis) {
       return Math.max(25, Math.round(basis * 0.25));
