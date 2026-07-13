@@ -584,13 +584,18 @@
       if (!isFinite(pct)) {
         return '<td style="text-align:right;color:' + baseColor + ';font-weight:600">' + valStr + '</td>';
       }
+      if (Math.abs(pct) < 0.1) {
+        return '<td style="text-align:right;color:' + baseColor + ';font-weight:600">' +
+          valStr +
+          '<span style="display:inline-block;margin-left:4px;font-size:.32rem;color:var(--mute);font-weight:500" title="Sebelumnya: ' + fmtN(prevVal) + '">0.0%</span>' +
+          '</td>';
+      }
       var isUp = diff > 0;
       var arrow = isUp ? '▲' : '▼';
       var arrowColor = isUp ? '#26a69a' : '#ef5350';
       var sign = isUp ? '+' : '';
       var pctStr;
-      if (Math.abs(pct) < 0.1) pctStr = sign + diff;
-      else if (Math.abs(pct) >= 1000) pctStr = sign + '999%+';
+      if (Math.abs(pct) >= 1000) pctStr = sign + '999%+';
       else pctStr = sign + pct.toFixed(1) + '%';
       return '<td style="text-align:right;color:' + baseColor + ';font-weight:600">' +
         valStr +
