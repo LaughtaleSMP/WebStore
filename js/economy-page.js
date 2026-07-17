@@ -888,31 +888,42 @@
     // ── KPI cards ──
     setText('tax-treasury', fmtN(wt.treasury || 0));
 
-    // Hitung jumlah player yang masuk tiap tier (dari LB coin)
-    var topCoin = (lb.coin || []);
+    // Hitung jumlah player yang masuk tiap tier (dari LB coin / server guide)
     var tier1Count = 0, tier2Count = 0, tier3Count = 0;
-    // Kita tidak punya full list, jadi estimate dari entries jika ada
-    var entries = safeParse(lb.entries, []) || [];
-    if (entries.length === 0 && topCoin.length > 0) entries = topCoin;
-    for (var i = 0; i < entries.length; i++) {
-      var bal = entries[i].coin || entries[i].c || 0;
-      if (bal >= (wt.tier3 || 50000)) tier3Count++;
-      else if (bal >= (wt.tier2 || 20000)) tier2Count++;
-      else if (bal >= (wt.tier1 || 5000)) tier1Count++;
-    }
-    var totalCand = tier1Count + tier2Count + tier3Count;
-    setText('tax-candidates', totalCand);
-
-    // Estimasi harian dari entries
+    var totalCand = 0;
     var estDaily = 0;
-    for (var j = 0; j < entries.length; j++) {
-      var b = entries[j].coin || entries[j].c || 0;
-      var rate = 0;
-      if (b >= (wt.tier3 || 50000)) rate = (wt.rate3 || 2) / 100;
-      else if (b >= (wt.tier2 || 20000)) rate = (wt.rate2 || 1) / 100;
-      else if (b >= (wt.tier1 || 5000)) rate = (wt.rate1 || 0.5) / 100;
-      estDaily += Math.floor(b * rate);
+
+    if (typeof wt.totalCandidates === 'number') {
+      tier1Count = wt.tier1Count || 0;
+      tier2Count = wt.tier2Count || 0;
+      tier3Count = wt.tier3Count || 0;
+      totalCand = wt.totalCandidates;
+      estDaily = wt.estDaily || 0;
+    } else {
+      // Fallback lama jika data server belum di-update
+      var topCoin = (lb.coin || []);
+      var entries = safeParse(lb.entries, []) || [];
+      if (entries.length === 0 && topCoin.length > 0) entries = topCoin;
+      for (var i = 0; i < entries.length; i++) {
+        var bal = entries[i].coin || entries[i].c || 0;
+        if (bal >= (wt.tier3 || 50000)) tier3Count++;
+        else if (bal >= (wt.tier2 || 20000)) tier2Count++;
+        else if (bal >= (wt.tier1 || 5000)) tier1Count++;
+      }
+      totalCand = tier1Count + tier2Count + tier3Count;
+
+      // Estimasi harian dari entries
+      for (var j = 0; j < entries.length; j++) {
+        var b = entries[j].coin || entries[j].c || 0;
+        var rate = 0;
+        if (b >= (wt.tier3 || 50000)) rate = (wt.rate3 || 2) / 100;
+        else if (b >= (wt.tier2 || 20000)) rate = (wt.rate2 || 1) / 100;
+        else if (b >= (wt.tier1 || 5000)) rate = (wt.rate1 || 0.5) / 100;
+        estDaily += Math.floor(b * rate);
+      }
     }
+
+    setText('tax-candidates', totalCand);
     setText('tax-estimate', fmtN(estDaily));
 
     // Subsidy info
