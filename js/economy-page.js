@@ -1486,8 +1486,8 @@
         '<td class="mkt-col-cat"><span class="mkt-cat mkt-cat-' + it.catCls + '">' + it.catLabel + '</span></td>' +
         '<td style="text-align:right;color:var(--cyan)">' + fmtN(it.count) + ' <span style="color:var(--dim);font-size:.32rem">' + it.txCount + 'tx</span></td>' +
         '<td style="text-align:right;color:var(--gold);font-weight:700">' + fmt(it.avg) + '</td>' +
-        '<td style="text-align:right;color:var(--dim)">' + fmt(Math.round(it.min)) + '</td>' +
-        '<td style="text-align:right;color:var(--text)">' + fmt(Math.round(it.max)) + '</td>' +
+        '<td style="text-align:right;color:var(--dim)">' + (it.min >= 1 ? fmt(Math.round(it.min)) : it.min > 0 ? it.min.toFixed(1) : '0') + '</td>' +
+        '<td style="text-align:right;color:var(--text)">' + (it.max >= 1 ? fmt(Math.round(it.max)) : it.max > 0 ? it.max.toFixed(1) : '0') + '</td>' +
         '<td class="mkt-col-vol" style="text-align:right"><span class="mkt-vol">' + fmtN(it.total) + '</span></td>' +
         '<td style="text-align:right">' + trendHtml + '</td>' +
         '</tr>');

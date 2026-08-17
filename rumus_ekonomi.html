@@ -153,15 +153,14 @@
 </div>
 
 <div class="cd">
-  <div class="sec-hd"><span class="sec-title">DISKON & PPN LAHAN</span></div>
-  <p class="fn">Setelah harga dasar dihitung, ada 3 modifikasi terakhir. <b>Kenapa ada diskon rumah pertama?</b> Agar semua warga punya tempat tinggal dasar. <b>Kenapa ada PPN hoarding?</b> Agar 1 orang tidak klaim banyak lahan dan menjadi spekulan tanah.</p>
-  <div class="fm">$$P_{\text{final}} = P_{\text{land}} \times D_1 \times D_g \times (1 + \text{PPN})$$</div>
+  <div class="sec-hd"><span class="sec-title">ATURAN UNCLAIM & ANTI SHORT-SELLING</span><span class="pill r">ANTI-ARBITRASE</span></div>
+  <p class="fn"><b>Kenapa unclaim dipotong 30% depresiasi?</b> Mencegah pemain membeli lahan mahal untuk menyembunyikan uang dari Wealth Tax lalu menjualnya kembali (*brankas koin*), atau memanfaatkan arbitrase kenaikan harga pasar.</p>
+  <div class="fm">$$\text{Refund} = \min(P_{\text{pasar}},\, P_{\text{beli}}) \times 0{,}70 - \text{PPN}$$</div>
   <table class="ptbl-math">
-    <tr><th>Komponen</th><th>Kondisi</th><th>Nilai</th><th>Kenapa?</th></tr>
-    <tr><td>$D_1$</td><td>Lahan ke-1</td><td style="color:var(--green)">0,5</td><td>Diskon 50% agar semua bisa punya rumah pertama</td></tr>
-    <tr><td>$D_1$</td><td>Lahan ke-2+</td><td>1,0</td><td>Tidak ada diskon lagi untuk properti tambahan</td></tr>
-    <tr><td>$D_g$</td><td>Bayar Gem</td><td style="color:var(--cyan)">0,01</td><td>Diskon 99% — insentif khusus pembayaran Gem</td></tr>
-    <tr><td>PPN</td><td>Lahan ke-4+</td><td style="color:var(--red)">+2% (Ikut Pajak Bank)</td><td>Pajak progresif anti-monopoli tanah per lahan baru</td></tr>
+    <tr><th>Ketentuan</th><th>Aturan</th><th>Tujuan</th></tr>
+    <tr><td>Maksimal Refund</td><td style="color:var(--red)">Maks. 70% dari Harga Beli</td><td>Potongan depresiasi likuidasi 30%</td></tr>
+    <tr><td>Beli dengan Gem</td><td style="color:var(--cyan)">Refund = 0 Koin</td><td>Anti-pencucian uang (Gem ke Koin)</td></tr>
+    <tr><td>Transfer Owner</td><td style="color:var(--gold)">Cooldown 7 Hari</td><td>Mencegah flip kilat diskon rumah pertama</td></tr>
   </table>
 </div>
 
@@ -215,7 +214,9 @@
     <tr><td style="color:var(--green)">< 5.000</td><td style="color:var(--green)">0% (BEBAS)</td><td>Rp 0 — pemain baru aman</td></tr>
     <tr><td>5.000 – 19.999</td><td>1,0%</td><td>Saldo 10.000 → dipotong 100/hari</td></tr>
     <tr><td>20.000 – 49.999</td><td>3,0%</td><td>Saldo 30.000 → dipotong 900/hari</td></tr>
-    <tr><td style="color:var(--red)">≥ 50.000</td><td style="color:var(--red)">6,0%</td><td>Saldo 100.000 → dipotong 6.000/hari</td></tr>
+    <tr><td>50.000 – 99.999</td><td>6,0%</td><td>Saldo 80.000 → dipotong 4.800/hari</td></tr>
+    <tr><td style="color:var(--red)">100.000 – 499.999</td><td style="color:var(--red)">10,0%</td><td>Saldo 200.000 → dipotong 20.000/hari</td></tr>
+    <tr><td style="color:var(--red);font-weight:bold">≥ 500.000</td><td style="color:var(--red);font-weight:bold">15,0%</td><td>Saldo 1.000.000 → dipotong 150.000/hari</td></tr>
   </table>
   <div class="benefit-box">Uang pajak tidak hilang — masuk ke Treasury dan otomatis dibagikan ke 50% pemain termiskin setiap hari.</div>
 </div>
@@ -230,7 +231,7 @@
     <tr><td>7 – 13 hari</td><td>1%</td><td>800 koin/hari</td></tr>
     <tr><td style="color:var(--red)">≥ 14 hari</td><td style="color:var(--red)">2%</td><td>1.600 koin/hari</td></tr>
   </table>
-  <div class="warn-box"><b>Cara menghindari:</b> Lakukan 1 transaksi apa saja (gacha 1×, transfer 1 koin, beli di toko, dll.) dan hitungan hari langsung reset ke 0. Sesederhana itu.</div>
+  <div class="warn-box"><b>Cara menghindari:</b> Lakukan transaksi senilai minimal <b>100 koin</b> (gacha 1×, beli di toko, transfer ≥ 100 koin, dll.) dan hitungan hari langsung reset ke 0. Transfer kecil di bawah 100 koin <b>tidak menghitung</b>.</div>
 </div>
 
 <div class="cd">

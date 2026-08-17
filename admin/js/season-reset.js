@@ -16,14 +16,15 @@ const sb = supabase.createClient(SB_URL, SB_KEY, {
 // ── Table Registry ──
 // tier: safe = auto-repopulate, warn = permanent but not critical, danger = critical permanent
 const TABLES = [
-  { id:'economy_history',  tier:'safe',   filter:'id=gte.0', label:'Economy History',        desc:'Snapshot ekonomi (gem, koin, flow). Auto-repopulate via sync BDS ~5 menit.' },
-  { id:'metrics_history',  tier:'safe',   filter:'id=gte.0', label:'Metrics History',        desc:'TPS, online players, server metrics. Auto-repopulate via sync BDS.' },
-  { id:'auction_history',  tier:'warn',   filter:'id=gte.0', label:'Auction History',        desc:'Riwayat transaksi auction house. Data market pricing hilang permanen.' },
-  { id:'weather_history',  tier:'warn',   filter:'id=gte.0', label:'Weather History',        desc:'Log weather event server. Tidak gameplay-critical, history hilang permanen.' },
-  { id:'chat_messages',    tier:'warn',   filter:'id=gte.0', label:'Chat Messages',          desc:'Log chat in-game & web. Tidak gameplay-critical.' },
-  { id:'topup_queue',      tier:'warn',   filter:"status=in.(done,failed)", label:'Topup Queue (done/failed)', desc:'Riwayat topup. Filter aman: hanya done/failed, pending tetap.' },
-  { id:'admin_activity_log', tier:'warn', filter:'id=gte.0', label:'Admin Activity Log',     desc:'Log aktivitas admin panel. Tidak gameplay-critical.' },
-  { id:'recovery_queue',   tier:'warn',   filter:"status=in.(done,failed)", label:'Recovery Queue (done/failed)', desc:'Queue recovery item. Hanya hapus yang sudah selesai.' },
+  { id:'economy_history',     tier:'safe', filter:'id=gte.0',            label:'Economy History',            desc:'Snapshot ekonomi (gem, koin, flow). Auto-repopulate via sync BDS ~5 menit.' },
+  { id:'metrics_history',     tier:'safe', filter:'id=gte.0',            label:'Metrics History',            desc:'TPS, online players, server metrics. Auto-repopulate via sync BDS.' },
+  { id:'auction_history',     tier:'warn', filter:'id=gte.0',            label:'Auction History',            desc:'Riwayat transaksi auction house. Data market pricing hilang permanen.' },
+  { id:'auction_price_index', tier:'warn', filter:'tx_count=gte.0',       label:'Auction Price Index',        desc:'Rangkuman harga pasar per item (min/max/avg). Direset agar bursa mulai dari 0.' },
+  { id:'weather_history',     tier:'warn', filter:'id=gte.0',            label:'Weather History',            desc:'Log weather event server. Tidak gameplay-critical, history hilang permanen.' },
+  { id:'chat_messages',       tier:'warn', filter:'id=gte.0',            label:'Chat Messages',              desc:'Log chat in-game & web. Tidak gameplay-critical.' },
+  { id:'topup_queue',         tier:'warn', filter:"status=in.(done,failed)", label:'Topup Queue (done/failed)', desc:'Riwayat topup. Filter aman: hanya done/failed, pending tetap.' },
+  { id:'admin_activity_log',  tier:'warn', filter:'id=gte.0',            label:'Admin Activity Log',         desc:'Log aktivitas admin panel. Tidak gameplay-critical.' },
+  { id:'recovery_queue',      tier:'warn', filter:"status=in.(done,failed)", label:'Recovery Queue (done/failed)', desc:'Queue recovery item. Hanya hapus yang sudah selesai.' },
 ];
 
 // ── State ──
@@ -145,54 +146,82 @@ async function boot() {
 //  INFRASTRUCTURE METRICS (via PostgREST + live SQL)
 // ═══════════════════════════════════════════
 
-// Live table size cache — populated by fetchLiveTableSizes()
-let liveTableSizes = {};  // { table_name: { total_bytes, index_bytes, est_rows } }
+// Live metrics state populated by live queries
+let liveTableSizes = {};  // { table_name: { total_bytes, index_bytes } }
 let liveDbSizeMB = 0;
+let liveCacheHit = '—';
+let liveConnections = '—';
+let livePgVersion = '17.6';
+let livePublicTables = [];
 
 /**
- * Fetch real table sizes from PostgreSQL catalog via Supabase RPC.
- * This replaces all hardcoded size values with live data.
+ * Execute a read-only SQL query via exec_sql RPC
  */
-async function fetchLiveTableSizes() {
+async function runSql(query) {
   try {
-    // Single-line query to pass RPC 'select %' prefix check
-    const query = "SELECT c.relname as name, pg_total_relation_size(c.oid) as total_bytes, pg_indexes_size(c.oid) as index_bytes FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind = 'r' ORDER BY pg_total_relation_size(c.oid) DESC";
-
     const r = await fetch(`${SB_URL}/rest/v1/rpc/exec_sql`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
     });
-
     if (!r.ok) {
-      console.warn('[SeasonReset] exec_sql RPC not available:', r.status);
-      return false;
+      console.warn('[SeasonReset] exec_sql status:', r.status);
+      return null;
     }
-
-    // PostgREST returns the json result directly from our function
     const data = await r.json();
-    // data is the JSON array returned by json_agg in the RPC
-    const rows = Array.isArray(data) ? data : [];
-    liveTableSizes = {};
-    for (const row of rows) {
-      liveTableSizes[row.name] = {
-        total_bytes: Number(row.total_bytes) || 0,
-        index_bytes: Number(row.index_bytes) || 0,
-      };
+    return Array.isArray(data) ? data : null;
+  } catch (e) {
+    console.warn('[SeasonReset] SQL error:', e?.message);
+    return null;
+  }
+}
+
+/**
+ * Fetch real table sizes, cache hit, connections, and DB size from PostgreSQL catalog.
+ */
+async function fetchLiveTableSizes() {
+  try {
+    // 1. Table sizes & index sizes
+    const tableQuery = "SELECT c.relname as name, pg_total_relation_size(c.oid) as total_bytes, pg_indexes_size(c.oid) as index_bytes FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind = 'r' ORDER BY pg_total_relation_size(c.oid) DESC";
+    const tableRows = await runSql(tableQuery);
+    if (tableRows) {
+      liveTableSizes = {};
+      for (const row of tableRows) {
+        liveTableSizes[row.name] = {
+          total_bytes: Number(row.total_bytes) || 0,
+          index_bytes: Number(row.index_bytes) || 0,
+        };
+      }
     }
 
-    // Also get DB size
-    const dbR = await fetch(`${SB_URL}/rest/v1/rpc/exec_sql`, {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: "SELECT pg_database_size(current_database()) as bytes" }),
-    });
-    if (dbR.ok) {
-      const dbData = await dbR.json();
-      const dbRows = Array.isArray(dbData) ? dbData : [];
-      if (dbRows[0]) {
-        liveDbSizeMB = Math.round(Number(dbRows[0].bytes) / 1048576);
-      }
+    // 2. Total DB size
+    const dbRows = await runSql("SELECT pg_database_size(current_database()) as bytes");
+    if (dbRows && dbRows[0]) {
+      liveDbSizeMB = Math.round(Number(dbRows[0].bytes) / 1048576);
+    }
+
+    // 3. Cache hit ratio (buffer cache)
+    const cacheRows = await runSql("SELECT coalesce(round(sum(heap_blks_hit) * 100.0 / nullif(sum(heap_blks_hit + heap_blks_read), 0), 1), 100.0) as ratio FROM pg_statio_user_tables");
+    if (cacheRows && cacheRows[0] && cacheRows[0].ratio !== null && cacheRows[0].ratio !== undefined) {
+      liveCacheHit = cacheRows[0].ratio + '%';
+    }
+
+    // 4. Active & Max connections
+    const connRows = await runSql("SELECT count(*)::int as active, current_setting('max_connections')::int as max_conn FROM pg_stat_activity");
+    if (connRows && connRows[0]) {
+      liveConnections = `${connRows[0].active} / ${connRows[0].max_conn}`;
+    }
+
+    // 5. PostgreSQL Version
+    const verRows = await runSql("SELECT current_setting('server_version') as ver");
+    if (verRows && verRows[0] && verRows[0].ver) {
+      livePgVersion = verRows[0].ver;
+    }
+
+    // 6. Dynamic Public Tables list
+    const ptRows = await runSql("SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename");
+    if (ptRows && ptRows.length > 0) {
+      livePublicTables = ptRows.map(r => r.tablename);
     }
 
     return true;
@@ -204,7 +233,7 @@ async function fetchLiveTableSizes() {
 
 async function fetchInfraMetrics() {
   try {
-    const allTables = [
+    const defaultTables = [
       'economy_history','metrics_history','auction_history','weather_history',
       'chat_messages','topup_queue','admin_activity_log','recovery_queue',
       'leaderboard_sync','online_players','orders','shop_items','site_config',
@@ -213,14 +242,17 @@ async function fetchInfraMetrics() {
       'admin_pending_requests','mimi_commands','shop_categories'
     ];
 
-    // Try fetching live sizes first
+    // Try fetching live sizes and PG metrics first
     await fetchLiveTableSizes();
+
+    // Use dynamic tables list from Postgres if available, else fallback
+    const targetTables = livePublicTables.length > 0 ? livePublicTables : defaultTables;
 
     let totalRows = 0;
     const sizes = {};
 
     // Fetch row counts for ALL public tables
-    const promises = allTables.map(async (t) => {
+    const promises = targetTables.map(async (t) => {
       try {
         const r = await fetch(`${SB_URL}/rest/v1/${t}?select=*&limit=1`, {
           method: 'HEAD',
@@ -236,7 +268,7 @@ async function fetchInfraMetrics() {
     });
     await Promise.all(promises);
 
-    infraData = { totalRows, tableSizes: sizes, tableCount: allTables.length };
+    infraData = { totalRows, tableSizes: sizes, tableCount: targetTables.length };
     renderInfraCards();
   } catch (e) {
     console.warn('[SeasonReset] infra metrics error:', e?.message);
@@ -254,9 +286,9 @@ function renderInfraCards() {
   setVal('infra-db-cap', usagePct + '%');
   setVal('infra-tables', d.tableCount || 25);
   setVal('infra-total-rows', (d.totalRows || 0).toLocaleString('id-ID'));
-  setVal('infra-cache-hit', '—'); // Not fetched live; avoid stale values
-  setVal('infra-connections', '—');
-  setVal('infra-pg-version', '17.6');
+  setVal('infra-cache-hit', liveCacheHit);
+  setVal('infra-connections', liveConnections);
+  setVal('infra-pg-version', livePgVersion);
   setVal('infra-region', 'ap-southeast-1');
 
   // DB capacity meter in rail
@@ -345,34 +377,79 @@ function renderDonutChart() {
 }
 
 // ═══════════════════════════════════════════
-//  STORAGE BUCKETS
+//  STORAGE BUCKETS (Live via SQL + JS Fallback)
 // ═══════════════════════════════════════════
 async function fetchStorageBuckets() {
-  // Hardcoded from our query since PostgREST can't query storage schema directly
-  storageData = [
-    { name: 'shop-images',   files: 13, size: '102 MB', bytes: 107_000_000 },
-    { name: 'banners',       files: 9,  size: '12 MB',  bytes: 12_600_000 },
-    { name: 'proofs',        files: 13, size: '6.2 MB', bytes: 6_500_000 },
-    { name: 'glyph-sheets',  files: 1,  size: '359 KB', bytes: 368_000 },
-  ];
+  try {
+    // 1. Try querying storage schema directly via exec_sql
+    const rows = await runSql("SELECT b.name, count(o.id)::int as files, coalesce(sum((o.metadata->>'size')::bigint), 0)::bigint as bytes FROM storage.buckets b LEFT JOIN storage.objects o ON b.id = o.bucket_id GROUP BY b.name ORDER BY bytes DESC");
+
+    if (rows && rows.length > 0) {
+      storageData = rows.map(r => ({
+        name: r.name,
+        files: Number(r.files) || 0,
+        bytes: Number(r.bytes) || 0,
+        size: formatBytes(Number(r.bytes) || 0),
+      }));
+    } else {
+      // 2. Fallback to Supabase JS Client
+      const { data: buckets, error } = await sb.storage.listBuckets();
+      if (!error && buckets && buckets.length > 0) {
+        storageData = [];
+        for (const b of buckets) {
+          const { data: files } = await sb.storage.from(b.name).list('', { limit: 1000 });
+          const fileCount = files ? files.length : 0;
+          let bytes = 0;
+          if (files) {
+            for (const f of files) {
+              bytes += f.metadata?.size || 0;
+            }
+          }
+          storageData.push({
+            name: b.name,
+            files: fileCount,
+            bytes: bytes,
+            size: formatBytes(bytes),
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[SeasonReset] storage bucket fetch error:', e?.message);
+  }
+
   renderStorageBuckets();
 }
 
 function renderStorageBuckets() {
   const container = document.getElementById('storage-grid');
   if (!container) return;
-  const maxBytes = Math.max(...storageData.map(b => b.bytes));
-  const colors = ['#4a8fff', '#a78bfa', '#34d399', '#22d3ee'];
+
+  if (!storageData || storageData.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-faint);font-size:12px;padding:10px">Tidak ada storage bucket ditemukan.</div>';
+    setVal('rail-storage-val', '0 B');
+    setVal('rail-storage-sub', '0 buckets · 0 files');
+    return;
+  }
+
+  const totalBytes = storageData.reduce((s, b) => s + (b.bytes || 0), 0);
+  const totalFiles = storageData.reduce((s, b) => s + (b.files || 0), 0);
+  setVal('rail-storage-val', formatBytes(totalBytes));
+  setVal('rail-storage-sub', `${storageData.length} buckets · ${totalFiles.toLocaleString('id-ID')} files`);
+
+  const maxBytes = Math.max(...storageData.map(b => b.bytes), 1);
+  const colors = ['#4a8fff', '#a78bfa', '#34d399', '#22d3ee', '#fbbf24', '#f87171'];
 
   container.innerHTML = storageData.map((b, i) => {
-    const pct = (b.bytes / maxBytes * 100).toFixed(0);
+    const pct = Math.max(Math.round((b.bytes / maxBytes) * 100), 2);
+    const color = colors[i % colors.length];
     return `<div class="bucket-card">
       <div class="bucket-name">
-        <svg width="12" height="12" fill="none" stroke="${colors[i % colors.length]}" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        <svg width="12" height="12" fill="none" stroke="${color}" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
         ${b.name}
       </div>
-      <div class="bucket-stat">${b.files} files · ${b.size}</div>
-      <div class="bucket-bar"><div class="bucket-bar-fill" style="width:${pct}%;background:${colors[i % colors.length]}"></div></div>
+      <div class="bucket-stat">${(b.files || 0).toLocaleString('id-ID')} files · ${b.size}</div>
+      <div class="bucket-bar"><div class="bucket-bar-fill" style="width:${pct}%;background:${color}"></div></div>
     </div>`;
   }).join('');
 }
@@ -486,7 +563,7 @@ function updateImpactAnalysis() {
 }
 
 // ═══════════════════════════════════════════
-//  EXPORT BACKUP (CSV-like JSON download)
+//  EXPORT BACKUP (Paginated Full JSON download)
 // ═══════════════════════════════════════════
 async function exportSelectedTables() {
   const checked = [...document.querySelectorAll('input[data-table]:checked')].map(cb => cb.dataset.table);
@@ -495,30 +572,55 @@ async function exportSelectedTables() {
 
   const exportBtn = document.getElementById('export-btn');
   exportBtn.disabled = true;
-  exportBtn.textContent = 'Exporting...';
+  exportBtn.textContent = 'Memulai Export...';
 
   const backup = { exported_at: new Date().toISOString(), tables: {} };
+  const pageSize = 1000;
 
-  for (const tableId of checked) {
-    try {
-      const r = await fetch(`${SB_URL}/rest/v1/${tableId}?select=*&limit=10000`, {
-        headers: authHeaders(),
-      });
-      if (r.ok) backup.tables[tableId] = await r.json();
-      else backup.tables[tableId] = { error: r.status };
-    } catch (e) { backup.tables[tableId] = { error: e?.message }; }
+  try {
+    for (let tIdx = 0; tIdx < checked.length; tIdx++) {
+      const tableId = checked[tIdx];
+      const allRows = [];
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        exportBtn.textContent = `Exporting ${tableId} (${allRows.length.toLocaleString('id-ID')} rows)...`;
+        const r = await fetch(`${SB_URL}/rest/v1/${tableId}?select=*&limit=${pageSize}&offset=${offset}`, {
+          headers: authHeaders(),
+        });
+        if (!r.ok) {
+          backup.tables[tableId] = { error: r.status, partial: allRows };
+          break;
+        }
+        const data = await r.json();
+        if (Array.isArray(data) && data.length > 0) {
+          allRows.push(...data);
+          offset += data.length;
+          if (data.length < pageSize) {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+
+      backup.tables[tableId] = allRows;
+    }
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `laughtale-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Terjadi kesalahan saat export: ' + (err?.message || err));
+  } finally {
+    exportBtn.disabled = false;
+    exportBtn.innerHTML = `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Backup`;
   }
-
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `laughtale-backup-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-
-  exportBtn.disabled = false;
-  exportBtn.innerHTML = `<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Backup`;
 }
 
 // ═══════════════════════════════════════════
@@ -541,6 +643,7 @@ document.getElementById('check-none').addEventListener('click', () => {
 document.getElementById('refresh-counts').addEventListener('click', () => {
   refreshCounts();
   fetchInfraMetrics();
+  fetchStorageBuckets();
 });
 
 // ═══════════════════════════════════════════

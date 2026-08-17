@@ -26,7 +26,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 * { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.1) transparent; }
 
 /* Layout */
-.w{position:relative;z-index:1;max-width:700px;margin:0 auto;padding:1.5rem 1.25rem 4rem}
+.w{position:relative;z-index:1;max-width:700px;margin:0 auto;padding:1.5rem 1.25rem 5.5rem}
 
 /* Header */
 .hd{text-align:center;margin-bottom:2rem;padding-top:1rem}
