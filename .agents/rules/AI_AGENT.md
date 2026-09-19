@@ -208,7 +208,7 @@ Masih tidak yakin → jujur: *"Sudah cek [X,Y,Z], tidak menemukan. Kemungkinan [
 □ Sudah baca AI_AGENT.md §16?
 □ Rencana edit lengkap? (semua file + perubahan)
 □ Bisa selesai 1 pass?
-□ Respons ringkas? (tabel > paragraf)
+□ Respons ringkas & jelas? (poin-poin langsung to-the-point)
 ```
 
 > **Catatan:** Rules komunikasi (§3), reload/restart (§4), risiko (§8) ada di `GEMINI.md` — tidak diduplikasi di sini.

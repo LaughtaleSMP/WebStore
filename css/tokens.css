@@ -1,0 +1,325 @@
+/* ============================================================
+   LAUGHTALE SMP — MODERN DESIGN TOKENS & MOBILE PRIMITIVES
+   PhD-Level UI/UX Architecture · Mobile-First Responsive System
+   ============================================================ */
+
+:root {
+  /* ── 1. Color Palette (Semantic Tokens) ── */
+  --bg-deep: #070a0f;
+  --bg-surface: rgba(15, 23, 42, 0.75);
+  --bg-surface-hover: rgba(30, 41, 59, 0.85);
+  --bg-surface-active: rgba(51, 65, 85, 0.9);
+  --bg-glass: rgba(15, 23, 42, 0.65);
+  
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-glass: rgba(255, 255, 255, 0.12);
+  --border-accent: rgba(168, 85, 247, 0.4);
+  --border-glow: rgba(168, 85, 247, 0.6);
+
+  /* Primary Brand (Laughtale Purple / Accent) */
+  --color-primary: #a855f7;
+  --color-primary-light: #c084fc;
+  --color-primary-dark: #7c3aed;
+  --color-primary-glow: rgba(168, 85, 247, 0.25);
+
+  /* Functional Status Colors */
+  --color-online: #10b981;
+  --color-online-glow: rgba(16, 185, 129, 0.3);
+  --color-gold: #f59e0b;
+  --color-gold-glow: rgba(245, 158, 11, 0.25);
+  --color-cyan: #06b6d4;
+  --color-cyan-glow: rgba(6, 182, 212, 0.25);
+  --color-rose: #f43f5e;
+  --color-rose-glow: rgba(244, 63, 94, 0.25);
+
+  /* Typography Colors */
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --text-inverse: #0f172a;
+
+  /* ── 2. Fluid Typography Scale ── */
+  --font-sans: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-pixel: "Press Start 2P", monospace;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --text-2xs: clamp(0.6rem, 0.55rem + 0.25vw, 0.7rem);
+  --text-xs: clamp(0.7rem, 0.65rem + 0.3vw, 0.8rem);
+  --text-sm: clamp(0.8rem, 0.75rem + 0.3vw, 0.9rem);
+  --text-base: clamp(0.9rem, 0.85rem + 0.3vw, 1rem);
+  --text-lg: clamp(1.05rem, 0.95rem + 0.5vw, 1.25rem);
+  --text-xl: clamp(1.25rem, 1.1rem + 0.75vw, 1.55rem);
+  --text-2xl: clamp(1.5rem, 1.3rem + 1vw, 2rem);
+  --text-3xl: clamp(1.85rem, 1.5rem + 1.5vw, 2.75rem);
+
+  /* ── 3. Spacing & Dimensions ── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --shadow-glow-purple: 0 0 24px rgba(168, 85, 247, 0.35);
+  --shadow-glow-emerald: 0 0 20px rgba(16, 185, 129, 0.35);
+
+  --nav-bottom-height: 64px;
+}
+
+/* Tabular figures for dynamic realtime numbers */
+.tabular-nums, .stat-val, .kpi-num, .price-tag, .count-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ============================================================
+   MOBILE BOTTOM NAVIGATION BAR (Floating Thumb-Zone Hub)
+   ============================================================ */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: clamp(10px, 2.5vw, 18px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(100% - 24px), 440px);
+  height: var(--nav-bottom-height);
+  background: rgba(13, 17, 23, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-full);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  z-index: 999;
+  padding: 6px 8px;
+  align-items: center;
+  justify-content: space-around;
+  user-select: none;
+  touch-action: manipulation;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
+}
+
+.mobile-nav-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 100%;
+  min-height: 48px; /* Touch target minimum */
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  gap: 3px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav-item svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.25s;
+}
+
+.mobile-nav-item:active {
+  transform: scale(0.92);
+}
+
+.mobile-nav-item.active {
+  color: #fff;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(124, 58, 237, 0.15) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.3);
+}
+
+.mobile-nav-item.active svg {
+  stroke: var(--color-primary-light);
+  transform: translateY(-1px) scale(1.1);
+}
+
+/* Badge for notifications on bottom nav item */
+.mobile-nav-badge {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 18px);
+  width: 7px;
+  height: 7px;
+  background: var(--color-rose);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--color-rose);
+  animation: pulseBadge 2s infinite;
+}
+
+@keyframes pulseBadge {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+@media (max-width: 900px) {
+  .mobile-bottom-nav {
+    display: flex;
+  }
+  
+  /* Give enough breathing room for body content above floating bottom bar */
+  body {
+    padding-bottom: calc(var(--nav-bottom-height) + 32px) !important;
+  }
+}
+
+/* ============================================================
+   MODERN GLASS CARD (Clean, Premium, Dark)
+   ============================================================ */
+.premium-card {
+  position: relative;
+  background: var(--bg-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: clamp(1rem, 3vw, 1.5rem);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
+  overflow: hidden;
+}
+
+.premium-card:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-card), 0 0 20px var(--color-primary-glow);
+  transform: translateY(-2px);
+}
+
+/* ============================================================
+   BOTTOM SHEET MODAL (Mobile-Native Drawer)
+   ============================================================ */
+.bottom-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bottom-sheet-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.bottom-sheet {
+  width: 100%;
+  max-width: 540px;
+  max-height: 88vh;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.bottom-sheet-overlay.open .bottom-sheet {
+  transform: translateY(0);
+}
+
+.bottom-sheet-handle {
+  width: 44px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  margin: 12px auto 6px;
+  cursor: grab;
+}
+
+.bottom-sheet-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bottom-sheet-body {
+  padding: 1.25rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bottom-sheet-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(15, 23, 42, 0.95);
+}
+
+/* ============================================================
+   PILL BUTTONS & FILTERS (Horizontal Scrollable on Mobile)
+   ============================================================ */
+.pill-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.pill-group::-webkit-scrollbar { display: none; }
+
+.pill-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.pill-item:hover, .pill-item.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary-light);
+  box-shadow: 0 0 16px var(--color-primary-glow);
+}
+
+/* ============================================================
+   ACCESSIBILITY & REDUCED MOTION SAFETY
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
