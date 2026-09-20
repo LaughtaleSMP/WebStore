@@ -190,9 +190,10 @@
   height: auto;
   min-height: 0;
 }
-/* Hide page-nav and prevent page scroll when fullscreen active */
+/* Hide mobile bottom nav and prevent page scroll when fullscreen active */
 body.lc-fs-active { overflow: hidden; }
-body.lc-fs-active #pn { display: none !important; }
+body.lc-fs-active #pn,
+body.lc-fs-active .mobile-bottom-nav { display: none !important; }
 
 /* ── Body ── */
 .lc-body {
