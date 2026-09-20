@@ -947,9 +947,6 @@
           <label class="rf-pill" title="Hanya tampilkan pemain dengan PvP aktif">
             <input type="checkbox" id="rf-pvp"><span class="rf-icon"></span>PvP only
           </label>
-          <label class="rf-pill" title="Sembunyikan land claim normal, hanya tampilkan yang inactive ≥7 hari">
-            <input type="checkbox" id="rf-expiring"><span class="rf-icon"></span>Land Expiring
-          </label>
           <label class="rf-pill active" title="Gabungkan marker pemain berdekatan saat zoom out">
             <input type="checkbox" id="rf-cluster" checked><span class="rf-icon"></span>Smart Cluster
           </label>
@@ -1102,8 +1099,6 @@
           </svg>
           <span class="card-title" style="font-size:.55rem">LAND CLAIMS</span>
           <span class="pill g" id="land-exp-count" style="font-size:.42rem">0</span>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:.42rem;color:var(--mute)"
-            id="land-exp-summary"></span>
         </div>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"
           style="color:var(--mute);transition:transform .2s" id="land-exp-chevron">
@@ -1117,8 +1112,7 @@
               <tr>
                 <th>Land</th>
                 <th>Owner</th>
-                <th>Inactive</th>
-                <th>Status</th>
+                <th>Dim</th>
                 <th>Pos</th>
               </tr>
             </thead>

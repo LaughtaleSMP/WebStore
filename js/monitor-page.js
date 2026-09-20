@@ -1141,7 +1141,7 @@ var radarPlayers=[],radarLands=[],radarZoneBorders=[],radarDim='overworld',radar
 var radarPanX=0,radarPanZ=0,radarDrag=false,radarDragStart={x:0,z:0,px:0,pz:0};
 var radarHistory=[],radarTimeIdx=-1,radarRaf=0,radarAnimId=0,rSel=null,rFollow=true;
 // [FILTER] Radar filters — toggle UI di HTML, state direstore dari localStorage.
-var _rfState={afk:false,pvp:false,expiring:false,owner:'',cluster:true,hidePlayer:false,hmHostile:true,hmPassive:true,hmItem:true,hmOther:true,hmType:''};
+var _rfState={afk:false,pvp:false,owner:'',cluster:true,hidePlayer:false,hmHostile:true,hmPassive:true,hmItem:true,hmOther:true,hmType:''};
 var _afkTracker={}; // {name: {x,z,since}} untuk deteksi AFK >5 menit
 var _AFK_MS=300000,_AFK_MOVE_SQ=4; // 5 min, 2 blok delta = bergerak
 try{var _rfSaved=localStorage.getItem('lt_radar_filters');if(_rfSaved){var _rfp=JSON.parse(_rfSaved);for(var k in _rfp)if(k in _rfState)_rfState[k]=_rfp[k];}}catch(e){}
@@ -1506,34 +1506,18 @@ function drawRadar(){
     ctx.fillStyle='rgba(34, 211, 238, 0.8)';ctx.font='600 9px JetBrains Mono,monospace';ctx.textAlign='left';
     ctx.fillText('0,0',ox+4,oz-4);
   }
-  var _lVis=0,_lTot=0,_lExp=0;
-  var _WARN_DAYS=7,_CRIT_DAYS=10,_CLEAN_DAYS=14;
+  var _lVis=0,_lTot=0;
   if(radarLands&&radarLands.length){for(var li=0;li<radarLands.length;li++){var l=radarLands[li];if(!l||l.x1==null)continue;if((DIM_SHORT[l.d]||'overworld')!==radarDim)continue;
     // [FILTER] Owner substring filter for lands
     if(_rfState.owner){var _ownLow=_rfState.owner.trim().toLowerCase();if(_ownLow&&(!l.o||l.o.toLowerCase().indexOf(_ownLow)<0))continue;}
     _lTot++;var lx1=cX+(Math.min(l.x1,l.x2)-radarPanX)*sc,lz1=cY+(Math.min(l.z1,l.z2)-radarPanZ)*sc,lx2=cX+(Math.max(l.x1,l.x2)-radarPanX)*sc,lz2=cY+(Math.max(l.z1,l.z2)-radarPanZ)*sc,lw=lx2-lx1,lh=lz2-lz1;if(lx2<0||lx1>W||lz2<0||lz1>H)continue;_lVis++;
-    // Determine expiry status from di (daysInactive)
-    var di=typeof l.di==='number'?l.di:-1;
-    var isWarn=di>=_WARN_DAYS&&di<_CRIT_DAYS;
-    var isCrit=di>=_CRIT_DAYS&&di<_CLEAN_DAYS;
-    var isDead=di>=_CLEAN_DAYS;
-    var isExpiring=isWarn||isCrit||isDead;
-    // [FILTER] Expiring-only filter
-    if(_rfState.expiring&&!isExpiring){_lVis--;continue;}
-    if(isExpiring)_lExp++;
-    // Choose color: normal=owner-hash, warn=orange, crit=red pulse, dead=bright red
-    var lc=isExpiring?'#f87171':LAND_COLORS[nameHash(l.o)%LAND_COLORS.length];
-    if(isWarn)lc='#fb923c';
+    // Choose color: owner-hash color
+    var lc=LAND_COLORS[nameHash(l.o)%LAND_COLORS.length];
     // Fill
-    var fillAlpha=isDead?0.28:isCrit?0.24:isWarn?0.20:0.16;
-    ctx.globalAlpha=fillAlpha;ctx.fillStyle=lc;ctx.fillRect(lx1,lz1,lw,lh);
+    ctx.globalAlpha=0.16;ctx.fillStyle=lc;ctx.fillRect(lx1,lz1,lw,lh);
     // Border
-    var borderAlpha=isDead?0.9:isCrit?0.8:isWarn?0.7:0.65;
-    // Pulsing effect for critical/dead lands
-    if((isCrit||isDead)&&!_reduceMotion){var pulse=(Math.sin(Date.now()/400)+1)/2;borderAlpha=borderAlpha*(0.5+pulse*0.5);}
-    ctx.globalAlpha=borderAlpha;ctx.strokeStyle=lc;ctx.lineWidth=isDead?2:isCrit?1.5:1;
-    if(isExpiring){ctx.setLineDash([]);ctx.strokeRect(lx1,lz1,lw,lh);}
-    else{ctx.setLineDash([3,3]);ctx.strokeRect(lx1,lz1,lw,lh);ctx.setLineDash([]);}
+    ctx.globalAlpha=0.65;ctx.strokeStyle=lc;ctx.lineWidth=1;
+    ctx.setLineDash([3,3]);ctx.strokeRect(lx1,lz1,lw,lh);ctx.setLineDash([]);
     // Labels (skip during interaction for perf)
     if(!isInteract){
       var _lfs=Math.min(16,Math.max(7,Math.floor(lw/8)));
@@ -1541,31 +1525,16 @@ function drawRadar(){
       var _lpad=_lfs+2;
       if(lw>30&&lh>_lfs){
         // Land name
-        ctx.globalAlpha=isExpiring?0.9:0.75;
+        ctx.globalAlpha=0.75;
         ctx.font='600 '+_lfs+'px JetBrains Mono,monospace';ctx.textAlign='left';
         ctx.fillStyle=lc;
         ctx.fillText(l.n,Math.max(lx1+4,2),Math.max(lz1+_lfs+2,_lfs+2));
         // Owner name
         if(l.o&&lh>_lpad+_lfs2+2){
-          ctx.globalAlpha=isExpiring?0.8:0.65;
+          ctx.globalAlpha=0.65;
           ctx.font='500 '+_lfs2+'px JetBrains Mono,monospace';
-          ctx.fillStyle=isExpiring?lc:'rgba(255,255,255,0.55)';
+          ctx.fillStyle='rgba(255,255,255,0.55)';
           ctx.fillText(l.o,Math.max(lx1+4,2),Math.max(lz1+_lpad+_lfs2,_lpad+_lfs2));
-        }
-        // Expiry badge
-        if(isExpiring&&lw>50&&lh>_lpad+_lfs2+_lfs2+8){
-          var _ey=Math.max(lz1+_lpad+_lfs2*2+4,_lpad+_lfs2*2+4);
-          var _efs=Math.min(10,Math.max(6,Math.floor(lw/12)));
-          ctx.font='700 '+_efs+'px JetBrains Mono,monospace';
-          if(isDead){ctx.globalAlpha=0.9;ctx.fillStyle='#f87171';ctx.fillText('[CLEAN] '+di+'d',Math.max(lx1+4,2),_ey);}
-          else if(isCrit){ctx.globalAlpha=0.8;ctx.fillStyle='#f87171';ctx.fillText('[!] '+di+'d expiring',Math.max(lx1+4,2),_ey);}
-          else{ctx.globalAlpha=0.7;ctx.fillStyle='#fb923c';ctx.fillText('[~] '+di+'d inactive',Math.max(lx1+4,2),_ey);}
-        }
-        // Corner warning icon for small lands
-        else if(isExpiring&&lw>15&&lh>15){
-          ctx.globalAlpha=isDead?0.9:0.7;ctx.font='700 '+Math.min(12,Math.max(8,Math.floor(Math.min(lw,lh)/3)))+'px sans-serif';
-          ctx.textAlign='center';ctx.fillStyle=lc;
-          ctx.fillText(isDead?'X':isCrit?'!':'~',lx1+lw/2,lz1+lh/2+4);
         }
       }
     }
@@ -2274,7 +2243,7 @@ function drawRadar(){
 
   ctx.fillStyle='rgba(255,255,255,0.2)';ctx.font='600 10px Inter,sans-serif';ctx.textAlign='center';
   ctx.fillText('N',W/2,13);ctx.fillText('S',W/2,H-5);ctx.fillText('W',9,H/2+4);ctx.fillText('E',W-9,H/2+4);
-  safeSet('radar-count',ap.length+' pemain'+(_lTot?' \u00b7 '+_lVis+'/'+_lTot+' land'+(_lExp?' \u00b7 '+_lExp+' expiring':''):''));safeSet('radar-zoom-label','Zoom: '+radarZoom+' blok');
+  safeSet('radar-count',ap.length+' pemain'+(_lTot?' \u00b7 '+_lVis+'/'+_lTot+' land':''));safeSet('radar-zoom-label','Zoom: '+radarZoom+' blok');
   // Update dimension badges based on current time point
   var _dcOw=0,_dcNe=0,_dcEn=0;
   if(isLive){
@@ -2465,7 +2434,6 @@ function _setRadarHistError(msg){
   };
   _rfBindCheck('rf-afk','afk');
   _rfBindCheck('rf-pvp','pvp');
-  _rfBindCheck('rf-expiring','expiring');
   _rfBindCheck('rf-cluster','cluster');
   _rfBindCheck('rf-hide-player','hidePlayer');
   _rfBindCheck('rf-hm-hostile','hmHostile');
@@ -2742,55 +2710,34 @@ function _renderExpPanel(){
     items.push(l);
   }
   if(!items.length){card.style.display='none';return;}
-  // Sort: highest di first (most urgent), unknowns (-1) at bottom
+  // Sort alphabetically by land name
   items.sort(function(a,b){
-    var da=typeof a.di==='number'?a.di:-1,db=typeof b.di==='number'?b.di:-1;
-    if(da===-1&&db===-1)return 0;
-    if(da===-1)return 1;
-    if(db===-1)return -1;
-    return db-da;
+    return (a.n||'').localeCompare(b.n||'');
   });
   // Diff check — avoid re-render if data unchanged
-  var hash=items.length+'|'+items.map(function(l){return l.n+(l.di||'');}).join(',');
+  var hash=items.length+'|'+items.map(function(l){return (l.n||'')+(l.o||'');}).join(',');
   if(hash===_expLastHash)return;
   _expLastHash=hash;
   card.style.display='';
-  // Count at-risk lands (7d+)
-  var atRisk=0;
-  for(var i=0;i<items.length;i++){var d=typeof items[i].di==='number'?items[i].di:-1;if(d>=7)atRisk++;}
-  if(cnt){cnt.textContent=items.length;cnt.className='pill '+(atRisk>0?'r':'g');cnt.style.fontSize='.42rem';}
-  // Inline summary (visible when collapsed)
+  if(cnt){cnt.textContent=items.length;cnt.className='pill g';cnt.style.fontSize='.42rem';}
   var sum=$('land-exp-summary');
-  if(sum){
-    if(atRisk>0)sum.textContent=atRisk+' at risk';
-    else sum.textContent='all safe';
-    sum.style.display=_expCollapsed?'':'none';
-  }
+  if(sum)sum.style.display='none';
   var DIM_LABEL={o:'OW',n:'N',t:'END'};
   var html='';
   for(var i=0;i<items.length;i++){
-    var l=items[i],di=typeof l.di==='number'?l.di:-1;
-    var stClass,stLabel,diText,diColor;
-    if(di===-1){stClass='st-ok';stLabel='NO DATA';diText='--';diColor='var(--mute)';}
-    else if(di>=14){stClass='st-dead';stLabel='CLEAN';diText=di+'d';diColor='#f87171';}
-    else if(di>=10){stClass='st-crit';stLabel='EXPIRING';diText=di+'d';diColor='#f87171';}
-    else if(di>=7){stClass='st-warn';stLabel='WARNING';diText=di+'d';diColor='#fb923c';}
-    else if(di>=5){stClass='st-ok';stLabel='WATCH';diText=di+'d';diColor='var(--dim)';}
-    else{stClass='st-ok';stLabel='ACTIVE';diText=di+'d';diColor='#34d399';}
+    var l=items[i];
     var x1=Math.min(l.x1,l.x2),z1=Math.min(l.z1,l.z2),x2=Math.max(l.x1,l.x2),z2=Math.max(l.z1,l.z2);
     var dim=DIM_LABEL[l.d]||'OW';
     html+='<tr data-lx="'+((x1+x2)/2)+'" data-lz="'+((z1+z2)/2)+'" data-ld="'+(l.d||'o')+'" style="cursor:pointer">';
     html+='<td class="exp-name">'+esc(l.n)+'</td>';
     html+='<td class="exp-owner">'+esc(l.o)+'</td>';
-    html+='<td style="color:'+diColor+'">'+diText+'</td>';
-    html+='<td><span class="exp-st '+stClass+'">'+stLabel+'</span></td>';
-    html+='<td class="exp-pos">'+dim+' '+x1+','+z1+'</td>';
+    html+='<td class="exp-pos">'+dim+'</td>';
+    html+='<td class="exp-pos">'+x1+','+z1+'</td>';
     html+='</tr>';
   }
   tbody.innerHTML=html;
   if(info){
-    if(atRisk>0)info.textContent=items.length+' total \u00b7 '+atRisk+' at risk \u00b7 auto-clean: 14d';
-    else info.textContent=items.length+' land'+(items.length>1?'s':'')+' claimed \u00b7 auto-clean: 14d inactive';
+    info.textContent=items.length+' land'+(items.length>1?'s':'')+' claimed \u00b7 permanent';
   }
   // Click row → navigate radar to that land
   tbody.querySelectorAll('tr').forEach(function(tr){
@@ -4260,12 +4207,7 @@ function _showCoordTip(cv,worldX,worldZ,px,pz){
       if(worldX>=x1&&worldX<=x2&&worldZ>=z1&&worldZ<=z2){
         isLand=true;
         html='<b>'+esc(l.n)+'</b>';
-        html+='<br><span class="tip-dim">'+esc(l.o)+'</span>';
-        var di=typeof l.di==='number'?l.di:-1;
-        if(di>=14)html+=' <span class="tip-crit">auto-clean</span>';
-        else if(di>=10)html+=' <span class="tip-crit">'+di+'d expiring</span>';
-        else if(di>=7)html+=' <span class="tip-warn">'+di+'d inactive</span>';
-        else if(di>=0)html+=' <span class="tip-ok">active</span>';
+        html+='<br><span class="tip-dim">Owner: '+esc(l.o)+'</span>';
         html+='<br><span class="tip-dim">'+x1+', '+z1+' &rarr; '+x2+', '+z2+'</span>';
         break;
       }
