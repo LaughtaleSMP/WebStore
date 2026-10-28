@@ -2,7 +2,7 @@
 
 **v4.4** · Panduan khusus untuk AI coding assistant.
 
-> Companion: [`CODING_STANDARDS.md`](./CODING_STANDARDS.md) · [`CODE_MAP.md`](./CODE_MAP.md)
+> Companion: [`CODING_STANDARDS.md`](./CODING_STANDARDS.md) · [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) · [`CODE_MAP.md`](./CODE_MAP.md)
 >
 > **Char budget**: File ini ≤ **12.000 karakter**.
 
@@ -186,6 +186,7 @@ console.log("[ModuleName] Loaded: key1=val1 key2=val2");
 4. Checklist §11 dijalankan
 5. CODE_MAP.md di-update jika ada file baru
 6. Edge cases ditangani
+7. Web code: wajib post-code DevTools inspection (0 console error, responsive mobile 375px & desktop 1440px, anti-truncation)
 
 **Aturan:**
 - Jangan serahkan sisa ke user (kecuali butuh keputusan).

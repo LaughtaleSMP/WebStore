@@ -226,6 +226,8 @@ if (!player) return;                       // early return
 
 **UX**: error jelas ✓ konfirmasi destruktif ✓ format angka ✓ WCAG AA ✓ sound feedback ✓
 
+**Web Inspection**: DevTools inspection paska-kode ✓ 0 console error merah ✓ viewport 375px & 1440px lolos ✓ no horizontal overflow ✓ dropdown/modal anti-terpotong ✓ zero AI-slop ✓
+
 **Behavioral**: rate disclosed ✓ pity visible ✓ spending cap ✓ no FOMO < 24h ✓
 
 **Statistical**: median+percentile ✓ EMA justified ✓ anti-gaming ✓
